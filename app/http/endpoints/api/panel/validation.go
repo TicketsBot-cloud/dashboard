@@ -167,12 +167,12 @@ func validateEmoji(c PanelValidationContext) validation.ValidationFunc {
 	}
 }
 
-var urlRegex = regexp.MustCompile(`^https?://([-a-zA-Z0-9@:%._+~#=]{1,256})\.[a-zA-Z0-9()]{1,63}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$`)
+var urlRegex = regexp.MustCompile(`^https?://([-a-zA-Z0-9@:%._+~#=]{1,256})\.[a-zA-Z0-9()]{1,63}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*\.(?:gif|jpg|jpeg|png|webp))$`)
 
 func validateNullableUrl(url *string) validation.ValidationFunc {
 	return func() error {
 		if url != nil && (len(*url) > 255 || !urlRegex.MatchString(*url)) {
-			return validation.NewInvalidInputError("Invalid URL")
+			return validation.NewInvalidInputError("Invalid image URL. Must end with .gif, .jpg, .jpeg, .png, or .webp")
 		}
 
 		return nil
@@ -361,13 +361,13 @@ func validateEmbed(e *types.CustomEmbed) error {
 	if e == nil || e.Title != nil || e.Description != nil || len(e.Fields) > 0 || e.ImageUrl != nil || e.ThumbnailUrl != nil {
 		if e.ImageUrl != nil && (len(*e.ImageUrl) > 255 || !urlRegex.MatchString(*e.ImageUrl)) {
 			if *e.ImageUrl != "%avatar_url%" {
-				return validation.NewInvalidInputError("Invalid URL")
+				return validation.NewInvalidInputError("Invalid image URL. Must end with .gif, .jpg, .jpeg, .png, or .webp")
 			}
 		}
 
 		if e.ThumbnailUrl != nil && (len(*e.ThumbnailUrl) > 255 || !urlRegex.MatchString(*e.ThumbnailUrl)) {
 			if *e.ThumbnailUrl != "%avatar_url%" {
-				return validation.NewInvalidInputError("Invalid URL")
+				return validation.NewInvalidInputError("Invalid image URL. Must end with .gif, .jpg, .jpeg, .png, or .webp")
 			}
 		}
 

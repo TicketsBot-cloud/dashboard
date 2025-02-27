@@ -133,11 +133,39 @@
         guild = res.data;
     }
 
+    function checkGuildCache(id, newIcon, newName) {
+        // Retrieve the guilds array from localStorage
+        let guilds = JSON.parse(window.localStorage.getItem('guilds')) || [];
+
+        // Find the guild with the specified id
+        let guild = guilds.find(g => g.id === id);
+
+        // If the guild is found, update its icon and name
+        if (guild) {
+            let updated = false;
+            if (guild.icon !== newIcon) {
+                guild.icon = newIcon;
+                updated = true;
+            }
+            if (guild.name !== newName) {
+                guild.name = newName;
+                updated = true;
+            }
+            // Save the updated guilds array back to localStorage if there were changes
+            if (updated) {
+                window.localStorage.setItem('guilds', JSON.stringify(guilds));
+            }
+        } else {
+            console.error(`Guild with id ${id} not found`);
+        }
+    }
+
     onMount(async () => {
         await withLoadingScreen(async () => {
             await loadGuild();
 
             iconUrl = getIconUrl(guildId, guild.icon);
+            checkGuildCache(guildId, guild.icon, guild.name);
         })
     });
 </script>

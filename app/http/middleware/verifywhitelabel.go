@@ -20,26 +20,16 @@ func VerifyWhitelabel(isApi bool) func(ctx *gin.Context) {
 		}
 
 		if tier < premium.Whitelabel {
-			var isForced bool
-			for _, id := range config.Conf.ForceWhitelabel {
-				if id == userId {
-					isForced = true
-					break
-				}
+			if isApi {
+				ctx.AbortWithStatusJSON(402, gin.H{
+					"success": false,
+					"error":   "You must have the whitelabel premium tier",
+				})
+			} else {
+				ctx.Redirect(302, fmt.Sprintf("%s/premium", config.Conf.Server.MainSite))
+				ctx.Abort()
 			}
-
-			if !isForced {
-				if isApi {
-					ctx.AbortWithStatusJSON(402, gin.H{
-						"success": false,
-						"error":   "You must have the whitelabel premium tier",
-					})
-				} else {
-					ctx.Redirect(302, fmt.Sprintf("%s/premium", config.Conf.Server.MainSite))
-					ctx.Abort()
-				}
-				return
-			}
+			return
 		}
 	}
 }

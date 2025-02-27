@@ -37,6 +37,11 @@ label {
 	display: block;
 }
 
+textarea {
+	resize: vertical;
+	max-height: 500px;
+}
+
 input, button, select, textarea {
 	font-family: inherit;
 	font-size: inherit;

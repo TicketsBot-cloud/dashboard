@@ -79,7 +79,7 @@
     }
 
     function updateSize() {
-        content.style.maxHeight = `${content.scrollHeight}px`;
+        content.style.maxHeight = `100%`;
     }
 
     function updateIfExpanded() {

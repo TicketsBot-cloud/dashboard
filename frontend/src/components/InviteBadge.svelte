@@ -9,7 +9,8 @@
 </div>
 
 <script>
+    import {INVITE_URL} from "../js/constants";
     function invite() {
-        window.location.href = `https://invite.ticketsbot.cloud`;
+        window.location.href = INVITE_URL;
     }
 </script>

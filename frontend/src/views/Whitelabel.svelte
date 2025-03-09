@@ -191,7 +191,7 @@
     import axios from "axios";
     import Card from '../components/Card.svelte'
     import Button from '../components/Button.svelte'
-    import {API_URL} from "../js/constants";
+    import {API_URL, FRONTPAGE_URL} from "../js/constants";
     import {setDefaultHeaders} from '../includes/Auth.svelte'
     import Dropdown from "../components/form/Dropdown.svelte";
     import Input from "../components/form/Input.svelte";
@@ -255,7 +255,7 @@
         const res = await axios.get(`${API_URL}/user/whitelabel/`);
         if (res.status !== 200) {
             if (res.status === 402) {
-                window.location.replace("https://ticketsbot.cloud/premium");
+                window.location.replace(`${FRONTPAGE_URL}/premium`);
                 return false;
             }
 

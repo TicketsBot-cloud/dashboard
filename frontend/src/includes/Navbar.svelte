@@ -30,7 +30,7 @@
     </div>
     <div>
       <div class="nav-section" class:dropdown={$dropdown}>
-        <NavElement icon="fas fa-book" link="https://docs.ticketsbot.cloud">Documentation</NavElement>
+        <NavElement icon="fas fa-book" link={DOCS_URL}>Documentation</NavElement>
         <NavElement icon="fas fa-server" link="/#">Servers</NavElement>
         <NavElement icon="fas fa-sign-out-alt" link="/logout">Logout</NavElement>
       </div>
@@ -40,6 +40,7 @@
 
 <script>
     import NavElement from "../components/NavElement.svelte";
+    import {DOCS_URL} from "../js/constants";
     import Badge from "../components/Badge.svelte";
 
     export let guildId;

@@ -9,11 +9,11 @@ import (
 
 var S3Client *minio.Client
 
-func ConnectS3(endpoint, accessKey, secretKey string) {
+func ConnectS3(endpoint, accessKey, secretKey string, secure bool) {
 	// Initialize minio client object.
 	minioClient, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-		Secure: true,
+		Secure: secure,
 	})
 	if err != nil {
 		log.Fatalln(err)

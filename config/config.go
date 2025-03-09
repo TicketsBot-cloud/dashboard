@@ -59,6 +59,7 @@ type Config struct {
 	SecureProxyUrl string `env:"SECURE_PROXY_URL"`
 	S3Import       struct {
 		Endpoint         string `env:"ENDPOINT,required"`
+		Secure           bool   `env:"SECURE" envDefault:"true"`
 		AccessKey        string `env:"ACCESS_KEY,required"`
 		SecretKey        string `env:"SECRET_KEY,required"`
 		TranscriptBucket string `env:"TRANSCRIPT_BUCKET,required"`

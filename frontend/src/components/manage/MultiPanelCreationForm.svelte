@@ -1,6 +1,6 @@
 <form on:submit|preventDefault>
     <Collapsible defaultOpen>
-        <span slot="header">Properties</span>
+        <span slot="header">Multi-Panel Properties</span>
         <div slot="content" class="col-1">
             <div class="col-1">
                 <ChannelDropdown col1 allowAnnouncementChannel {channels} label="Panel Channel"

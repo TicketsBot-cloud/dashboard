@@ -22,7 +22,7 @@
     </Collapsible>
 
     <Collapsible defaultOpen>
-        <span slot="header">Message</span>
+        <span slot="header">Panel Message</span>
         <div slot="content" class="col-1">
             <EmbedForm footerPremiumOnly={true} bind:data={data.embed}/>
         </div>

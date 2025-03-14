@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
+	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/rxdn/gdl/objects"
 	"github.com/rxdn/gdl/objects/channel/embed"
@@ -70,7 +71,7 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 	}
 
 	if !p.IsPremium {
-		e.SetFooter("Powered by ticketsbot.cloud", "https://ticketsbot.cloud/assets/img/logo.png")
+		e.SetFooter(`Powered by ${config.Conf.Bot.PoweredBy}`, config.Conf.Bot.IconUrl)
 	}
 
 	data := rest.CreateMessageData{

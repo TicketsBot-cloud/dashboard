@@ -41,6 +41,8 @@ import LegalLayout from "./layouts/LegalLayout.svelte"
 import PrivacyPolicy from "./views/legal/PrivacyPolicy.svelte"
 import TermsOfService from "./views/legal/TOS.svelte"
 
+import {WHITELABEL_DISABLED} from "./js/constants";
+
 export const routes = [
     {name: '/', component: Index, layout: IndexLayout},
     {name: '404', path: '404', component: Error404, layout: ErrorLayout},
@@ -48,7 +50,7 @@ export const routes = [
     {name: '/login', component: Login},
     {name: '/logout', component: Logout},
     {name: '/error', component: Error, layout: ErrorLayout},
-    {name: '/whitelabel', component: Whitelabel, layout: IndexLayout},
+    !WHITELABEL_DISABLED && {name: '/whitelabel', component: Whitelabel, layout: IndexLayout},
     {
         name: 'legal',
         nestedRoutes: [
@@ -188,4 +190,4 @@ export const routes = [
             }
         ],
     }
-]
+].filter(Boolean); // Filter out false values

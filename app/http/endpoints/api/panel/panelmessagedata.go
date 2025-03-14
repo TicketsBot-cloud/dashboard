@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/config"
@@ -71,7 +73,7 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 	}
 
 	if !p.IsPremium {
-		e.SetFooter(`Powered by ${config.Conf.Bot.PoweredBy}`, config.Conf.Bot.IconUrl)
+		e.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
 	}
 
 	data := rest.CreateMessageData{

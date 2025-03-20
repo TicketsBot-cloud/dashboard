@@ -29,6 +29,11 @@
                     </WrappedSelect>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-2">
+                    <Checkbox label="Delete Mentions (Delete mentions after ticket opening)" col2={true} tool bind:value={data.delete_mentions} />
+                </div>
+            </div>
             <div class="incomplete-row">
                 <CategoryDropdown label="Ticket Category" col3 {channels} bind:value={data.category_id}/>
 
@@ -38,7 +43,6 @@
                         <option value={form.form_id}>{form.title}</option>
                     {/each}
                 </Dropdown>
-
                 <div>
                     <label for="naming-scheme-wrapper" class="form-label">Naming Scheme</label>
                     <div class="row" id="naming-scheme-wrapper">
@@ -327,6 +331,7 @@
               teams: [],
               button_style: "1",
               form_id: "null",
+              delete_mentions: false,
               channel_id: channels.find((c) => c.type === 0 || c.type === 5)?.id,
               category_id: channels.find((c) => c.type === 4)?.id,
               use_server_default_naming_scheme: true,

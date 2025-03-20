@@ -47,6 +47,7 @@ type panelBody struct {
 	ExitSurveyFormId  *int                              `json:"exit_survey_form_id"`
 	AccessControlList []database.PanelAccessControlRule `json:"access_control_list"`
 	PendingCategory   *uint64                           `json:"pending_category,string"`
+	DeleteMentions    bool                              `json:"delete_mentions"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -233,6 +234,7 @@ func CreatePanel(c *gin.Context) {
 		Disabled:            data.Disabled,
 		ExitSurveyFormId:    data.ExitSurveyFormId,
 		PendingCategory:     data.PendingCategory,
+		DeleteMentions:      data.DeleteMentions,
 	}
 
 	createOptions := panelCreateOptions{

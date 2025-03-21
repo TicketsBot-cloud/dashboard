@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"math"
+	"fmt"
 
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
+	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/rxdn/gdl/objects/channel/embed"
 	"github.com/rxdn/gdl/objects/interaction/component"
@@ -38,8 +40,7 @@ func multiPanelIntoMessageData(panel database.MultiPanel, isPremium bool) multiP
 
 func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.Panel) (uint64, error) {
 	if !d.IsPremium {
-		// TODO: Don't harcode
-		d.Embed.SetFooter("Powered by ticketsbot.cloud", "https://ticketsbot.cloud/assets/img/logo.png")
+		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
 	}
 
 	var components []component.Component

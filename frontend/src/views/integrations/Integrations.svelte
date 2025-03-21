@@ -28,7 +28,7 @@
                 <div class="integration">
                     <Integration builtIn name="Bloxlink"
                                  imageUrl="https://dbl-static.b-cdn.net/9bbd1f9504ddefc89606b19b290e9a0f.png"
-                                 viewLink="https://docs.ticketsbot.cloud/dashboard/settings/placeholders#bloxlink">
+                                 viewLink={`${DOCS_URL}/dashboard/settings/placeholders#bloxlink`}>
           <span slot="description">
             Our Bloxlink integration inserts the Roblox usernames, profile URLs and more of your users into
             ticket welcome messages automatically! This integration is automatically enabled in all servers, press the
@@ -65,7 +65,7 @@
 <script>
     import {notifyError, notifySuccess, withLoadingScreen} from '../../js/util'
     import axios from "axios";
-    import {API_URL} from "../../js/constants";
+    import {API_URL, DOCS_URL} from "../../js/constants";
     import {setDefaultHeaders} from '../../includes/Auth.svelte'
     import Integration from "../../components/manage/Integration.svelte";
     import Button from "../../components/Button.svelte";

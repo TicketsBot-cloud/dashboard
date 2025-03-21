@@ -27,7 +27,7 @@
           </div>
         </Collapsible>
 
-        <Collapsible defaultOpen tooltip="Click here to find out more about thread mode" tooltipUrl="https://docs.ticketsbot.cloud/features/thread-mode">
+        <Collapsible defaultOpen tooltip="Click here to find out more about thread mode" tooltipUrl={`${DOCS_URL}/features/thread-mode`}>
           <span slot="header" class="header">Thread Mode</span>
           <div slot="content" class="col-1">
             <div class="row">
@@ -209,6 +209,7 @@
     import {toDays, toHours, toMinutes} from "../../js/timeutil";
     import Toggle from "../form/Toggle.svelte";
     import IconBadge from "../IconBadge.svelte";
+    import {DOCS_URL} from "../../js/constants";
 
     export let guildId;
 

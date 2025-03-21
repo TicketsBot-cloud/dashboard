@@ -141,7 +141,7 @@
                 <div class="section">
                   <p>You can specify a URL to send a POST request to when a user adds your integration to their server /
                     updates the secrets. Respond with 2XX if the secrets are valid, or any other status code to reject
-                    them. You can read more about secret validation in our <a class="link-blue" href="https://docs.ticketsbot.cloud/integrations/building-integrations#secret-validation">documentation</a>.</p>
+                    them. You can read more about secret validation in our <a class="link-blue" href={`${DOCS_URL}/integrations/building-integrations#secret-validation`}>documentation</a>.</p>
                   <Input col1 label="Validation URL (Optional)" bind:value={data.validation_url}
                          on:change={ensureNullIfBlank} placeholder="https://api.example.com/validate"/>
                 </div>
@@ -272,6 +272,7 @@
     import Textarea from "./form/Textarea.svelte";
     import {createEventDispatcher, onMount} from "svelte";
     import ConfirmationModal from "./ConfirmationModal.svelte";
+    import {DOCS_URL} from "../js/constants";
 
     const dispatch = createEventDispatcher();
 

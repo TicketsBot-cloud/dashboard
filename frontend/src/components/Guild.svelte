@@ -16,7 +16,7 @@
             <span class="no-permission">
             No permission
             <Tooltip tip="You do not have permission to manage this server." top color="#121212">
-                <a href="https://docs.ticketsbot.cloud/miscellaneous/dashboard-no-permission" target="_blank">
+                <a href={`${DOCS_URL}/miscellaneous/dashboard-no-permission`} target="_blank">
                     <i class="fas fa-circle-question form-label tooltip-icon"></i>
                 </a>
             </Tooltip>
@@ -27,6 +27,7 @@
 
 <script>
     import Tooltip from "svelte-tooltip";
+    import {DOCS_URL} from "../js/constants";
 
     export let guild;
 

@@ -33,7 +33,7 @@
     <nav class="bottom">
         <hr/>
         <ul class="nav-list">
-            <ManageSidebarLink {currentRoute} title="Documentation" icon="fa-book" href="https://docs.ticketsbot.cloud" newWindow />
+            <ManageSidebarLink {currentRoute} title="Documentation" icon="fa-book" href={DOCS_URL} newWindow />
             <ManageSidebarLink {currentRoute} title="Logout" icon="fa-sign-out-alt" href="/logout" />
         </ul>
     </nav>
@@ -93,7 +93,7 @@
 <script>
     import {onMount} from "svelte";
     import axios from "axios";
-    import {API_URL} from "../js/constants";
+    import {API_URL, DOCS_URL} from "../js/constants";
     import {notifyError, withLoadingScreen} from "../js/util";
     import {getIconUrl, getDefaultIcon} from "../js/icons";
     import ManageSidebarLink from "./ManageSidebarLink.svelte";

@@ -19,8 +19,8 @@ require (
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.32.0
 	github.com/gin-gonic/contrib v0.0.0-20191209060500-d6e26eeaa607
-	github.com/gin-gonic/gin v1.10.0
-	github.com/go-playground/validator/v10 v10.26.0
+	github.com/gin-gonic/gin v1.9.1
+	github.com/go-playground/validator/v10 v10.14.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-redis/redis_rate/v9 v9.1.1

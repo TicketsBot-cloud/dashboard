@@ -31,6 +31,8 @@
                                 <option value="0">Playing</option>
                                 <option value="2">Listening</option>
                                 <option value="3">Watching</option>
+                                <option value="5">Competing</option>
+                                <option value="4">Custom</option>
                             </Dropdown>
 
                             <div class="col-2-3">

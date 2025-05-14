@@ -51,6 +51,8 @@ func WhitelabelStatusPost(c *gin.Context) {
 		user.ActivityTypePlaying,
 		user.ActivityTypeListening,
 		user.ActivityTypeWatching,
+		user.ActivityTypeCompeting,
+		user.ActivityTypeCustom,
 	}
 
 	if !utils.Contains(validActivities, data.StatusType) {

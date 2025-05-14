@@ -14,10 +14,10 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/channel"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/rxdn/gdl/objects/channel"
-	"github.com/rxdn/gdl/rest/request"
 	"golang.org/x/sync/errgroup"
 )
 

@@ -13,10 +13,10 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/interaction"
+	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/rxdn/gdl/objects/interaction"
-	"github.com/rxdn/gdl/rest"
 )
 
 type tag struct {

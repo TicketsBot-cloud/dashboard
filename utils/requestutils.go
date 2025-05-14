@@ -9,7 +9,7 @@ import (
 )
 
 func ErrorJson(err error) map[string]any {
-	log.Logger.Error("An error occurred", zap.Error(err))
+	log.Logger.Error(err.Error(), zap.Error(err))
 	return ErrorStr(err.Error())
 }
 

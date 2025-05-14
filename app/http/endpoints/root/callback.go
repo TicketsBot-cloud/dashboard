@@ -13,10 +13,10 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/rest/request"
 )
 
 func CallbackHandler(c *gin.Context) {

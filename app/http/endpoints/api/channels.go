@@ -7,9 +7,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/objects/channel"
+	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/channel"
-	"github.com/rxdn/gdl/rest"
 )
 
 func ChannelsHandler(ctx *gin.Context) {

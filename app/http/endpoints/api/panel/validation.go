@@ -16,9 +16,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/objects/channel"
-	"github.com/rxdn/gdl/objects/guild"
-	"github.com/rxdn/gdl/objects/interaction/component"
+	"github.com/TicketsBot-cloud/gdl/objects/channel"
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
+	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 )
 
 func ApplyPanelDefaults(data *panelBody) {

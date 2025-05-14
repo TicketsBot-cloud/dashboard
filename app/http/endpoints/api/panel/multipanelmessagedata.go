@@ -7,10 +7,10 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/objects/channel/embed"
-	"github.com/rxdn/gdl/objects/interaction/component"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/utils"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
+	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/utils"
 )
 
 type multiPanelMessageData struct {

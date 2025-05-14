@@ -12,9 +12,9 @@ import (
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
+	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/jackc/pgtype"
-	"github.com/rxdn/gdl/objects/guild"
-	"github.com/rxdn/gdl/rest"
 	errgroup "golang.org/x/sync/errgroup"
 )
 

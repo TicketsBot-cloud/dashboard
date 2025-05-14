@@ -3,7 +3,7 @@ package types
 import (
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/objects/channel/embed"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
 )
 
 type CustomEmbed struct {

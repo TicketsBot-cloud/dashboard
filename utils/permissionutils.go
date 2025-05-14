@@ -9,7 +9,7 @@ import (
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/internal/api"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/objects/member"
+	"github.com/TicketsBot-cloud/gdl/objects/member"
 )
 
 func GetPermissionLevel(ctx context.Context, guildId, userId uint64) (permission.PermissionLevel, error) {

@@ -4,11 +4,11 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/objects"
-	"github.com/rxdn/gdl/objects/channel/embed"
-	"github.com/rxdn/gdl/objects/guild/emoji"
-	"github.com/rxdn/gdl/objects/interaction/component"
-	"github.com/rxdn/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/objects"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
+	"github.com/TicketsBot-cloud/gdl/objects/guild/emoji"
+	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
+	"github.com/TicketsBot-cloud/gdl/rest"
 )
 
 type panelMessageData struct {

@@ -10,9 +10,9 @@ import (
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/rest/request"
 )
 
 func MultiPanelResend(ctx *gin.Context) {

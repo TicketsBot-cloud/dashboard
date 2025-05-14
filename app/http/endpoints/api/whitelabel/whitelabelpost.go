@@ -16,11 +16,11 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/TicketsBot/worker/bot/command/manager"
+	"github.com/TicketsBot-cloud/gdl/objects/application"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
+	"github.com/TicketsBot-cloud/worker/bot/command/manager"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/application"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/rest/request"
 )
 
 func WhitelabelPost() func(*gin.Context) {

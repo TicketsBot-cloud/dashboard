@@ -77,7 +77,6 @@
                                 {/each}
                             </div>
                         {/if}
-
                         {#if message.attachments?.length > 0}
                             <div class="attachment-wrapper">
                                 {#each message.attachments.filter(a => isImage(a.filename)) as attachment}

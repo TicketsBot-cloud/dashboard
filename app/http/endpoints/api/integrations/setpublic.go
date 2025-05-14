@@ -8,9 +8,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
+	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/channel/embed"
-	"github.com/rxdn/gdl/rest"
 )
 
 func SetIntegrationPublicHandler(ctx *gin.Context) {

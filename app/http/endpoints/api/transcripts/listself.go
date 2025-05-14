@@ -9,9 +9,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
+	cache2 "github.com/TicketsBot-cloud/gdl/cache"
+	gdlutils "github.com/TicketsBot-cloud/gdl/utils"
 	"github.com/gin-gonic/gin"
-	cache2 "github.com/rxdn/gdl/cache"
-	gdlutils "github.com/rxdn/gdl/utils"
 	"golang.org/x/sync/errgroup"
 )
 

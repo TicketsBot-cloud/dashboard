@@ -5,8 +5,8 @@ import (
 
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/objects/member"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/member"
 )
 
 func SearchMembers(ctx *gin.Context) {

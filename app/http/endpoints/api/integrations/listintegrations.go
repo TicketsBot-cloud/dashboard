@@ -8,8 +8,8 @@ import (
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/user"
 )
 
 const pageLimit = 20

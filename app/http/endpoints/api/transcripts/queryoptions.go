@@ -6,7 +6,7 @@ import (
 
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/utils"
+	"github.com/TicketsBot-cloud/gdl/utils"
 )
 
 type wrappedQueryOptions struct {

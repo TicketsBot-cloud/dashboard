@@ -2,8 +2,9 @@ package chatreplica
 
 import (
 	"fmt"
-	"github.com/rxdn/gdl/objects/channel/message"
 	"strconv"
+
+	"github.com/TicketsBot-cloud/gdl/objects/channel/message"
 )
 
 func FromArchiveMessages(messages []message.Message, ticketId int) Payload {

@@ -7,8 +7,8 @@ import (
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/TicketsBot/worker/bot/customisation"
-	"github.com/TicketsBot/worker/i18n"
+	"github.com/TicketsBot-cloud/worker/bot/customisation"
+	"github.com/TicketsBot-cloud/worker/i18n"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 )

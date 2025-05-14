@@ -8,8 +8,8 @@ import (
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/gin-gonic/gin"
-	cache2 "github.com/rxdn/gdl/cache"
 )
 
 // requires AuthenticateCookie middleware to be run before

@@ -84,7 +84,7 @@ func main() {
 	cache.Instance = cache.NewCache()
 
 	logger.Info("Connecting to import S3")
-	s3.ConnectS3(config.Conf.S3Import.Endpoint, config.Conf.S3Import.AccessKey, config.Conf.S3Import.SecretKey)
+	s3.ConnectS3(config.Conf.S3Import.Endpoint, config.Conf.S3Import.AccessKey, config.Conf.S3Import.SecretKey, config.Conf.S3Import.Secure)
 
 	logger.Info("Initialising microservice clients")
 	utils.ArchiverClient = archiverclient.NewArchiverClient(archiverclient.NewProxyRetriever(config.Conf.Bot.ObjectStore), []byte(config.Conf.Bot.AesKey))

@@ -8,6 +8,7 @@ toolchain go1.24.2
 // replace github.com/TicketsBot-cloud/gdl => ../gdl
 // replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
 // replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
+// replace github.com/TicketsBot-cloud/worker => ../worker
 
 require (
 	github.com/BurntSushi/toml v1.2.1
@@ -44,7 +45,7 @@ require (
 require (
 	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250514201320-d5141071a6eb
-	github.com/TicketsBot-cloud/worker v0.0.0-20250509070110-e1af3e1f7228
+	github.com/TicketsBot-cloud/worker v0.0.0-20250514210747-48c7e67e5129
 )
 
 require (

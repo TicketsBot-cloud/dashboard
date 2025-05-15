@@ -39,6 +39,7 @@
     setDefaultHeaders();
 
     let guilds = window.localStorage.getItem('guilds') ? JSON.parse(window.localStorage.getItem('guilds')) : [];
+    guilds = guilds.sort((a, b) => a.name.localeCompare(b.name));
 
     async function refreshGuilds() {
         await withLoadingScreen(async () => {

@@ -12,11 +12,12 @@ import (
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/channel"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
+	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
+	"github.com/TicketsBot-cloud/gdl/objects/user"
+	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/channel"
-	"github.com/rxdn/gdl/objects/channel/embed"
-	"github.com/rxdn/gdl/objects/user"
-	"github.com/rxdn/gdl/rest"
 )
 
 var MentionRegex, _ = regexp.Compile("<@(\\d+)>")
@@ -85,11 +86,12 @@ func GetTicket(c *gin.Context) {
 }
 
 type StrippedMessage struct {
-	Author      user.User            `json:"author"`
-	Content     string               `json:"content"`
-	Timestamp   time.Time            `json:"timestamp"`
-	Attachments []channel.Attachment `json:"attachments"`
-	Embeds      []embed.Embed        `json:"embeds"`
+	Author      user.User             `json:"author"`
+	Content     string                `json:"content"`
+	Timestamp   time.Time             `json:"timestamp"`
+	Attachments []channel.Attachment  `json:"attachments"`
+	Embeds      []embed.Embed         `json:"embeds"`
+	Components  []component.Component `json:"components"`
 }
 
 func fetchMessages(botContext *botcontext.BotContext, ticket database.Ticket) ([]StrippedMessage, error) {
@@ -108,6 +110,7 @@ func fetchMessages(botContext *botcontext.BotContext, ticket database.Ticket) ([
 			Timestamp:   message.Timestamp,
 			Attachments: message.Attachments,
 			Embeds:      message.Embeds,
+			Components:  message.Components,
 		}
 	}
 

@@ -14,7 +14,9 @@
                 <ManageSidebarLink {currentRoute} title="Settings" icon="fa-cogs" href="/manage/{guildId}/settings" />
             {/if}
 
-            <ManageSidebarLink {currentRoute} title="Transcripts" icon="fa-copy" href="/manage/{guildId}/transcripts" />
+            {#if isMod}
+                <ManageSidebarLink {currentRoute} title="Transcripts" icon="fa-copy" href="/manage/{guildId}/transcripts" />
+            {/if}
 
             {#if isAdmin}
                 <ManageSidebarLink {currentRoute} routePrefix="/manage/{guildId}/panels" title="Ticket Panels" icon="fa-mouse-pointer" href="/manage/{guildId}/panels" />
@@ -25,9 +27,11 @@
                 <ManageSidebarLink {currentRoute} title="Import" icon="fa-file-import" href="/manage/{guildId}/import" />
             {/if}
 
-            <ManageSidebarLink {currentRoute} title="Tickets" icon="fa-ticket-alt" href="/manage/{guildId}/tickets" />
-            <ManageSidebarLink {currentRoute} title="Blacklist" icon="fa-ban" href="/manage/{guildId}/blacklist" />
-            <ManageSidebarLink {currentRoute} title="Tags" icon="fa-tags" href="/manage/{guildId}/tags" />
+            {#if isMod}
+                <ManageSidebarLink {currentRoute} title="Tickets" icon="fa-ticket-alt" href="/manage/{guildId}/tickets" />
+                <ManageSidebarLink {currentRoute} title="Blacklist" icon="fa-ban" href="/manage/{guildId}/blacklist" />
+                <ManageSidebarLink {currentRoute} title="Tags" icon="fa-tags" href="/manage/{guildId}/tags" />
+            {/if}
         </ul>
     </nav>
     <nav class="bottom">
@@ -109,6 +113,8 @@
     let importModal = false;
 
     $: isAdmin = permissionLevel >= 2;
+    $: isMod = permissionLevel >= 1;
+    $: isUser = permissionLevel >= 0;
 
     let guildId = currentRoute.namedParams.id;
 

@@ -122,7 +122,7 @@
 
         .navbar.dropdown, .wrapper.dropdown {
             height: 100%;
-            overflow: hidden;
+            overflow: scroll;
         }
 
         .wrapper.dropdown {

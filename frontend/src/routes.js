@@ -37,6 +37,8 @@ import EditMultiPanel from "./views/panels/EditMultiPanel.svelte";
 import SelectServers from "./views/premium/SelectServers.svelte";
 import Import from './views/Import.svelte'
 
+import TranscriptsView2 from './views/TranscriptView2.svelte'
+
 import LegalLayout from "./layouts/LegalLayout.svelte"
 import PrivacyPolicy from "./views/legal/PrivacyPolicy.svelte"
 import TermsOfService from "./views/legal/TOS.svelte"
@@ -86,8 +88,8 @@ export const routes = [
                     },
                     {
                         name: 'view/:ticketid',
-                        component: TranscriptView, // just to test
-                        layout: TranscriptViewLayout,
+                        component: TranscriptsView2, // Switched to the new view for now
+                        layout: ManageLayout,
                     }
                 ]
             },

@@ -12,15 +12,16 @@ import (
 	"github.com/TicketsBot-cloud/common/tokenchange"
 	"github.com/TicketsBot-cloud/common/whitelabeldelete"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/TicketsBot/worker/bot/command/manager"
+	"github.com/TicketsBot-cloud/gdl/objects/application"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
+	"github.com/TicketsBot-cloud/worker/bot/command/manager"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/application"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/rest/request"
 )
 
 func WhitelabelPost() func(*gin.Context) {
@@ -91,8 +92,7 @@ func WhitelabelPost() func(*gin.Context) {
 				application.FlagIntentGatewayGuildMembersLimited,
 				application.FlagGatewayMessageContentLimited,
 			)),
-			// TODO: Don't hardcode URL
-			InteractionsEndpointUrl: utils.Ptr(fmt.Sprintf("https://gateway.ticketsbot.cloud/handle/%d", bot.Id)),
+			InteractionsEndpointUrl: utils.Ptr(fmt.Sprintf("%s/handle/%d", config.Conf.Bot.InteractionsBaseUrl, bot.Id)),
 		}
 
 		if _, err := rest.EditCurrentApplication(context.Background(), data.Token, nil, editData); err != nil {

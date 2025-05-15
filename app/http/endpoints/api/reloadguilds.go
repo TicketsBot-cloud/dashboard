@@ -11,9 +11,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	wrapper "github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/rest/request"
 )
 
 func ReloadGuildsHandler(c *gin.Context) {

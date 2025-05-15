@@ -6,16 +6,18 @@ import (
 
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/utils"
+	"github.com/TicketsBot-cloud/gdl/utils"
 )
 
 type wrappedQueryOptions struct {
-	Id       int    `json:"id,string"`
-	Username string `json:"username"`
-	UserId   uint64 `json:"user_id,string"`
-	PanelId  int    `json:"panel_id"`
-	Page     int    `json:"page"`
-	Rating   int    `json:"rating,string"`
+	Id          int    `json:"id,string"`
+	Username    string `json:"username"`
+	UserId      uint64 `json:"user_id,string"`
+	PanelId     int    `json:"panel_id"`
+	Page        int    `json:"page"`
+	Rating      int    `json:"rating,string"`
+	ClosedById  uint64 `json:"closed_by_id,string"`
+	ClaimedById uint64 `json:"claimed_by_id,string"`
 }
 
 func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQueryOptions, error) {
@@ -29,7 +31,7 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 
 		// TODO: Do this better
 		if len(userIds) == 0 {
-			return database.TicketQueryOptions{}, errors.New("User not found")
+			return database.TicketQueryOptions{}, errors.New("user not found")
 		}
 	}
 
@@ -47,15 +49,17 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 	}
 
 	opts := database.TicketQueryOptions{
-		Id:      o.Id,
-		GuildId: guildId,
-		UserIds: userIds,
-		Open:    utils.BoolPtr(false),
-		PanelId: o.PanelId,
-		Rating:  o.Rating,
-		Order:   database.OrderTypeDescending,
-		Limit:   pageLimit,
-		Offset:  offset,
+		Id:          o.Id,
+		GuildId:     guildId,
+		UserIds:     userIds,
+		Open:        utils.BoolPtr(false),
+		PanelId:     o.PanelId,
+		Rating:      o.Rating,
+		ClosedById:  o.ClosedById,
+		ClaimedById: o.ClaimedById,
+		Order:       database.OrderTypeDescending,
+		Limit:       pageLimit,
+		Offset:      offset,
 	}
 	return opts, nil
 }

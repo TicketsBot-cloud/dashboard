@@ -17,13 +17,16 @@
 
             <Input col4=true label="User ID" placeholder="User ID" on:input={handleInputUserId}
                    bind:value={filterSettings.userId}/>
+
+            <Input col4=true label="Closed By Id" placeholder="Closed By" on:input={handleInputClosedById}
+                  bind:value={filterSettings.closedById}/>
           </div>
           <div class="row">
             <div class="col-4">
               <PanelDropdown label="Panel" isMulti={false} bind:panels bind:selected={selectedPanel} />
             </div>
 
-            <Dropdown label="Rating" bind:value={filterSettings.rating}>
+            <Dropdown col4=true label="Rating" bind:value={filterSettings.rating}>
               <option value=0>Any</option>
               <option value=1>1 ⭐</option>
               <option value=2>2 ⭐</option>
@@ -31,6 +34,9 @@
               <option value=4>4 ⭐</option>
               <option value=5>5 ⭐</option>
             </Dropdown>
+
+            <Input col4=true label="Claimed By Id" placeholder="Claimed By" on:input={handleInputClaimedById}
+                  bind:value={filterSettings.claimedById}/>
           </div>
         </div>
       </div>
@@ -150,6 +156,18 @@
         }
     };
 
+    let handleInputClosedById = () => {
+        if (filterSettings.closedById == "") {
+            filterSettings.closedById = undefined;
+        }
+    };
+
+    let handleInputClaimedById = () => {
+        if (filterSettings.claimedById == "") {
+            filterSettings.claimedById = undefined;
+        }
+    };
+
     let loading = false;
 
     async function loadPrevious() {
@@ -190,6 +208,8 @@
             id: filterSettings.ticketId,
             username: filterSettings.username,
             user_id: filterSettings.userId,
+            closed_by_id: filterSettings.closedById,
+            claimed_by_id: filterSettings.claimedById,
             rating: filterSettings.rating,
             panel_id: selectedPanel,
             page: page,

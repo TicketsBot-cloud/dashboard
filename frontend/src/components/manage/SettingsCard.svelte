@@ -1,4 +1,4 @@
-{#if data}
+{#if data && loaded}
   <Card footer="{false}" fill="{false}">
   <span slot="title">
     Settings
@@ -218,6 +218,7 @@
     let channels = [];
     let panels = [];
     let isPremium = false;
+    let loaded = false;
 
     let data;
 
@@ -409,6 +410,7 @@
             loadPremium(),
             loadSettings()
         ]);
+        loaded = true;
 
         if (data.archive_channel && !channels.some(c => c.id === data.archive_channel)) {
             await loadChannels(true);

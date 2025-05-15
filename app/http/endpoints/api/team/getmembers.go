@@ -10,8 +10,8 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/user"
 	"golang.org/x/sync/errgroup"
 )
 

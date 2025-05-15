@@ -67,11 +67,11 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 
 	// Render
 	payload := chatreplica.FromTranscript(transcript, ticketId)
-	html, err := chatreplica.Render(payload)
+	// html, err := chatreplica.Render(payload)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorJson(err))
 		return
 	}
 
-	ctx.Data(200, "text/html", html)
+	ctx.JSON(200, payload)
 }

@@ -123,12 +123,11 @@
     }
 
     .logo {
-        width: 100%;
+        width: 90%;
         border-radius: 10px 10px 0 0;
-        min-height: 150px;
-        height: 150px;
         max-height: 150px;
         object-fit: cover;
+        margin: auto;
     }
 
     .details {

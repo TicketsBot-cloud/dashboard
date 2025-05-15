@@ -125,6 +125,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 		guildAuthApiAdmin.POST("/import", api_import.ImportHandler)
 		guildAuthApiAdmin.GET("/import/runs", api_import.GetRuns)
 		guildAuthApiAdmin.GET("/import/presign", api_import.PresignURL)
+		guildAuthApiAdmin.GET("/import/queue", api_import.CurrentQueue)
 
 		guildAuthApiSupport.GET("/blacklist", api_blacklist.GetBlacklistHandler)
 		guildAuthApiSupport.POST("/blacklist", api_blacklist.AddBlacklistHandler)

@@ -8,7 +8,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
-	"github.com/rxdn/gdl/rest/ratelimit"
+	"github.com/TicketsBot-cloud/gdl/rest/ratelimit"
 )
 
 func ContextForGuild(guildId uint64) (*BotContext, error) {

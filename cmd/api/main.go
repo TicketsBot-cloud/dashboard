@@ -21,9 +21,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/s3"
 	"github.com/TicketsBot-cloud/dashboard/utils"
-	"github.com/TicketsBot/worker/i18n"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
+	"github.com/TicketsBot-cloud/worker/i18n"
 	"github.com/getsentry/sentry-go"
-	"github.com/rxdn/gdl/rest/request"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -84,7 +84,7 @@ func main() {
 	cache.Instance = cache.NewCache()
 
 	logger.Info("Connecting to import S3")
-	s3.ConnectS3(config.Conf.S3Import.Endpoint, config.Conf.S3Import.AccessKey, config.Conf.S3Import.SecretKey)
+	s3.ConnectS3(config.Conf.S3Import.Endpoint, config.Conf.S3Import.AccessKey, config.Conf.S3Import.SecretKey, config.Conf.S3Import.Secure)
 
 	logger.Info("Initialising microservice clients")
 	utils.ArchiverClient = archiverclient.NewArchiverClient(archiverclient.NewProxyRetriever(config.Conf.Bot.ObjectStore), []byte(config.Conf.Bot.AesKey))

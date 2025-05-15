@@ -13,10 +13,10 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/TicketsBot/worker/bot/customisation"
-	"github.com/TicketsBot/worker/i18n"
+	"github.com/TicketsBot-cloud/gdl/objects/channel"
+	"github.com/TicketsBot-cloud/worker/bot/customisation"
+	"github.com/TicketsBot-cloud/worker/i18n"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/objects/channel"
 	"golang.org/x/sync/errgroup"
 )
 

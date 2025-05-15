@@ -16,11 +16,54 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/s3"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/minio/minio-go/v7"
 )
 
 //	func ImportHandler(ctx *gin.Context) {
 //		ctx.JSON(401, "This endpoint is disabled")
 //	}
+
+func CurrentQueue(ctx *gin.Context) {
+	guildId, userId := ctx.Keys["guildid"].(uint64), ctx.Keys["userid"].(uint64)
+	var (
+		dataBucket        = config.Conf.S3Import.DataBucket
+		transcriptsBucket = config.Conf.S3Import.TranscriptBucket
+		opts              = minio.ListObjectsOptions{
+			Prefix:    "",
+			Recursive: true,
+		}
+
+		dataCount        int
+		transcriptsCount int
+	)
+
+	permissionLevel, err := utils.GetPermissionLevel(ctx, guildId, userId)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		return
+	}
+
+	if permissionLevel < permission.Admin {
+		ctx.JSON(403, utils.ErrorStr("You do not have permission to view import queue"))
+		return
+	}
+
+	dataCh := s3.S3Client.ListObjects(ctx, dataBucket, opts)
+	transcriptsCh := s3.S3Client.ListObjects(ctx, transcriptsBucket, opts)
+
+	for range dataCh {
+		dataCount++
+	}
+
+	for range transcriptsCh {
+		transcriptsCount++
+	}
+
+	ctx.JSON(200, gin.H{
+		"data":        dataCount,
+		"transcripts": transcriptsCount,
+	})
+}
 
 func PresignURL(ctx *gin.Context) {
 	guildId, userId := ctx.Keys["guildid"].(uint64), ctx.Keys["userid"].(uint64)
@@ -79,8 +122,8 @@ func PresignURL(ctx *gin.Context) {
 		return
 	}
 
-	if guild.OwnerId != userId {
-		ctx.JSON(403, utils.ErrorStr("Only the server owner can import transcripts"))
+	if guild.OwnerId != userId && !botCtx.IsBotAdmin(ctx, userId) {
+		ctx.JSON(403, utils.ErrorStr("Only the server owner can import %s", file_type))
 		return
 	}
 

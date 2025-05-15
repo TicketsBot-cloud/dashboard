@@ -2,8 +2,8 @@ package utils
 
 import (
 	"github.com/TicketsBot-cloud/common/collections"
-	"github.com/rxdn/gdl/objects/channel/message"
-	"github.com/rxdn/gdl/objects/guild"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/message"
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
 )
 
 func Contains[T comparable](slice []T, value T) bool {

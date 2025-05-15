@@ -12,9 +12,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
-	"github.com/TicketsBot/worker/bot/command/manager"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/worker/bot/command/manager"
 	"github.com/gin-gonic/gin"
-	"github.com/rxdn/gdl/rest"
 )
 
 // TODO: Refactor

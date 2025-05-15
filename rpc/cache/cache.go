@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/TicketsBot-cloud/dashboard/config"
+	gdlcache "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/jackc/pgx/v4/pgxpool"
-	gdlcache "github.com/rxdn/gdl/cache"
 )
 
 type Cache struct {

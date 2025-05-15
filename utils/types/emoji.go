@@ -3,8 +3,9 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rxdn/gdl/objects"
-	"github.com/rxdn/gdl/objects/guild/emoji"
+
+	"github.com/TicketsBot-cloud/gdl/objects"
+	"github.com/TicketsBot-cloud/gdl/objects/guild/emoji"
 )
 
 type Emoji struct {

@@ -189,7 +189,7 @@
             placeholder: "",
             required: true,
             min_length: 0,
-            max_length: 1024,
+            max_length: 255,
             is_new: true,
         };
 

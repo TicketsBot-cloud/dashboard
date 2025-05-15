@@ -44,6 +44,11 @@
                             <Button icon="fas fa-paper-plane" on:click={updateStatus} fullWidth="{true}">
                                 Submit
                             </Button>
+                            {#if bot.status_type != "0" && bot.status != ""}
+                              <Button icon="fas fa-trash-can" on:click={deleteStatus} danger fullWidth="{true}">
+                                Clear Status
+                              </Button>
+                            {/if}
                         </div>
                     </form>
                 </div>
@@ -251,6 +256,21 @@
         }
 
         notifySuccess('Updated status successfully')
+    }
+
+    async function deleteStatus() {
+        const res = await axios.delete(`${API_URL}/user/whitelabel/status`);
+        if (res.status !== 200 || !res.data.success) {
+            if (res.status === 429) {
+                notifyRatelimit()
+            } else {
+                notifyError(res.data.error)
+            }
+
+            return;
+        }
+
+        notifySuccess('Deleted status successfully')
     }
 
     async function loadBot() {

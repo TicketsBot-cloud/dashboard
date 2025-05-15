@@ -71,12 +71,12 @@ export default {
 
         replace({
             env: JSON.stringify({
-				CLIENT_ID: process.env.CLIENT_ID,
-				REDIRECT_URI: process.env.REDIRECT_URI,
-				API_URL: process.env.API_URL,
-				WS_URL: process.env.WS_URL,
-				INVITE_URL: process.env.INVITE_URL,
-			})
+                CLIENT_ID: process.env.CLIENT_ID,
+                REDIRECT_URI: process.env.REDIRECT_URI,
+                API_URL: process.env.API_URL,
+                WS_URL: process.env.WS_URL,
+                INVITE_URL: process.env.INVITE_URL,
+            })
         }),
 
         // In dev mode, call `npm run start` once

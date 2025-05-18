@@ -67,7 +67,7 @@ func MessagesFromTranscript(messages []v2.Message) []Message {
 	var wrappedMessages []Message
 
 	for _, msg := range messages {
-		if msg.Content == "" && len(msg.Embeds) == 0 && len(msg.Attachments) == 0 {
+		if msg.Content == "" && len(msg.Embeds) == 0 && len(msg.Attachments) == 0 && len(msg.Components) == 0 {
 			continue
 		}
 

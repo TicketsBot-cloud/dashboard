@@ -99,7 +99,7 @@
 
             <div class="row">
                 <Colour col4=true label="Panel Colour" on:change={updateColour} bind:value={tempColour}/>
-                <ChannelDropdown label="Panel Channel" allowAnnouncementChannel col4 {channels} bind:value={data.channel_id}/>
+                <ChannelDropdown label="Panel Channel" withNull nullLabel={"None"} allowAnnouncementChannel col4 {channels} bind:value={data.channel_id}/>
                 <div class="col-2">
                     <div class="row" style="justify-content: flex-start; gap: 10px">
                         <div style="white-space: nowrap">

@@ -58,11 +58,13 @@
     setDefaultHeaders();
 
     let guilds = window.localStorage.getItem('guilds') ? JSON.parse(window.localStorage.getItem('guilds')) : [];
-    guilds = guilds.sort((a, b) => {
-      if (a.permission_level > 0 && b.permission_level <= 0) return -1;
-      if (a.permission_level <= 0 && b.permission_level > 0) return 1;
-      return a.name.localeCompare(b.name);
-    });
+    if(guilds.length > 0) {
+      guilds = guilds.sort((a, b) => {
+        if (a.permission_level > 0 && b.permission_level <= 0) return -1;
+        if (a.permission_level <= 0 && b.permission_level > 0) return 1;
+        return a.name?.localeCompare(b.name);
+      });
+    }
 
     async function refreshGuilds() {
         await withLoadingScreen(async () => {

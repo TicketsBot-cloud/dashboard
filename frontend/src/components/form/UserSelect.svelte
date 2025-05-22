@@ -1,9 +1,9 @@
 {#if label !== undefined}
-  <label class="form-label">{label}</label>
+  <label class="form-label" for={selectId}>{label}</label>
 {/if}
 
 <WrappedSelect placeholder="Search..." loadOptionsInterval={500} {loadOptions} optionIdentifier="id"
-               bind:selectedValue={value} nameMapper={labelMapper}/>
+               bind:selectedValue={value} nameMapper={labelMapper} aria-labelledby={selectId}/>
 
 <script>
     import axios from "axios";
@@ -12,11 +12,14 @@
     import {API_URL} from "../../js/constants";
     import {notifyError, notifyRatelimit} from "../../js/util";
     import WrappedSelect from "../WrappedSelect.svelte";
+    import {labelHash} from "../../js/labelHash";
 
     export let label;
     export let guildId;
 
     export let value;
+
+    $: selectId = label !== undefined ? `userselect-${labelHash(label)}` : undefined;
 
     async function loadOptions(filterText) {
         const res = await axios.get(`${API_URL}/api/${guildId}/members/search?query=${filterText}`)

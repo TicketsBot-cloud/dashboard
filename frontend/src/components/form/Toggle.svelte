@@ -1,15 +1,18 @@
 <div class:inline>
   {#if label !== undefined}
-    <label class="form-label" style="margin-bottom: 0 !important;">{label}</label>
+    <label class="form-label" style="margin-bottom: 0 !important;" for={labelId}>{label}</label>
   {/if}
   <Toggle hideLabel
           toggledColor="{toggledColour}"
           untoggledColor="{untoggledColour}"
-          bind:toggled={value}/>
+          bind:toggled={value}
+          aria-labelledby={labelId}
+  />
 </div>
 
 <script>
     import Toggle from "svelte-toggle";
+    import {labelHash} from "../../js/labelHash";
 
     export let value;
     export let label;
@@ -17,6 +20,8 @@
     export let toggledColour = "#66bb6a";
     export let untoggledColour = "#ccc";
     export let inline = false;
+
+    $: labelId = label !== undefined ? `toggle-${labelHash(label)}` : undefined;
 </script>
 
 <style>

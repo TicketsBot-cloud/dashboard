@@ -122,23 +122,17 @@
 
             <div class="row" style="justify-content: space-between">
               <div class="col-2" style="flex-direction: row">
-                <Duration disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceOpenDays}
+                <Duration label="Since Open With No Response" disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceOpenDays}
                           bind:hours={sinceOpenHours}
                           bind:minutes={sinceOpenMinutes}>
-                  <div slot="header" class="header">
-                    <label class="form-label" style="margin-bottom: unset">Since Open With No Response</label>
-                    <PremiumBadge/>
-                  </div>
+                  <PremiumBadge slot="header"/>
                 </Duration>
               </div>
               <div class="col-2" style="flex-direction: row">
-                <Duration disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceLastDays}
+                <Duration label="Since Last Message" disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceLastDays}
                           bind:hours={sinceLastHours}
                           bind:minutes={sinceLastMinutes}>
-                  <div slot="header" class="header">
-                    <label class="form-label" style="margin-bottom: unset">Since Last Message</label>
-                    <PremiumBadge/>
-                  </div>
+                  <PremiumBadge slot="header"/>
                 </Duration>
               </div>
             </div>

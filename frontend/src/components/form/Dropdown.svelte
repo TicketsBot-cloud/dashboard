@@ -1,7 +1,7 @@
 <div class:col-1={col1} class:col-2={col2} class:col-3={col3} class:col-4={col4}>
   {#if label !== undefined}
     <div class="label-wrapper">
-      <label for="input" class="form-label">{label}</label>
+      <label for={selectId} class="form-label">{label}</label>
       {#if premiumBadge}
         <div style="margin-bottom: 5px">
           <PremiumBadge />
@@ -9,7 +9,7 @@
       {/if}
     </div>
   {/if}
-  <select id="input" class="form-input" on:change bind:value={value} {disabled} style="margin: 0">
+  <select id={selectId} class="form-input" on:change bind:value={value} {disabled} style="margin: 0">
     <slot />
   </select>
 </div>
@@ -29,6 +29,7 @@
 
 <script>
     import PremiumBadge from "../PremiumBadge.svelte";
+    import {labelHash} from "../../js/labelHash";
 
     export let value;
     export let label;
@@ -40,4 +41,6 @@
     export let col4 = false;
 
     export let premiumBadge = false;
+
+    $: selectId = label !== undefined ? `select-${labelHash(label)}` : undefined;
 </script>

@@ -1,7 +1,7 @@
 <div class:col-1={col1} class:col-2={col2} class:col-3={col3} class:col-4={col4}>
   {#if label !== undefined}
     <div class="label-wrapper" class:no-margin={tooltipText !== undefined}>
-      <label for="input" class="form-label" style="margin-bottom: 0">{label}</label>
+      <label for={inputId} class="form-label" style="margin-bottom: 0">{label}</label>
       {#if badge !== undefined}
         <Badge>{badge}</Badge>
       {/if}
@@ -20,13 +20,14 @@
       {/if}
     </div>
   {/if}
-  <input id="input" class="form-input" placeholder="{placeholder}" disabled="{disabled}" on:input on:change
+  <input id={inputId} class="form-input" placeholder="{placeholder}" disabled="{disabled}" on:input on:change
          bind:value={value}>
 </div>
 
 <script>
     import Tooltip from 'svelte-tooltip';
     import Badge from "../Badge.svelte";
+    import {labelHash} from "../../js/labelHash";
 
     export let value;
     export let label;
@@ -41,6 +42,8 @@
     export let col2 = false;
     export let col3 = false;
     export let col4 = false;
+
+    $: inputId = label !== undefined ? `input-${labelHash(label)}` : undefined;
 </script>
 
 <style>

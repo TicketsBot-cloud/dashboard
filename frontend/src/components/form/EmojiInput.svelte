@@ -33,8 +33,15 @@
 <style>
     input {
         width: 100%;
+        height: 42px;
+        margin: 0;
         border-top-right-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
+    }
+
+    input:focus-visible {
+        height: 42px;
+        margin: 0;
     }
 
     .wrapper {
@@ -59,6 +66,6 @@
     }
 
     .picker-wrapper {
-        max-height: 40px;
+        max-height: 42px;
     }
 </style>

@@ -140,7 +140,8 @@
                                         selectedValue={data.emote}
                                         optionIdentifier="id"
                                         nameMapper={emojiNameMapper}
-                                        placeholderAlwaysShow={true}
+                                        isSearchable={false}
+                                        isClearable={false}
                                         on:input={handleCustomEmojiChange} />
                             </div>
                         {:else}
@@ -218,6 +219,21 @@
     let selectedTeams = seedDefault ? [{id: 'default', name: 'Default'}] : [];
     let selectedMentions = [];
 
+    let lastCustomEmoji = undefined;
+    let lastUnicodeEmoji = '📩';
+
+    // Unicode emoji regex
+    const unicodeEmojiRegex = /^\p{Emoji}$/u;
+
+    function validateUnicodeEmoji(value) {
+        if (typeof value !== "string") return false;
+        if (/^<a?:\w+:\d+>$/.test(value)) return false;
+        // Disallow spaces
+        if (/\s/.test(value)) return false;
+        // Only allow if matches single unicode emoji
+        return unicodeEmojiRegex.test(value);
+    }
+
     // Replace spaces with dashes in naming scheme as the user types
     $: if (data.naming_scheme !== undefined && data.naming_scheme !== null && data.naming_scheme.includes(' ')) {
         data.naming_scheme = data.naming_scheme.replaceAll(' ', '-');
@@ -259,9 +275,19 @@
     function handleEmojiTypeChange(e) {
         let isCustomEmoji = e.detail;
         if (isCustomEmoji) {
-            data.emote = undefined;
+            // Restore last selected custom emoji if available, else first emoji
+            if (lastCustomEmoji) {
+                data.emote = lastCustomEmoji;
+            } else {
+                data.emote = emojis && emojis.length > 0 ? emojis[0] : undefined;
+            }
         } else {
-            data.emote = '📩';
+            // Save the current custom emoji before switching to default
+            if (data.emote && typeof data.emote === "object") {
+                lastCustomEmoji = data.emote;
+            }
+            // Restore last unicode emoji if available
+            data.emote = lastUnicodeEmoji || '📩';
         }
     }
 
@@ -271,6 +297,17 @@
             id: emoji.id,
             name: emoji.name
         };
+        lastCustomEmoji = data.emote;
+    }
+
+    // Track changes to EmojiInput (unicode emoji)
+    $: if (!data.use_custom_emoji && typeof data.emote === "string") {
+        if (validateUnicodeEmoji(data.emote)) {
+            lastUnicodeEmoji = data.emote;
+        } else {
+            // Revert to last valid unicode emoji if invalid input is detected
+            data.emote = lastUnicodeEmoji;
+        }
     }
 
     function updateColour() {
@@ -287,17 +324,17 @@
 
     function applyOverrides() {
         if (data.default_team === true) {
-            $: selectedTeams.push({id: 'default', name: 'Default'});
+            selectedTeams.push({id: 'default', name: 'Default'});
         }
 
         if (data.teams) {
-            $: data.teams
+            data.teams
                 .map((id) => teams.find((team) => team.id === id))
                 .forEach((team) => selectedTeams.push(team));
         }
 
         if (data.mentions) {
-            $: data.mentions
+            data.mentions
                 .map((id) => mentionItems.find((role) => role.id === id))
                 .forEach((mention) => selectedMentions.push(mention));
         }

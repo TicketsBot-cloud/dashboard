@@ -7,6 +7,10 @@ import css from 'rollup-plugin-css-only';
 import replace from "@rollup/plugin-replace";
 import {babel} from '@rollup/plugin-babel';
 import json from '@rollup/plugin-json';
+import dotenv from 'dotenv';
+
+// Load .env fiel
+dotenv.config();
 
 const production = !process.env.ROLLUP_WATCH;
 

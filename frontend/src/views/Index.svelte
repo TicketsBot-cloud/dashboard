@@ -6,11 +6,30 @@
       </span>
 
       <div slot="body" style="width: 100%">
+        <span class="flex-container">
+          <h2>Your Servers</h2>
+        </span>
         <div id="guild-container">
           <InviteBadge/>
 
           {#each guilds as guild}
-            <Guild guild={guild}/>
+            {#if guild.permission_level > 0}
+              <Guild guild={guild}/>
+            {/if}
+          {/each}
+        </div>
+
+        <br/>
+        <span class="flex-container">
+          <h2>Other Servers</h2>
+          <i>You do not have access to managing these servers.</i>
+        </span>
+
+        <div id="guild-container">
+          {#each guilds as guild}
+            {#if guild.permission_level === 0}
+              <Guild guild={guild}/>
+            {/if}
           {/each}
         </div>
 
@@ -39,6 +58,13 @@
     setDefaultHeaders();
 
     let guilds = window.localStorage.getItem('guilds') ? JSON.parse(window.localStorage.getItem('guilds')) : [];
+    if(guilds.length > 0) {
+      guilds = guilds.sort((a, b) => {
+        if (a.permission_level > 0 && b.permission_level <= 0) return -1;
+        if (a.permission_level <= 0 && b.permission_level > 0) return 1;
+        return a.name?.localeCompare(b.name);
+      });
+    }
 
     async function refreshGuilds() {
         await withLoadingScreen(async () => {

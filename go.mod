@@ -20,7 +20,7 @@ require (
 	github.com/getsentry/sentry-go v0.33.0
 	github.com/gin-gonic/contrib v0.0.0-20191209060500-d6e26eeaa607
 	github.com/gin-gonic/gin v1.10.1
-	github.com/go-playground/validator/v10 v10.26.0
+	github.com/go-playground/validator/v10 v10.20.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-redis/redis_rate/v9 v9.1.1
@@ -46,6 +46,7 @@ require (
 	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250514201320-d5141071a6eb
 	github.com/TicketsBot-cloud/worker v0.0.0-20250514210747-48c7e67e5129
+	github.com/getsentry/sentry-go/gin v0.33.0
 )
 
 require (
@@ -70,7 +71,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/elliotchance/orderedmap v1.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
-	github.com/getsentry/sentry-go/gin v0.33.0 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-faster/city v1.0.1 // indirect

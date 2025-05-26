@@ -24,6 +24,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
+	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/penglongli/gin-metrics/ginmetrics"
 	"go.uber.org/zap"
@@ -33,6 +34,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 	logger.Info("Starting HTTP server")
 
 	router := gin.New()
+	router.Use(sentrygin.New(sentrygin.Options{}))
 	router.Use(gin.Recovery())
 	router.Use(middleware.Logging(logger))
 	router.Use(middleware.ErrorHandler)

@@ -7,3 +7,10 @@ export const OAUTH = {
     clientId: env.CLIENT_ID || "1325579039888511056",
     redirectUri: env.REDIRECT_URI || "http://localhost:5000/callback"
 }
+
+export const SENTRY = {
+    dsn: env.SENTRY_DSN || "",
+    tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE ? parseFloat(env.SENTRY_TRACES_SAMPLE_RATE) : 1.0,
+    replaysSessionSampleRate: env.SENTRY_REPLAYS_SESSION_SAMPLE_RATE ? parseFloat(env.SENTRY_REPLAYS_SESSION_SAMPLE_RATE) : 1.0,
+    replaysOnErrorSampleRate: env.SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE ? parseFloat(env.SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE) : 1.0,
+}

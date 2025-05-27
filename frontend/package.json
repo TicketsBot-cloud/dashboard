@@ -24,6 +24,7 @@
     "svelte-toggle": "^3.1.0"
   },
   "dependencies": {
+    "@sentry/svelte": "^9.22.0",
     "axios": "^0.21.4",
     "sirv-cli": "^1.0.0",
     "svelte-emoji-selector": "^1.0.1",

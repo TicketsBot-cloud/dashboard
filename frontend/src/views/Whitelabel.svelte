@@ -44,7 +44,7 @@
                             <Button icon="fas fa-paper-plane" on:click={updateStatus} fullWidth="{true}">
                                 Submit
                             </Button>
-                            {#if bot.status_type != "0" && bot.status != ""}
+                            {#if fetched.status != ""}
                               <Button icon="fas fa-trash-can" on:click={deleteStatus} danger fullWidth="{true}">
                                 Clear Status
                               </Button>
@@ -208,6 +208,7 @@
     let active = false;
     let token;
     let bot = {};
+    let fetched = {};
     let errors = [];
 
     async function invite() {
@@ -254,7 +255,8 @@
 
             return;
         }
-
+        
+        fetched = {...data};
         notifySuccess('Updated status successfully')
     }
 
@@ -269,7 +271,14 @@
 
             return;
         }
+        
+        const blankStatus = {
+            status: "",
+            status_type: "0",
+        }
 
+        bot = blankStatus;
+        fetched = {...blankStatus};
         notifySuccess('Deleted status successfully')
     }
 
@@ -289,6 +298,7 @@
         }
 
         bot = res.data;
+        fetched = {...res.data};
 
         active = true;
 

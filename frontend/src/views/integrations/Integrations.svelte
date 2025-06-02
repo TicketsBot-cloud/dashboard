@@ -110,7 +110,7 @@
             return null;
         }
 
-        return `https://image-cdn.ticketsbot.cloud/proxy?token=${integration.proxy_token}`
+        return `https://image-cdn.tickets.bot/proxy?token=${integration.proxy_token}`
     }
 
     async function removeIntegration(integrationId) {

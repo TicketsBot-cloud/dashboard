@@ -304,7 +304,9 @@
         transcriptData.messages = msgs;
     }
 
-    withLoadingScreen(loadData);
+    loadData();
+
+    // withLoadingScreen(loadData);
 </script>
 
 

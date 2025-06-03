@@ -42,13 +42,13 @@ type Config struct {
 		ObjectStore                          string `env:"LOG_ARCHIVER_URL"`
 		AesKey                               string `env:"LOG_AES_KEY" toml:"aes-key"`
 		ProxyUrl                             string `env:"DISCORD_PROXY_URL" toml:"discord-proxy-url"`
-		InteractionsBaseUrl                  string `env:"INTERACTIONS_BASE_URL" envDefault:"https://gateway.ticketsbot.cloud"`
+		InteractionsBaseUrl                  string `env:"INTERACTIONS_BASE_URL" envDefault:"https://gateway.tickets.bot"`
 		RenderServiceUrl                     string `env:"RENDER_SERVICE_URL" toml:"render-service-url"`
 		ImageProxySecret                     string `env:"IMAGE_PROXY_SECRET" toml:"image-proxy-secret"`
 		PublicIntegrationRequestWebhookId    uint64 `env:"PUBLIC_INTEGRATION_REQUEST_WEBHOOK_ID" toml:"public-integration-request-webhook-id"`
 		PublicIntegrationRequestWebhookToken string `env:"PUBLIC_INTEGRATION_REQUEST_WEBHOOK_TOKEN" toml:"public-integration-request-webhook-token"`
-		PoweredBy                            string `env:"POWEREDBY" envDefault:"ticketsbot.cloud"`
-		IconUrl                              string `env:"ICON_URL" envDefault:"https://ticketsbot.cloud/assets/img/logo.png"`
+		PoweredBy                            string `env:"POWEREDBY" envDefault:"tickets.bot"`
+		IconUrl                              string `env:"ICON_URL" envDefault:"https://tickets.bot/assets/img/logo.png"`
 	}
 	Redis struct {
 		Host     string `env:"HOST,required"`

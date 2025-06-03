@@ -10,7 +10,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/TicketsBot-cloud">
-    <img src="https://ticketsbot.cloud/assets/img/logo-trans-black.png" alt="Logo" width="128" height="128">
+    <img src="https://tickets.bot/assets/img/logo-trans-black.png" alt="Logo" width="128" height="128">
   </a>
 
 <h3 align="center">Tickets Bot - Dashboard</h3>
@@ -18,10 +18,10 @@
   <p align="center">
     Tickets is simple, customisable and powerful Discord ticket system complete with a web UI.
     <br />
-    <a href="https://docs.ticketsbot.cloud"><strong>Explore the docs »</strong></a>
+    <a href="https://docs.tickets.bot"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://ticketsbot.cloud">View Hosted Version</a>
+    <a href="https://tickets.bot">View Hosted Version</a>
     &middot;
     <a href="https://ticketsv2.atlassian.net/jira/software/c/projects/RM/boards/3">View Roadmap</a>
     &middot;
@@ -69,7 +69,7 @@ Here's why:
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-_For usage examples, please refer to the [Documentation](https://docs.ticketsbot.cloud)_
+_For usage examples, please refer to the [Documentation](https://docs.tickets.bot)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

@@ -27,7 +27,7 @@
           </div>
         </Collapsible>
 
-        <Collapsible defaultOpen tooltip="Click here to find out more about thread mode" tooltipUrl="https://docs.ticketsbot.cloud/features/thread-mode">
+        <Collapsible defaultOpen tooltip="Click here to find out more about thread mode" tooltipUrl="https://docs.tickets.bot/features/thread-mode">
           <span slot="header" class="header">Thread Mode</span>
           <div slot="content" class="col-1">
             <div class="row">

@@ -17,7 +17,7 @@
         --border="#2e3136"
         --border-focused="0"
         --border-hover="0"
-        --borderRadius="4px"
+        --border-radius="4px"
         --item-hover-bg="#121212"
         --list-background="#2e3136"
         --item-color="white"

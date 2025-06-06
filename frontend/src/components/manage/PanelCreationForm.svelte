@@ -62,7 +62,7 @@
                            bind:value={data.naming_scheme}
                            placeholder="ticket-%id%"
                            tooltipText="Click here for the full placeholder list"
-                           tooltipLink="https://docs.ticketsbot.cloud/dashboard/settings/placeholders#custom-naming-scheme-placeholders" />
+                           tooltipLink="https://docs.tickets.bot/dashboard/settings/placeholders#custom-naming-scheme-placeholders" />
                 {/if}
             </div>
             <div class="incomplete-row">
@@ -299,6 +299,7 @@
         if (data.mentions) {
             $: data.mentions
                 .map((id) => mentionItems.find((role) => role.id === id))
+                .filter((mention) => mention != null)
                 .forEach((mention) => selectedMentions.push(mention));
         }
 

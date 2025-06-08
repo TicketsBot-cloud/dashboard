@@ -106,7 +106,7 @@
             
                                                 {#if embed.footer || embed.timestamp}
                                                     <div class="embed-footer">
-                                                        {#if embed.footer.icon_url}
+                                                        {#if embed.footer?.icon_url}
                                                             <img src={embed.footer.icon_url} alt="Footer icon" class="embed-footer-icon">
                                                         {/if}
                                                         <span>

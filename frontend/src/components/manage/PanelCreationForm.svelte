@@ -300,6 +300,7 @@
         if (data.mentions) {
             $: data.mentions
                 .map((id) => mentionItems.find((role) => role.id === id))
+                .filter((mention) => mention != null)
                 .forEach((mention) => selectedMentions.push(mention));
         }
 

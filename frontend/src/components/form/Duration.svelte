@@ -1,32 +1,66 @@
 <div class="col">
   <div class="row label">
-    <slot name="header"></slot>
+    {#if label}
+      <div class="header">
+        <label class="form-label" style="margin-bottom: unset" for={durationId}>{label}</label>
+        <slot name="header"></slot>
+      </div>
+    {/if}
   </div>
 
   <div class="row fields">
     <div class="parent">
-      <input class="form-input" type="number" min=0 {disabled} bind:value={days}/>
+      <input
+        class="form-input"
+        type="number"
+        min=0
+        {disabled}
+        bind:value={days}
+        id={durationId ? `${durationId}-days` : undefined}
+        aria-labelledby={durationId}
+      />
       <div class="period" class:disabled>D</div>
     </div>
 
     <div class="parent">
-      <input class="form-input" type="number" min=0 {disabled} bind:value={hours}/>
+      <input
+        class="form-input"
+        type="number"
+        min=0
+        {disabled}
+        bind:value={hours}
+        id={durationId ? `${durationId}-hours` : undefined}
+        aria-labelledby={durationId}
+      />
       <div class="period" class:disabled>H</div>
     </div>
 
     <div class="parent">
-      <input class="form-input" type="number" min=0 {disabled} bind:value={minutes}/>
+      <input
+        class="form-input"
+        type="number"
+        min=0
+        {disabled}
+        bind:value={minutes}
+        id={durationId ? `${durationId}-minutes` : undefined}
+        aria-labelledby={durationId}
+      />
       <div class="period" class:disabled>M</div>
     </div>
   </div>
 </div>
 
 <script>
+    import {labelHash} from "../../js/labelHash";
+
+    export let label;
     export let disabled = false; // note: bind:disabled isn't valid
 
     export let days = 0;
     export let hours = 0;
     export let minutes = 0;
+
+    $: durationId = label !== undefined ? `duration-${labelHash(label)}` : undefined;
 </script>
 
 <style>
@@ -79,10 +113,11 @@
         margin-bottom: 4px;
     }
 
-    .header-wrapper {
+    .header {
         display: flex;
         flex-direction: row;
-        gap: 4px;
+        align-items: center;
+        gap: 5px;
     }
 
     .parent {

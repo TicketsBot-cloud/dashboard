@@ -28,7 +28,7 @@
     import {notifyError, notifyRatelimit, withLoadingScreen} from '../js/util'
     import Button from "../components/Button.svelte";
     import axios from "axios";
-    import {API_URL} from "../js/constants";
+    import {API_URL, WS_URL} from "../js/constants";
     import {getToken, setDefaultHeaders} from '../includes/Auth.svelte'
     import Input from "../components/form/Input.svelte";
     import {navigateTo} from "svelte-router-spa";
@@ -43,8 +43,6 @@
     let isPremium = false;
     let tags = [];
     let container;
-
-    let WS_URL = env.WS_URL || 'ws://localhost:3000';
 
     function scrollContainer() {
         container.scrollTop = container.scrollHeight;

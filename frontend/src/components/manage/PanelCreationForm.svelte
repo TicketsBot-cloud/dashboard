@@ -62,7 +62,7 @@
                            bind:value={data.naming_scheme}
                            placeholder="ticket-%id%"
                            tooltipText="Click here for the full placeholder list"
-                           tooltipLink="https://docs.tickets.bot/dashboard/settings/placeholders#custom-naming-scheme-placeholders" />
+                           tooltipLink={`${DOCS_URL}/dashboard/settings/placeholders#custom-naming-scheme-placeholders`} />
                 {/if}
             </div>
             <div class="incomplete-row">
@@ -197,6 +197,7 @@
     import EmbedForm from "../EmbedForm.svelte";
     import WrappedSelect from "../WrappedSelect.svelte";
     import AccessControlList from "./AccessControlList.svelte";
+    import {DOCS_URL} from "../../js/constants";
 
     export let guildId;
     export let seedDefault = true;

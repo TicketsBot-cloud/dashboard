@@ -1,5 +1,6 @@
 <script>
     import {Navigate} from 'svelte-router-spa'
+    import {WHITELABEL_DISABLED} from "../js/constants";
     import {getAvatarUrl, getDefaultIcon} from "../js/icons";
 
     export let userData;
@@ -23,12 +24,14 @@
           <span class="sidebar-text">Servers</span>
         </div>
       </Navigate>
+      {#if !WHITELABEL_DISABLED}
       <Navigate to="/whitelabel" styles="sidebar-link">
         <div class="sidebar-element">
           <i class="fas fa-edit sidebar-icon"></i>
           <span class="sidebar-text">Whitelabel</span>
         </div>
       </Navigate>
+      {/if}
       {#if userData.admin}
         <Navigate to="/admin/bot-staff" styles="sidebar-link">
           <div class="sidebar-element">

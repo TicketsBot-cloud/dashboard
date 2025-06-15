@@ -44,7 +44,7 @@
                             <Button icon="fas fa-paper-plane" on:click={updateStatus} fullWidth="{true}">
                                 Submit
                             </Button>
-                            {#if bot.status_type != "0" && bot.status != ""}
+                            {#if fetched.status != ""}
                               <Button icon="fas fa-trash-can" on:click={deleteStatus} danger fullWidth="{true}">
                                 Clear Status
                               </Button>
@@ -198,7 +198,7 @@
     import axios from "axios";
     import Card from '../components/Card.svelte'
     import Button from '../components/Button.svelte'
-    import {API_URL} from "../js/constants";
+    import {API_URL, FRONTPAGE_URL} from "../js/constants";
     import {setDefaultHeaders} from '../includes/Auth.svelte'
     import Dropdown from "../components/form/Dropdown.svelte";
     import Input from "../components/form/Input.svelte";
@@ -208,6 +208,7 @@
     let active = false;
     let token;
     let bot = {};
+    let fetched = {};
     let errors = [];
 
     async function invite() {
@@ -254,7 +255,8 @@
 
             return;
         }
-
+        
+        fetched = {...data};
         notifySuccess('Updated status successfully')
     }
 
@@ -269,7 +271,14 @@
 
             return;
         }
+        
+        const blankStatus = {
+            status: "",
+            status_type: "0",
+        }
 
+        bot = blankStatus;
+        fetched = {...blankStatus};
         notifySuccess('Deleted status successfully')
     }
 
@@ -277,7 +286,7 @@
         const res = await axios.get(`${API_URL}/user/whitelabel/`);
         if (res.status !== 200) {
             if (res.status === 402) {
-                window.location.replace("https://tickets.bot/premium");
+                window.location.replace(`${FRONTPAGE_URL}/premium`);
                 return false;
             }
 
@@ -289,6 +298,7 @@
         }
 
         bot = res.data;
+        fetched = {...res.data};
 
         active = true;
 

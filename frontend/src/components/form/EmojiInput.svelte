@@ -1,9 +1,9 @@
 <div class:col-1={col1} class:col-2={col2} class:col-3={col3} class:col-4={col4}>
   {#if label !== undefined}
-    <label class="form-label">{label}</label>
+    <label for={emojiInputId} class="form-label">{label}</label>
   {/if}
   <div class="wrapper">
-    <input id="input" class="form-input" placeholder="{placeholder}" disabled="{disabled}" bind:value={value}>
+    <input id={emojiInputId} class="form-input" placeholder="{placeholder}" disabled="{disabled}" bind:value={value}>
     {#if !disabled}
       <div class="picker-wrapper">
           <EmojiSelector on:emoji={onUpdate}/>
@@ -24,10 +24,13 @@
     export let col4 = false;
 
     import EmojiSelector from 'svelte-emoji-selector'
+    import {labelHash} from "../../js/labelHash";
 
     function onUpdate(e) {
         value = e.detail;
     }
+
+    $: emojiInputId = label !== undefined ? `emojiinput-${labelHash(label)}` : undefined;
 </script>
 
 <style>

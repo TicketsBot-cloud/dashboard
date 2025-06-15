@@ -1,7 +1,7 @@
 <div class:col-1={col1} class:col-2={col2} class:col-3={col3} class:col-4={col4}>
   <div class="label-wrapper">
       <slot name="label">
-          <label for="input" class="form-label">
+          <label for={checkboxId} class="form-label">
               {label}
           </label>
       </slot>
@@ -11,11 +11,12 @@
           </div>
       {/if}
   </div>
-  <input id="input" class="form-checkbox" type=checkbox bind:checked={value} on:change {disabled}>
+  <input id={checkboxId} class="form-checkbox" type=checkbox bind:checked={value} on:change {disabled}>
 </div>
 
 <script>
     import PremiumBadge from "../PremiumBadge.svelte";
+    import {labelHash} from "../../js/labelHash";
 
     export let value;
     export let label;
@@ -26,6 +27,8 @@
     export let col2 = false;
     export let col3 = false;
     export let col4 = false;
+
+    $: checkboxId = label !== undefined ? `checkbox-${labelHash(label)}` : undefined;
 </script>
 
 <style>

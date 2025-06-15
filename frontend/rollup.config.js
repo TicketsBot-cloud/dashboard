@@ -77,8 +77,16 @@ export default {
             env: JSON.stringify({
                 CLIENT_ID: process.env.CLIENT_ID,
                 REDIRECT_URI: process.env.REDIRECT_URI,
+                FRONTPAGE_URL: process.env.FRONTPAGE_URL,
                 API_URL: process.env.API_URL,
                 WS_URL: process.env.WS_URL,
+                INVITE_URL: process.env.INVITE_URL,
+                DOCS_URL: process.env.DOCS_URL,
+                TITLE: process.env.TITLE,
+                DESCRIPTION: process.env.DESCRIPTION,
+                FAVICON: process.env.FAVICON,
+                FAVICON_TYPE: process.env.FAVICON_TYPE,
+                WHITELABEL_DISABLED: process.env.WHITELABEL_DISABLED,
                 INVITE_URL: process.env.INVITE_URL,
             })
         }),

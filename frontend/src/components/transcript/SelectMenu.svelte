@@ -9,7 +9,7 @@
             {#each options as option}
                 <div class="select-option" data-value={option.value} data-id={custom_id}>
                     {#if option.emoji}
-                        <span class="emoji">{emoji.name}</span>
+                        <span class="emoji">{option.emoji.name}</span>
                     {/if}
                     <span class="option-label">{option.label || ''}</span>
                 </div>

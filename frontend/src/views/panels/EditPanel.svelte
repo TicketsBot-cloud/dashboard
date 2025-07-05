@@ -4,7 +4,7 @@
         Back to Panels
     </a>
     <Card footer="{false}">
-        <span slot="title">Create Panel</span>
+        <span slot="title">Edit Panel</span>
 
         <div slot="body" class="body-wrapper">
             {#if !$loadingScreen}

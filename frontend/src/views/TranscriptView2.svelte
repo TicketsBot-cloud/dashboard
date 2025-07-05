@@ -82,7 +82,7 @@
                                                             .replace(/~~(.*?)~~/g, '<s>$1</s>') // Strikethrough
                                                             .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>') // Code block
                                                             .replace(/`(.*?)`/g, '<code>$1</code>') // Inline code
-                                                            .replace(/>(.*?)($|\n)/g, '<blockquote>$1</blockquote>$2') // Blockquote
+                                                            .replace(/^>(.*?)($|\n)/gm, '<blockquote>$1</blockquote>$2') // Blockquote (only at line start)
                                                             .replace(/\n/g, '<br>')}
                                                     </div>
                                                 {/if}

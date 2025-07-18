@@ -4,7 +4,7 @@
         Back to Panels
     </a>
     <Card footer={false}>
-        <span slot="title">Create Multi-Panel</span>
+        <span slot="title">Edit Multi-Panel</span>
         <div slot="body" class="card-body">
             <p>Note: The panels which you wish to combine into a multi-panel must already exist</p>
 

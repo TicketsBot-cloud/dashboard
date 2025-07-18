@@ -10,11 +10,14 @@
 
 <div class="card" class:fill>
   <div class="card-header" class:dropdown on:click={() => dropdownActive = dropdown && !dropdownActive}>
-    <h4 class="card-title">
-      <slot name="title">
-        No Title :(
-      </slot>
-    </h4>
+    <div class="card-title-row">
+      <h4 class="card-title">
+        <slot name="title">
+          No Title :(
+        </slot>
+      </h4>
+      <slot name="title-items"></slot>
+    </div>
   </div>
   <div class="card-body" class:dropdown class:dropdownActive class:dropdownInactive={dropdown && !dropdownActive} {ref}>
     <div class="inner" class:dropdown>
@@ -54,7 +57,13 @@
         color: white;
         font-size: 22px;
         font-weight: bolder;
+    }
 
+    .card-title-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         padding: 10px 20px;
         margin: 0;
     }

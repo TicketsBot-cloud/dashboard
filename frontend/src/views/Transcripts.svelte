@@ -50,38 +50,45 @@
         <span slot="title">
           Transcripts
         </span>
+        <ColumnSelector
+        options={["Ticket ID", "Username", "Rating", "Close Reason", "Transcript"]}
+        bind:selected={selectedColumns}
+        slot="title-items"
+        />
 
         <div slot="body" class="main-col">
           <table class="nice">
             <thead>
             <tr>
-              <th>Ticket ID</th>
-              <th>Username</th>
-              <th>Rating</th>
-              <th class="reason">Close Reason</th>
-              <th>Transcript</th>
+              <th class:visible={selectedColumns.includes('Ticket ID')}>Ticket ID</th>
+              <th class:visible={selectedColumns.includes('Username')}>Username</th>
+              <th class:visible={selectedColumns.includes('Rating')}>Rating</th>
+              <th class:visible={selectedColumns.includes('Close Reason')}>Close Reason</th>
+              <th class:visible={selectedColumns.includes('Transcript')}>Transcript</th>
             </tr>
             </thead>
             <tbody>
             {#each transcripts as transcript}
               <tr>
-                <td>{transcript.ticket_id}</td>
-                <td>{transcript.username}</td>
-                <td>
+                <td class:visible={selectedColumns.includes('Ticket ID')}>{transcript.ticket_id}</td>
+                <td class:visible={selectedColumns.includes('Username')}>{transcript.username}</td>
+                <td class:visible={selectedColumns.includes('Rating')}>
                   {#if transcript.rating}
                     {transcript.rating} ⭐
                   {:else}
                     No rating
                   {/if}
                 </td>
-                <td class="reason">{transcript.close_reason || 'No reason specified'}</td>
-                {#if transcript.has_transcript}
-                  <td>
+                <td class:visible={selectedColumns.includes('Close Reason')}>
+                  {transcript.close_reason || 'No reason specified'}
+                </td>
+                <td class:visible={selectedColumns.includes('Transcript')}>
+                  {#if transcript.has_transcript}
                     <Navigate to="{`/manage/${guildId}/transcripts/view/${transcript.ticket_id}`}" styles="link">
                       <Button>View</Button>
                     </Navigate>
-                  </td>
-                {/if}
+                  {/if}
+                </td>
               </tr>
             {/each}
             </tbody>
@@ -104,7 +111,6 @@
     import Card from '../components/Card.svelte'
     import Input from '../components/form/Input.svelte'
     import Button from '../components/Button.svelte'
-
     import {notifyError, withLoadingScreen} from '../js/util'
     import {onMount} from "svelte";
     import {dropdown} from "../js/stores";
@@ -114,6 +120,7 @@
     import {Navigate} from 'svelte-router-spa'
     import PanelDropdown from "../components/PanelDropdown.svelte";
     import Dropdown from "../components/form/Dropdown.svelte";
+    import ColumnSelector from "../components/ColumnSelector.svelte";
 
     setDefaultHeaders();
 
@@ -128,6 +135,23 @@
 
     const pageLimit = 15;
     let page = 1;
+
+    // Show Columns logic
+    let selectedColumns = ['Ticket ID', 'Username', 'Rating', 'Close Reason', 'Transcript'];
+    const columnStorageKey = 'transcript_list:selected_columns';
+
+    $: selectedColumns, updateColumnStorage();
+
+    function updateColumnStorage() {
+      window.localStorage.setItem(columnStorageKey, JSON.stringify(selectedColumns));
+    }
+
+    function loadColumnSettings() {
+      const columns = window.localStorage.getItem(columnStorageKey);
+      if (columns) {
+        selectedColumns = JSON.parse(columns);
+      }
+    }
 
     let handleInputTicketId = () => {
         filterSettings.username = undefined;
@@ -244,6 +268,7 @@
     }
 
     withLoadingScreen(async () => {
+        loadColumnSettings();
         await Promise.all([
             loadPanels(),
             loadData({})
@@ -280,10 +305,6 @@
         gap: 2%;
         width: 100%;
         height: 100%;
-    }
-
-    .centre {
-        justify-content: center !important;
     }
 
     .form-wrapper {
@@ -361,9 +382,12 @@
         .col {
             width: 100%;
         }
+    }
 
-        .reason {
-            display: none;
-        }
+    th, td {
+        display: none;
+    }
+    th.visible, td.visible {
+        display: table-cell;
     }
 </style>

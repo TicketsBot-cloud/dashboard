@@ -5,14 +5,6 @@
             Filters
         </span>
         <div slot="body" class="filter-wrapper">
-            <div>
-                <label class="form-label">Show Columns</label>
-                <ColumnSelector
-                    options={["ID", "Panel", "User", "Opened Time", "Claimed By", "Last Message Time", "Awaiting Response"]}
-                    bind:selected={selectedColumns}
-                />
-            </div>
-
             <Dropdown col2 label="Sort Tickets By..." bind:value={sortMethod}>
                 <option value="id_asc">Ticket ID (Ascending) / Oldest First</option>
                 <option value="id_desc">Ticket ID (Descending) / Newest First</option>
@@ -24,7 +16,14 @@
     </Card>
 
     <Card footer={false}>
-        <span slot="title">Open Tickets</span>
+        <span slot="title">
+            Open Tickets
+        </span>
+        <ColumnSelector
+        options={["ID", "Panel", "User", "Opened Time", "Claimed By", "Last Message Time", "Awaiting Response"]}
+        bind:selected={selectedColumns}
+        slot="title-items"
+        />
         <div slot="body" class="body-wrapper">
             <table class="nice">
                 <thead>

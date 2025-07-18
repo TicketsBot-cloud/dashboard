@@ -1,20 +1,30 @@
-<section>
-    <Button on:click={toggleDropdown} bind:clientWidth={buttonWidth}>{label}</Button>
-    <div class="dropdown" bind:this={dropdown} style="min-width: {buttonWidth}px">
+<section class="column-selector">
+    <Button on:click={toggleDropdown}>{label}</Button>
+    <div class="dropdown" bind:this={dropdown}>
         {#each options as option}
             <div class="option">
-                <input type="checkbox" checked={selected.includes(option)} on:change={() => handleChange(option)} />
-                <span>{option}</span>
+                <label>
+                    <input type="checkbox" checked={selected.includes(option)} on:change={() => handleChange(option)}>
+                    <span>{option}</span>
+                </label>
             </div>
         {/each}
     </div>
 </section>
 
 <style>
+    .column-selector {
+        position: relative;
+        display: inline-block;
+        font-size: 16px;
+    }
+
     .dropdown {
         display: none;
         position: absolute;
-        margin-top: 6px;
+        z-index: 1;
+        top: 42px;
+        right: 0;
         padding: 5px 10px;
         background-color: var(--background);
         border-radius: 4px;
@@ -26,8 +36,9 @@
         display: flex;
         flex-direction: row;
         align-items: center;
+        text-wrap: nowrap;
         gap: 4px;
-        font-size: 18px;
+        font-size: 16px;
     }
 
     input {
@@ -61,7 +72,6 @@
     }
 
     let dropdown;
-    let buttonWidth;
 
     function toggleDropdown() {
         if (dropdown.style.display === 'block') {

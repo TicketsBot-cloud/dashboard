@@ -1,15 +1,25 @@
-<div class="discord-button {convertButtonStyle(button_style)}" data-custom-id={custom_id || ''}>
-    {#if emoji}
-        <span class="emoji">{emoji.name}</span>
-    {/if}
-    {label || ''}
-</div>
+{#if button_style === 5 && url}
+    <a href={url} class="discord-button {convertButtonStyle(button_style)}" data-custom-id={custom_id || ''} target="_blank" rel="noopener noreferrer">
+        {#if emoji}
+            <span class="emoji">{emoji.name}</span>
+        {/if}
+        {label || ''}&nbsp;<i class="fas fa-external-link-alt"></i>
+    </a>
+{:else}
+    <div class="discord-button {convertButtonStyle(button_style)}" data-custom-id={custom_id || ''}>
+        {#if emoji}
+            <span class="emoji">{emoji.name}</span>
+        {/if}
+        {label || ''}
+    </div>
+{/if}
 
 <script>
     export let button_style;
     export let custom_id;
     export let emoji;
     export let label;
+    export let url;
 
     function convertButtonStyle(style) {
         switch (style) {
@@ -86,7 +96,7 @@
 .button-link {
     background-color: #4f545c;
     color: white;
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 .button-link:hover {

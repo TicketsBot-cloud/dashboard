@@ -68,7 +68,7 @@
             <div class="incomplete-row">
                 <Dropdown col3 label="Exit Survey Form" premiumBadge={true} bind:value={data.exit_survey_form_id} disabled={!isPremium}>
                     <option value=null>None</option>
-                    {#each forms as form}
+                   {#each forms as form}
                         <option value={form.form_id}>{form.title}</option>
                     {/each}
                 </Dropdown>
@@ -84,11 +84,30 @@
         </div>
     </Collapsible>
 
-    <Collapsible defaultOpen>
+    <Collapsible defaultOpen newBadge={true} >
         <span slot="header">Panel Message</span>
         <div slot="content" class="col-1">
             <div class="row">
-                <div class="col-1-3">
+                <div class="col-2-3">
+                    <ComponentBuilder on:add={handleAdd} />
+                    <ul>
+                        {#each compArray as c, i}
+                          <li>{i}: type={c.type}</li>
+                        {/each}
+                      </ul>
+                </div>
+                <div class="col-2-3">
+                    <Container component={panelContainer} />
+                </div>
+            </div>
+        </div>
+    </Collapsible>
+
+    <Collapsible>
+        <span slot="header">Panel Embed</span>
+        <div slot="content" class="col-1">
+            <div class="row">
+                <div class="col-2-3">
                     <Input label="Panel Title" placeholder="Open a ticket!" col1=true bind:value={data.title}/>
                 </div>
                 <div class="col-2-3">
@@ -198,6 +217,10 @@
     import WrappedSelect from "../WrappedSelect.svelte";
     import AccessControlList from "./AccessControlList.svelte";
     import {DOCS_URL} from "../../js/constants";
+    import SelectMenu from "../transcript/SelectMenu.svelte";
+    import Container from "../transcript/Container.svelte";
+    import Button from "../Button.svelte";
+    import ComponentBuilder from "./ComponentBuilder.svelte";
 
     export let guildId;
     export let seedDefault = true;
@@ -215,6 +238,14 @@
 
     let teamsWithDefault = [];
     let mentionItems = [];
+
+    let compArray = [];
+
+    // ② handler to push new item (always re-assign!)
+    function handleAdd(e) {
+        compArray = [...compArray, e.detail];
+        console.log('Parent compArray →', compArray);
+    }
 
     let selectedTeams = seedDefault ? [{id: 'default', name: 'Default'}] : [];
     let selectedMentions = [];
@@ -355,6 +386,100 @@
             applyOverrides();
         }
     })
+
+    let panelContainer = {
+        accent_color: tempColour,
+        components:[
+            {
+            "type": 1,
+            "components": [
+                {
+                    "type": 2,
+                    "label": "Accept",
+                    "style": 1,
+                    "custom_id": "click_yes"
+                },
+                {
+                    "type": 2,
+                    "label": "Learn More",
+                    "style": 5,
+                    "url": "http://watchanimeattheoffice.com/"
+                },
+                {
+                    "type": 2,
+                    "label": "Decline",
+                    "style": 4,
+                    "custom_id": "click_no"
+                }
+            ]
+            },
+            {
+                type: 10,
+                content: "### Example Panel Message"
+            },
+            {
+                type: 14,
+            },
+            {
+                "type": 9,
+                "components": [
+                    {
+                    "type": 10,
+                    "content": "# Real Game v7.3"
+                    },
+                    {
+                    "type": 10,
+                    "content": "Hope you're excited, the update is finally here! Here are some of the changes:\n- Fixed a bug where certain treasure chests wouldn't open properly\n- Improved server stability during peak hours\n- Added a new type of gravity that will randomly apply when the moon is visible in-game\n- Every third thursday the furniture will scream your darkest secrets to nearby npcs"
+                    },
+                    {
+                    "type": 10,
+                    "content": "-# That last one wasn't real, but don't use voice chat near furniture just in case..."
+                    }
+                ],
+                "accessory": {
+                    "type": 11,
+                    "media": {
+                    "url": "https://placehold.co/400x400.jpg"
+                    }
+                }
+            },
+            {
+                "type": 9,
+                "components": [
+                    {
+                    "type": 10,
+                    "content": "test button"
+                    },
+                ],
+                "accessory": {
+                    "type": 2,
+                    "style": 5,
+                    "label": "Open Ticket",
+                    "custom_id": "open_ticket",
+                    "url": "https://example.com/open_ticket" // Added URL for the button
+                }
+            },
+            {
+                type: 12,
+                items: [
+                    {
+                        media: {
+                            url: "https://placehold.co/400x400.jpg"
+                        },
+                        description: null,
+                        spoiler: false
+                    },
+                    {
+                        media: {
+                            url: "https://placehold.co/400x400.jpg"
+                        },
+                        description: null,
+                        spoiler: false
+                    }
+                ]
+            }
+        ]
+    };
 </script>
 
 <style>

@@ -24,6 +24,11 @@
         </Tooltip>
       </div>
     {/if}
+    {#if newBadge}
+      <div style="margin-bottom: 5px">
+        <NewBadge />
+      </div>
+    {/if}
 
     <hr/>
   </div>
@@ -39,6 +44,8 @@
     import {afterUpdate, onMount} from "svelte";
     import Tooltip from "svelte-tooltip";
     import { createEventDispatcher } from 'svelte';
+    import PremiumBadge from "./PremiumBadge.svelte";
+    import NewBadge from "./NewBadge.svelte";
 
     export let retractIcon = "fas fa-minus";
     export let expandIcon = "fas fa-plus";
@@ -47,6 +54,7 @@
     export let defaultOpen = false;
     export let tooltip = undefined;
     export let tooltipUrl = undefined;
+    export let newBadge = false;
 
     let expanded = false;
     let showOverflow = true;

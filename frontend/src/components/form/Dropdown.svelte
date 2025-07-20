@@ -30,6 +30,7 @@
 <script>
     import PremiumBadge from "../PremiumBadge.svelte";
     import {labelHash} from "../../js/labelHash";
+    import Button from "../Button.svelte";
 
     export let value;
     export let label;

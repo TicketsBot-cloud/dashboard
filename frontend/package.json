@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "axios": "^0.21.4",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "sirv-cli": "^1.0.0",
     "svelte-emoji-selector": "^1.0.1",
     "svelte-router-spa": "^6.0.3",

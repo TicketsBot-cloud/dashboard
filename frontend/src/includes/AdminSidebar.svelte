@@ -7,7 +7,7 @@
     <div class="inner">
       <Navigate to="/admin/bot-staff" styles="sidebar-link">
         <div class="sidebar-element">
-          <i class="fas fa-user-group sidebar-icon"></i>
+          <i class="fas fa-user-group"></i>
           <span class="sidebar-text">Bot Staff</span>
         </div>
       </Navigate>
@@ -16,7 +16,7 @@
   <div class="sidebar-container">
     <div class="sidebar-element">
       <Navigate to="/" styles="sidebar-link">
-        <i class="sidebar-icon fas fa-home sidebar-icon"></i>
+        <i class="fas fa-home"></i>
         <span class="sidebar-text">Home</span>
       </Navigate>
     </div>
@@ -55,11 +55,6 @@
     .sidebar-element:hover {
         background-color: #121212;
         transition: background-color 0.5s ease;
-    }
-
-    #custom-image {
-        max-height: 70px;
-        max-width: 90%;
     }
 
     .sidebar-text {

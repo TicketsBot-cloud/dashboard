@@ -24,3 +24,5 @@ export const isErrorPage = writable(false);
 export const errorMessage = writable("");
 
 export const permissionLevelCache = writable({});
+
+export const showSidebar = writable(false);

@@ -27,13 +27,10 @@
     .sidebar {
         display: flex;
         flex-direction: column;
-        height: 100%;
-        width: 16.6%;
+        height: calc(100% - 30px);
+        min-width: 260px;
+        padding: 15px 0;
         background-color: #272727;
-        float: left;
-        background-size: cover;
-        overflow-x: hidden !important;
-        min-width: 250px;
     }
 
     .sidebar-container {
@@ -49,7 +46,7 @@
         align-items: center;
         width: 100%;
         cursor: pointer;
-        padding: 5px 0 5px 0;
+        padding: 5px 20px;
     }
 
     .sidebar-element:hover {
@@ -57,8 +54,13 @@
         transition: background-color 0.5s ease;
     }
 
+    .sidebar-element i {
+        width: 25px;
+        text-align: center;
+    }
+
     .sidebar-text {
-        margin-left: 4%;
+        margin-left: 10px;
         display: flex;
         align-items: center;
     }
@@ -89,7 +91,7 @@
 
         .sidebar-element {
             width: unset;
-            padding: 20px 15px;
+            padding: 15px;
         }
     }
 </style>

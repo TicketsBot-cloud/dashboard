@@ -112,13 +112,9 @@
         display: flex;
         flex-direction: column;
         height: calc(100% - 30px);
-        width: 16.6%;
+        min-width: 260px;
         padding: 15px 0;
         background-color: #272727;
-        float: left;
-        background-size: cover;
-        overflow-x: hidden !important;
-        min-width: 250px;
     }
     .inner {
         width: 100%;
@@ -129,7 +125,7 @@
         align-items: center;
         width: 100%;
         cursor: pointer;
-        padding: 5px 4%;
+        padding: 5px 20px;
     }
 
     .sidebar-element:hover {

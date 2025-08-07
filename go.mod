@@ -12,7 +12,7 @@ toolchain go1.24.2
 
 require (
 	github.com/BurntSushi/toml v1.2.1
-	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250514201416-cf23f65eb3fc
+	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250807224931-e188ad18a850
 	github.com/TicketsBot-cloud/database v0.0.0-20250320215455-17762cd7d39a
 	github.com/TicketsBot-cloud/gdl v0.0.0-20250509054940-2045fbe19c06
 	github.com/apex/log v1.1.2

@@ -26,7 +26,7 @@ type (
 
 	inputCreateBody struct {
 		Label       string                   `json:"label" validate:"required,min=1,max=45"`
-		Description *string                  `json:"description,omitempty" validate:"max=100"`
+		Description *string                  `json:"description,omitempty" validate:"omitempty,max=100"`
 		Placeholder *string                  `json:"placeholder,omitempty" validate:"omitempty,min=1,max=100"`
 		Position    int                      `json:"position" validate:"required,min=1,max=5"`
 		Style       component.TextStyleTypes `json:"style" validate:"required,min=1,max=2"`

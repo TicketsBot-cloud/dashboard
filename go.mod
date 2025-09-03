@@ -54,7 +54,8 @@ require (
 require (
 	github.com/ClickHouse/ch-go v0.66.0 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.36.0 // indirect
-	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c // indirect
+	github.com/TicketsBot/analytics-client v0.0.0-20240724103359-30f5dac821e6 // indirect
+	github.com/TicketsBot/common v0.0.0-20241117150316-ff54c97b45c1 // indirect
 	github.com/TicketsBot/ttlcache v1.6.1-0.20200405150101-acc18e37b261 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

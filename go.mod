@@ -4,17 +4,19 @@ go 1.23.8
 
 toolchain go1.24.2
 
-// replace github.com/TicketsBot-cloud/database => ../database
-// replace github.com/TicketsBot-cloud/gdl => ../gdl
-// replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
-// replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
-// replace github.com/TicketsBot-cloud/worker => ../worker
+//replace github.com/TicketsBot-cloud/database => ../database
+//replace github.com/TicketsBot-cloud/gdl => ../gdl
+//replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
+//replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
+//replace github.com/TicketsBot-cloud/worker => ../worker
+
+replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0
 
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250514201416-cf23f65eb3fc
-	github.com/TicketsBot-cloud/database v0.0.0-20250320215455-17762cd7d39a
-	github.com/TicketsBot-cloud/gdl v0.0.0-20250509054940-2045fbe19c06
+	github.com/TicketsBot-cloud/database v0.0.0-20250903144933-e8e254858b76
+	github.com/TicketsBot-cloud/gdl v0.0.0-20250903113726-d89a77a99a6a
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0
@@ -39,7 +41,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sync v0.14.0
+	golang.org/x/sync v0.16.0
 )
 
 require (
@@ -50,8 +52,8 @@ require (
 )
 
 require (
-	github.com/ClickHouse/ch-go v0.65.1 // indirect
-	github.com/ClickHouse/clickhouse-go/v2 v2.34.0 // indirect
+	github.com/ClickHouse/ch-go v0.66.0 // indirect
+	github.com/ClickHouse/clickhouse-go/v2 v2.36.0 // indirect
 	github.com/TicketsBot/analytics-client v0.0.0-20240724103359-30f5dac821e6 // indirect
 	github.com/TicketsBot/common v0.0.0-20241117150316-ff54c97b45c1 // indirect
 	github.com/TicketsBot/ttlcache v1.6.1-0.20200405150101-acc18e37b261 // indirect
@@ -125,17 +127,17 @@ require (
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
-	go.opentelemetry.io/otel v1.35.0 // indirect
-	go.opentelemetry.io/otel/trace v1.35.0 // indirect
+	go.opentelemetry.io/otel v1.36.0 // indirect
+	go.opentelemetry.io/otel/trace v1.36.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect
-	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect
-	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/term v0.32.0 // indirect
-	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/term v0.34.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

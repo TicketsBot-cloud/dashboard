@@ -26,6 +26,7 @@ type (
 
 	inputCreateBody struct {
 		Label       string                   `json:"label" validate:"required,min=1,max=45"`
+		Description *string                  `json:"description,omitempty" validate:"omitempty,max=100"`
 		Placeholder *string                  `json:"placeholder,omitempty" validate:"omitempty,min=1,max=100"`
 		Position    int                      `json:"position" validate:"required,min=1,max=5"`
 		Style       component.TextStyleTypes `json:"style" validate:"required,min=1,max=2"`
@@ -216,6 +217,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			CustomId:    existing.CustomId,
 			Style:       uint8(input.Style),
 			Label:       input.Label,
+			Description: input.Description,
 			Placeholder: input.Placeholder,
 			Required:    input.Required,
 			MinLength:   &input.MinLength,
@@ -240,6 +242,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			input.Position,
 			uint8(input.Style),
 			input.Label,
+			input.Description,
 			input.Placeholder,
 			input.Required,
 			&input.MinLength,

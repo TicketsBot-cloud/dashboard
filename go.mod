@@ -4,17 +4,19 @@ go 1.23.8
 
 toolchain go1.24.2
 
-// replace github.com/TicketsBot-cloud/database => ../database
-// replace github.com/TicketsBot-cloud/gdl => ../gdl
-// replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
-// replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
-// replace github.com/TicketsBot-cloud/worker => ../worker
+//replace github.com/TicketsBot-cloud/database => ../database
+//replace github.com/TicketsBot-cloud/gdl => ../gdl
+//replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
+//replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
+//replace github.com/TicketsBot-cloud/worker => ../worker
+
+replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0
 
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250514201416-cf23f65eb3fc
-	github.com/TicketsBot-cloud/database v0.0.0-20250320215455-17762cd7d39a
-	github.com/TicketsBot-cloud/gdl v0.0.0-20250509054940-2045fbe19c06
+	github.com/TicketsBot-cloud/database v0.0.0-20250601094419-c168a11bd60a
+	github.com/TicketsBot-cloud/gdl v0.0.0-20250903113726-d89a77a99a6a
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0
@@ -50,10 +52,9 @@ require (
 )
 
 require (
-	github.com/ClickHouse/ch-go v0.65.1 // indirect
-	github.com/ClickHouse/clickhouse-go/v2 v2.34.0 // indirect
-	github.com/TicketsBot/analytics-client v0.0.0-20240724103359-30f5dac821e6 // indirect
-	github.com/TicketsBot/common v0.0.0-20241117150316-ff54c97b45c1 // indirect
+	github.com/ClickHouse/ch-go v0.66.0 // indirect
+	github.com/ClickHouse/clickhouse-go/v2 v2.36.0 // indirect
+	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c // indirect
 	github.com/TicketsBot/ttlcache v1.6.1-0.20200405150101-acc18e37b261 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -125,8 +126,8 @@ require (
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
-	go.opentelemetry.io/otel v1.35.0 // indirect
-	go.opentelemetry.io/otel/trace v1.35.0 // indirect
+	go.opentelemetry.io/otel v1.36.0 // indirect
+	go.opentelemetry.io/otel/trace v1.36.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect

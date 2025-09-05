@@ -7,7 +7,7 @@
     <div class="inner">
       <Navigate to="/admin/bot-staff" styles="sidebar-link">
         <div class="sidebar-element">
-          <i class="fas fa-user-group sidebar-icon"></i>
+          <i class="fas fa-user-group"></i>
           <span class="sidebar-text">Bot Staff</span>
         </div>
       </Navigate>
@@ -16,7 +16,7 @@
   <div class="sidebar-container">
     <div class="sidebar-element">
       <Navigate to="/" styles="sidebar-link">
-        <i class="sidebar-icon fas fa-home sidebar-icon"></i>
+        <i class="fas fa-home"></i>
         <span class="sidebar-text">Home</span>
       </Navigate>
     </div>
@@ -27,13 +27,10 @@
     .sidebar {
         display: flex;
         flex-direction: column;
-        height: 100%;
-        width: 16.6%;
+        height: calc(100% - 30px);
+        min-width: 260px;
+        padding: 15px 0;
         background-color: #272727;
-        float: left;
-        background-size: cover;
-        overflow-x: hidden !important;
-        min-width: 250px;
     }
 
     .sidebar-container {
@@ -49,7 +46,7 @@
         align-items: center;
         width: 100%;
         cursor: pointer;
-        padding: 5px 0 5px 0;
+        padding: 5px 20px;
     }
 
     .sidebar-element:hover {
@@ -57,13 +54,13 @@
         transition: background-color 0.5s ease;
     }
 
-    #custom-image {
-        max-height: 70px;
-        max-width: 90%;
+    .sidebar-element i {
+        width: 25px;
+        text-align: center;
     }
 
     .sidebar-text {
-        margin-left: 4%;
+        margin-left: 10px;
         display: flex;
         align-items: center;
     }
@@ -94,7 +91,7 @@
 
         .sidebar-element {
             width: unset;
-            padding: 20px 15px;
+            padding: 15px;
         }
     }
 </style>

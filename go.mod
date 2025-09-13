@@ -15,11 +15,15 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250807224931-e188ad18a850
+	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
 	github.com/TicketsBot-cloud/database v0.0.0-20250912194903-010a01ef7e90
 	github.com/TicketsBot-cloud/gdl v0.0.0-20250912194323-e3ba3b76ed84
+	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
+	github.com/TicketsBot-cloud/worker v0.0.0-20250913112550-8d331a3f89af
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0
+	github.com/getsentry/sentry-go/gin v0.33.0
 	github.com/gin-gonic/contrib v0.0.0-20191209060500-d6e26eeaa607
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-playground/validator/v10 v10.20.0
@@ -42,13 +46,6 @@ require (
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.17.0
-)
-
-require (
-	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
-	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
-	github.com/TicketsBot-cloud/worker v0.0.0-20250912144630-789d8a14bf7b
-	github.com/getsentry/sentry-go/gin v0.33.0
 )
 
 require (

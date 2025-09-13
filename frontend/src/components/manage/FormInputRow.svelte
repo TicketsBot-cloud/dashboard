@@ -26,6 +26,11 @@
         data.options = [];
     }
 
+    // Set default max_length for String Select if not set
+    $: if (data.type === 3 && data.options && data.options.length > 0 && !data.max_length) {
+        data.max_length = data.options.length;
+    }
+
     // Validate min/max selections
     $: if (
         data.min_length &&
@@ -97,6 +102,10 @@
                     description: "",
                 },
             ];
+            // If max_length was not set or was equal to previous length, update it
+            if (!data.max_length || data.max_length === data.options.length - 1) {
+                data.max_length = data.options.length;
+            }
         }
     }
 

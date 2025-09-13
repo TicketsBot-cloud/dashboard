@@ -218,6 +218,12 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return fmt.Errorf("input %d does not exist", input.Id)
 		}
 
+		// For String Select (type 3), ensure max_length defaults to number of options if not set
+		maxLength := input.MaxLength
+		if input.Type == 3 && maxLength == 0 && len(input.Options) > 0 {
+			maxLength = uint16(len(input.Options))
+		}
+
 		wrapped := database.FormInput{
 			Id:          input.Id,
 			FormId:      formId,
@@ -230,7 +236,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			Placeholder: input.Placeholder,
 			Required:    input.Required,
 			MinLength:   &input.MinLength,
-			MaxLength:   &input.MaxLength,
+			MaxLength:   &maxLength,
 		}
 
 		if err := dbclient.Client.FormInput.UpdateTx(ctx, tx, wrapped); err != nil {
@@ -273,6 +279,12 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return err
 		}
 
+		// For String Select (type 3), ensure max_length defaults to number of options if not set
+		maxLength := input.MaxLength
+		if input.Type == 3 && maxLength == 0 && len(input.Options) > 0 {
+			maxLength = uint16(len(input.Options))
+		}
+
 		formInputId, err := dbclient.Client.FormInput.CreateTx(ctx,
 			tx,
 			formId,
@@ -285,7 +297,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			input.Placeholder,
 			input.Required,
 			&input.MinLength,
-			&input.MaxLength,
+			&maxLength,
 		)
 
 		if err != nil {

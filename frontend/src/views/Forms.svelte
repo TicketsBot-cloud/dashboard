@@ -124,6 +124,7 @@
             max_length: 255,
             is_new: true,
             type: 4, // Text Input
+            options: [], // Initialize empty options array for potential String Select
         };
 
         form.inputs = [...form.inputs, input];
@@ -185,6 +186,10 @@
                     ...i,
                     style: parseInt(i.style),
                     placeholder: nullIfBlank(i.placeholder),
+                    // Ensure String Select has max_length set to options length if not specified
+                    max_length: i.type === 3 && !i.max_length && i.options?.length > 0
+                        ? i.options.length
+                        : i.max_length,
                 })),
             update: form.inputs
                 .filter((i) => !i.is_new)
@@ -192,6 +197,10 @@
                     ...i,
                     style: parseInt(i.style),
                     placeholder: nullIfBlank(i.placeholder),
+                    // Ensure String Select has max_length set to options length if not specified
+                    max_length: i.type === 3 && !i.max_length && i.options?.length > 0
+                        ? i.options.length
+                        : i.max_length,
                 })),
             delete: toDelete[activeFormId] || [],
         };

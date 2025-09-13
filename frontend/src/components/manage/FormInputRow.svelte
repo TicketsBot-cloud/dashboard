@@ -9,6 +9,7 @@
     import Checkbox from "../form/Checkbox.svelte";
     import DoubleRangeSlider from "../form/DoubleRangeSlider.svelte";
     import Number from "../form/Number.svelte";
+    import BetaAlert from "../BetaAlert.svelte";
 
     export let withCreateButton = false;
     export let withDeleteButton = false;
@@ -190,11 +191,11 @@
                         }}
                     >
                         <option value={4}>Text Input</option>
-                        <option value={3}>String Select</option>
-                        <option value={5}>User Select</option>
-                        <option value={6}>Role Select</option>
-                        <option value={7}>Mentionable Select</option>
-                        <option value={8}>Channel Select</option>
+                        <option value={3}>String Select (Beta)</option>
+                        <option value={5}>User Select (Beta)</option>
+                        <option value={6}>Role Select (Beta)</option>
+                        <option value={7}>Mentionable Select (Beta)</option>
+                        <option value={8}>Channel Select (Beta)</option>
                     </Dropdown>
                 </div>
                 {#if withDeleteButton}
@@ -219,6 +220,12 @@
             />
         </div>
     </div>
+    
+    <!-- Beta Warning for non-text input types -->
+    {#if data.type !== 4 && data.type !== null}
+        <BetaAlert />
+    {/if}
+    
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
         <div class="row settings-row">
@@ -571,11 +578,11 @@
                         }}
                     >
                         <option value={4}>Text Input</option>
-                        <option value={3}>String Select</option>
-                        <option value={5}>User Select</option>
-                        <option value={6}>Role Select</option>
-                        <option value={7}>Channel Select</option>
-                        <option value={8}>Mentionable Select</option>
+                        <option value={3}>String Select (Beta)</option>
+                        <option value={5}>User Select (Beta)</option>
+                        <option value={6}>Role Select (Beta)</option>
+                        <option value={7}>Channel Select (Beta)</option>
+                        <option value={8}>Mentionable Select (Beta)</option>
                     </Dropdown>
                 </div>
             </div>

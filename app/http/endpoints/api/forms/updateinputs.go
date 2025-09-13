@@ -28,11 +28,19 @@ type (
 		Label       string                   `json:"label" validate:"required,min=1,max=45"`
 		Description *string                  `json:"description,omitempty" validate:"omitempty,max=100"`
 		Placeholder *string                  `json:"placeholder,omitempty" validate:"omitempty,min=1,max=100"`
+		Type        int                      `json:"type" validate:"required,min=3,max=8"`
 		Position    int                      `json:"position" validate:"required,min=1,max=5"`
-		Style       component.TextStyleTypes `json:"style" validate:"required,min=1,max=2"`
+		Style       component.TextStyleTypes `json:"style" validate:"omitempty,required,min=1,max=2"`
 		Required    bool                     `json:"required"`
 		MinLength   uint16                   `json:"min_length" validate:"min=0,max=1024"` // validator interprets 0 as not set
 		MaxLength   uint16                   `json:"max_length" validate:"min=0,max=1024"`
+		Options     []inputOption            `json:"options,omitempty" validate:"omitempty,dive,required,min=1,max=25"`
+	}
+
+	inputOption struct {
+		Label       string  `json:"label" validate:"required,min=1,max=100"`
+		Description *string `json:"description,omitempty" validate:"omitempty,max=100"`
+		Value       string  `json:"value" validate:"required,min=1,max=100"`
 	}
 
 	inputUpdateBody struct {
@@ -213,6 +221,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		wrapped := database.FormInput{
 			Id:          input.Id,
 			FormId:      formId,
+			Type:        input.Type,
 			Position:    input.Position,
 			CustomId:    existing.CustomId,
 			Style:       uint8(input.Style),
@@ -227,6 +236,35 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		if err := dbclient.Client.FormInput.UpdateTx(ctx, tx, wrapped); err != nil {
 			return err
 		}
+
+		if wrapped.Type == 3 { // String Select
+			// Delete existing options
+			options, err := dbclient.Client.FormInputOption.GetOptions(ctx, wrapped.Id)
+			if err != nil {
+				return err
+			}
+
+			for _, option := range options {
+				if err := dbclient.Client.FormInputOption.DeleteTx(ctx, tx, option.Id); err != nil {
+					return err
+				}
+			}
+
+			// Add new options
+			for i, opt := range input.Options {
+				option := database.FormInputOption{
+					FormInputId: wrapped.Id,
+					Position:    i + 1,
+					Label:       opt.Label,
+					Description: opt.Description,
+					Value:       opt.Value,
+				}
+
+				if _, err := dbclient.Client.FormInputOption.CreateTx(ctx, tx, option); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	for _, input := range data.Create {
@@ -235,9 +273,10 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return err
 		}
 
-		if _, err := dbclient.Client.FormInput.CreateTx(ctx,
+		formInputId, err := dbclient.Client.FormInput.CreateTx(ctx,
 			tx,
 			formId,
+			input.Type,
 			customId,
 			input.Position,
 			uint8(input.Style),
@@ -247,8 +286,26 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			input.Required,
 			&input.MinLength,
 			&input.MaxLength,
-		); err != nil {
+		)
+
+		if err != nil {
 			return err
+		}
+
+		if input.Type == 3 { // String Select
+			for i, opt := range input.Options {
+				option := database.FormInputOption{
+					FormInputId: formInputId,
+					Position:    i + 1,
+					Label:       opt.Label,
+					Description: opt.Description,
+					Value:       opt.Value,
+				}
+
+				if _, err := dbclient.Client.FormInputOption.CreateTx(ctx, tx, option); err != nil {
+					return err
+				}
+			}
 		}
 	}
 

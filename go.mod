@@ -1,6 +1,6 @@
 module github.com/TicketsBot-cloud/dashboard
 
-go 1.23.8
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -15,11 +15,15 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250807224931-e188ad18a850
-	github.com/TicketsBot-cloud/database v0.0.0-20250903144933-e8e254858b76
-	github.com/TicketsBot-cloud/gdl v0.0.0-20250905224402-65e3ee6910e0
+	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
+	github.com/TicketsBot-cloud/database v0.0.0-20250912194903-010a01ef7e90
+	github.com/TicketsBot-cloud/gdl v0.0.0-20250912194323-e3ba3b76ed84
+	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
+	github.com/TicketsBot-cloud/worker v0.0.0-20250913112550-8d331a3f89af
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0
+	github.com/getsentry/sentry-go/gin v0.33.0
 	github.com/gin-gonic/contrib v0.0.0-20191209060500-d6e26eeaa607
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-playground/validator/v10 v10.20.0
@@ -41,20 +45,13 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sync v0.16.0
-)
-
-require (
-	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
-	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
-	github.com/TicketsBot-cloud/worker v0.0.0-20250514210747-48c7e67e5129
-	github.com/getsentry/sentry-go/gin v0.33.0
+	golang.org/x/sync v0.17.0
 )
 
 require (
 	github.com/ClickHouse/ch-go v0.66.0 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.36.0 // indirect
-	github.com/TicketsBot/analytics-client v0.0.0-20240724103359-30f5dac821e6 // indirect
+	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c // indirect
 	github.com/TicketsBot/common v0.0.0-20241117150316-ff54c97b45c1 // indirect
 	github.com/TicketsBot/ttlcache v1.6.1-0.20200405150101-acc18e37b261 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
@@ -134,12 +131,12 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect
-	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect
+	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
 	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/term v0.34.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/term v0.35.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

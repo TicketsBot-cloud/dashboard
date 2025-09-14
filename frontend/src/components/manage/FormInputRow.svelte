@@ -26,11 +26,6 @@
         data.options = [];
     }
 
-    // Set default max_length for String Select if not set
-    $: if (data.type === 3 && data.options && data.options.length > 0 && !data.max_length) {
-        data.max_length = data.options.length;
-    }
-
     // Validate min/max selections
     $: if (
         data.min_length &&
@@ -102,10 +97,6 @@
                     description: "",
                 },
             ];
-            // If max_length was not set or was equal to previous length, update it
-            if (!data.max_length || data.max_length === data.options.length - 1) {
-                data.max_length = data.options.length;
-            }
         }
     }
 
@@ -187,14 +178,10 @@
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
-                                // Clear min/max for select types that don't use custom options
-                                if (newType !== 3 && newType !== 4) {
+                                // Clear min/max for types that don't use them
+                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
-                                }
-
-                                if (newType > 4 && newType < 9) {
-                                    data.max_length = 25;
                                 }
                             }
                         }}
@@ -578,8 +565,8 @@
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
-                                // Clear min/max for select types that don't use custom options
-                                if (newType !== 3 && newType !== 4) {
+                                // Clear min/max for types that don't use them
+                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }

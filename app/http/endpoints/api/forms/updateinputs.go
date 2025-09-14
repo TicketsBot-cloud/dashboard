@@ -218,10 +218,49 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return fmt.Errorf("input %d does not exist", input.Id)
 		}
 
-		// For String Select (type 3), ensure max_length defaults to number of options if not set
+		// Set default values for min_length and max_length
+		minLength := input.MinLength
 		maxLength := input.MaxLength
-		if input.Type == 3 && maxLength == 0 && len(input.Options) > 0 {
-			maxLength = uint16(len(input.Options))
+
+		// Handle select types (3, 5-8)
+		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) {
+			// Enforce min_length constraints (0-25)
+			if minLength < 0 {
+				minLength = 0
+			} else if minLength > 25 {
+				minLength = 25
+			}
+
+			// Handle max_length based on type
+			if input.Type == 3 {
+				// String Select: use options length as max, can be lower but not higher
+				optionsLength := uint16(len(input.Options))
+				if optionsLength > 0 {
+					if maxLength == 0 || maxLength > optionsLength {
+						maxLength = optionsLength
+					}
+				} else {
+					// No options yet, cap at 25
+					if maxLength == 0 || maxLength > 25 {
+						maxLength = 25
+					}
+				}
+			} else {
+				// Other select types (5-8): enforce 1-25 range
+				if maxLength == 0 || maxLength > 25 {
+					maxLength = 25
+				}
+			}
+
+			// Ensure max is at least 1
+			if maxLength < 1 {
+				maxLength = 1
+			}
+
+			// Ensure min doesn't exceed max
+			if minLength > maxLength {
+				minLength = maxLength
+			}
 		}
 
 		wrapped := database.FormInput{
@@ -235,7 +274,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			Description: input.Description,
 			Placeholder: input.Placeholder,
 			Required:    input.Required,
-			MinLength:   &input.MinLength,
+			MinLength:   &minLength,
 			MaxLength:   &maxLength,
 		}
 
@@ -279,10 +318,49 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return err
 		}
 
-		// For String Select (type 3), ensure max_length defaults to number of options if not set
+		// Set default values for min_length and max_length
+		minLength := input.MinLength
 		maxLength := input.MaxLength
-		if input.Type == 3 && maxLength == 0 && len(input.Options) > 0 {
-			maxLength = uint16(len(input.Options))
+
+		// Handle select types (3, 5-8)
+		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) {
+			// Enforce min_length constraints (0-25)
+			if minLength < 0 {
+				minLength = 0
+			} else if minLength > 25 {
+				minLength = 25
+			}
+
+			// Handle max_length based on type
+			if input.Type == 3 {
+				// String Select: use options length as max, can be lower but not higher
+				optionsLength := uint16(len(input.Options))
+				if optionsLength > 0 {
+					if maxLength == 0 || maxLength > optionsLength {
+						maxLength = optionsLength
+					}
+				} else {
+					// No options yet, cap at 25
+					if maxLength == 0 || maxLength > 25 {
+						maxLength = 25
+					}
+				}
+			} else {
+				// Other select types (5-8): enforce 1-25 range
+				if maxLength == 0 || maxLength > 25 {
+					maxLength = 25
+				}
+			}
+
+			// Ensure max is at least 1
+			if maxLength < 1 {
+				maxLength = 1
+			}
+
+			// Ensure min doesn't exceed max
+			if minLength > maxLength {
+				minLength = maxLength
+			}
 		}
 
 		formInputId, err := dbclient.Client.FormInput.CreateTx(ctx,
@@ -296,7 +374,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			input.Description,
 			input.Placeholder,
 			input.Required,
-			&input.MinLength,
+			&minLength,
 			&maxLength,
 		)
 

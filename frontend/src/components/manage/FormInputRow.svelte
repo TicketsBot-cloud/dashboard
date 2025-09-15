@@ -178,6 +178,12 @@
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
+                                // Reset text input fields when switching TO text input
+                                if (newType === 4 && oldType !== 4) {
+                                    data.style = 1; // Default to short style
+                                    data.min_length = 0;
+                                    data.max_length = 255; // Default max for short style
+                                }
                                 // Clear min/max for types that don't use them
                                 if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
                                     data.min_length = undefined;
@@ -564,6 +570,12 @@
                                     data.style = undefined;
                                     data.min_length = undefined;
                                     data.max_length = undefined;
+                                }
+                                // Reset text input fields when switching TO text input
+                                if (newType === 4 && oldType !== 4) {
+                                    data.style = 1; // Default to short style
+                                    data.min_length = 0;
+                                    data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
                                 if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {

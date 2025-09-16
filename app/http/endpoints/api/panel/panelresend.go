@@ -53,13 +53,20 @@ func ResendPanel(ctx *gin.Context) {
 		return
 	}
 
+	if panel.ChannelId == nil {
+		ctx.JSON(400, utils.ErrorStr("This panel has no selected channel."))
+		return
+	}
+
 	// delete old message
 	// TODO: Use proper context
-	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, panel.ChannelId, panel.GuildId); err != nil {
-		var unwrapped request.RestError
-		if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
-			ctx.JSON(500, utils.ErrorJson(err))
-			return
+	if panel.MessageId != nil {
+		if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, *panel.ChannelId, *panel.MessageId); err != nil {
+			var unwrapped request.RestError
+			if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
+				ctx.JSON(500, utils.ErrorJson(err))
+				return
+			}
 		}
 	}
 
@@ -69,20 +76,24 @@ func ResendPanel(ctx *gin.Context) {
 		return
 	}
 
+	var newMsgId *uint64
 	messageData := panelIntoMessageData(panel, premiumTier > premium.None)
-	msgId, err := messageData.send(botContext)
-	if err != nil {
-		var unwrapped request.RestError
-		if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
-			ctx.JSON(500, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
-		} else {
-			ctx.JSON(500, utils.ErrorJson(err))
-		}
+	if messageData != nil {
+		msgId, err := messageData.send(botContext)
+		if err != nil {
+			var unwrapped request.RestError
+			if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
+				ctx.JSON(500, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+			} else {
+				ctx.JSON(500, utils.ErrorJson(err))
+			}
 
-		return
+			return
+		}
+		newMsgId = &msgId
 	}
 
-	if err = dbclient.Client.Panel.UpdateMessageId(ctx, panel.PanelId, msgId); err != nil {
+	if err = dbclient.Client.Panel.UpdateMessageId(ctx, panel.PanelId, newMsgId); err != nil {
 		ctx.JSON(500, utils.ErrorJson(err))
 		return
 	}

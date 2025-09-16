@@ -26,8 +26,8 @@ import (
 const freePanelLimit = 3
 
 type panelBody struct {
-	ChannelId         uint64                            `json:"channel_id,string"`
-	MessageId         uint64                            `json:"message_id,string"`
+	ChannelId         *uint64                           `json:"channel_id,string"`
+	MessageId         *uint64                           `json:"message_id,string"`
 	Title             string                            `json:"title"`
 	Content           string                            `json:"content"`
 	Colour            uint32                            `json:"colour"`
@@ -50,9 +50,13 @@ type panelBody struct {
 	DeleteMentions    bool                              `json:"delete_mentions"`
 }
 
-func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
-	return panelMessageData{
-		ChannelId:      p.ChannelId,
+func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) *panelMessageData {
+	if p.ChannelId == nil {
+		// This should never happen. But lets not make assumptions
+		return nil
+	}
+	return &panelMessageData{
+		ChannelId:      *p.ChannelId,
 		Title:          p.Title,
 		Content:        p.Content,
 		CustomId:       customId,
@@ -85,7 +89,7 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
-	data.MessageId = 0
+	data.MessageId = nil
 
 	// Check panel quota
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
@@ -166,20 +170,24 @@ func CreatePanel(c *gin.Context) {
 	}
 
 	messageData := data.IntoPanelMessageData(customId, premiumTier > premium.None)
-	msgId, err := messageData.send(botContext)
-	if err != nil {
-		var unwrapped request.RestError
-		if errors.As(err, &unwrapped) {
-			if unwrapped.StatusCode == http.StatusForbidden {
-				c.JSON(400, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+	var newMsgId *uint64
+	if messageData != nil {
+		msgId, err := messageData.send(botContext)
+		if err != nil {
+			var unwrapped request.RestError
+			if errors.As(err, &unwrapped) {
+				if unwrapped.StatusCode == http.StatusForbidden {
+					c.JSON(400, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+				} else {
+					c.JSON(400, utils.ErrorStr("Error sending panel message: "+unwrapped.ApiError.Message))
+				}
 			} else {
-				c.JSON(400, utils.ErrorStr("Error sending panel message: "+unwrapped.ApiError.Message))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
 			}
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
-		}
 
-		return
+			return
+		}
+		newMsgId = &msgId
 	}
 
 	var emojiId *uint64
@@ -212,7 +220,7 @@ func CreatePanel(c *gin.Context) {
 
 	// Store in DB
 	panel := database.Panel{
-		MessageId:           msgId,
+		MessageId:           newMsgId,
 		ChannelId:           data.ChannelId,
 		GuildId:             guildId,
 		Title:               data.Title,

@@ -439,10 +439,6 @@
                             />
                         </div>
                         <div class="config-info">
-                            <Checkbox
-                                label="Required"
-                                bind:value={data.required}
-                            />
                             {#if data.min_length || data.max_length}
                                 <span class="config-text">
                                     Users must select
@@ -719,7 +715,6 @@
     .config-row {
         display: flex;
         gap: 10px;
-        margin-bottom: 10px;
     }
 
     .config-row :global(.col-2) {
@@ -739,7 +734,6 @@
         font-size: 13px;
         color: var(--text-secondary, #666);
         font-style: italic;
-        padding: 4px 8px;
         background: rgba(0, 0, 0, 0.03);
         border-radius: 4px;
     }

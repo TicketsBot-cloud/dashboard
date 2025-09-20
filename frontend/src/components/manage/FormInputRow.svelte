@@ -26,11 +26,6 @@
         data.options = [];
     }
 
-    // Set default max_length for String Select if not set
-    $: if (data.type === 3 && data.options && data.options.length > 0 && !data.max_length) {
-        data.max_length = data.options.length;
-    }
-
     // Validate min/max selections
     $: if (
         data.min_length &&
@@ -102,10 +97,6 @@
                     description: "",
                 },
             ];
-            // If max_length was not set or was equal to previous length, update it
-            if (!data.max_length || data.max_length === data.options.length - 1) {
-                data.max_length = data.options.length;
-            }
         }
     }
 
@@ -187,14 +178,16 @@
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
-                                // Clear min/max for select types that don't use custom options
-                                if (newType !== 3 && newType !== 4) {
+                                // Reset text input fields when switching TO text input
+                                if (newType === 4 && oldType !== 4) {
+                                    data.style = 1; // Default to short style
+                                    data.min_length = 0;
+                                    data.max_length = 255; // Default max for short style
+                                }
+                                // Clear min/max for types that don't use them
+                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
-                                }
-
-                                if (newType > 4 && newType < 9) {
-                                    data.max_length = 25;
                                 }
                             }
                         }}
@@ -446,10 +439,6 @@
                             />
                         </div>
                         <div class="config-info">
-                            <Checkbox
-                                label="Required"
-                                bind:value={data.required}
-                            />
                             {#if data.min_length || data.max_length}
                                 <span class="config-text">
                                     Users must select
@@ -578,8 +567,14 @@
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
-                                // Clear min/max for select types that don't use custom options
-                                if (newType !== 3 && newType !== 4) {
+                                // Reset text input fields when switching TO text input
+                                if (newType === 4 && oldType !== 4) {
+                                    data.style = 1; // Default to short style
+                                    data.min_length = 0;
+                                    data.max_length = 255; // Default max for short style
+                                }
+                                // Clear min/max for types that don't use them
+                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -720,7 +715,6 @@
     .config-row {
         display: flex;
         gap: 10px;
-        margin-bottom: 10px;
     }
 
     .config-row :global(.col-2) {
@@ -740,7 +734,6 @@
         font-size: 13px;
         color: var(--text-secondary, #666);
         font-style: italic;
-        padding: 4px 8px;
         background: rgba(0, 0, 0, 0.03);
         border-radius: 4px;
     }

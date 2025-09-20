@@ -232,11 +232,7 @@
         }
 
         forms = res.data || [];
-        forms
-            .flatMap((f) => f.inputs)
-            .forEach((i) => {
-                i.style = i.style.toString();
-            });
+        forms.flatMap((f) => f.inputs);
 
         if (forms.length > 0) {
             activeFormId = forms[0].form_id;

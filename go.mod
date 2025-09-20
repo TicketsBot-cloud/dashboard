@@ -4,11 +4,15 @@ go 1.24.0
 
 toolchain go1.24.2
 
-//replace github.com/TicketsBot-cloud/database => ../database
-//replace github.com/TicketsBot-cloud/gdl => ../gdl
-//replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
-//replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
-//replace github.com/TicketsBot-cloud/worker => ../worker
+replace github.com/TicketsBot-cloud/database => ../database
+
+replace github.com/TicketsBot-cloud/gdl => ../gdl
+
+replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
+
+replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
+
+replace github.com/TicketsBot-cloud/worker => ../worker
 
 replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0
 
@@ -16,8 +20,8 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250807224931-e188ad18a850
 	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
-	github.com/TicketsBot-cloud/database v0.0.0-20250912194903-010a01ef7e90
-	github.com/TicketsBot-cloud/gdl v0.0.0-20250912194323-e3ba3b76ed84
+	github.com/TicketsBot-cloud/database v0.0.0-20250918212912-4cc263bc1b41
+	github.com/TicketsBot-cloud/gdl v0.0.0-20250917180424-569348f7a55b
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
 	github.com/TicketsBot-cloud/worker v0.0.0-20250913112550-8d331a3f89af
 	github.com/apex/log v1.1.2
@@ -52,7 +56,6 @@ require (
 	github.com/ClickHouse/ch-go v0.66.0 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.36.0 // indirect
 	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c // indirect
-	github.com/TicketsBot/common v0.0.0-20241117150316-ff54c97b45c1 // indirect
 	github.com/TicketsBot/ttlcache v1.6.1-0.20200405150101-acc18e37b261 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

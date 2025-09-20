@@ -12,6 +12,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
+	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
@@ -48,6 +49,12 @@ func CallbackHandler(c *gin.Context) {
 
 	// Get ID + name
 	currentUser, err := rest.GetCurrentUser(context.Background(), fmt.Sprintf("Bearer %s", res.AccessToken), nil)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		return
+	}
+
+	premiumTier, err  := rpc.PremiumClient.GetTierByUser(context.Background(), currentUser.Id, false)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
 		return
@@ -98,6 +105,7 @@ func CallbackHandler(c *gin.Context) {
 			"username": currentUser.Username,
 			"avatar":   currentUser.Avatar,
 			"admin":    utils.Contains(config.Conf.Admins, currentUser.Id),
+			"tier":     premiumTier,
 		},
 		"guilds": guilds,
 	}

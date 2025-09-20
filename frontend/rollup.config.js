@@ -82,11 +82,13 @@ export default {
                 API_URL: process.env.API_URL,
                 WS_URL: process.env.WS_URL,
                 INVITE_URL: process.env.INVITE_URL,
+                PREMIUM_URL: process.env.PREMIUM_URL,
                 TITLE: process.env.TITLE,
                 DESCRIPTION: process.env.DESCRIPTION,
                 FAVICON: process.env.FAVICON,
                 FAVICON_TYPE: process.env.FAVICON_TYPE,
                 WHITELABEL_DISABLED: process.env.WHITELABEL_DISABLED,
+                PREMIUM_DISABLED: process.env.PREMIUM_DISABLED,
             })
         }),
 

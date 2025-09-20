@@ -2,7 +2,11 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/database"
@@ -10,14 +14,80 @@ import (
 )
 
 type wrappedQueryOptions struct {
-	Id          int    `json:"id,string"`
+	Id          int    `json:"id"`
 	Username    string `json:"username"`
-	UserId      uint64 `json:"user_id,string"`
+	UserId      uint64 `json:"user_id"`
 	PanelId     int    `json:"panel_id"`
 	Page        int    `json:"page"`
-	Rating      int    `json:"rating,string"`
-	ClosedById  uint64 `json:"closed_by_id,string"`
-	ClaimedById uint64 `json:"claimed_by_id,string"`
+	Rating      int    `json:"rating"`
+	ClosedById  uint64 `json:"closed_by_id"`
+	ClaimedById uint64 `json:"claimed_by_id"`
+}
+
+// UnmarshalJSON dynamically handles both string and number types, treating empty strings as 0
+func (o *wrappedQueryOptions) UnmarshalJSON(data []byte) error {
+	// First unmarshal into a map to handle different types
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	// Use reflection to dynamically set fields
+	v := reflect.ValueOf(o).Elem()
+	t := v.Type()
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldValue := v.Field(i)
+
+		// Get the JSON tag name
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" {
+			jsonTag = strings.ToLower(field.Name)
+		}
+		// Handle comma-separated tags (e.g., "field,omitempty")
+		if idx := strings.Index(jsonTag, ","); idx != -1 {
+			jsonTag = jsonTag[:idx]
+		}
+
+		// Get the raw value from the map
+		rawValue, exists := raw[jsonTag]
+		if !exists {
+			continue
+		}
+
+		// Set the field based on its type
+		switch fieldValue.Kind() {
+		case reflect.String:
+			if s, ok := rawValue.(string); ok {
+				fieldValue.SetString(s)
+			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			switch val := rawValue.(type) {
+			case string:
+				if val != "" {
+					if n, err := strconv.ParseInt(val, 10, 64); err == nil {
+						fieldValue.SetInt(n)
+					}
+				}
+			case float64:
+				fieldValue.SetInt(int64(val))
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			switch val := rawValue.(type) {
+			case string:
+				if val != "" {
+					if n, err := strconv.ParseUint(val, 10, 64); err == nil {
+						fieldValue.SetUint(n)
+					}
+				}
+			case float64:
+				fieldValue.SetUint(uint64(val))
+			}
+		}
+	}
+
+	return nil
 }
 
 func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQueryOptions, error) {

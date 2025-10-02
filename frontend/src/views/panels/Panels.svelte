@@ -33,6 +33,7 @@
                         <tr>
                             <th>Channel</th>
                             <th class="max">Panel Title</th>
+                            <th>Support Hours</th>
                             <th></th>
                             <th></th>
                             <th></th>
@@ -43,6 +44,15 @@
                             <tr>
                                 <td>#{channels.find((c) => c.id === panel.channel_id)?.name ?? 'Unknown Channel'}</td>
                                 <td class="max">{panel.title}</td>
+                                <td>
+                                    {#if panel.has_support_hours}
+                                        <span class="support-hours-badge" class:active={panel.is_currently_active} class:inactive={!panel.is_currently_active}>
+                                            {panel.is_currently_active ? 'Open' : 'Closed'}
+                                        </span>
+                                    {:else}
+                                        <span class="support-hours-badge always-active">24/7</span>
+                                    {/if}
+                                </td>
                                 <td>
                                     <Button disabled={panel.force_disabled}
                                             on:click={() => resendPanel(panel.panel_id)}>Resend
@@ -288,8 +298,35 @@
         padding: 0 10px;
     }
 
-    th:not(.max), td:not(.max) {
-        width: 0;
+    th.max, td.max {
+        width: 100%;
+    }
+
+    .support-hours-badge {
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         white-space: nowrap;
+    }
+
+    .support-hours-badge.active {
+        background-color: rgba(102, 187, 106, 0.15);
+        color: #66bb6a;
+        border: 1px solid rgba(102, 187, 106, 0.3);
+    }
+
+    .support-hours-badge.inactive {
+        background-color: rgba(244, 67, 54, 0.15);
+        color: #ef5350;
+        border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+
+    .support-hours-badge.always-active {
+        background-color: rgba(79, 195, 247, 0.15);
+        color: #4FC3F7;
+        border: 1px solid rgba(79, 195, 247, 0.3);
     }
 </style>

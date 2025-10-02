@@ -74,10 +74,23 @@
     async function createPanel() {
         setBlankStringsToNull(panelCreateData);
 
+        // Save support hours separately from panel data
+        const supportHours = panelCreateData.support_hours;
+        delete panelCreateData.support_hours;
+
         const res = await axios.post(`${API_URL}/api/${guildId}/panels`, panelCreateData);
         if (res.status !== 200) {
             notifyError(res.data.error);
             return;
+        }
+
+        // Get the created panel ID from response and save support hours if provided
+        if (res.data && res.data.panel_id && supportHours && supportHours.length > 0) {
+            const hoursRes = await axios.post(`${API_URL}/api/${guildId}/panels/${res.data.panel_id}/support-hours`, supportHours);
+            if (hoursRes.status !== 200) {
+                notifyError(hoursRes.data.error);
+                // Don't return here, the panel is already created
+            }
         }
 
         navigateTo(`/manage/${guildId}/panels?created=true`);

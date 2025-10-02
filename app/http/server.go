@@ -141,6 +141,12 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 		guildAuthApiAdmin.PATCH("/panels/:panelid", api_panels.UpdatePanel)
 		guildAuthApiAdmin.DELETE("/panels/:panelid", api_panels.DeletePanel)
 
+		// Support hours endpoints
+		guildAuthApiSupport.GET("/panels/:panelid/support-hours", api_panels.GetSupportHours)
+		guildAuthApiAdmin.POST("/panels/:panelid/support-hours", api_panels.SetSupportHours)
+		guildAuthApiAdmin.DELETE("/panels/:panelid/support-hours", api_panels.DeleteSupportHours)
+		guildAuthApiSupport.GET("/panels/:panelid/is-active", api_panels.IsPanelActive)
+
 		guildAuthApiAdmin.GET("/multipanels", api_panels.MultiPanelList)
 		guildAuthApiAdmin.POST("/multipanels", api_panels.MultiPanelCreate)
 		guildAuthApiAdmin.POST("/multipanels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.MultiPanelResend)

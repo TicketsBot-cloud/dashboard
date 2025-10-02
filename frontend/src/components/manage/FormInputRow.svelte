@@ -185,7 +185,11 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -193,11 +197,11 @@
                         }}
                     >
                         <option value={4}>Text Input</option>
-                        <option value={3}>String Select (Beta)</option>
-                        <option value={5}>User Select (Beta)</option>
-                        <option value={6}>Role Select (Beta)</option>
-                        <option value={7}>Mentionable Select (Beta)</option>
-                        <option value={8}>Channel Select (Beta)</option>
+                        <option value={3}>String Select</option>
+                        <option value={5}>User Select</option>
+                        <option value={6}>Role Select</option>
+                        <option value={7}>Mentionable Select</option>
+                        <option value={8}>Channel Select</option>
                     </Dropdown>
                 </div>
                 {#if withDeleteButton}
@@ -222,12 +226,7 @@
             />
         </div>
     </div>
-    
-    <!-- Beta Warning for non-text input types -->
-    {#if data.type !== 4 && data.type !== null}
-        <BetaAlert />
-    {/if}
-    
+
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
         <div class="row settings-row">
@@ -574,7 +573,11 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -582,11 +585,11 @@
                         }}
                     >
                         <option value={4}>Text Input</option>
-                        <option value={3}>String Select (Beta)</option>
-                        <option value={5}>User Select (Beta)</option>
-                        <option value={6}>Role Select (Beta)</option>
-                        <option value={7}>Channel Select (Beta)</option>
-                        <option value={8}>Mentionable Select (Beta)</option>
+                        <option value={3}>String Select</option>
+                        <option value={5}>User Select</option>
+                        <option value={6}>Role Select</option>
+                        <option value={7}>Channel Select</option>
+                        <option value={8}>Mentionable Select</option>
                     </Dropdown>
                 </div>
             </div>

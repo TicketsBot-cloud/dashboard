@@ -18,6 +18,7 @@
 
     export let index;
     export let formLength;
+    export let formId;
 
     export let data = {};
 
@@ -185,7 +186,11 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -222,12 +227,12 @@
             />
         </div>
     </div>
-    
+
     <!-- Beta Warning for non-text input types -->
     {#if data.type !== 4 && data.type !== null}
         <BetaAlert />
     {/if}
-    
+
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
         <div class="row settings-row">
@@ -515,7 +520,7 @@
                     </Dropdown>
                 </div>
                 <div class="row" style="gap: 10px">
-                    <Checkbox label="Required" bind:value={data.required} />
+                    <Checkbox id={`required-${formId}-${index}`} label="Required" bind:value={data.required} />
                     {#if data.style == 1}
                         <DoubleRangeSlider
                             label="Answer Length Range"
@@ -574,7 +579,11 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -688,7 +697,6 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        padding-bottom: 0.5em;
         min-width: 180px;
     }
 
@@ -855,5 +863,20 @@
         .properties-group > div:nth-child(2) {
             flex-direction: column;
         }
+    }
+
+    .buttons-row {
+        align-items: flex-end; /* Align items to bottom */
+    }
+
+    .type-selector :global(select) {
+        height: 48px;
+        padding: 0.75rem 1rem;
+    }
+
+    .button-form :global(button) {
+        height: 48px;
+        min-height: 48px;
+        box-sizing: border-box;
     }
 </style>

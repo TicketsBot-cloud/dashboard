@@ -477,21 +477,39 @@
     </Collapsible>
 
     <Collapsible>
-        <span slot="header">Support Hours</span>
+        <span slot="header"
+            >Support Hours {#if !isPremium}<span class="premium-badge"
+                    >Premium</span
+                >{/if}</span
+        >
         <div slot="content" class="col-1">
-            <div class="row">
-                <p>
-                    Optionally restrict when tickets can be opened from this
-                    panel. If no hours are set, the panel will be available
-                    24/7.
-                </p>
-            </div>
-            <div class="row">
-                <SupportHoursForm
-                    bind:data={data.support_hours}
-                    on:change={handleSupportHoursChange}
-                />
-            </div>
+            {#if !isPremium}
+                <div class="premium-notice">
+                    <i class="fas fa-crown"></i>
+                    <div class="premium-notice-text">
+                        <strong>Premium Feature</strong>
+                        <span
+                            >Support hours allow you to restrict when tickets
+                            can be opened from this panel. Upgrade to premium to
+                            configure operating hours.</span
+                        >
+                    </div>
+                </div>
+            {:else}
+                <div class="row">
+                    <p>
+                        Optionally restrict when tickets can be opened from this
+                        panel. If no hours are set, the panel will be available
+                        24/7.
+                    </p>
+                </div>
+                <div class="row">
+                    <SupportHoursForm
+                        bind:data={data.support_hours}
+                        on:change={handleSupportHoursChange}
+                    />
+                </div>
+            {/if}
         </div>
     </Collapsible>
 </form>
@@ -518,6 +536,52 @@
         flex-direction: column;
         width: 100%;
         height: 100%;
+    }
+
+    .premium-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-left: 8px;
+        display: inline-block;
+    }
+
+    .premium-notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 8px;
+        margin-bottom: 16px;
+    }
+
+    .premium-notice i {
+        color: #667eea;
+        font-size: 24px;
+        margin-top: 4px;
+    }
+
+    .premium-notice-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .premium-notice-text strong {
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 16px;
+    }
+
+    .premium-notice-text span {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 14px;
+        line-height: 1.5;
     }
 
     .col {

@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher, onMount } from "svelte";
+    import BetaAlert from "../BetaAlert.svelte";
 
     export let data = [];
 
@@ -168,7 +169,7 @@
                 </div>
             {/if}
         </div>
-
+        <BetaAlert style="width: 100%" />
         <div class="days-container">
             {#each daysOfWeek as day, index}
                 <div class="day-row" class:enabled={hours[index].enabled}>

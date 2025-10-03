@@ -6,8 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -77,6 +80,24 @@ type supportHoursRequest struct {
 
 func SetSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+
+	// Check premium status
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		return
+	}
+
+	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		return
+	}
+
+	if premiumTier == premium.None {
+		c.JSON(http.StatusForbidden, utils.ErrorStr("Support hours are a premium feature"))
+		return
+	}
 
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
@@ -150,6 +171,24 @@ func SetSupportHours(c *gin.Context) {
 
 func DeleteSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+
+	// Check premium status
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		return
+	}
+
+	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		return
+	}
+
+	if premiumTier == premium.None {
+		c.JSON(http.StatusForbidden, utils.ErrorStr("Support hours are a premium feature"))
+		return
+	}
 
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)

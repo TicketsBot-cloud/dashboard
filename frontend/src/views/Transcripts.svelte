@@ -1,123 +1,14 @@
-<div class="content">
-  <div class="col">
-    <Card footer footerRight ref="filter-card">
-      <span slot="title">
-        <i class="fas fa-filter"></i>
-        Filter Logs
-      </span>
-
-      <div slot="body" class="body-wrapper">
-        <div class="form-wrapper">
-          <div class="row">
-            <Input col4=true label="Ticket ID" placeholder="Ticket ID"
-                   on:input={handleInputTicketId} bind:value={filterSettings.ticketId}/>
-
-            <Input col4=true label="Username" placeholder="Username" on:input={handleInputUsername}
-                   bind:value={filterSettings.username}/>
-
-            <Input col4=true label="User ID" placeholder="User ID" on:input={handleInputUserId}
-                   bind:value={filterSettings.userId}/>
-
-            <Input col4=true label="Closed By Id" placeholder="Closed By" on:input={handleInputClosedById}
-                  bind:value={filterSettings.closedById}/>
-          </div>
-          <div class="row">
-            <div class="col-4">
-              <PanelDropdown label="Panel" isMulti={false} bind:panels bind:selected={selectedPanel} />
-            </div>
-
-            <Dropdown col4=true label="Rating" bind:value={filterSettings.rating}>
-              <option value=0>Any</option>
-              <option value=1>1 ⭐</option>
-              <option value=2>2 ⭐</option>
-              <option value=3>3 ⭐</option>
-              <option value=4>4 ⭐</option>
-              <option value=5>5 ⭐</option>
-            </Dropdown>
-
-            <Input col4=true label="Claimed By Id" placeholder="Claimed By" on:input={handleInputClaimedById}
-                  bind:value={filterSettings.claimedById}/>
-          </div>
-        </div>
-      </div>
-      <div slot="footer">
-        <Button icon="fas fa-search" on:click={filter}>Filter</Button>
-      </div>
-    </Card>
-
-    <div style="margin: 2% 0;">
-      <Card footer="{false}">
-        <span slot="title">
-          Transcripts
-        </span>
-        <ColumnSelector
-        options={["Ticket ID", "Username", "Rating", "Close Reason", "Transcript"]}
-        bind:selected={selectedColumns}
-        slot="title-items"
-        />
-
-        <div slot="body" class="main-col">
-          <table class="nice">
-            <thead>
-            <tr>
-              <th class:visible={selectedColumns.includes('Ticket ID')}>Ticket ID</th>
-              <th class:visible={selectedColumns.includes('Username')}>Username</th>
-              <th class:visible={selectedColumns.includes('Rating')}>Rating</th>
-              <th class:visible={selectedColumns.includes('Close Reason')}>Close Reason</th>
-              <th class:visible={selectedColumns.includes('Transcript')}>Transcript</th>
-            </tr>
-            </thead>
-            <tbody>
-            {#each transcripts as transcript}
-              <tr>
-                <td class:visible={selectedColumns.includes('Ticket ID')}>{transcript.ticket_id}</td>
-                <td class:visible={selectedColumns.includes('Username')}>{transcript.username}</td>
-                <td class:visible={selectedColumns.includes('Rating')}>
-                  {#if transcript.rating}
-                    {transcript.rating} ⭐
-                  {:else}
-                    No rating
-                  {/if}
-                </td>
-                <td class:visible={selectedColumns.includes('Close Reason')}>
-                  {transcript.close_reason || 'No reason specified'}
-                </td>
-                <td class:visible={selectedColumns.includes('Transcript')}>
-                  {#if transcript.has_transcript}
-                    <Navigate to="{`/manage/${guildId}/transcripts/view/${transcript.ticket_id}`}" styles="link">
-                      <Button>View</Button>
-                    </Navigate>
-                  {/if}
-                </td>
-              </tr>
-            {/each}
-            </tbody>
-          </table>
-
-          <div class="nav" class:nav-margin={transcripts.length === 0}>
-            <i class="fas fa-chevron-left" class:hidden={page === 1} on:click={loadPrevious}></i>
-            <span>Page {page}</span>
-            <i class="fas fa-chevron-right"
-               class:hidden={transcripts.length < pageLimit || transcripts[transcripts.length - 1].ticket_id === 1}
-               on:click={loadNext}></i>
-          </div>
-        </div>
-      </Card>
-    </div>
-  </div>
-</div>
-
 <script>
-    import Card from '../components/Card.svelte'
-    import Input from '../components/form/Input.svelte'
-    import Button from '../components/Button.svelte'
-    import {notifyError, withLoadingScreen} from '../js/util'
-    import {onMount} from "svelte";
-    import {dropdown} from "../js/stores";
+    import Card from "../components/Card.svelte";
+    import Input from "../components/form/Input.svelte";
+    import Button from "../components/Button.svelte";
+    import { notifyError, withLoadingScreen } from "../js/util";
+    import { onMount } from "svelte";
+    import { dropdown } from "../js/stores";
     import axios from "axios";
-    import {API_URL} from "../js/constants";
-    import {setDefaultHeaders} from '../includes/Auth.svelte'
-    import {Navigate} from 'svelte-router-spa'
+    import { API_URL } from "../js/constants";
+    import { setDefaultHeaders } from "../includes/Auth.svelte";
+    import { Navigate } from "svelte-router-spa";
     import PanelDropdown from "../components/PanelDropdown.svelte";
     import Dropdown from "../components/form/Dropdown.svelte";
     import ColumnSelector from "../components/ColumnSelector.svelte";
@@ -125,7 +16,7 @@
     setDefaultHeaders();
 
     export let currentRoute;
-    let guildId = currentRoute.namedParams.id
+    let guildId = currentRoute.namedParams.id;
 
     let filterSettings = {};
     let transcripts = [];
@@ -137,20 +28,29 @@
     let page = 1;
 
     // Show Columns logic
-    let selectedColumns = ['Ticket ID', 'Username', 'Rating', 'Close Reason', 'Transcript'];
-    const columnStorageKey = 'transcript_list:selected_columns';
+    let selectedColumns = [
+        "Ticket ID",
+        "Username",
+        "Rating",
+        "Close Reason",
+        "Transcript",
+    ];
+    const columnStorageKey = "transcript_list:selected_columns";
 
-    $: selectedColumns, updateColumnStorage();
+    $: (selectedColumns, updateColumnStorage());
 
     function updateColumnStorage() {
-      window.localStorage.setItem(columnStorageKey, JSON.stringify(selectedColumns));
+        window.localStorage.setItem(
+            columnStorageKey,
+            JSON.stringify(selectedColumns),
+        );
     }
 
     function loadColumnSettings() {
-      const columns = window.localStorage.getItem(columnStorageKey);
-      if (columns) {
-        selectedColumns = JSON.parse(columns);
-      }
+        const columns = window.localStorage.getItem(columnStorageKey);
+        if (columns) {
+            selectedColumns = JSON.parse(columns);
+        }
     }
 
     let handleInputTicketId = () => {
@@ -176,7 +76,7 @@
         filterSettings.username = undefined;
 
         if (filterSettings.userId === "") {
-           filterSettings.userId = undefined;
+            filterSettings.userId = undefined;
         }
     };
 
@@ -213,7 +113,10 @@
     async function loadNext() {
         if (loading) return;
 
-        if (transcripts.length < pageLimit || transcripts[transcripts.length - 1].ticket_id === 1) {
+        if (
+            transcripts.length < pageLimit ||
+            transcripts[transcripts.length - 1].ticket_id === 1
+        ) {
             return;
         }
 
@@ -257,7 +160,10 @@
     }
 
     async function loadData(paginationSettings) {
-        const res = await axios.post(`${API_URL}/api/${guildId}/transcripts`, paginationSettings);
+        const res = await axios.post(
+            `${API_URL}/api/${guildId}/transcripts`,
+            paginationSettings,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
             return false;
@@ -269,12 +175,211 @@
 
     withLoadingScreen(async () => {
         loadColumnSettings();
-        await Promise.all([
-            loadPanels(),
-            loadData({})
-        ])
-    })
+        await Promise.all([loadPanels(), loadData({})]);
+    });
 </script>
+
+<div class="content">
+    <div class="col">
+        <Card footer footerRight ref="filter-card">
+            <span slot="title">
+                <i class="fas fa-filter"></i>
+                Filter Logs
+            </span>
+
+            <div slot="body" class="body-wrapper">
+                <div class="form-wrapper">
+                    <div class="row">
+                        <Input
+                            col4="true"
+                            label="Ticket ID"
+                            placeholder="Ticket ID"
+                            on:input={handleInputTicketId}
+                            bind:value={filterSettings.ticketId}
+                        />
+
+                        <Input
+                            col4="true"
+                            label="Username"
+                            placeholder="Username"
+                            on:input={handleInputUsername}
+                            bind:value={filterSettings.username}
+                        />
+
+                        <Input
+                            col4="true"
+                            label="User ID"
+                            placeholder="User ID"
+                            on:input={handleInputUserId}
+                            bind:value={filterSettings.userId}
+                        />
+
+                        <Input
+                            col4="true"
+                            label="Closed By Id"
+                            placeholder="Closed By"
+                            on:input={handleInputClosedById}
+                            bind:value={filterSettings.closedById}
+                        />
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <PanelDropdown
+                                label="Panel"
+                                isMulti={false}
+                                bind:panels
+                                bind:selected={selectedPanel}
+                            />
+                        </div>
+
+                        <Dropdown
+                            col4="true"
+                            label="Rating"
+                            bind:value={filterSettings.rating}
+                        >
+                            <option value="0">Any</option>
+                            <option value="1">1 ⭐</option>
+                            <option value="2">2 ⭐</option>
+                            <option value="3">3 ⭐</option>
+                            <option value="4">4 ⭐</option>
+                            <option value="5">5 ⭐</option>
+                        </Dropdown>
+
+                        <Input
+                            col4="true"
+                            label="Claimed By Id"
+                            placeholder="Claimed By"
+                            on:input={handleInputClaimedById}
+                            bind:value={filterSettings.claimedById}
+                        />
+                    </div>
+                </div>
+            </div>
+            <div slot="footer">
+                <Button icon="fas fa-search" on:click={filter}>Filter</Button>
+            </div>
+        </Card>
+
+        <div style="margin: 2% 0;">
+            <Card footer={false}>
+                <span slot="title"> Transcripts </span>
+                <ColumnSelector
+                    options={[
+                        "Ticket ID",
+                        "Username",
+                        "Rating",
+                        "Close Reason",
+                        "Transcript",
+                    ]}
+                    bind:selected={selectedColumns}
+                    slot="title-items"
+                />
+
+                <div slot="body" class="main-col">
+                    <table class="nice">
+                        <thead>
+                            <tr>
+                                <th
+                                    class:visible={selectedColumns.includes(
+                                        "Ticket ID",
+                                    )}>Ticket ID</th
+                                >
+                                <th
+                                    class:visible={selectedColumns.includes(
+                                        "Username",
+                                    )}>Username</th
+                                >
+                                <th
+                                    class:visible={selectedColumns.includes(
+                                        "Rating",
+                                    )}>Rating</th
+                                >
+                                <th
+                                    class:visible={selectedColumns.includes(
+                                        "Close Reason",
+                                    )}>Close Reason</th
+                                >
+                                <th
+                                    class:visible={selectedColumns.includes(
+                                        "Transcript",
+                                    )}>Transcript</th
+                                >
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each transcripts as transcript}
+                                <tr style="height: 70px;">
+                                    <td
+                                        class:visible={selectedColumns.includes(
+                                            "Ticket ID",
+                                        )}>{transcript.ticket_id}</td
+                                    >
+                                    <td
+                                        class:visible={selectedColumns.includes(
+                                            "Username",
+                                        )}>{transcript.username}</td
+                                    >
+                                    <td
+                                        class:visible={selectedColumns.includes(
+                                            "Rating",
+                                        )}
+                                    >
+                                        {#if transcript.rating}
+                                            {transcript.rating} ⭐
+                                        {:else}
+                                            No rating
+                                        {/if}
+                                    </td>
+                                    <td
+                                        class:visible={selectedColumns.includes(
+                                            "Close Reason",
+                                        )}
+                                    >
+                                        {transcript.close_reason ||
+                                            "No reason specified"}
+                                    </td>
+                                    <td
+                                        class:visible={selectedColumns.includes(
+                                            "Transcript",
+                                        )}
+                                    >
+                                        {#if transcript.has_transcript}
+                                            <Navigate
+                                                to={`/manage/${guildId}/transcripts/view/${transcript.ticket_id}`}
+                                                styles="link"
+                                            >
+                                                <Button>View</Button>
+                                            </Navigate>
+                                        {/if}
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+
+                    <div
+                        class="nav"
+                        class:nav-margin={transcripts.length === 0}
+                    >
+                        <i
+                            class="fas fa-chevron-left"
+                            class:hidden={page === 1}
+                            on:click={loadPrevious}
+                        ></i>
+                        <span>Page {page}</span>
+                        <i
+                            class="fas fa-chevron-right"
+                            class:hidden={transcripts.length < pageLimit ||
+                                transcripts[transcripts.length - 1]
+                                    .ticket_id === 1}
+                            on:click={loadNext}
+                        ></i>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    </div>
+</div>
 
 <style>
     .content {
@@ -314,7 +419,7 @@
         height: 100%;
     }
 
-    :global([ref=filter-card]) {
+    :global([ref="filter-card"]) {
         min-height: 110px !important;
     }
 
@@ -373,7 +478,7 @@
             flex-direction: column;
         }
 
-        :global([ref=filter-card]) {
+        :global([ref="filter-card"]) {
             min-height: 252px !important;
         }
     }
@@ -384,10 +489,12 @@
         }
     }
 
-    th, td {
+    th,
+    td {
         display: none;
     }
-    th.visible, td.visible {
+    th.visible,
+    td.visible {
         display: table-cell;
     }
 </style>

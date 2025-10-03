@@ -116,7 +116,7 @@
         const input = {
             form_id: activeFormId,
             position: form.inputs.length + 1,
-            style: "1",
+            style: 1,
             label: "",
             placeholder: "",
             required: true,
@@ -124,7 +124,6 @@
             max_length: 255,
             is_new: true,
             type: 4, // Text Input
-            options: [], // Initialize empty options array for potential String Select
         };
 
         form.inputs = [...form.inputs, input];
@@ -187,9 +186,10 @@
                     style: parseInt(i.style),
                     placeholder: nullIfBlank(i.placeholder),
                     // Ensure String Select has max_length set to options length if not specified
-                    max_length: i.type === 3 && !i.max_length && i.options?.length > 0
-                        ? i.options.length
-                        : i.max_length,
+                    max_length:
+                        i.type === 3 && !i.max_length && i.options?.length > 0
+                            ? i.options.length
+                            : i.max_length,
                 })),
             update: form.inputs
                 .filter((i) => !i.is_new)
@@ -198,9 +198,10 @@
                     style: parseInt(i.style),
                     placeholder: nullIfBlank(i.placeholder),
                     // Ensure String Select has max_length set to options length if not specified
-                    max_length: i.type === 3 && !i.max_length && i.options?.length > 0
-                        ? i.options.length
-                        : i.max_length,
+                    max_length:
+                        i.type === 3 && !i.max_length && i.options?.length > 0
+                            ? i.options.length
+                            : i.max_length,
                 })),
             delete: toDelete[activeFormId] || [],
         };
@@ -231,11 +232,7 @@
         }
 
         forms = res.data || [];
-        forms
-            .flatMap((f) => f.inputs)
-            .forEach((i) => {
-                i.style = i.style.toString();
-            });
+        forms.flatMap((f) => f.inputs);
 
         if (forms.length > 0) {
             activeFormId = forms[0].form_id;

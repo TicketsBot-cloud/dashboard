@@ -18,17 +18,13 @@
 
     export let index;
     export let formLength;
+    export let formId;
 
     export let data = {};
 
     // Initialize options if not present
     $: if (data.type === 3 && !data.options) {
         data.options = [];
-    }
-
-    // Set default max_length for String Select if not set
-    $: if (data.type === 3 && data.options && data.options.length > 0 && !data.max_length) {
-        data.max_length = data.options.length;
     }
 
     // Validate min/max selections
@@ -102,10 +98,6 @@
                     description: "",
                 },
             ];
-            // If max_length was not set or was equal to previous length, update it
-            if (!data.max_length || data.max_length === data.options.length - 1) {
-                data.max_length = data.options.length;
-            }
         }
     }
 
@@ -187,14 +179,20 @@
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
-                                // Clear min/max for select types that don't use custom options
-                                if (newType !== 3 && newType !== 4) {
+                                // Reset text input fields when switching TO text input
+                                if (newType === 4 && oldType !== 4) {
+                                    data.style = 1; // Default to short style
+                                    data.min_length = 0;
+                                    data.max_length = 255; // Default max for short style
+                                }
+                                // Clear min/max for types that don't use them
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
-                                }
-
-                                if (newType > 4 && newType < 9) {
-                                    data.max_length = 25;
                                 }
                             }
                         }}
@@ -229,12 +227,12 @@
             />
         </div>
     </div>
-    
+
     <!-- Beta Warning for non-text input types -->
     {#if data.type !== 4 && data.type !== null}
         <BetaAlert />
     {/if}
-    
+
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
         <div class="row settings-row">
@@ -446,10 +444,6 @@
                             />
                         </div>
                         <div class="config-info">
-                            <Checkbox
-                                label="Required"
-                                bind:value={data.required}
-                            />
                             {#if data.min_length || data.max_length}
                                 <span class="config-text">
                                     Users must select
@@ -526,7 +520,7 @@
                     </Dropdown>
                 </div>
                 <div class="row" style="gap: 10px">
-                    <Checkbox label="Required" bind:value={data.required} />
+                    <Checkbox id={`required-${formId}-${index}`} label="Required" bind:value={data.required} />
                     {#if data.style == 1}
                         <DoubleRangeSlider
                             label="Answer Length Range"
@@ -578,8 +572,18 @@
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
-                                // Clear min/max for select types that don't use custom options
-                                if (newType !== 3 && newType !== 4) {
+                                // Reset text input fields when switching TO text input
+                                if (newType === 4 && oldType !== 4) {
+                                    data.style = 1; // Default to short style
+                                    data.min_length = 0;
+                                    data.max_length = 255; // Default max for short style
+                                }
+                                // Clear min/max for types that don't use them
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -693,7 +697,6 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        padding-bottom: 0.5em;
         min-width: 180px;
     }
 
@@ -720,7 +723,6 @@
     .config-row {
         display: flex;
         gap: 10px;
-        margin-bottom: 10px;
     }
 
     .config-row :global(.col-2) {
@@ -740,7 +742,6 @@
         font-size: 13px;
         color: var(--text-secondary, #666);
         font-style: italic;
-        padding: 4px 8px;
         background: rgba(0, 0, 0, 0.03);
         border-radius: 4px;
     }
@@ -862,5 +863,20 @@
         .properties-group > div:nth-child(2) {
             flex-direction: column;
         }
+    }
+
+    .buttons-row {
+        align-items: flex-end; /* Align items to bottom */
+    }
+
+    .type-selector :global(select) {
+        height: 48px;
+        padding: 0.75rem 1rem;
+    }
+
+    .button-form :global(button) {
+        height: 48px;
+        min-height: 48px;
+        box-sizing: border-box;
     }
 </style>

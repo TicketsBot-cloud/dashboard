@@ -1,7 +1,7 @@
 <script>
-    import {Navigate} from 'svelte-router-spa'
-    import {WHITELABEL_DISABLED} from "../js/constants";
-    import {getAvatarUrl, getDefaultIcon} from "../js/icons";
+    import { Navigate } from "svelte-router-spa";
+    import { WHITELABEL_DISABLED } from "../js/constants";
+    import { getAvatarUrl, getDefaultIcon } from "../js/icons";
 
     export let userData;
 
@@ -12,52 +12,59 @@
             e.target.src = getDefaultIcon(userId);
         }
     }
-
 </script>
 
 <div class="sidebar">
-  <div class="sidebar-container" id="sidebar-nav">
-    <div class="inner">
-      <Navigate to="/" styles="sidebar-link">
-        <div class="sidebar-element">
-          <i class="fas fa-server sidebar-icon"></i>
-          <span class="sidebar-text">Servers</span>
+    <div class="sidebar-container" id="sidebar-nav">
+        <div class="inner">
+            <Navigate to="/" styles="sidebar-link">
+                <div class="sidebar-element">
+                    <i class="fas fa-server sidebar-icon"></i>
+                    <span class="sidebar-text">Servers</span>
+                </div>
+            </Navigate>
+            {#if !WHITELABEL_DISABLED}
+                <Navigate to="/whitelabel" styles="sidebar-link">
+                    <div class="sidebar-element">
+                        <i class="fas fa-edit sidebar-icon"></i>
+                        <span class="sidebar-text">Whitelabel</span>
+                    </div>
+                </Navigate>
+            {/if}
+            {#if userData.admin}
+                <Navigate to="/admin/bot-staff" styles="sidebar-link">
+                    <div class="sidebar-element">
+                        <i class="fa-solid fa-user-secret sidebar-icon"></i>
+                        <span class="sidebar-text">Admin</span>
+                    </div>
+                </Navigate>
+            {/if}
         </div>
-      </Navigate>
-      {#if !WHITELABEL_DISABLED}
-      <Navigate to="/whitelabel" styles="sidebar-link">
+    </div>
+    <div class="sidebar-container">
         <div class="sidebar-element">
-          <i class="fas fa-edit sidebar-icon"></i>
-          <span class="sidebar-text">Whitelabel</span>
+            <Navigate
+                to="/logout"
+                onclick="clearLocalStorage();"
+                styles="sidebar-link"
+            >
+                <i class="sidebar-icon fas fa-sign-out-alt sidebar-icon"></i>
+                <span class="sidebar-text">Logout</span>
+            </Navigate>
         </div>
-      </Navigate>
-      {/if}
-      {#if userData.admin}
-        <Navigate to="/admin/bot-staff" styles="sidebar-link">
-          <div class="sidebar-element">
-            <i class="fa-solid fa-user-secret sidebar-icon"></i>
-            <span class="sidebar-text">Admin</span>
-          </div>
-        </Navigate>
-      {/if}
-    </div>
-  </div>
-  <div class="sidebar-container">
-    <div class="sidebar-element">
-      <Navigate to="/logout" onclick="clearLocalStorage();" styles="sidebar-link">
-        <i class="sidebar-icon fas fa-sign-out-alt sidebar-icon"></i>
-        <span class="sidebar-text">Logout</span>
-      </Navigate>
-    </div>
-    <div class="sidebar-element user-element">
-      <a class="sidebar-link">
-        <img class="avatar" src={getAvatarUrl(userData.id, userData.avatar)}
-          on:error={(e) => handleAvatarLoadError(e, userData.id)} alt="Avatar"/>
+        <div class="sidebar-element user-element">
+            <a class="sidebar-link">
+                <img
+                    class="avatar"
+                    src={getAvatarUrl(userData.id, userData.avatar)}
+                    on:error={(e) => handleAvatarLoadError(e, userData.id)}
+                    alt="Avatar"
+                />
 
-        <span class="sidebar-text">{userData.username}</span>
-      </a>
+                <span class="sidebar-text">{userData.username}</span>
+            </a>
+        </div>
     </div>
-  </div>
 </div>
 
 <style>
@@ -66,7 +73,7 @@
         flex-direction: column;
         height: 100%;
         width: 16.6%;
-        background-color: #272727;
+        background-color: #1a1f2e;
         float: left;
         background-size: cover;
         overflow-x: hidden !important;
@@ -130,7 +137,7 @@
         display: flex;
         justify-content: center;
         padding: 10px 0;
-        margin: 0 !important
+        margin: 0 !important;
     }
 
     .avatar {

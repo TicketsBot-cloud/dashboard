@@ -1,45 +1,7 @@
-<div class="super">
-  <RoleSelect {guildId} placeholder="Add another role..."
-              roles={roles.filter((r) => !acl.find((s) => s.role_id === r.id))} disabled={acl.length >= maxAclSize}
-              on:change={(e) => addToACL(e.detail)} bind:value={roleSelectorValue}/>
-
-  <div class="container">
-    {#each acl as subject, i}
-      {@const role = roles.find(r => r.id === subject.role_id)}
-      <div class="subject">
-        <div class="inner-left">
-          <div class="row" style="gap: 10px">
-            <div class="arrow-container">
-              <i class="fa-solid fa-arrow-up position-arrow" class:disabled={i<=0} on:click={() => moveUp(i)}></i>
-              <i class="fa-solid fa-arrow-down position-arrow" class:disabled={i>=acl.length-1}
-                 on:click={() => moveDown(i)}></i>
-            </div>
-            <span>{role ? role.name : 'Deleted Role'}</span>
-          </div>
-          {#key rerender}
-            <Toggle on="Allow" off="Deny"
-                    hideLabel
-                    toggledColor="#66bb6a"
-                    untoggledColor="#e84141"
-                    toggled={subject.action === "allow"}
-                    on:toggle={(e) => handleToggle(subject.role_id, e.detail)}/>
-          {/key}
-        </div>
-        <div class="inner-right">
-          {#if subject.role_id !== guildId}
-            <div class="delete-button">
-              <i class="fas fa-x" on:click={() => removeFromACL(subject)}></i>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/each}
-  </div>
-</div>
-
 <script>
     import Toggle from "svelte-toggle";
     import RoleSelect from "../form/RoleSelect.svelte";
+    import Checkbox from "../form/Checkbox.svelte";
 
     export let guildId;
     export let roles;
@@ -47,15 +9,15 @@
     export let acl = [
         {
             role_id: guildId,
-            action: "allow"
-        }
+            action: "allow",
+        },
     ];
 
     let rerender = 0;
     let roleSelectorValue;
 
     function handleToggle(roleId, enabled) {
-        const subject = acl.find(s => s.role_id === roleId);
+        const subject = acl.find((s) => s.role_id === roleId);
         subject.action = enabled ? "allow" : "deny";
     }
 
@@ -63,9 +25,9 @@
         acl = [
             {
                 role_id: role.id,
-                action: "allow"
+                action: "allow",
             },
-            ...acl
+            ...acl,
         ];
 
         roleSelectorValue = null;
@@ -75,7 +37,7 @@
 
     function removeFromACL(subject) {
         if (subject.role_id === guildId) return;
-        acl = acl.filter(s => s.role_id !== subject.role_id);
+        acl = acl.filter((s) => s.role_id !== subject.role_id);
 
         rerender++;
     }
@@ -99,11 +61,69 @@
 
         const tmp = acl[index];
         acl[index] = acl[index + 1];
-        acl[index + 1] = tmp
+        acl[index + 1] = tmp;
 
         rerender++;
     }
 </script>
+
+<div class="super">
+    <RoleSelect
+        {guildId}
+        placeholder="Add another role..."
+        roles={roles.filter((r) => !acl.find((s) => s.role_id === r.id))}
+        disabled={acl.length >= maxAclSize}
+        on:change={(e) => addToACL(e.detail)}
+        bind:value={roleSelectorValue}
+    />
+
+    <div class="container">
+        {#each acl as subject, i}
+            {@const role = roles.find((r) => r.id === subject.role_id)}
+            <div class="subject">
+                <div class="inner-left">
+                    <div class="row" style="gap: 10px">
+                        <div class="arrow-container">
+                            <i
+                                class="fa-solid fa-arrow-up position-arrow"
+                                class:disabled={i <= 0}
+                                on:click={() => moveUp(i)}
+                            ></i>
+                            <i
+                                class="fa-solid fa-arrow-down position-arrow"
+                                class:disabled={i >= acl.length - 1}
+                                on:click={() => moveDown(i)}
+                            ></i>
+                        </div>
+                        <span>{role ? role.name : "Deleted Role"}</span>
+                    </div>
+                    {#key rerender}
+                        <Toggle
+                            on="Allow"
+                            off="Deny"
+                            hideLabel
+                            toggledColor="#66bb6a"
+                            untoggledColor="#e84141"
+                            toggled={subject.action === "allow"}
+                            on:toggle={(e) =>
+                                handleToggle(subject.role_id, e.detail)}
+                        />
+                    {/key}
+                </div>
+                <div class="inner-right">
+                    {#if subject.role_id !== guildId}
+                        <div class="delete-button">
+                            <i
+                                class="fas fa-x"
+                                on:click={() => removeFromACL(subject)}
+                            ></i>
+                        </div>
+                    {/if}
+                </div>
+            </div>
+        {/each}
+    </div>
+</div>
 
 <style>
     .super {

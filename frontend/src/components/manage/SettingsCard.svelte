@@ -525,15 +525,15 @@
                 >
                     <span slot="header">Ticket Permissions</span>
                     <div slot="content" class="row">
-                        <Toggle
+                        <Checkbox
                             label="Attach Files"
                             bind:value={data.ticket_permissions.attach_files}
                         />
-                        <Toggle
+                        <Checkbox
                             label="Embed Links"
                             bind:value={data.ticket_permissions.embed_links}
                         />
-                        <Toggle
+                        <Checkbox
                             label="Add Reactions"
                             bind:value={data.ticket_permissions.add_reactions}
                         />

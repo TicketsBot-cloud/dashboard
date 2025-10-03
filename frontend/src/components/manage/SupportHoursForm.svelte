@@ -119,10 +119,6 @@
         emitChange();
     }
 
-    function hasAnyDayEnabled() {
-        return hours.some((h) => h.enabled);
-    }
-
     function emitChange() {
         const enabledHours = hours
             .filter((h) => h.enabled)
@@ -155,7 +151,7 @@
                 <i class="fas fa-clock"></i>
                 <span>All times are in UTC</span>
             </div>
-            {#if !hasAnyDayEnabled()}
+            {#if !hours.some((h) => h.enabled)}
                 <div class="default-notice">
                     <i class="fas fa-check-circle"></i>
                     <span>Panel is available 24/7 (no restrictions)</span>
@@ -206,10 +202,10 @@
                                     aria-label="End time for {day}"
                                 />
                             </div>
-                        {:else if !hasAnyDayEnabled()}
-                            <div class="status-label open-24-7">24/7</div>
-                        {:else}
+                        {:else if hours.some((h) => h.enabled)}
                             <div class="status-label closed">Closed</div>
+                        {:else}
+                            <div class="status-label open-24-7">24/7</div>
                         {/if}
                     </div>
                 </div>
@@ -237,12 +233,12 @@
             <button
                 class="action-button secondary"
                 on:click={clearAll}
-                title={hasAnyDayEnabled()
+                title={hours.some((h) => h.enabled)
                     ? "Remove all restrictions (return to 24/7)"
                     : "Clear settings"}
             >
                 <i class="fas fa-times"></i>
-                {hasAnyDayEnabled() ? "Set 24/7" : "Clear all"}
+                {hours.some((h) => h.enabled) ? "Set 24/7" : "Clear all"}
             </button>
         </div>
     </div>

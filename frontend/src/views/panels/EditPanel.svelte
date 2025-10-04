@@ -71,6 +71,7 @@
     let isPremium = false;
 
     let panelData;
+    let supportHours = [];
 
     async function editPanel() {
         setBlankStringsToNull(panelData);
@@ -80,6 +81,23 @@
             notifyError(res.data.error);
             return;
         }
+
+        // Save support hours only if premium
+        if (isPremium) {
+            if (panelData.support_hours && panelData.support_hours.length > 0) {
+                const hoursRes = await axios.post(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`, panelData.support_hours);
+                if (hoursRes.status !== 200) {
+                    notifyError(hoursRes.data.error);
+                    return;
+                }
+            } else {
+                // If no support hours, delete them
+                await axios.delete(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`).catch(() => {
+                    // Ignore errors when deleting (might not exist)
+                });
+            }
+        }
+        // Non-premium users can't modify support hours at all
 
         navigateTo(`/manage/${guildId}/panels?edited=true`);
     }
@@ -101,6 +119,21 @@
             panelData = panels.find(p => p.panel_id === panelId);
             if (!panelData) {
                 navigateTo(`/manage/${guildId}/panels?notfound=true`);
+            } else {
+                // Load support hours for this panel (only if premium)
+                if (isPremium) {
+                    try {
+                        const hoursRes = await axios.get(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`);
+                        if (hoursRes.status === 200) {
+                            panelData.support_hours = hoursRes.data;
+                        }
+                    } catch (e) {
+                        // Support hours are optional, so we don't show an error
+                        panelData.support_hours = [];
+                    }
+                } else {
+                    panelData.support_hours = [];
+                }
             }
         });
     });

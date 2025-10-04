@@ -1,14 +1,3 @@
-<button on:click isTrigger="1" class:fullWidth class:danger class:iconOnly class:shadow={!noShadow} {disabled} {type} bind:clientWidth>
-  {#if icon !== undefined}
-    <i class="{icon}"></i>
-  {/if}
-  {#if !iconOnly}
-    <span class="content">
-      <slot/>
-    </span>
-  {/if}
-</button>
-
 <script>
     export let icon = undefined;
     export let fullWidth = false;
@@ -19,6 +8,27 @@
     export let noShadow = false;
     export let clientWidth;
 </script>
+
+<button
+    on:click
+    isTrigger="1"
+    class:fullWidth
+    class:danger
+    class:iconOnly
+    class:shadow={!noShadow}
+    {disabled}
+    {type}
+    bind:clientWidth
+>
+    {#if icon !== undefined}
+        <i class={icon}></i>
+    {/if}
+    {#if !iconOnly}
+        <span class="content">
+            <slot />
+        </span>
+    {/if}
+</button>
 
 <style>
     button {
@@ -32,17 +42,29 @@
         color: white;
         background: var(--primary-gradient);
         border: none;
-        /*border-color: var(--primary);*/
-        /*border-width: 2px;*/
-        border-radius: .25rem;
+        border-radius: var(--border-radius-md);
         margin: 0;
+        padding: 12px 24px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
 
         cursor: pointer;
-        transition: background-color 150ms ease-in-out, border-color 150ms ease-in-out;
+        transition: all var(--transition-fast);
+        transform: translateY(0);
     }
 
     button.shadow {
-        box-shadow: 0 4px 4px rgb(0 0 0 / 25%);
+        box-shadow: var(--shadow-md);
+    }
+
+    button:hover:enabled {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    button:active:enabled {
+        transform: translateY(0);
+        box-shadow: var(--shadow-sm);
     }
 
     /*button:active, button:hover:enabled {*/
@@ -66,11 +88,12 @@
     }
 
     .danger {
-        background: #dc3545 !important;
-        border-color: #dc3545 !important;
+        background: #e35d6a !important;
+        border-color: #e35d6a !important;
     }
 
-    .danger:hover:enabled, .danger:active {
+    .danger:hover:enabled,
+    .danger:active {
         background: #c32232 !important;
         border-color: #c32232 !important;
     }

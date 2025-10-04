@@ -1,131 +1,63 @@
-<div class="content">
-    <Card footer footerRight>
-        <span slot="title">Forms</span>
-        <div slot="body" class="body-wrapper">
-            <div class="section">
-                <h2 class="section-title">Create New Form</h2>
-
-                <form on:submit|preventDefault={createForm}>
-                    <div class="row" id="creation-row">
-                        <Input placeholder="Form Title" col3={true} bind:value={newTitle}/>
-                        <div id="create-button-wrapper">
-                            <Button icon="fas fa-paper-plane" fullWidth={windowWidth <= 950}>Create</Button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="section">
-                <h2 class="section-title">Manage Forms</h2>
-
-                {#if editingTitle && activeFormId !== null}
-                    <div class="row form-name-edit-wrapper">
-                        <Input col4 label="Form Title" placeholder="Form Title" bind:value={renamedTitle}/>
-                        <div class="form-name-save-wrapper">
-                            <Button icon="fas fa-floppy-disk" fullWidth={windowWidth <= 950} on:click={updateTitle}>
-                                Save
-                            </Button>
-                        </div>
-                    </div>
-                {:else}
-                    <div class="row form-select-row">
-                        <div class="multiselect-super">
-                            <Dropdown col1 bind:value={activeFormId}>
-                                <option value={null}>Select a form...</option>
-                                {#each forms as form}
-                                    <option value="{form.form_id}">{form.title}</option>
-                                {/each}
-                            </Dropdown>
-                        </div>
-
-                        {#if activeFormId !== null}
-                            <Button on:click={() => editingTitle = true}>Rename Form</Button>
-                            <Button danger type="button"
-                                    on:click={() => deleteForm(activeFormId)}>Delete {activeFormTitle}</Button>
-                        {/if}
-                    </div>
-                {/if}
-
-                <div class="manage">
-                    {#if activeFormId !== null}
-                        {#each forms.find(form => form.form_id === activeFormId).inputs as input, i (input)}
-                            <div animate:flip="{{duration: 500}}">
-                                <FormInputRow data={input} formId={activeFormId}
-                                              withSaveButton={true} withDeleteButton={true} withDirectionButtons={true}
-                                              index={i} {formLength}
-                                              on:delete={() => deleteInput(activeFormId, input)}
-                                              on:move={(e) => changePosition(activeFormId, input, e.detail.direction)}/>
-                            </div>
-                        {/each}
-                    {/if}
-
-                    {#if activeFormId !== null}
-                        <div class="row"
-                             style="justify-content: center; align-items: center; gap: 10px; margin-top: 10px">
-                            <hr class="fill">
-                            <div class="row add-input-container" class:add-input-disabled={formLength >= 5}>
-                                <i class="fas fa-plus"></i>
-                                <a on:click={addInput}>New Field</a>
-                            </div>
-                            <hr class="fill">
-                        </div>
-                    {/if}
-                </div>
-            </div>
-        </div>
-
-        <div slot="footer">
-            <Button type="submit" icon="fas fa-floppy-disk" disabled={formLength === 0} on:click={saveInputs}>
-                Save
-            </Button>
-        </div>
-    </Card>
-</div>
-
-<svelte:window bind:innerWidth={windowWidth}/>
-
 <script>
     import Card from "../components/Card.svelte";
-    import {notifyError, notifySuccess, nullIfBlank, withLoadingScreen} from '../js/util'
+    import {
+        notifyError,
+        notifySuccess,
+        nullIfBlank,
+        withLoadingScreen,
+    } from "../js/util";
     import Button from "../components/Button.svelte";
     import axios from "axios";
-    import {API_URL} from "../js/constants";
-    import {setDefaultHeaders} from '../includes/Auth.svelte'
+    import { API_URL } from "../js/constants";
+    import { setDefaultHeaders } from "../includes/Auth.svelte";
     import Input from "../components/form/Input.svelte";
     import Dropdown from "../components/form/Dropdown.svelte";
     import FormInputRow from "../components/manage/FormInputRow.svelte";
-    import {flip} from "svelte/animate";
+    import { flip } from "svelte/animate";
 
     export let currentRoute;
     let guildId = currentRoute.namedParams.id;
 
-    let defaultTeam = {id: 'default', name: 'Default'};
+    let defaultTeam = { id: "default", name: "Default" };
 
     let newTitle;
     let forms = [];
     let toDelete = {};
     let activeFormId = null;
-    $: activeFormTitle = activeFormId !== null ? forms.find(f => f.form_id === activeFormId).title : 'Unknown';
+    $: activeFormTitle =
+        activeFormId !== null
+            ? forms.find((f) => f.form_id === activeFormId).title
+            : "Unknown";
 
-    $: formLength = activeFormId !== null ? forms.find(f => f.form_id === activeFormId).inputs.length : 0;
+    $: formLength =
+        activeFormId !== null
+            ? forms.find((f) => f.form_id === activeFormId).inputs.length
+            : 0;
 
     let editingTitle = false;
     let renamedTitle = "";
-    $: activeFormId, reflectTitle();
+    $: (activeFormId, reflectTitle());
 
     function reflectTitle() {
-        renamedTitle = activeFormId !== null ? forms.find(f => f.form_id === activeFormId).title : null;
+        renamedTitle =
+            activeFormId !== null
+                ? forms.find((f) => f.form_id === activeFormId).title
+                : null;
     }
 
     $: windowWidth = 0;
 
     function getForm(formId) {
-        return forms.find(form => form.form_id === formId);
+        return forms.find((form) => form.form_id === formId);
     }
 
     async function updateTitle() {
-        const res = await axios.patch(`${API_URL}/api/${guildId}/forms/${activeFormId}`, {title: renamedTitle});
+        const res = await axios.patch(
+            `${API_URL}/api/${guildId}/forms/${activeFormId}`,
+            { title: renamedTitle },
+        );
         if (res.status !== 200) {
-            notifyError('Failed to update form title');
+            notifyError("Failed to update form title");
             return;
         }
 
@@ -133,7 +65,7 @@
         getForm(activeFormId).title = renamedTitle;
         forms = forms;
 
-        notifySuccess('Form title updated');
+        notifySuccess("Form title updated");
     }
 
     async function createForm() {
@@ -148,7 +80,7 @@
         }
 
         notifySuccess(`Form ${newTitle} has been created`);
-        newTitle = '';
+        newTitle = "";
 
         let form = res.data;
         form.inputs = [];
@@ -169,7 +101,7 @@
 
         notifySuccess(`Form deleted successfully`);
 
-        forms = forms.filter(form => form.form_id !== id);
+        forms = forms.filter((form) => form.form_id !== id);
         if (forms.length > 0) {
             activeFormId = forms[0].form_id;
         } else {
@@ -184,13 +116,14 @@
         const input = {
             form_id: activeFormId,
             position: form.inputs.length + 1,
-            style: "1",
+            style: 1,
             label: "",
             placeholder: "",
             required: true,
             min_length: 0,
             max_length: 255,
             is_new: true,
+            type: 4, // Text Input
         };
 
         form.inputs = [...form.inputs, input];
@@ -223,11 +156,20 @@
 
         let inputs = form.inputs;
         if (direction === "up") {
-            [inputs[idx - 1].position, inputs[idx].position] = [inputs[idx].position, inputs[idx - 1].position];
+            [inputs[idx - 1].position, inputs[idx].position] = [
+                inputs[idx].position,
+                inputs[idx - 1].position,
+            ];
             [inputs[idx - 1], inputs[idx]] = [inputs[idx], inputs[idx - 1]];
         } else if (direction === "down") {
-            [inputs[idx + 1].position, inputs[idx].position] = [form.inputs[idx].position, form.inputs[idx + 1].position];
-            [inputs[idx + 1], inputs[idx]] = [form.inputs[idx], form.inputs[idx + 1]];
+            [inputs[idx + 1].position, inputs[idx].position] = [
+                form.inputs[idx].position,
+                form.inputs[idx + 1].position,
+            ];
+            [inputs[idx + 1], inputs[idx]] = [
+                form.inputs[idx],
+                form.inputs[idx + 1],
+            ];
         }
 
         forms = forms;
@@ -237,14 +179,37 @@
         const form = getForm(activeFormId);
 
         const data = {
-            "create": form.inputs.filter(i => i.is_new === true)
-                .map(i => ({...i, style: parseInt(i.style), placeholder: nullIfBlank(i.placeholder)})),
-            "update": form.inputs.filter(i => !i.is_new)
-                .map(i => ({...i, style: parseInt(i.style), placeholder: nullIfBlank(i.placeholder)})),
-            "delete": toDelete[activeFormId] || [],
-        }
+            create: form.inputs
+                .filter((i) => i.is_new === true)
+                .map((i) => ({
+                    ...i,
+                    style: parseInt(i.style),
+                    placeholder: nullIfBlank(i.placeholder),
+                    // Ensure String Select has max_length set to options length if not specified
+                    max_length:
+                        i.type === 3 && !i.max_length && i.options?.length > 0
+                            ? i.options.length
+                            : i.max_length,
+                })),
+            update: form.inputs
+                .filter((i) => !i.is_new)
+                .map((i) => ({
+                    ...i,
+                    style: parseInt(i.style),
+                    placeholder: nullIfBlank(i.placeholder),
+                    // Ensure String Select has max_length set to options length if not specified
+                    max_length:
+                        i.type === 3 && !i.max_length && i.options?.length > 0
+                            ? i.options.length
+                            : i.max_length,
+                })),
+            delete: toDelete[activeFormId] || [],
+        };
 
-        const res = await axios.patch(`${API_URL}/api/${guildId}/forms/${activeFormId}/inputs`, data);
+        const res = await axios.patch(
+            `${API_URL}/api/${guildId}/forms/${activeFormId}/inputs`,
+            data,
+        );
         if (res.status !== 204) {
             notifyError(res.data.error);
             return;
@@ -256,7 +221,7 @@
         await loadForms();
         activeFormId = formId;
 
-        notifySuccess('Form updated successfully');
+        notifySuccess("Form updated successfully");
     }
 
     async function loadForms() {
@@ -267,9 +232,7 @@
         }
 
         forms = res.data || [];
-        forms.flatMap(f => f.inputs).forEach(i => {
-            i.style = i.style.toString();
-        });
+        forms.flatMap((f) => f.inputs);
 
         if (forms.length > 0) {
             activeFormId = forms[0].form_id;
@@ -281,6 +244,137 @@
         await loadForms();
     });
 </script>
+
+<div class="content">
+    <Card footer footerRight>
+        <span slot="title">Forms</span>
+        <div slot="body" class="body-wrapper">
+            <div class="section">
+                <h2 class="section-title">Create New Form</h2>
+
+                <form on:submit|preventDefault={createForm}>
+                    <div class="row" id="creation-row">
+                        <Input
+                            placeholder="Form Title"
+                            col3={true}
+                            bind:value={newTitle}
+                        />
+                        <div id="create-button-wrapper">
+                            <Button
+                                icon="fas fa-paper-plane"
+                                fullWidth={windowWidth <= 950}>Create</Button
+                            >
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="section">
+                <h2 class="section-title">Manage Forms</h2>
+
+                {#if editingTitle && activeFormId !== null}
+                    <div class="row form-name-edit-wrapper">
+                        <Input
+                            col4
+                            label="Form Title"
+                            placeholder="Form Title"
+                            bind:value={renamedTitle}
+                        />
+                        <div class="form-name-save-wrapper">
+                            <Button
+                                icon="fas fa-floppy-disk"
+                                fullWidth={windowWidth <= 950}
+                                on:click={updateTitle}
+                            >
+                                Save
+                            </Button>
+                        </div>
+                    </div>
+                {:else}
+                    <div class="row form-select-row">
+                        <div class="multiselect-super">
+                            <Dropdown col1 bind:value={activeFormId}>
+                                <option value={null}>Select a form...</option>
+                                {#each forms as form}
+                                    <option value={form.form_id}
+                                        >{form.title}</option
+                                    >
+                                {/each}
+                            </Dropdown>
+                        </div>
+
+                        {#if activeFormId !== null}
+                            <Button on:click={() => (editingTitle = true)}
+                                >Rename Form</Button
+                            >
+                            <Button
+                                danger
+                                type="button"
+                                on:click={() => deleteForm(activeFormId)}
+                                >Delete {activeFormTitle}</Button
+                            >
+                        {/if}
+                    </div>
+                {/if}
+
+                <div class="manage">
+                    {#if activeFormId !== null}
+                        {#each forms.find((form) => form.form_id === activeFormId).inputs as input, i (input)}
+                            <div animate:flip={{ duration: 500 }}>
+                                <FormInputRow
+                                    data={input}
+                                    formId={activeFormId}
+                                    withSaveButton={true}
+                                    withDeleteButton={true}
+                                    withDirectionButtons={true}
+                                    index={i}
+                                    {formLength}
+                                    on:delete={() =>
+                                        deleteInput(activeFormId, input)}
+                                    on:move={(e) =>
+                                        changePosition(
+                                            activeFormId,
+                                            input,
+                                            e.detail.direction,
+                                        )}
+                                />
+                            </div>
+                        {/each}
+                    {/if}
+
+                    {#if activeFormId !== null}
+                        <div
+                            class="row"
+                            style="justify-content: center; align-items: center; gap: 10px; margin-top: 10px"
+                        >
+                            <hr class="fill" />
+                            <div
+                                class="row add-input-container"
+                                class:add-input-disabled={formLength >= 5}
+                            >
+                                <i class="fas fa-plus"></i>
+                                <a on:click={addInput}>New Field</a>
+                            </div>
+                            <hr class="fill" />
+                        </div>
+                    {/if}
+                </div>
+            </div>
+        </div>
+
+        <div slot="footer">
+            <Button
+                type="submit"
+                icon="fas fa-floppy-disk"
+                disabled={formLength === 0}
+                on:click={saveInputs}
+            >
+                Save
+            </Button>
+        </div>
+    </Card>
+</div>
+
+<svelte:window bind:innerWidth={windowWidth} />
 
 <style>
     .content {

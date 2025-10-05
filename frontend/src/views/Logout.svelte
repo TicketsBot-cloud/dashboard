@@ -1,7 +1,7 @@
 <script>
   import {clearLocalStorage, setDefaultHeaders} from '../includes/Auth.svelte'
   import axios from "axios";
-  import {API_URL} from "../js/constants";
+  import {API_URL, FRONTPAGE_URL} from "../js/constants";
   import {errorPage} from "../js/util";
 
   setDefaultHeaders();
@@ -14,7 +14,7 @@
       }
 
       clearLocalStorage()
-      window.location.href = 'https://ticketsbot.cloud'
+      window.location.href = FRONTPAGE_URL
   }
 
   process()

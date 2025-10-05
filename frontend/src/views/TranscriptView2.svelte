@@ -82,7 +82,7 @@
                                                             .replace(/~~(.*?)~~/g, '<s>$1</s>') // Strikethrough
                                                             .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>') // Code block
                                                             .replace(/`(.*?)`/g, '<code>$1</code>') // Inline code
-                                                            .replace(/>(.*?)($|\n)/g, '<blockquote>$1</blockquote>$2') // Blockquote
+                                                            .replace(/^>(.*?)($|\n)/gm, '<blockquote>$1</blockquote>$2') // Blockquote (only at line start)
                                                             .replace(/\n/g, '<br>')}
                                                     </div>
                                                 {/if}
@@ -106,7 +106,7 @@
             
                                                 {#if embed.footer || embed.timestamp}
                                                     <div class="embed-footer">
-                                                        {#if embed.footer.icon_url}
+                                                        {#if embed.footer?.icon_url}
                                                             <img src={embed.footer.icon_url} alt="Footer icon" class="embed-footer-icon">
                                                         {/if}
                                                         <span>
@@ -304,7 +304,9 @@
         transcriptData.messages = msgs;
     }
 
-    withLoadingScreen(loadData);
+    loadData();
+
+    // withLoadingScreen(loadData);
 </script>
 
 

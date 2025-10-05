@@ -9,9 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type embeddedFormInput struct {
+	database.FormInput
+	Options []database.FormInputOption `json:"options"`
+}
+
 type embeddedForm struct {
 	database.Form
-	Inputs []database.FormInput `json:"inputs"`
+	Inputs []embeddedFormInput `json:"inputs"`
 }
 
 func GetForms(c *gin.Context) {
@@ -29,6 +34,12 @@ func GetForms(c *gin.Context) {
 		return
 	}
 
+	options, err := dbclient.Client.FormInputOption.GetAllOptionsByGuild(c, guildId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		return
+	}
+
 	data := make([]embeddedForm, len(forms))
 	for i, form := range forms {
 		formInputs, ok := inputs[form.Id]
@@ -36,9 +47,17 @@ func GetForms(c *gin.Context) {
 			formInputs = make([]database.FormInput, 0)
 		}
 
+		inputs := make([]embeddedFormInput, len(formInputs))
+		for j, input := range formInputs {
+			inputs[j] = embeddedFormInput{
+				FormInput: input,
+				Options:   options[input.Id],
+			}
+		}
+
 		data[i] = embeddedForm{
 			Form:   form,
-			Inputs: formInputs,
+			Inputs: inputs,
 		}
 	}
 

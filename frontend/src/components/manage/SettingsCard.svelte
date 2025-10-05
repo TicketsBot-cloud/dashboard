@@ -27,7 +27,7 @@
           </div>
         </Collapsible>
 
-        <Collapsible defaultOpen tooltip="Click here to find out more about thread mode" tooltipUrl="https://docs.ticketsbot.cloud/features/thread-mode">
+        <Collapsible defaultOpen tooltip="Click here to find out more about thread mode" tooltipUrl={`${DOCS_URL}/features/thread-mode`}>
           <span slot="header" class="header">Thread Mode</span>
           <div slot="content" class="col-1">
             <div class="row">
@@ -122,23 +122,17 @@
 
             <div class="row" style="justify-content: space-between">
               <div class="col-2" style="flex-direction: row">
-                <Duration disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceOpenDays}
+                <Duration label="Since Open With No Response" disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceOpenDays}
                           bind:hours={sinceOpenHours}
                           bind:minutes={sinceOpenMinutes}>
-                  <div slot="header" class="header">
-                    <label class="form-label" style="margin-bottom: unset">Since Open With No Response</label>
-                    <PremiumBadge/>
-                  </div>
+                  <PremiumBadge slot="header"/>
                 </Duration>
               </div>
               <div class="col-2" style="flex-direction: row">
-                <Duration disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceLastDays}
+                <Duration label="Since Last Message" disabled={!isPremium || !data.auto_close.enabled} bind:days={sinceLastDays}
                           bind:hours={sinceLastHours}
                           bind:minutes={sinceLastMinutes}>
-                  <div slot="header" class="header">
-                    <label class="form-label" style="margin-bottom: unset">Since Last Message</label>
-                    <PremiumBadge/>
-                  </div>
+                  <PremiumBadge slot="header"/>
                 </Duration>
               </div>
             </div>
@@ -209,6 +203,7 @@
     import {toDays, toHours, toMinutes} from "../../js/timeutil";
     import Toggle from "../form/Toggle.svelte";
     import IconBadge from "../IconBadge.svelte";
+    import {DOCS_URL} from "../../js/constants";
 
     export let guildId;
 

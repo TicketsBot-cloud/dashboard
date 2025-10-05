@@ -24,7 +24,7 @@
                     <div class="controls">
                         <p>Your panel quota: <b>{panels.length} / {isPremium ? '∞' : '3'}</b></p>
                         <Navigate to="/manage/{guildId}/panels/create" styles="link">
-                            <Button icon="fas fa-plus">New Panel</Button>
+                            <Button icon="fas fa-plus" disabled={!isPremium && panels.length >= 3}>New Panel</Button>
                         </Navigate>
                     </div>
 

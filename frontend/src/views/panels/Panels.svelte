@@ -172,9 +172,7 @@
                             <tr>
                                 <th>Channel</th>
                                 <th>Panel Title</th>
-                                {#if isPremium}
-                                    <th>Support Hours</th>
-                                {/if}
+                                <th>Support Hours</th>
                                 <th style="width: 60px">Actions</th>
                             </tr>
                         </thead>
@@ -187,26 +185,24 @@
                                         )?.name ?? "Unknown Channel"}</td
                                     >
                                     <td>{panel.title}</td>
-                                    {#if isPremium}
-                                        <td>
-                                            {#if panel.has_support_hours}
-                                                <span
-                                                    class="support-hours-badge"
-                                                    class:active={panel.is_currently_active}
-                                                    class:inactive={!panel.is_currently_active}
-                                                >
-                                                    {panel.is_currently_active
-                                                        ? "Open"
-                                                        : "Closed"}
-                                                </span>
-                                            {:else}
-                                                <span
-                                                    class="support-hours-badge always-active"
-                                                    >24/7</span
-                                                >
-                                            {/if}
-                                        </td>
-                                    {/if}
+                                    <td>
+                                        {#if panel.has_support_hours}
+                                            <span
+                                                class="support-hours-badge"
+                                                class:active={panel.is_currently_active}
+                                                class:inactive={!panel.is_currently_active}
+                                            >
+                                                {panel.is_currently_active
+                                                    ? "Open"
+                                                    : "Closed"}
+                                            </span>
+                                        {:else}
+                                            <span
+                                                class="support-hours-badge always-active"
+                                                >24/7</span
+                                            >
+                                        {/if}
+                                    </td>
                                     <td class="actions-cell">
                                         <ActionDropdown>
                                             <button

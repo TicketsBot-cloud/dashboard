@@ -82,22 +82,28 @@
             return;
         }
 
-        // Save support hours only if premium
-        if (isPremium) {
-            if (panelData.support_hours && panelData.support_hours.length > 0) {
+        // Save support hours (free users get 1 panel, premium unlimited)
+        if (panelData.support_hours && panelData.support_hours.length > 0) {
+            try {
                 const hoursRes = await axios.post(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`, panelData.support_hours);
                 if (hoursRes.status !== 200) {
                     notifyError(hoursRes.data.error);
                     return;
                 }
-            } else {
-                // If no support hours, delete them
-                await axios.delete(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`).catch(() => {
-                    // Ignore errors when deleting (might not exist)
-                });
+            } catch (error) {
+                if (error.response && error.response.status === 403) {
+                    notifyError(error.response.data.error || "Support hours quota exceeded");
+                } else {
+                    notifyError("Failed to save support hours");
+                }
+                return;
             }
+        } else {
+            // If no support hours, delete them
+            await axios.delete(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`).catch(() => {
+                // Ignore errors when deleting (might not exist)
+            });
         }
-        // Non-premium users can't modify support hours at all
 
         navigateTo(`/manage/${guildId}/panels?edited=true`);
     }
@@ -120,18 +126,14 @@
             if (!panelData) {
                 navigateTo(`/manage/${guildId}/panels?notfound=true`);
             } else {
-                // Load support hours for this panel (only if premium)
-                if (isPremium) {
-                    try {
-                        const hoursRes = await axios.get(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`);
-                        if (hoursRes.status === 200) {
-                            panelData.support_hours = hoursRes.data;
-                        }
-                    } catch (e) {
-                        // Support hours are optional, so we don't show an error
-                        panelData.support_hours = [];
+                // Load support hours for this panel
+                try {
+                    const hoursRes = await axios.get(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`);
+                    if (hoursRes.status === 200) {
+                        panelData.support_hours = hoursRes.data;
                     }
-                } else {
+                } catch (e) {
+                    // Support hours are optional, so we don't show an error
                     panelData.support_hours = [];
                 }
             }

@@ -478,38 +478,38 @@
 
     <Collapsible>
         <span slot="header"
-            >Support Hours {#if !isPremium}<span class="premium-badge"
-                    >Premium</span
+            >Support Hours {#if !isPremium}<span class="free-badge"
+                    >1 Panel Free</span
                 >{/if}</span
         >
         <div slot="content" class="col-1">
             {#if !isPremium}
-                <div class="premium-notice">
-                    <i class="fas fa-crown"></i>
-                    <div class="premium-notice-text">
-                        <strong>Premium Feature</strong>
+                <div class="free-feature-notice">
+                    <i class="fas fa-clock"></i>
+                    <div class="feature-notice-text">
+                        <strong>Free: 1 Panel • Premium: Unlimited</strong>
                         <span
-                            >Support hours allow you to restrict when tickets
-                            can be opened from this panel. Upgrade to premium to
-                            configure operating hours.</span
+                            >Configure operating hours for when tickets can be
+                            opened. Free users can set support hours on one
+                            panel, premium users get unlimited panels with
+                            support hours.</span
                         >
                     </div>
                 </div>
-            {:else}
-                <div class="row">
-                    <p>
-                        Optionally restrict when tickets can be opened from this
-                        panel. If no hours are set, the panel will be available
-                        24/7.
-                    </p>
-                </div>
-                <div class="row">
-                    <SupportHoursForm
-                        bind:data={data.support_hours}
-                        on:change={handleSupportHoursChange}
-                    />
-                </div>
             {/if}
+            <div class="row">
+                <p>
+                    Optionally restrict when tickets can be opened from this
+                    panel. If no hours are set, the panel will be available
+                    24/7.
+                </p>
+            </div>
+            <div class="row">
+                <SupportHoursForm
+                    bind:data={data.support_hours}
+                    on:change={handleSupportHoursChange}
+                />
+            </div>
         </div>
     </Collapsible>
 </form>
@@ -550,7 +550,20 @@
         display: inline-block;
     }
 
-    .premium-notice {
+    .free-badge {
+        background: linear-gradient(135deg, #4fc3f7 0%, #81c784 100%);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-left: 8px;
+        display: inline-block;
+    }
+
+    .premium-notice,
+    .free-feature-notice {
         display: flex;
         align-items: flex-start;
         gap: 16px;
@@ -561,24 +574,38 @@
         margin-bottom: 16px;
     }
 
+    .free-feature-notice {
+        background: rgba(79, 195, 247, 0.1);
+        border-color: rgba(79, 195, 247, 0.3);
+    }
+
     .premium-notice i {
         color: #667eea;
         font-size: 24px;
         margin-top: 4px;
     }
 
-    .premium-notice-text {
+    .free-feature-notice i {
+        color: #4fc3f7;
+        font-size: 24px;
+        margin-top: 4px;
+    }
+
+    .premium-notice-text,
+    .feature-notice-text {
         display: flex;
         flex-direction: column;
         gap: 4px;
     }
 
-    .premium-notice-text strong {
+    .premium-notice-text strong,
+    .feature-notice-text strong {
         color: rgba(255, 255, 255, 0.95);
         font-size: 16px;
     }
 
-    .premium-notice-text span {
+    .premium-notice-text span,
+    .feature-notice-text span {
         color: rgba(255, 255, 255, 0.7);
         font-size: 14px;
         line-height: 1.5;

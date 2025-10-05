@@ -81,7 +81,14 @@ type supportHoursRequest struct {
 func SetSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
 
-	// Check premium status
+	panelIdStr := c.Param("panelid")
+	panelId, err := strconv.Atoi(panelIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
+		return
+	}
+
+	// Check premium status for support hours quota
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
@@ -94,16 +101,36 @@ func SetSupportHours(c *gin.Context) {
 		return
 	}
 
+	// For free users, check if they already have support hours on another panel
 	if premiumTier == premium.None {
-		c.JSON(http.StatusForbidden, utils.ErrorStr("Support hours are a premium feature"))
-		return
-	}
+		// Get all panels with support hours for this guild
+		allPanels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			return
+		}
 
-	panelIdStr := c.Param("panelid")
-	panelId, err := strconv.Atoi(panelIdStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
-		return
+		panelWithSupportHours := 0
+		for _, panel := range allPanels {
+			if panel.PanelId == panelId {
+				continue // Skip the current panel we're setting hours for
+			}
+
+			hours, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, panel.PanelId)
+			if err != nil {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				return
+			}
+
+			if len(hours) > 0 {
+				panelWithSupportHours++
+			}
+		}
+
+		if panelWithSupportHours >= 1 {
+			c.JSON(http.StatusForbidden, utils.ErrorStr("Free users can only configure support hours on one panel. Upgrade to premium for unlimited support hours."))
+			return
+		}
 	}
 
 	// Verify panel exists and belongs to guild
@@ -171,24 +198,6 @@ func SetSupportHours(c *gin.Context) {
 
 func DeleteSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
-
-	// Check premium status
-	botContext, err := botcontext.ContextForGuild(guildId)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
-		return
-	}
-
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
-		return
-	}
-
-	if premiumTier == premium.None {
-		c.JSON(http.StatusForbidden, utils.ErrorStr("Support hours are a premium feature"))
-		return
-	}
 
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)

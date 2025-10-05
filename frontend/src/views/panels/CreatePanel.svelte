@@ -52,20 +52,23 @@
             return;
         }
 
-        // Get the created panel ID from response and save support hours if provided (only if premium)
-        if (
-            isPremium &&
-            res.data &&
-            res.data.panel_id &&
-            supportHours &&
-            supportHours.length > 0
-        ) {
-            const hoursRes = await axios.post(
-                `${API_URL}/api/${guildId}/panels/${res.data.panel_id}/support-hours`,
-                supportHours,
-            );
-            if (hoursRes.status !== 200) {
-                notifyError(hoursRes.data.error);
+        // Get the created panel ID from response and save support hours if provided
+        if (res.data && res.data.panel_id && supportHours && supportHours.length > 0) {
+            try {
+                const hoursRes = await axios.post(
+                    `${API_URL}/api/${guildId}/panels/${res.data.panel_id}/support-hours`,
+                    supportHours,
+                );
+                if (hoursRes.status !== 200) {
+                    notifyError(hoursRes.data.error);
+                    // Don't return here, the panel is already created
+                }
+            } catch (error) {
+                if (error.response && error.response.status === 403) {
+                    notifyError(error.response.data.error || "Support hours quota exceeded");
+                } else {
+                    notifyError("Failed to save support hours");
+                }
                 // Don't return here, the panel is already created
             }
         }

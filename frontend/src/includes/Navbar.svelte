@@ -63,7 +63,9 @@
         display: none;
         justify-content: center;
         width: 100%;
-        background-color: #272727;
+        background-color: var(--background-secondary);
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
     }
 
     .wrapper {

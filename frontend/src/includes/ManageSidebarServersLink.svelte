@@ -61,6 +61,7 @@
     a:hover,
     a:visited,
     a:active {
+        background: #303542;
         display: block;
 
         color: inherit;

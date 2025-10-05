@@ -1,33 +1,7 @@
-<div class:col-1={col1} class:col-2={col2} class:col-3={col3} class:col-4={col4}>
-  {#if label !== undefined}
-    <div class="label-wrapper" class:no-margin={tooltipText !== undefined}>
-      <label for={inputId} class="form-label" style="margin-bottom: 0">{label}</label>
-      {#if badge !== undefined}
-        <Badge>{badge}</Badge>
-      {/if}
-      {#if tooltipText !== undefined}
-        <div>
-          <Tooltip tip={tooltipText} top color="#121212">
-            {#if tooltipLink !== undefined}
-              <a href={tooltipLink} target="_blank">
-                <i class="fas fa-circle-info form-label tooltip-icon"></i>
-              </a>
-            {:else}
-              <i class="fas fa-circle-info form-label tooltip-icon"></i>
-            {/if}
-          </Tooltip>
-        </div>
-      {/if}
-    </div>
-  {/if}
-  <input id={inputId} class="form-input" placeholder="{placeholder}" disabled="{disabled}" on:input on:change
-         bind:value={value}>
-</div>
-
 <script>
-    import Tooltip from 'svelte-tooltip';
+    import Tooltip from "svelte-tooltip";
     import Badge from "../Badge.svelte";
-    import {labelHash} from "../../js/labelHash";
+    import { labelHash } from "../../js/labelHash";
 
     export let value;
     export let label;
@@ -45,6 +19,50 @@
 
     $: inputId = label !== undefined ? `input-${labelHash(label)}` : undefined;
 </script>
+
+<div
+    class:col-1={col1}
+    class:col-2={col2}
+    class:col-3={col3}
+    class:col-4={col4}
+>
+    {#if label !== undefined}
+        <div class="label-wrapper" class:no-margin={tooltipText !== undefined}>
+            <label for={inputId} class="form-label" style="margin-bottom: 0"
+                >{label}</label
+            >
+            {#if badge !== undefined}
+                <Badge>{badge}</Badge>
+            {/if}
+            {#if tooltipText !== undefined}
+                <div>
+                    <Tooltip tip={tooltipText} top color="#121212">
+                        {#if tooltipLink !== undefined}
+                            <a href={tooltipLink} target="_blank">
+                                <i
+                                    class="fas fa-circle-info form-label tooltip-icon"
+                                ></i>
+                            </a>
+                        {:else}
+                            <i
+                                class="fas fa-circle-info form-label tooltip-icon"
+                            ></i>
+                        {/if}
+                    </Tooltip>
+                </div>
+            {/if}
+        </div>
+    {/if}
+    <input
+        id={inputId}
+        class="form-input"
+        {placeholder}
+        {disabled}
+        on:input
+        on:change
+        bind:value
+    />
+</div>
 
 <style>
     input {

@@ -1,79 +1,247 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
 
 :root {
-	--primary: #995DF3;
-	--primary-gradient: linear-gradient(71.3deg, #873ef5 0%, #995DF3 100%);
-	--blue: #3472f7;
-	--background: #272727;
+    --primary: #995df3;
+    --primary-gradient: linear-gradient(71.3deg, #873ef5 0%, #995df3 100%);
+    --blue: #3472f7;
+
+    /* Modern Dark Theme Colors */
+    --background-primary: #0a0e1b;
+    --background-secondary: #1a1f2e;
+    --background-tertiary: #252a3c;
+    --background-hover: #2a3042;
+    --background: #1a1f2e; /* Keep for backwards compatibility */
+
+    /* Border and Surface Colors */
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-color-hover: rgba(255, 255, 255, 0.12);
+
+    /* Text Colors */
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-tertiary: rgba(255, 255, 255, 0.5);
+
+    /* Modern Border Radius */
+    --border-radius-sm: 6px;
+    --border-radius-md: 10px;
+    --border-radius-lg: 16px;
+
+    /* Modern Shadows */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.2), 0 6px 10px rgba(0, 0, 0, 0.15);
+    --shadow-xl:
+        0 20px 40px rgba(0, 0, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.2);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-html, body {
-	position: relative;
-	width: 100%;
-	height: 100%;
+html,
+body {
+    position: relative;
+    width: 100%;
+    height: 100%;
 }
 
-body, h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6, p, .navbar, .brand, .btn-simple, .alert, a, .td-name, td, button.close {
-	font-family: 'Poppins', sans-serif !important;
-	font-weight: 400 !important;
+body,
+h1,
+.h1,
+h2,
+.h2,
+h3,
+.h3,
+h4,
+.h4,
+h5,
+.h5,
+h6,
+.h6,
+p,
+.navbar,
+.brand,
+.btn-simple,
+.alert,
+a,
+.td-name,
+td,
+button.close {
+    font-family: "Poppins", sans-serif !important;
 }
 
-h1, h2, h3, h4, h5, h6, p, span {
-	margin: 0;
+/* Typography Scale and Weights */
+h1,
+.h1 {
+    font-size: 2.5rem;
+    font-weight: 600 !important;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+h2,
+.h2 {
+    font-size: 2rem;
+    font-weight: 600 !important;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+h3,
+.h3 {
+    font-size: 1.75rem;
+    font-weight: 500 !important;
+    line-height: 1.4;
+}
+
+h4,
+.h4 {
+    font-size: 1.5rem;
+    font-weight: 500 !important;
+    line-height: 1.4;
+}
+
+h5,
+.h5 {
+    font-size: 1.25rem;
+    font-weight: 500 !important;
+    line-height: 1.5;
+}
+
+h6,
+.h6 {
+    font-size: 1rem;
+    font-weight: 500 !important;
+    line-height: 1.5;
+}
+
+p,
+body {
+    font-weight: 300 !important;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span {
+    margin: 0;
 }
 
 body {
-	line-height: 1.5;
-	font-size: 1rem;
-	font-weight: 400;
-	background-color: #121212 !important;
-	color: white;
-	margin: 0;
-	padding: 0 !important;
-	box-sizing: border-box;
+    font-size: 1rem;
+    font-weight: 300;
+    background-color: var(--background-primary) !important;
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0 !important;
+    box-sizing: border-box;
 }
 
 label {
-	display: block;
+    display: block;
 }
 
 textarea {
-	resize: vertical;
-	max-height: 500px;
+    resize: vertical;
+    max-height: 500px;
 }
 
-input, button, select, textarea {
-	font-family: inherit;
-	font-size: inherit;
-	-webkit-padding: 0.4em 0;
-	padding: 0.4em;
-	box-sizing: border-box;
-	border: 1px solid #ccc;
-	border-radius: 2px;
+input,
+button,
+select,
+textarea {
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    transition: all var(--transition-fast);
+    background-color: var(--background-tertiary);
+    color: var(--text-primary);
 }
 
-input:disabled {
-	color: #ccc;
+/*select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+}
+
+select:after {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+}*/
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(153, 93, 243, 0.1);
+    background-color: var(--background-hover);
+}
+
+input:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+    border-color: var(--border-color-hover);
+    background-color: var(--background-hover);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+    color: var(--text-tertiary);
+    background-color: var(--background-secondary);
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 button {
-	color: #333;
-	background-color: #f4f4f4;
-	outline: none;
+    color: #333;
+    background-color: #f4f4f4;
+    outline: none;
 }
 
 button:disabled {
-	color: #999;
+    color: #999;
 }
 
 button:not(:disabled):active {
-	background-color: #ddd;
+    background-color: #ddd;
 }
 
 button:focus {
-	border-color: #666;
+    border-color: #666;
 }
 
 code {
-	color: #f9a8d4;
+    color: #f9a8d4;
+}
+
+.multiselect-super > div > select {
+    margin: 0 !important;
+}
+
+.value-container {
+    height: 48px;
 }

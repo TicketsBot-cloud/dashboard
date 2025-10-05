@@ -1,114 +1,15 @@
-<main>
-    <Card footer={false}>
-        <span slot="title">
-            <i class="fas fa-filter"></i>
-            Filters
-        </span>
-        <div slot="body" class="filter-wrapper">
-            <Dropdown col2 label="Sort Tickets By..." bind:value={sortMethod}>
-                <option value="id_asc">Ticket ID (Ascending) / Oldest First</option>
-                <option value="id_desc">Ticket ID (Descending) / Newest First</option>
-                <option value="unclaimed">Unclaimed & Awaiting Response First</option>
-            </Dropdown>
-
-            <Checkbox label="Only Show Unclaimed Tickets & Tickets Claimed By Me" bind:value={onlyShowMyTickets} />
-        </div>
-    </Card>
-
-    <Card footer={false}>
-        <span slot="title">
-            Open Tickets
-        </span>
-        <ColumnSelector
-        options={["ID", "Panel", "User", "Opened Time", "Claimed By", "Last Message Time", "Awaiting Response"]}
-        bind:selected={selectedColumns}
-        slot="title-items"
-        />
-        <div slot="body" class="body-wrapper">
-            <table class="nice">
-                <thead>
-                <tr>
-                    <th class:visible={selectedColumns.includes('ID')}>ID</th>
-                    <th class:visible={selectedColumns.includes('Panel')}>Panel</th>
-                    <th class:visible={selectedColumns.includes('User')}>User</th>
-                    <th class:visible={selectedColumns.includes('Opened Time')}>Opened</th>
-                    <th class:visible={selectedColumns.includes('Claimed By')}>Claimed By</th>
-                    <th class:visible={selectedColumns.includes('Last Message Time')}>Last Message</th>
-                    <th class:visible={selectedColumns.includes('Awaiting Response')}>Awaiting Response</th>
-                    <th class="visible">View</th>
-                </tr>
-                </thead>
-                <tbody>
-                {#each filtered as ticket}
-                    {@const user = data.resolved_users[ticket.user_id]}
-                    {@const claimer = ticket.claimed_by ? data.resolved_users[ticket.claimed_by] : null}
-                    {@const panel_title = data.panel_titles[ticket.panel_id?.toString()]}
-
-                    <tr>
-                        <td class:visible={selectedColumns.includes('ID')}>{ticket.id}</td>
-                        <td class:visible={selectedColumns.includes('Panel')}>
-                            {panel_title || 'Unknown Panel'}
-                        </td>
-
-                        <td class:visible={selectedColumns.includes('User')}>
-                            {#if user}
-                                {user.global_name || user.username}
-                            {:else}
-                                Unknown
-                            {/if}
-                        </td>
-
-                        <td class:visible={selectedColumns.includes('Opened Time')}>
-                            {getRelativeTime(new Date(ticket.opened_at))}
-                        </td>
-
-                        <td class:visible={selectedColumns.includes('Claimed By')}>
-                            {#if ticket.claimed_by === null}
-                                <b>Unclaimed</b>
-                            {:else if claimer}
-                                {claimer.global_name || claimer.username}
-                            {:else}
-                                Unknown
-                            {/if}
-                        </td>
-
-                        <td class:visible={selectedColumns.includes('Last Message Time')}>
-                            {#if ticket.last_response_time}
-                                {getRelativeTime(new Date(ticket.last_response_time))}
-                            {:else}
-                                Never
-                            {/if}
-                        </td>
-
-                        <td class:visible={selectedColumns.includes('Awaiting Response')}>
-                            {#if ticket.last_response_is_staff}
-                                No
-                            {:else}
-                                <b>Yes</b>
-                            {/if}
-                        </td>
-
-                        <td class="visible">
-                            <Navigate to="/manage/{guildId}/tickets/view/{ticket.id}" styles="link">
-                                <Button type="button">View</Button>
-                            </Navigate>
-                        </td>
-                    </tr>
-                {/each}
-                </tbody>
-            </table>
-        </div>
-    </Card>
-</main>
-
 <script>
     import Card from "../components/Card.svelte";
-    import {getRelativeTime, notifyError, withLoadingScreen} from '../js/util'
+    import {
+        getRelativeTime,
+        notifyError,
+        withLoadingScreen,
+    } from "../js/util";
     import axios from "axios";
-    import {API_URL} from "../js/constants";
-    import {setDefaultHeaders} from '../includes/Auth.svelte'
+    import { API_URL } from "../js/constants";
+    import { setDefaultHeaders } from "../includes/Auth.svelte";
     import Button from "../components/Button.svelte";
-    import {Navigate} from 'svelte-router-spa';
+    import { Navigate } from "svelte-router-spa";
     import ColumnSelector from "../components/ColumnSelector.svelte";
     import Dropdown from "../components/form/Dropdown.svelte";
     import Checkbox from "../components/form/Checkbox.svelte";
@@ -116,22 +17,32 @@
     export let currentRoute;
     let guildId = currentRoute.namedParams.id;
 
-    let selectedColumns = ['ID', 'Panel', 'User', 'Claimed By', 'Last Message Time', 'Awaiting Response'];
+    let selectedColumns = [
+        "ID",
+        "Panel",
+        "User",
+        "Claimed By",
+        "Last Message Time",
+        "Awaiting Response",
+    ];
     let sortMethod = "unclaimed";
     let onlyShowMyTickets = false;
 
     let data = {
         tickets: [],
         panel_titles: {},
-        resolved_users: {}
+        resolved_users: {},
     };
 
     let filtered = [];
 
     function filterTickets() {
-        filtered = data.tickets.filter(ticket => {
+        filtered = data.tickets.filter((ticket) => {
             if (onlyShowMyTickets) {
-                return ticket.claimed_by === null || ticket.claimed_by === data.self_id;
+                return (
+                    ticket.claimed_by === null ||
+                    ticket.claimed_by === data.self_id
+                );
             }
 
             return true;
@@ -142,7 +53,7 @@
             filtered.sort((a, b) => a.id - b.id);
         } else if (sortMethod === "id_desc") {
             filtered.sort((a, b) => b.id - a.id);
-        } else if (sortMethod === 'unclaimed') {
+        } else if (sortMethod === "unclaimed") {
             filtered.sort((a, b) => {
                 // Place unclaimed tickets at the top. The priority of fields used for sorting is:
                 // 1. Unclaimed tickets, or tickets claimed by the current user
@@ -157,10 +68,16 @@
                     return 1;
                 }
 
-                if (a.claimed_by === data.self_id && b.claimed_by !== data.self_id) {
+                if (
+                    a.claimed_by === data.self_id &&
+                    b.claimed_by !== data.self_id
+                ) {
                     return -1;
                 }
-                if (a.claimed_by !== data.self_id && b.claimed_by === data.self_id) {
+                if (
+                    a.claimed_by !== data.self_id &&
+                    b.claimed_by === data.self_id
+                ) {
                     return 1;
                 }
 
@@ -194,29 +111,35 @@
             data.tickets = [];
         }
 
-        data.tickets = data.tickets.map(ticket => {
+        data.tickets = data.tickets.map((ticket) => {
             if (ticket.claimed_by === "null") {
                 ticket.claimed_by = null;
             }
 
             return ticket;
-        })
+        });
 
         filterTickets();
     }
 
-    const columnStorageKey = 'ticket_list:selected_columns';
-    const sortOrderKey = 'ticket_list:sort_order';
-    const onlyMyTicketsKey = 'ticket_list:only_my_tickets';
+    const columnStorageKey = "ticket_list:selected_columns";
+    const sortOrderKey = "ticket_list:sort_order";
+    const onlyMyTicketsKey = "ticket_list:only_my_tickets";
 
-    $: selectedColumns, updateFilters();
-    $: sortMethod, updateFilters();
-    $: onlyShowMyTickets, updateFilters();
+    $: (selectedColumns, updateFilters());
+    $: (sortMethod, updateFilters());
+    $: (onlyShowMyTickets, updateFilters());
 
     function updateFilters() {
-        window.localStorage.setItem(columnStorageKey, JSON.stringify(selectedColumns));
+        window.localStorage.setItem(
+            columnStorageKey,
+            JSON.stringify(selectedColumns),
+        );
         window.localStorage.setItem(sortOrderKey, sortMethod);
-        window.localStorage.setItem(onlyMyTicketsKey, JSON.stringify(onlyShowMyTickets));
+        window.localStorage.setItem(
+            onlyMyTicketsKey,
+            JSON.stringify(onlyShowMyTickets),
+        );
 
         filterTickets();
     }
@@ -246,6 +169,180 @@
     });
 </script>
 
+<main>
+    <Card footer={false}>
+        <span slot="title">
+            <i class="fas fa-filter"></i>
+            Filters
+        </span>
+        <div slot="body" class="filter-wrapper">
+            <Dropdown col2 label="Sort Tickets By..." bind:value={sortMethod}>
+                <option value="id_asc"
+                    >Ticket ID (Ascending) / Oldest First</option
+                >
+                <option value="id_desc"
+                    >Ticket ID (Descending) / Newest First</option
+                >
+                <option value="unclaimed"
+                    >Unclaimed & Awaiting Response First</option
+                >
+            </Dropdown>
+
+            <Checkbox
+                label="Only Show Unclaimed Tickets & Tickets Claimed By Me"
+                bind:value={onlyShowMyTickets}
+            />
+        </div>
+    </Card>
+
+    <Card footer={false}>
+        <span slot="title"> Open Tickets </span>
+        <ColumnSelector
+            options={[
+                "ID",
+                "Panel",
+                "User",
+                "Opened Time",
+                "Claimed By",
+                "Last Message Time",
+                "Awaiting Response",
+            ]}
+            bind:selected={selectedColumns}
+            slot="title-items"
+        />
+        <div slot="body" class="body-wrapper">
+            <table class="nice">
+                <thead>
+                    <tr>
+                        <th class:visible={selectedColumns.includes("ID")}
+                            >ID</th
+                        >
+                        <th class:visible={selectedColumns.includes("Panel")}
+                            >Panel</th
+                        >
+                        <th class:visible={selectedColumns.includes("User")}
+                            >User</th
+                        >
+                        <th
+                            class:visible={selectedColumns.includes(
+                                "Opened Time",
+                            )}>Opened</th
+                        >
+                        <th
+                            class:visible={selectedColumns.includes(
+                                "Claimed By",
+                            )}>Claimed By</th
+                        >
+                        <th
+                            class:visible={selectedColumns.includes(
+                                "Last Message Time",
+                            )}>Last Message</th
+                        >
+                        <th
+                            class:visible={selectedColumns.includes(
+                                "Awaiting Response",
+                            )}>Awaiting Response</th
+                        >
+                        <th class="visible"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each filtered as ticket}
+                        {@const user = data.resolved_users[ticket.user_id]}
+                        {@const claimer = ticket.claimed_by
+                            ? data.resolved_users[ticket.claimed_by]
+                            : null}
+                        {@const panel_title =
+                            data.panel_titles[ticket.panel_id?.toString()]}
+
+                        <tr>
+                            <td class:visible={selectedColumns.includes("ID")}
+                                >{ticket.id}</td
+                            >
+                            <td
+                                class:visible={selectedColumns.includes(
+                                    "Panel",
+                                )}
+                            >
+                                {panel_title || "Unknown Panel"}
+                            </td>
+
+                            <td
+                                class:visible={selectedColumns.includes("User")}
+                            >
+                                {#if user}
+                                    {user.global_name || user.username}
+                                {:else}
+                                    Unknown
+                                {/if}
+                            </td>
+
+                            <td
+                                class:visible={selectedColumns.includes(
+                                    "Opened Time",
+                                )}
+                            >
+                                {getRelativeTime(new Date(ticket.opened_at))}
+                            </td>
+
+                            <td
+                                class:visible={selectedColumns.includes(
+                                    "Claimed By",
+                                )}
+                            >
+                                {#if ticket.claimed_by === null}
+                                    <b>Unclaimed</b>
+                                {:else if claimer}
+                                    {claimer.global_name || claimer.username}
+                                {:else}
+                                    Unknown
+                                {/if}
+                            </td>
+
+                            <td
+                                class:visible={selectedColumns.includes(
+                                    "Last Message Time",
+                                )}
+                            >
+                                {#if ticket.last_response_time}
+                                    {getRelativeTime(
+                                        new Date(ticket.last_response_time),
+                                    )}
+                                {:else}
+                                    Never
+                                {/if}
+                            </td>
+
+                            <td
+                                class:visible={selectedColumns.includes(
+                                    "Awaiting Response",
+                                )}
+                            >
+                                {#if ticket.last_response_is_staff}
+                                    No
+                                {:else}
+                                    <b>Yes</b>
+                                {/if}
+                            </td>
+
+                            <td class="visible action-cell">
+                                <div class="button-right">
+                                    <Navigate
+                                        to="/manage/{guildId}/tickets/view/{ticket.id}"
+                                        styles="link"
+                                    >
+                                        <Button type="button">View</Button>
+                                    </Navigate>
+                                </div>
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
+    </Card>
+</main>
+
 <style>
     main {
         display: flex;
@@ -270,12 +367,25 @@
         height: 100%;
     }
 
-    th, td {
+    th,
+    td {
         display: none;
     }
 
-    th.visible, td.visible {
+    th.visible,
+    td.visible {
         display: table-cell;
+    }
+
+    .action-cell {
+        text-align: right;
+        width: 120px;
+    }
+
+    .button-right {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
     }
 
     @media only screen and (max-width: 1400px) {

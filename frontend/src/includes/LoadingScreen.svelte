@@ -1,13 +1,13 @@
-{#if $loadingScreen}
-  <div id="loading-container" out:fade>
-    <div class="loader">Loading...</div>
-  </div>
-{/if}
-
 <script>
-    import {loadingScreen} from '../js/stores'
-    import { fade } from 'svelte/transition';
+    import { loadingScreen } from "../js/stores";
+    import { fade } from "svelte/transition";
 </script>
+
+{#if $loadingScreen}
+    <div id="loading-container" out:fade>
+        <div class="loader">Loading...</div>
+    </div>
+{/if}
 
 <style>
     #loading-container {
@@ -16,7 +16,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: #121212;
+        background-color: #262b3d;
         z-index: 1001;
 
         display: flex;
@@ -48,7 +48,7 @@
     .loader:after {
         position: absolute;
         top: 0;
-        content: '';
+        content: "";
     }
     .loader:before {
         left: -1.5em;

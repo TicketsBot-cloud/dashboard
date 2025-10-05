@@ -45,7 +45,7 @@
     --border="#262b3d"
     --border-focused="0"
     --border-hover="0"
-    --border-radius="4px"
+    --border-radius="6px"
     --item-hover-bg="#121212"
     --list-background="#262b3d"
     --item-color="white"

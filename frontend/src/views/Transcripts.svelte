@@ -35,7 +35,7 @@
         "Close Reason",
         "Actions",
     ];
-    const columnStorageKey = "transcript_list:selected_columns";
+    const columnStorageKey = "transcript_list:selected_columns:new";
 
     $: (selectedColumns, updateColumnStorage());
 

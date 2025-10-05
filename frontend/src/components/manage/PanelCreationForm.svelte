@@ -482,8 +482,8 @@
                     >1 Panel Free</span
                 >{/if}</span
         >
-        <div slot="content" class="col-1">
-            {#if !isPremium}
+        <div slot="content" class="col-1" style="padding-top: 10px;">
+            {#if !false}
                 <div class="free-feature-notice">
                     <i class="fas fa-clock"></i>
                     <div class="feature-notice-text">

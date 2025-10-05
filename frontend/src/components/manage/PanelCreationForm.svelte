@@ -230,14 +230,20 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-2">
-                    <Checkbox
-                        label="Delete Mentions (Delete mentions after ticket opening)"
-                        col2={true}
-                        tool
-                        bind:value={data.delete_mentions}
-                    />
-                </div>
+                <ChannelDropdown
+                    withNull
+                    col3
+                    label="Transcript Channel"
+                    allowAnnouncementChannel
+                    {channels}
+                    bind:value={data.transcript_channel_id}
+                />
+                <Checkbox
+                    label="Delete Mentions (Delete mentions after ticket opening)"
+                    col2
+                    tool
+                    bind:value={data.delete_mentions}
+                />
             </div>
             <div class="incomplete-row">
                 <CategoryDropdown

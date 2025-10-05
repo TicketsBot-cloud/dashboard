@@ -302,8 +302,8 @@
                                 <th
                                     class:visible={selectedColumns.includes(
                                         "Transcript",
-                                    )}>Transcript</th
-                                >
+                                    )}
+                                ></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -338,18 +338,21 @@
                                         {transcript.close_reason ||
                                             "No reason specified"}
                                     </td>
-                                    <td
+                                     <td
                                         class:visible={selectedColumns.includes(
                                             "Transcript",
                                         )}
+                                        class="transcript-cell"
                                     >
                                         {#if transcript.has_transcript}
-                                            <Navigate
-                                                to={`/manage/${guildId}/transcripts/view/${transcript.ticket_id}`}
-                                                styles="link"
-                                            >
-                                                <Button>View</Button>
-                                            </Navigate>
+                                            <div class="button-container">
+                                                <Navigate
+                                                    to={`/manage/${guildId}/transcripts/view/${transcript.ticket_id}`}
+                                                    styles="link"
+                                                >
+                                                    <Button>View</Button>
+                                                </Navigate>
+                                            </div>
                                         {/if}
                                     </td>
                                 </tr>
@@ -417,6 +420,48 @@
         flex-direction: column;
         width: 100%;
         height: 100%;
+    }
+
+    table.nice > tbody > tr > td {
+        padding: 10px;
+    }
+
+    .link {
+        justify-content: flex-end;
+    }
+
+    .flex {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
+    }
+
+    :global(table.nice > tbody > tr > td.flex) {
+        text-align: right;
+        padding-right: 10px !important;
+        padding-left: 10px !important;
+        width: 100%;
+    }
+
+    :global(table.nice > thead > tr > th:last-child) {
+        width: 120px;
+        text-align: right;
+    }
+
+    :global(table.nice > tbody > tr > td:last-child) {
+        width: 120px;
+        text-align: right;
+    }
+
+    .transcript-cell {
+        text-align: right !important;
+        padding-right: 10px !important;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
     }
 
     :global([ref="filter-card"]) {

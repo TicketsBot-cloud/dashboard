@@ -33,7 +33,7 @@
         "Username",
         "Rating",
         "Close Reason",
-        "Transcript",
+        "Actions",
     ];
     const columnStorageKey = "transcript_list:selected_columns";
 
@@ -269,7 +269,7 @@
                         "Username",
                         "Rating",
                         "Close Reason",
-                        "Transcript",
+                        "Actions",
                     ]}
                     bind:selected={selectedColumns}
                     slot="title-items"
@@ -301,7 +301,7 @@
                                 >
                                 <th
                                     class:visible={selectedColumns.includes(
-                                        "Transcript",
+                                        "Actions",
                                     )}
                                 ></th>
                             </tr>
@@ -338,9 +338,9 @@
                                         {transcript.close_reason ||
                                             "No reason specified"}
                                     </td>
-                                     <td
+                                    <td
                                         class:visible={selectedColumns.includes(
-                                            "Transcript",
+                                            "Actions",
                                         )}
                                         class="transcript-cell"
                                     >
@@ -501,7 +501,7 @@
     }
 
     .nav > i {
-        color: #1dc7ea;
+        color: #995df3;
         cursor: pointer;
     }
 

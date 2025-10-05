@@ -351,8 +351,12 @@
                                 class="row add-input-container"
                                 class:add-input-disabled={formLength >= 5}
                             >
-                                <i class="fas fa-plus"></i>
-                                <a on:click={addInput}>New Field</a>
+                                <Button
+                                    type="button"
+                                    icon="fas fa-plus"
+                                    disabled={formLength >= 5}
+                                    on:click={addInput}>New Field</Button
+                                >
                             </div>
                             <hr class="fill" />
                         </div>
@@ -431,7 +435,7 @@
     .form-select-row {
         justify-content: flex-start;
         gap: 12px;
-        max-height: 40px;
+        max-height: 48px;
     }
 
     .form-name-edit-wrapper {

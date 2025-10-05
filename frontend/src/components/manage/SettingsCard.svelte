@@ -164,33 +164,27 @@
 
         if (!data.welcome_message) {
             success = false;
-            notify(
-                "Warning",
-                "Your welcome message has not been saved.\nWelcome messages must be between 1 - 1000 characters in length.",
-            );
+            notify("Warning", "Welcome message is required for the /open command\nThe welcome message must be between 1 - 1000 characters in length.");
         }
 
         if (!data.ticket_limit) {
             success = false;
-            notify(
-                "Warning",
-                "Your ticket limit has not been saved.\nTicket limits must be in the range 1 - 10.",
-            );
+            notify("Warning", "Ticket limit is required and must be between 1-10.\nThis controls how many tickets each user can have open simultaneously.");
         }
 
         if (!data.archive_channel) {
             success = false;
-            notify("Warning", "Your archive channel has not been saved.");
+            notify("Warning", "Transcript channel is required.\nPlease select a text channel where ticket transcripts will be posted when tickets are closed.");
         }
 
         if (!data.category) {
             success = false;
-            notify("Warning", "Your channel category has not been saved.");
+            notify("Warning", "Channel category is required for the /open command.\nPlease select a category where new tickets will be created.");
         }
 
         if (!data.naming_scheme) {
             success = false;
-            notify("Warning", "Your archive channel has not been saved.");
+            notify("Warning", "Naming scheme is required for the /open command.\nPlease select how ticket channels should be named.");
         }
 
         return success;

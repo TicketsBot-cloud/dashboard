@@ -237,6 +237,7 @@ func UpdatePanel(c *gin.Context) {
 		ExitSurveyFormId:    data.ExitSurveyFormId,
 		PendingCategory:     data.PendingCategory,
 		DeleteMentions:      data.DeleteMentions,
+		TranscriptChannelId: data.TranscriptChannelId,
 	}
 
 	// insert mention data

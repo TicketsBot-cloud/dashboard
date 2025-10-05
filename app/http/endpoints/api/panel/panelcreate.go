@@ -26,28 +26,29 @@ import (
 const freePanelLimit = 3
 
 type panelBody struct {
-	ChannelId         uint64                            `json:"channel_id,string"`
-	MessageId         uint64                            `json:"message_id,string"`
-	Title             string                            `json:"title"`
-	Content           string                            `json:"content"`
-	Colour            uint32                            `json:"colour"`
-	CategoryId        uint64                            `json:"category_id,string"`
-	Emoji             types.Emoji                       `json:"emote"`
-	WelcomeMessage    *types.CustomEmbed                `json:"welcome_message" validate:"omitempty,dive"`
-	Mentions          []string                          `json:"mentions"`
-	WithDefaultTeam   bool                              `json:"default_team"`
-	Teams             []int                             `json:"teams"`
-	ImageUrl          *string                           `json:"image_url,omitempty"`
-	ThumbnailUrl      *string                           `json:"thumbnail_url,omitempty"`
-	ButtonStyle       component.ButtonStyle             `json:"button_style,string"`
-	ButtonLabel       string                            `json:"button_label"`
-	FormId            *int                              `json:"form_id"`
-	NamingScheme      *string                           `json:"naming_scheme"`
-	Disabled          bool                              `json:"disabled"`
-	ExitSurveyFormId  *int                              `json:"exit_survey_form_id"`
-	AccessControlList []database.PanelAccessControlRule `json:"access_control_list"`
-	PendingCategory   *uint64                           `json:"pending_category,string"`
-	DeleteMentions    bool                              `json:"delete_mentions"`
+	ChannelId           uint64                            `json:"channel_id,string"`
+	MessageId           uint64                            `json:"message_id,string"`
+	Title               string                            `json:"title"`
+	Content             string                            `json:"content"`
+	Colour              uint32                            `json:"colour"`
+	CategoryId          uint64                            `json:"category_id,string"`
+	Emoji               types.Emoji                       `json:"emote"`
+	WelcomeMessage      *types.CustomEmbed                `json:"welcome_message" validate:"omitempty,dive"`
+	Mentions            []string                          `json:"mentions"`
+	WithDefaultTeam     bool                              `json:"default_team"`
+	Teams               []int                             `json:"teams"`
+	ImageUrl            *string                           `json:"image_url,omitempty"`
+	ThumbnailUrl        *string                           `json:"thumbnail_url,omitempty"`
+	ButtonStyle         component.ButtonStyle             `json:"button_style,string"`
+	ButtonLabel         string                            `json:"button_label"`
+	FormId              *int                              `json:"form_id"`
+	NamingScheme        *string                           `json:"naming_scheme"`
+	Disabled            bool                              `json:"disabled"`
+	ExitSurveyFormId    *int                              `json:"exit_survey_form_id"`
+	AccessControlList   []database.PanelAccessControlRule `json:"access_control_list"`
+	PendingCategory     *uint64                           `json:"pending_category,string"`
+	DeleteMentions      bool                              `json:"delete_mentions"`
+	TranscriptChannelId *uint64                           `json:"transcript_channel_id,string"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -235,6 +236,7 @@ func CreatePanel(c *gin.Context) {
 		ExitSurveyFormId:    data.ExitSurveyFormId,
 		PendingCategory:     data.PendingCategory,
 		DeleteMentions:      data.DeleteMentions,
+		TranscriptChannelId: data.TranscriptChannelId,
 	}
 
 	createOptions := panelCreateOptions{

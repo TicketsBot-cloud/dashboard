@@ -40,7 +40,7 @@
         text-align: center;
 
         color: white;
-        background: var(--primary-gradient);
+        background: #995df3;
         border: none;
         border-radius: var(--border-radius-md);
         margin: 0;
@@ -60,6 +60,8 @@
     button:hover:enabled {
         transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
+        background: #7a4ac2;
+        background-color: #7a4ac2;
     }
 
     button:active:enabled {
@@ -67,15 +69,10 @@
         box-shadow: var(--shadow-sm);
     }
 
-    /*button:active, button:hover:enabled {*/
-    /*    background-color: #0062cc;*/
-    /*    border-color: #0062cc;*/
-    /*}*/
-
     button:disabled {
         background: #6c757d;
         border: #6c757d;
-        cursor: default;
+        cursor: not-allowed;
     }
 
     .content {

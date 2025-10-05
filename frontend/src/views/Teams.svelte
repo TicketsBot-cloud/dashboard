@@ -1,90 +1,17 @@
-  <div class="content">
-    <Card footer={false}>
-      <span slot="title">Support Teams</span>
-      <div slot="body" class="body-wrapper">
-        <div class="section">
-          <h2 class="section-title">Create Team</h2>
-
-          <form on:submit|preventDefault={createTeam}>
-            <div class="row" style="max-height: 40px"> <!-- hacky -->
-              <Input placeholder="Team Name" col4={true} bind:value={createName}/>
-              <div style="margin-left: 30px">
-                <Button icon="fas fa-paper-plane">Submit</Button>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="section">
-          <h2 class="section-title">Manage Teams</h2>
-
-          <div class="col-1" style="flex-direction: row; gap: 12px">
-            <Dropdown col3 label="Team" bind:value={activeTeam} on:change={(e) => updateActiveTeam(e.target.value)}>
-              {#each teams as team}
-                <option value={team.id}>{team.name}</option>
-              {/each}
-            </Dropdown>
-
-            {#if activeTeam !== 'default'}
-              <div style="margin-top: auto; margin-bottom: 0.5em">
-                <Button danger={true} type="button"
-                    on:click={() => deleteTeam(activeTeam)}>Delete {getTeam(activeTeam)?.name}</Button>
-              </div>
-            {/if}
-          </div>
-
-          <div class="manage">
-            <div class="col">
-              <h3>Manage Members</h3>
-
-              <table class="nice">
-                <tbody>
-                {#each members as member}
-                  <tr>
-                    {#if member.type === USER_TYPE}
-                      <td>{member.name}</td>
-                    {:else if member.type === ROLE_TYPE}
-                      {@const role = roles.find(role => role.id === member.id)}
-                      <td>{role === undefined ? "Unknown Role" : role.name}</td>
-                    {/if}
-                    <td style="display: flex; flex-direction: row-reverse">
-                      <Button type="button" danger={true} on:click={() => removeMember(activeTeam, member)}>Delete
-                      </Button>
-                    </td>
-                  </tr>
-                {/each}
-                </tbody>
-              </table>
-            </div>
-
-            <div class="col">
-              <h3>Add Role</h3>
-              <div class="user-select">
-                <div class="col-1" style="display: flex; flex: 1">
-                  <RoleSelect {guildId} {roles} bind:value={selectedRole}/>
-                </div>
-
-                <div style="margin-left: 10px">
-                  <Button type="button" icon="fas fa-plus" disabled={selectedRole === null || selectedRole == undefined}
-                          on:click={addRole}>Add To Team
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Card>
-  </div>
-
 <script>
     import Card from "../components/Card.svelte";
-    import {notifyError, notifyRatelimit, notifySuccess, withLoadingScreen} from '../js/util'
+    import {
+        notifyError,
+        notifyRatelimit,
+        notifySuccess,
+        withLoadingScreen,
+    } from "../js/util";
     import Button from "../components/Button.svelte";
     import axios from "axios";
-    import {API_URL} from "../js/constants";
-    import {setDefaultHeaders} from '../includes/Auth.svelte'
+    import { API_URL } from "../js/constants";
+    import { setDefaultHeaders } from "../includes/Auth.svelte";
     import Input from "../components/form/Input.svelte";
-    import Select from 'svelte-select';
+    import Select from "svelte-select";
     import UserSelect from "../components/form/UserSelect.svelte";
     import RoleSelect from "../components/form/RoleSelect.svelte";
     import WrappedSelect from "../components/WrappedSelect.svelte";
@@ -96,7 +23,7 @@
     const USER_TYPE = 0;
     const ROLE_TYPE = 1;
 
-    let defaultTeam = {id: 'default', name: 'Default'};
+    let defaultTeam = { id: "default", name: "Default" };
 
     let createName;
     let teams = [defaultTeam];
@@ -126,25 +53,31 @@
     }
 
     async function addRole() {
-        const res = await axios.put(`${API_URL}/api/${guildId}/team/${activeTeam}/${selectedRole.id}?type=1`);
+        const res = await axios.put(
+            `${API_URL}/api/${guildId}/team/${activeTeam}/${selectedRole.id}?type=1`,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
             return;
         }
 
-        notifySuccess(`${selectedRole.name} has been added to the support team ${getTeam(activeTeam).name}`);
+        notifySuccess(
+            `${selectedRole.name} has been added to the support team ${getTeam(activeTeam).name}`,
+        );
 
         let entity = {
             id: selectedRole.id,
             type: 1,
             name: selectedRole.name,
-        }
+        };
         members = [...members, entity];
         selectedRole = undefined;
     }
 
     async function removeMember(teamId, entity) {
-        const res = await axios.delete(`${API_URL}/api/${guildId}/team/${teamId}/${entity.id}?type=${entity.type}`);
+        const res = await axios.delete(
+            `${API_URL}/api/${guildId}/team/${teamId}/${entity.id}?type=${entity.type}`,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
             return;
@@ -156,7 +89,9 @@
             notifySuccess(`${entity.name} has been removed from the team`);
         } else {
             const role = roles.find((role) => role.id === entity.id);
-            notifySuccess(`${role === undefined ? "Unknown role" : role.name} has been removed from the team`);
+            notifySuccess(
+                `${role === undefined ? "Unknown role" : role.name} has been removed from the team`,
+            );
         }
     }
 
@@ -172,7 +107,7 @@
         }
 
         notifySuccess(`Team ${createName} has been created`);
-        createName = '';
+        createName = "";
         teams = [...teams, res.data];
     }
 
@@ -214,14 +149,128 @@
     withLoadingScreen(async () => {
         setDefaultHeaders();
 
-        await Promise.all([
-            loadTeams(),
-            loadRoles()
-        ]);
+        await Promise.all([loadTeams(), loadRoles()]);
 
         await updateActiveTeam(defaultTeam.id); // Depends on teams
     });
 </script>
+
+<div class="content">
+    <Card footer={false}>
+        <span slot="title">Support Teams</span>
+        <div slot="body" class="body-wrapper">
+            <div class="section">
+                <h2 class="section-title">Create Team</h2>
+
+                <form on:submit|preventDefault={createTeam}>
+                    <div class="row" style="max-height: 48px">
+                        <!-- hacky -->
+                        <Input
+                            placeholder="Team Name"
+                            col4={true}
+                            bind:value={createName}
+                        />
+                        <div style="margin-left: 30px">
+                            <Button icon="fas fa-paper-plane">Submit</Button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="section">
+                <h2 class="section-title">Manage Teams</h2>
+
+                <div class="col-1" style="flex-direction: row; gap: 12px">
+                    <Dropdown
+                        col3
+                        label="Team"
+                        bind:value={activeTeam}
+                        on:change={(e) => updateActiveTeam(e.target.value)}
+                    >
+                        {#each teams as team}
+                            <option value={team.id}>{team.name}</option>
+                        {/each}
+                    </Dropdown>
+
+                    {#if activeTeam !== "default"}
+                        <div style="margin-top: auto; margin-bottom: 0.5em">
+                            <Button
+                                danger={true}
+                                type="button"
+                                on:click={() => deleteTeam(activeTeam)}
+                                >Delete {getTeam(activeTeam)?.name}</Button
+                            >
+                        </div>
+                    {/if}
+                </div>
+
+                <div class="manage">
+                    <div class="col">
+                        <h3>Manage Members</h3>
+
+                        <table class="nice">
+                            <tbody>
+                                {#each members as member}
+                                    <tr>
+                                        {#if member.type === USER_TYPE}
+                                            <td>{member.name}</td>
+                                        {:else if member.type === ROLE_TYPE}
+                                            {@const role = roles.find(
+                                                (role) => role.id === member.id,
+                                            )}
+                                            <td
+                                                >{role === undefined
+                                                    ? "Unknown Role"
+                                                    : role.name}</td
+                                            >
+                                        {/if}
+                                        <td class="action-cell">
+                                            <div class="button-right">
+                                                <Button
+                                                    type="button"
+                                                    danger={true}
+                                                    on:click={() =>
+                                                        removeMember(
+                                                            activeTeam,
+                                                            member,
+                                                        )}
+                                                    >Delete
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {/each}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="col">
+                        <h3>Add Role</h3>
+                        <div class="user-select">
+                            <div class="col-1" style="display: flex; flex: 1">
+                                <RoleSelect
+                                    {guildId}
+                                    {roles}
+                                    bind:value={selectedRole}
+                                />
+                            </div>
+
+                            <div style="margin-left: 10px">
+                                <Button
+                                    type="button"
+                                    icon="fas fa-plus"
+                                    disabled={selectedRole === null ||
+                                        selectedRole == undefined}
+                                    on:click={addRole}
+                                    >Add To Team
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Card>
+</div>
 
 <style>
     .content {
@@ -294,6 +343,17 @@
         width: 100%;
         height: 100%;
         margin-bottom: 1%;
+    }
+
+    .action-cell {
+        text-align: right;
+        width: 120px;
+    }
+
+    .button-right {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
     }
 
     @media only screen and (max-width: 950px) {

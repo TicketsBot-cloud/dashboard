@@ -237,3 +237,11 @@ button:focus {
 code {
     color: #f9a8d4;
 }
+
+.multiselect-super > div > select {
+    margin: 0 !important;
+}
+
+.value-container {
+    height: 48px;
+}

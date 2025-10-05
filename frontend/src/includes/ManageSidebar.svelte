@@ -10,6 +10,7 @@
     import SubNavigationLink from "./SubNavigationLink.svelte";
 
     import ImportModal from "../components/manage/ImportModal.svelte";
+    import ManageSidebarServersLink from "./ManageSidebarServersLink.svelte";
 
     export let currentRoute;
     export let permissionLevel;
@@ -97,11 +98,13 @@
     </header>
     <nav>
         <ul class="nav-list">
-            <ManageSidebarLink
-                {currentRoute}
-                title="← Back to servers"
-                href="/"
-            />
+            <div style="padding: 10px;">
+                <ManageSidebarServersLink
+                    {currentRoute}
+                    title="← Back to servers"
+                    href="/"
+                />
+            </div>
 
             {#if isAdmin}
                 <ManageSidebarLink

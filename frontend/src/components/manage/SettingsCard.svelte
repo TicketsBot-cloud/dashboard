@@ -164,27 +164,42 @@
 
         if (!data.welcome_message) {
             success = false;
-            notify("Warning", "Welcome message is required for the /open command\nThe welcome message must be between 1 - 1000 characters in length.");
+            notify(
+                "Warning",
+                "Welcome message is required for the /open command\nThe welcome message must be between 1 - 1000 characters in length.",
+            );
         }
 
         if (!data.ticket_limit) {
             success = false;
-            notify("Warning", "Ticket limit is required and must be between 1-10.\nThis controls how many tickets each user can have open simultaneously.");
+            notify(
+                "Warning",
+                "Ticket limit is required and must be between 1-10.\nThis controls how many tickets each user can have open simultaneously.",
+            );
         }
 
         if (!data.archive_channel) {
             success = false;
-            notify("Warning", "Transcript channel is required.\nPlease select a text channel where ticket transcripts will be posted when tickets are closed.");
+            notify(
+                "Warning",
+                "Transcript channel is required.\nPlease select a text channel where ticket transcripts will be posted when tickets are closed.",
+            );
         }
 
         if (!data.category) {
             success = false;
-            notify("Warning", "Channel category is required for the /open command.\nPlease select a category where new tickets will be created.");
+            notify(
+                "Warning",
+                "Channel category is required for the /open command.\nPlease select a category where new tickets will be created.",
+            );
         }
 
         if (!data.naming_scheme) {
             success = false;
-            notify("Warning", "Naming scheme is required for the /open command.\nPlease select how ticket channels should be named.");
+            notify(
+                "Warning",
+                "Naming scheme is required for the /open command.\nPlease select how ticket channels should be named.",
+            );
         }
 
         return success;
@@ -518,7 +533,11 @@
                     tooltip="Define which permissions are given to users in ticket channels"
                 >
                     <span slot="header">Ticket Permissions</span>
-                    <div slot="content" class="row">
+                    <div
+                        slot="content"
+                        class="row"
+                        style="padding-bottom: 10px;"
+                    >
                         <Checkbox
                             label="Attach Files"
                             bind:value={data.ticket_permissions.attach_files}

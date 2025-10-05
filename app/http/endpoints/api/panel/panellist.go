@@ -23,6 +23,8 @@ func ListPanels(c *gin.Context) {
 		Teams                        []int                             `json:"teams"`
 		UseServerDefaultNamingScheme bool                              `json:"use_server_default_naming_scheme"`
 		AccessControlList            []database.PanelAccessControlRule `json:"access_control_list"`
+		HasSupportHours              bool                              `json:"has_support_hours"`
+		IsCurrentlyActive            bool                              `json:"is_currently_active"`
 	}
 
 	guildId := c.Keys["guildid"].(uint64)
@@ -109,6 +111,22 @@ func ListPanels(c *gin.Context) {
 				accessControlList = make([]database.PanelAccessControlRule, 0)
 			}
 
+			// Check if panel has support hours configured
+			supportHours, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, p.PanelId)
+			if err != nil {
+				return err
+			}
+
+			hasSupportHours := len(supportHours) > 0
+			isCurrentlyActive := true // Default to active if no hours configured
+
+			if hasSupportHours {
+				isCurrentlyActive, err = dbclient.Client.PanelSupportHours.IsActiveNow(c, p.PanelId)
+				if err != nil {
+					return err
+				}
+			}
+
 			wrapped[i] = panelResponse{
 				Panel:                        p.Panel,
 				WelcomeMessage:               welcomeMessage,
@@ -118,6 +136,8 @@ func ListPanels(c *gin.Context) {
 				Teams:                        teamIds,
 				UseServerDefaultNamingScheme: p.NamingScheme == nil,
 				AccessControlList:            accessControlList,
+				HasSupportHours:              hasSupportHours,
+				IsCurrentlyActive:            isCurrentlyActive,
 			}
 
 			return nil

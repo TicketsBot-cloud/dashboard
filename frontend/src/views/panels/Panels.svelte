@@ -1,131 +1,28 @@
-{#if panelToDelete !== null}
-    <ConfirmationModal icon="fas fa-trash-can" isDangerous on:cancel={() => panelToDelete = null}
-                       on:confirm={() => deletePanel(panelToDelete.panel_id)}>
-        <span slot="body">Are you sure you want to delete the panel {panelToDelete.title}?</span>
-        <span slot="confirm">Delete</span>
-    </ConfirmationModal>
-{/if}
-
-{#if multiPanelToDelete !== null}
-    <ConfirmationModal icon="fas fa-trash-can" isDangerous on:cancel={() => multiPanelToDelete = null}
-                       on:confirm={() => deleteMultiPanel(multiPanelToDelete.id)}>
-        <span slot="body">Are you sure you want to delete the multi-panel
-            {multiPanelToDelete.embed?.title || "Open a ticket!"}?</span>
-        <span slot="confirm">Delete</span>
-    </ConfirmationModal>
-{/if}
-
-<div class="wrapper">
-    <div class="col">
-        <div class="row">
-            <Card footer="{false}">
-                <span slot="title">Ticket Panels</span>
-                <div slot="body" class="card-body panels">
-                    <div class="controls">
-                        <p>Your panel quota: <b>{panels.length} / {isPremium ? '∞' : '3'}</b></p>
-                        <Navigate to="/manage/{guildId}/panels/create" styles="link">
-                            <Button icon="fas fa-plus" disabled={!isPremium && panels.length >= 3}>New Panel</Button>
-                        </Navigate>
-                    </div>
-
-                    <table style="margin-top: 10px">
-                        <thead>
-                        <tr>
-                            <th>Channel</th>
-                            <th class="max">Panel Title</th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {#each panels as panel}
-                            <tr>
-                                <td>#{channels.find((c) => c.id === panel.channel_id)?.name ?? 'Unknown Channel'}</td>
-                                <td class="max">{panel.title}</td>
-                                <td>
-                                    <Button disabled={panel.force_disabled}
-                                            on:click={() => resendPanel(panel.panel_id)}>Resend
-                                    </Button>
-                                </td>
-                                <td>
-                                    <Navigate to="/manage/{guildId}/panels/edit/{panel.panel_id}" styles="link">
-                                        <Button disabled={panel.force_disabled}>Edit</Button>
-                                    </Navigate>
-                                </td>
-                                <td>
-                                    <Button danger on:click={() => panelToDelete = panel}>Delete</Button>
-                                </td>
-                            </tr>
-                        {/each}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-        </div>
-    </div>
-    <div class="col">
-        <div class="row">
-            <Card footer="{false}">
-                <span slot="title">Multi-Panels</span>
-                <div slot="body" class="card-body">
-                    <div class="controls">
-                        <Navigate to="/manage/{guildId}/panels/create-multi" styles="link">
-                            <Button icon="fas fa-plus">New Multi-Panel</Button>
-                        </Navigate>
-                    </div>
-
-                    <table style="margin-top: 10px">
-                        <thead>
-                        <tr>
-                            <th class="max">Panel Title</th>
-                            <th></th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {#each multiPanels as panel}
-                            <tr>
-                                <td class="max">{panel.embed?.title || 'Open a ticket!'}</td>
-                                <td>
-                                    <Button on:click={() => resendMultiPanel(panel.id)}>Resend</Button>
-                                </td>
-                                <td>
-                                    <Navigate to="/manage/{guildId}/panels/edit-multi/{panel.id}" styles="link">
-                                        <Button>Edit</Button>
-                                    </Navigate>
-                                </td>
-                                <td>
-                                    <Button danger on:click={() => multiPanelToDelete = panel}>Delete</Button>
-                                </td>
-                            </tr>
-                        {/each}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-        </div>
-        <div class="row">
-
-        </div>
-    </div>
-</div>
-
 <script>
     import Card from "../../components/Card.svelte";
-    import {checkForParamAndRewrite, notifyError, notifySuccess, withLoadingScreen} from "../../js/util";
+    import {
+        checkForParamAndRewrite,
+        notifyError,
+        notifySuccess,
+        withLoadingScreen,
+    } from "../../js/util";
     import axios from "axios";
-    import {API_URL} from "../../js/constants";
-    import {setDefaultHeaders} from '../../includes/Auth.svelte'
+    import { API_URL } from "../../js/constants";
+    import { setDefaultHeaders } from "../../includes/Auth.svelte";
     import Button from "../../components/Button.svelte";
+    import ActionDropdown from "../../components/ActionDropdown.svelte";
     import ConfirmationModal from "../../components/ConfirmationModal.svelte";
-    import {Navigate} from "svelte-router-spa";
-    import {loadChannels, loadMultiPanels, loadPanels, loadPremium} from "../../js/common";
+    import { Navigate } from "svelte-router-spa";
+    import {
+        loadChannels,
+        loadMultiPanels,
+        loadPanels,
+        loadPremium,
+    } from "../../js/common";
 
     export let currentRoute;
 
-    setDefaultHeaders()
+    setDefaultHeaders();
 
     let guildId = currentRoute.namedParams.id;
 
@@ -138,7 +35,9 @@
     let multiPanelToDelete = null;
 
     async function resendPanel(panelId) {
-        const res = await axios.post(`${API_URL}/api/${guildId}/panels/${panelId}`);
+        const res = await axios.post(
+            `${API_URL}/api/${guildId}/panels/${panelId}`,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
             return;
@@ -148,7 +47,9 @@
     }
 
     async function deletePanel(panelId) {
-        const res = await axios.delete(`${API_URL}/api/${guildId}/panels/${panelId}`);
+        const res = await axios.delete(
+            `${API_URL}/api/${guildId}/panels/${panelId}`,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
             return;
@@ -159,17 +60,21 @@
     }
 
     async function resendMultiPanel(id) {
-        const res = await axios.post(`${API_URL}/api/${guildId}/multipanels/${id}`);
+        const res = await axios.post(
+            `${API_URL}/api/${guildId}/multipanels/${id}`,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
             return;
         }
 
-        notifySuccess("Multipanel resent successfully")
+        notifySuccess("Multipanel resent successfully");
     }
 
     async function deleteMultiPanel(id) {
-        const res = await axios.delete(`${API_URL}/api/${guildId}/multipanels/${id}`);
+        const res = await axios.delete(
+            `${API_URL}/api/${guildId}/multipanels/${id}`,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
             return;
@@ -181,11 +86,19 @@
 
     withLoadingScreen(async () => {
         await Promise.all([
-            loadChannels(guildId).then(r => channels = r).catch(e => notifyError(e)),
-            loadPremium(guildId, false).then(r => isPremium = r).catch(e => notifyError(e)),
-            loadPanels(guildId).then(r => panels = r).catch(e => notifyError(e)),
-            loadMultiPanels(guildId).then(r => multiPanels = r).catch(e => notifyError(e))
-        ])
+            loadChannels(guildId)
+                .then((r) => (channels = r))
+                .catch((e) => notifyError(e)),
+            loadPremium(guildId, false)
+                .then((r) => (isPremium = r))
+                .catch((e) => notifyError(e)),
+            loadPanels(guildId)
+                .then((r) => (panels = r))
+                .catch((e) => notifyError(e)),
+            loadMultiPanels(guildId)
+                .then((r) => (multiPanels = r))
+                .catch((e) => notifyError(e)),
+        ]);
 
         if (checkForParamAndRewrite("created")) {
             notifySuccess("Panel created successfully");
@@ -200,6 +113,206 @@
         }
     });
 </script>
+
+{#if panelToDelete !== null}
+    <ConfirmationModal
+        icon="fas fa-trash-can"
+        isDangerous
+        on:cancel={() => (panelToDelete = null)}
+        on:confirm={() => deletePanel(panelToDelete.panel_id)}
+    >
+        <span slot="body"
+            >Are you sure you want to delete the panel {panelToDelete.title}?</span
+        >
+        <span slot="confirm">Delete</span>
+    </ConfirmationModal>
+{/if}
+
+{#if multiPanelToDelete !== null}
+    <ConfirmationModal
+        icon="fas fa-trash-can"
+        isDangerous
+        on:cancel={() => (multiPanelToDelete = null)}
+        on:confirm={() => deleteMultiPanel(multiPanelToDelete.id)}
+    >
+        <span slot="body"
+            >Are you sure you want to delete the multi-panel
+            {multiPanelToDelete.embed?.title || "Open a ticket!"}?</span
+        >
+        <span slot="confirm">Delete</span>
+    </ConfirmationModal>
+{/if}
+
+<div class="wrapper">
+    <div class="col">
+        <div class="row">
+            <Card footer={false}>
+                <span slot="title">Ticket Panels</span>
+                <div slot="body" class="card-body panels">
+                    <div class="controls">
+                        <p>
+                            Your panel quota: <b
+                                >{panels.length} / {isPremium ? "∞" : "3"}</b
+                            >
+                        </p>
+                        <Navigate
+                            to="/manage/{guildId}/panels/create"
+                            styles="link"
+                        >
+                            <Button
+                                icon="fas fa-plus"
+                                disabled={!isPremium && panels.length >= 3}
+                                >New Panel</Button
+                            >
+                        </Navigate>
+                    </div>
+
+                    <table style="margin-top: 10px">
+                        <thead>
+                            <tr>
+                                <th>Channel</th>
+                                <th>Panel Title</th>
+                                <th>Support Hours</th>
+                                <th style="width: 60px">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each panels as panel}
+                                <tr>
+                                    <td
+                                        >#{channels.find(
+                                            (c) => c.id === panel.channel_id,
+                                        )?.name ?? "Unknown Channel"}</td
+                                    >
+                                    <td>{panel.title}</td>
+                                    <td>
+                                        {#if panel.has_support_hours}
+                                            <span
+                                                class="support-hours-badge"
+                                                class:active={panel.is_currently_active}
+                                                class:inactive={!panel.is_currently_active}
+                                            >
+                                                {panel.is_currently_active
+                                                    ? "Open"
+                                                    : "Closed"}
+                                            </span>
+                                        {:else}
+                                            <span
+                                                class="support-hours-badge always-active"
+                                                >24/7</span
+                                            >
+                                        {/if}
+                                    </td>
+                                    <td class="actions-cell">
+                                        <ActionDropdown>
+                                            <button
+                                                disabled={panel.force_disabled}
+                                                on:click={() =>
+                                                    resendPanel(panel.panel_id)}
+                                            >
+                                                <i class="fas fa-paper-plane"
+                                                ></i>
+                                                <span>Resend</span>
+                                            </button>
+                                            <Navigate
+                                                to="/manage/{guildId}/panels/edit/{panel.panel_id}"
+                                                styles="link"
+                                            >
+                                                <button
+                                                    disabled={panel.force_disabled}
+                                                >
+                                                    <i class="fas fa-edit"></i>
+                                                    <span>Edit</span>
+                                                </button>
+                                            </Navigate>
+                                            <div class="divider"></div>
+                                            <button
+                                                class="danger"
+                                                on:click={() =>
+                                                    (panelToDelete = panel)}
+                                            >
+                                                <i class="fas fa-trash"></i>
+                                                <span>Delete</span>
+                                            </button>
+                                        </ActionDropdown>
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+        </div>
+    </div>
+    <div class="col">
+        <div class="row">
+            <Card footer={false}>
+                <span slot="title">Multi-Panels</span>
+                <div slot="body" class="card-body">
+                    <div class="controls">
+                        <Navigate
+                            to="/manage/{guildId}/panels/create-multi"
+                            styles="link"
+                        >
+                            <Button icon="fas fa-plus">New Multi-Panel</Button>
+                        </Navigate>
+                    </div>
+
+                    <table style="margin-top: 10px">
+                        <thead>
+                            <tr>
+                                <th>Panel Title</th>
+                                <th style="width: 60px">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each multiPanels as panel}
+                                <tr>
+                                    <td
+                                        >{panel.embed?.title ||
+                                            "Open a ticket!"}</td
+                                    >
+                                    <td class="actions-cell">
+                                        <ActionDropdown>
+                                            <button
+                                                on:click={() =>
+                                                    resendMultiPanel(panel.id)}
+                                            >
+                                                <i class="fas fa-paper-plane"
+                                                ></i>
+                                                <span>Resend</span>
+                                            </button>
+                                            <Navigate
+                                                to="/manage/{guildId}/panels/edit-multi/{panel.id}"
+                                                styles="link"
+                                            >
+                                                <button>
+                                                    <i class="fas fa-edit"></i>
+                                                    <span>Edit</span>
+                                                </button>
+                                            </Navigate>
+                                            <div class="divider"></div>
+                                            <button
+                                                class="danger"
+                                                on:click={() =>
+                                                    (multiPanelToDelete =
+                                                        panel)}
+                                            >
+                                                <i class="fas fa-trash"></i>
+                                                <span>Delete</span>
+                                            </button>
+                                        </ActionDropdown>
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+        </div>
+        <div class="row"></div>
+    </div>
+</div>
 
 <style>
     .wrapper {
@@ -230,7 +343,6 @@
     .card-body.panels {
         display: flex;
         flex-direction: column;
-        row-gap: 4%;
     }
 
     .card-body > .controls {
@@ -262,18 +374,40 @@
 
     table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    thead {
+        background: var(--background-tertiary);
     }
 
     th {
         text-align: left;
-        font-weight: normal;
-        border-bottom: 1px solid #dee2e6;
-        padding-left: 10px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+        padding: 12px 16px;
     }
 
-    tr {
-        border-bottom: 1px solid #dee2e6;
+    th:first-child {
+        border-top-left-radius: var(--border-radius-sm);
+    }
+
+    th:last-child {
+        border-top-right-radius: var(--border-radius-sm);
+    }
+
+    tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: all var(--transition-fast);
+    }
+
+    tbody tr:hover {
+        background: var(--background-hover);
     }
 
     tr:last-child {
@@ -281,15 +415,67 @@
     }
 
     td {
-        padding: 10px;
+        padding: 16px;
+        color: var(--text-primary);
+        font-size: 0.95rem;
     }
 
     th {
         padding: 0 10px;
     }
 
-    th:not(.max), td:not(.max) {
-        width: 0;
-        white-space: nowrap;
+    th.max,
+    td.max {
+        width: 100%;
+    }
+
+    td.actions-cell {
+        text-align: center;
+    }
+
+    .support-hours-badge {
+        padding: 6px 12px;
+        border-radius: var(--border-radius-md);
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: inline-block;
+    }
+
+    .support-hours-badge.always-active {
+        background: rgba(58, 123, 224, 0.15);
+        color: #3a7be0;
+        border: 1px solid rgba(58, 123, 224, 0.3);
+    }
+
+    .support-hours-badge.active {
+        background: rgba(94, 204, 98, 0.15);
+        color: #5ecc62;
+        border: 1px solid rgba(94, 204, 98, 0.3);
+    }
+
+    .support-hours-badge.inactive {
+        background: rgba(166, 166, 172, 0.15);
+        color: #a6a6ac;
+        border: 1px solid rgba(166, 166, 172, 0.3);
+    }
+
+    .support-hours-badge.active {
+        background-color: rgba(102, 187, 106, 0.15);
+        color: #66bb6a;
+        border: 1px solid rgba(102, 187, 106, 0.3);
+    }
+
+    .support-hours-badge.inactive {
+        background-color: rgba(244, 67, 54, 0.15);
+        color: #ef5350;
+        border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+
+    .support-hours-badge.always-active {
+        background-color: rgba(79, 195, 247, 0.15);
+        color: #4fc3f7;
+        border: 1px solid rgba(79, 195, 247, 0.3);
     }
 </style>

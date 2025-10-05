@@ -57,7 +57,7 @@
                 {#each data.fields as field, i}
                     <div class="row" style="justify-content: flex-start; gap: 10px">
                         <Input col2 label="Field Name" placeholder="Field Name" bind:value={field.name}/>
-                        <Checkbox label="Inline" bind:value={field.inline}/>
+                        <Checkbox id={`embed-field-inline-${i}`} label="Inline" bind:value={field.inline}/>
 
                         <div style="margin-top: 18px; display: flex; align-self: center">
                             <Button danger icon="fas fa-trash-can" on:click={() => deleteField(i)}>Delete</Button>

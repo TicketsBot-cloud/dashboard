@@ -1,75 +1,16 @@
-<div class="content">
-    <div class="container">
-        <div class="spread">
-            <h4 class="title">My Integrations</h4>
-            <Button icon="fas fa-server" on:click={() => navigateTo(`/manage/${guildId}/integrations/create`)}>Create
-                Integration
-            </Button>
-        </div>
-        <div class="integrations my-integrations">
-            {#each ownedIntegrations as integration}
-                <div class="integration">
-                    <Integration owned name={integration.name} {guildId} integrationId={integration.id}
-                                 imageUrl={generateProxyUrl(integration)} guildCount={integration.guild_count}>
-              <span slot="description">
-                {integration.description}
-              </span>
-                    </Integration>
-                </div>
-            {/each}
-        </div>
-    </div>
-
-    <div>
-        <h4 class="title">Available Integrations</h4>
-        <div class="integrations">
-            <!-- Built in -->
-            {#if page === 1}
-                <div class="integration">
-                    <Integration builtIn name="Bloxlink"
-                                 imageUrl="https://dbl-static.b-cdn.net/9bbd1f9504ddefc89606b19b290e9a0f.png"
-                                 viewLink={`${DOCS_URL}/dashboard/settings/placeholders#bloxlink`}>
-          <span slot="description">
-            Our Bloxlink integration inserts the Roblox usernames, profile URLs and more of your users into
-            ticket welcome messages automatically! This integration is automatically enabled in all servers, press the
-            View button below to check out the full list of placeholders you can use!
-          </span>
-                    </Integration>
-                </div>
-            {/if}
-
-            {#each availableIntegrations as integration}
-                <div class="integration">
-                    <Integration name={integration.name} {guildId} integrationId={integration.id}
-                                 imageUrl={generateProxyUrl(integration)} ownerId={integration.owner_id}
-                                 added={integration.added} guildCount={integration.guild_count} showAuthor
-                                 author={integration.author} on:remove={() => removeIntegration(integration.id)}>
-              <span slot="description">
-                {integration.description}
-              </span>
-                    </Integration>
-                </div>
-            {/each}
-        </div>
-    </div>
-
-    <div class="pagination">
-        <i class="fas fa-chevron-left pagination-chevron" class:disabled-chevron={page === 1}
-           on:click={previousPage}></i>
-        <p>Page {page}</p>
-        <i class="fas fa-chevron-right pagination-chevron" class:disabled-chevron={!hasNextPage}
-           on:click={nextPage}></i>
-    </div>
-</div>
-
 <script>
-    import {notifyError, notifySuccess, withLoadingScreen} from '../../js/util'
+    import Card from "../../components/Card.svelte";
+    import {
+        notifyError,
+        notifySuccess,
+        withLoadingScreen,
+    } from "../../js/util";
     import axios from "axios";
-    import {API_URL, DOCS_URL} from "../../js/constants";
-    import {setDefaultHeaders} from '../../includes/Auth.svelte'
+    import { API_URL, DOCS_URL } from "../../js/constants";
+    import { setDefaultHeaders } from "../../includes/Auth.svelte";
     import Integration from "../../components/manage/Integration.svelte";
     import Button from "../../components/Button.svelte";
-    import {navigateTo} from "svelte-router-spa";
+    import { navigateTo } from "svelte-router-spa";
 
     export let currentRoute;
     let guildId = currentRoute.namedParams.id;
@@ -100,21 +41,28 @@
 
     let hasNextPage = true;
     $: if (page === 1) {
-        hasNextPage = availableIntegrations.length + builtInIntegrationCount >= pageLimit;
+        hasNextPage =
+            availableIntegrations.length + builtInIntegrationCount >= pageLimit;
     } else {
         hasNextPage = availableIntegrations.length >= pageLimit;
     }
 
     function generateProxyUrl(integration) {
-        if (integration.image_url === null || integration.proxy_token === undefined || integration.proxy_token === null) {
+        if (
+            integration.image_url === null ||
+            integration.proxy_token === undefined ||
+            integration.proxy_token === null
+        ) {
             return null;
         }
 
-        return `https://image-cdn.tickets.bot/proxy?token=${integration.proxy_token}`
+        return `https://image-cdn.tickets.bot/proxy?token=${integration.proxy_token}`;
     }
 
     async function removeIntegration(integrationId) {
-        const res = await axios.delete(`${API_URL}/api/${guildId}/integrations/${integrationId}`);
+        const res = await axios.delete(
+            `${API_URL}/api/${guildId}/integrations/${integrationId}`,
+        );
         if (res.status !== 204) {
             notifyError(res.data.error);
             return;
@@ -125,10 +73,12 @@
     }
 
     async function loadAvailableIntegrations() {
-        const res = await axios.get(`${API_URL}/api/${guildId}/integrations/available?page=${page}`);
+        const res = await axios.get(
+            `${API_URL}/api/${guildId}/integrations/available?page=${page}`,
+        );
         if (res.status !== 200) {
             notifyError(res.data.error);
-            return
+            return;
         }
 
         availableIntegrations = res.data;
@@ -149,7 +99,7 @@
 
         await Promise.all([
             loadOwnedIntegrations(),
-            loadAvailableIntegrations()
+            loadAvailableIntegrations(),
         ]);
 
         if (freshlyAdded) {
@@ -159,6 +109,108 @@
         }
     });
 </script>
+
+<Card footer={false}>
+    <span slot="title">Integrations</span>
+    <div slot="body" class="body-wrapper">
+        <div class="content">
+            <div class="container">
+                <div class="spread">
+                    <h4 class="title">My Integrations</h4>
+                    <Button
+                        icon="fas fa-server"
+                        on:click={() =>
+                            navigateTo(
+                                `/manage/${guildId}/integrations/create`,
+                            )}
+                        >Create Integration
+                    </Button>
+                </div>
+                <div class="integrations my-integrations">
+                    {#each ownedIntegrations as integration}
+                        <div class="integration">
+                            <Integration
+                                owned
+                                name={integration.name}
+                                {guildId}
+                                integrationId={integration.id}
+                                imageUrl={generateProxyUrl(integration)}
+                                guildCount={integration.guild_count}
+                            >
+                                <span slot="description">
+                                    {integration.description}
+                                </span>
+                            </Integration>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+
+            <div>
+                <h4 class="title">Available Integrations</h4>
+                <div class="integrations">
+                    <!-- Built in -->
+                    {#if page === 1}
+                        <div class="integration">
+                            <Integration
+                                builtIn
+                                name="Bloxlink"
+                                imageUrl="https://dbl-static.b-cdn.net/9bbd1f9504ddefc89606b19b290e9a0f.png"
+                                viewLink={`${DOCS_URL}/dashboard/settings/placeholders#bloxlink`}
+                            >
+                                <span slot="description">
+                                    Our Bloxlink integration inserts the Roblox
+                                    usernames, profile URLs and more of your
+                                    users into ticket welcome messages
+                                    automatically! This integration is
+                                    automatically enabled in all servers, press
+                                    the View button below to check out the full
+                                    list of placeholders you can use!
+                                </span>
+                            </Integration>
+                        </div>
+                    {/if}
+
+                    {#each availableIntegrations as integration}
+                        <div class="integration">
+                            <Integration
+                                name={integration.name}
+                                {guildId}
+                                integrationId={integration.id}
+                                imageUrl={generateProxyUrl(integration)}
+                                ownerId={integration.owner_id}
+                                added={integration.added}
+                                guildCount={integration.guild_count}
+                                showAuthor
+                                author={integration.author}
+                                on:remove={() =>
+                                    removeIntegration(integration.id)}
+                            >
+                                <span slot="description">
+                                    {integration.description}
+                                </span>
+                            </Integration>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+
+            <div class="pagination">
+                <i
+                    class="fas fa-chevron-left pagination-chevron"
+                    class:disabled-chevron={page === 1}
+                    on:click={previousPage}
+                ></i>
+                <p>Page {page}</p>
+                <i
+                    class="fas fa-chevron-right pagination-chevron"
+                    class:disabled-chevron={!hasNextPage}
+                    on:click={nextPage}
+                ></i>
+            </div>
+        </div>
+    </div>
+</Card>
 
 <style>
     .content {
@@ -214,7 +266,7 @@
 
     .pagination-chevron {
         cursor: pointer;
-        color: #3472f7;
+        color: #995df3;
     }
 
     .disabled-chevron {

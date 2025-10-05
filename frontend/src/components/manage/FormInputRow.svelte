@@ -8,8 +8,6 @@
     import Textarea from "../form/Textarea.svelte";
     import Checkbox from "../form/Checkbox.svelte";
     import DoubleRangeSlider from "../form/DoubleRangeSlider.svelte";
-    import Number from "../form/Number.svelte";
-    import BetaAlert from "../BetaAlert.svelte";
 
     export let withCreateButton = false;
     export let withDeleteButton = false;
@@ -18,6 +16,7 @@
 
     export let index;
     export let formLength;
+    export let formId;
 
     export let data = {};
 
@@ -185,7 +184,11 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -193,11 +196,11 @@
                         }}
                     >
                         <option value={4}>Text Input</option>
-                        <option value={3}>String Select (Beta)</option>
-                        <option value={5}>User Select (Beta)</option>
-                        <option value={6}>Role Select (Beta)</option>
-                        <option value={7}>Mentionable Select (Beta)</option>
-                        <option value={8}>Channel Select (Beta)</option>
+                        <option value={3}>String Select</option>
+                        <option value={5}>User Select</option>
+                        <option value={6}>Role Select</option>
+                        <option value={7}>Mentionable Select</option>
+                        <option value={8}>Channel Select</option>
                     </Dropdown>
                 </div>
                 {#if withDeleteButton}
@@ -222,12 +225,7 @@
             />
         </div>
     </div>
-    
-    <!-- Beta Warning for non-text input types -->
-    {#if data.type !== 4 && data.type !== null}
-        <BetaAlert />
-    {/if}
-    
+
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
         <div class="row settings-row">
@@ -515,7 +513,11 @@
                     </Dropdown>
                 </div>
                 <div class="row" style="gap: 10px">
-                    <Checkbox label="Required" bind:value={data.required} />
+                    <Checkbox
+                        id={`required-${formId}-${index}`}
+                        label="Required"
+                        bind:value={data.required}
+                    />
                     {#if data.style == 1}
                         <DoubleRangeSlider
                             label="Answer Length Range"
@@ -574,7 +576,11 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (newType !== 3 && newType !== 4 && (newType < 5 || newType > 8)) {
+                                if (
+                                    newType !== 3 &&
+                                    newType !== 4 &&
+                                    (newType < 5 || newType > 8)
+                                ) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -582,11 +588,11 @@
                         }}
                     >
                         <option value={4}>Text Input</option>
-                        <option value={3}>String Select (Beta)</option>
-                        <option value={5}>User Select (Beta)</option>
-                        <option value={6}>Role Select (Beta)</option>
-                        <option value={7}>Channel Select (Beta)</option>
-                        <option value={8}>Mentionable Select (Beta)</option>
+                        <option value={3}>String Select</option>
+                        <option value={5}>User Select</option>
+                        <option value={6}>Role Select</option>
+                        <option value={7}>Channel Select</option>
+                        <option value={8}>Mentionable Select</option>
                     </Dropdown>
                 </div>
             </div>
@@ -688,7 +694,6 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        padding-bottom: 0.5em;
         min-width: 180px;
     }
 
@@ -855,5 +860,20 @@
         .properties-group > div:nth-child(2) {
             flex-direction: column;
         }
+    }
+
+    .buttons-row {
+        align-items: flex-end; /* Align items to bottom */
+    }
+
+    .type-selector :global(select) {
+        height: 48px;
+        padding: 0.75rem 1rem;
+    }
+
+    .button-form :global(button) {
+        height: 48px;
+        min-height: 48px;
+        box-sizing: border-box;
     }
 </style>

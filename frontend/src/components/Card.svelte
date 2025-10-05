@@ -9,31 +9,37 @@
 </script>
 
 <div class="card" class:fill>
-  <div class="card-header" class:dropdown on:click={() => dropdownActive = dropdown && !dropdownActive}>
-    <div class="card-title-row">
-      <h4 class="card-title">
-        <slot name="title">
-          No Title :(
-        </slot>
-      </h4>
-      <slot name="title-items"></slot>
+    <div
+        class="card-header"
+        class:dropdown
+        on:click={() => (dropdownActive = dropdown && !dropdownActive)}
+    >
+        <div class="card-title-row">
+            <h4 class="card-title">
+                <slot name="title">No Title :(</slot>
+            </h4>
+            <slot name="title-items"></slot>
+        </div>
     </div>
-  </div>
-  <div class="card-body" class:dropdown class:dropdownActive class:dropdownInactive={dropdown && !dropdownActive} {ref}>
-    <div class="inner" class:dropdown>
-      <slot name="body">
-        No Content :(
-      </slot>
+    <div
+        class="card-body"
+        class:dropdown
+        class:dropdownActive
+        class:dropdownInactive={dropdown && !dropdownActive}
+        {ref}
+    >
+        <div class="inner" class:dropdown>
+            <slot name="body">No Content :(</slot>
+        </div>
     </div>
-  </div>
 
-  {#if footer}
-    <div class="card-footer">
-      <div class="footer-content" class:footerRight>
-        <slot name="footer" />
-      </div>
-    </div>
-  {/if}
+    {#if footer}
+        <div class="card-footer">
+            <div class="footer-content" class:footerRight>
+                <slot name="footer" />
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -41,12 +47,19 @@
         display: flex;
         flex-direction: column;
 
-        background-color: #272727 !important;
+        background-color: var(--background-secondary) !important;
+        border: 1px solid var(--border-color);
 
         width: 100%;
-        border-radius: 5px;
-        box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
-        transition: all .3s ease-in-out;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition-base);
+        padding-bottom: 10px;
+    }
+
+    .card:hover {
+        box-shadow: var(--shadow-lg);
+        border-color: var(--border-color-hover);
     }
 
     .fill {
@@ -54,9 +67,10 @@
     }
 
     .card-title {
-        color: white;
-        font-size: 22px;
-        font-weight: bolder;
+        color: var(--text-primary);
+        font-size: 1.375rem;
+        font-weight: 500;
+        letter-spacing: -0.01em;
     }
 
     .card-title-row {
@@ -64,13 +78,13 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px 20px;
+        padding: 16px 24px;
         margin: 0;
     }
 
     .card-header {
         display: flex;
-        border-bottom: 1px solid rgba(0, 0, 0, .125);
+        border-bottom: 1px solid var(--border-color);
     }
 
     .card-header.dropdown {
@@ -82,8 +96,8 @@
         display: flex;
         flex: 1;
 
-        color: white;
-        margin: 10px 20px;
+        color: var(--text-primary);
+        margin: 16px 24px;
     }
 
     .inner {
@@ -98,7 +112,10 @@
 
     .card-body.dropdown {
         position: relative;
-        transition: min-height .3s ease-in-out, margin-top .3s ease-in-out, margin-bottom .3s ease-in-out;
+        transition:
+            min-height 0.3s ease-in-out,
+            margin-top 0.3s ease-in-out,
+            margin-bottom 0.3s ease-in-out;
     }
 
     .card-body.dropdownInactive {
@@ -118,9 +135,9 @@
 
     .card-footer {
         display: flex;
-        color: white;
-        border-top: 1px solid rgba(0, 0, 0, .125);
-        padding: 10px 20px;
+        color: var(--text-primary);
+        border-top: 1px solid var(--border-color);
+        padding: 16px 24px;
     }
 
     .footer-content {
@@ -134,7 +151,7 @@
         flex-direction: row-reverse;
     }
 
-    :global(div [slot=footer]) {
+    :global(div [slot="footer"]) {
         display: flex;
         flex-direction: row;
     }

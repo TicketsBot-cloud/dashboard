@@ -1,79 +1,9 @@
-<div class="wrapper">
-  {#if imageUrl !== null}
-    <img src={imageUrl} class="logo" bind:this={logo} on:error={useDefaultLogo}/>
-  {:else}
-    <img src="/assets/img/grey.png" class="logo"/>
-  {/if}
-  <div class="details">
-    <div class="title-row">
-      <span class="title">{name}</span>
-      {#if builtIn}
-        <Badge colour="#0c8f43">Built-In</Badge>
-      {/if}
-      {#if added}
-        <Badge>Active</Badge>
-      {/if}
-      {#if guildCount !== undefined}
-        <Badge>
-          <div class="guild-count">
-            <i class="fas fa-server"></i>
-            {guildCount}
-          </div>
-        </Badge>
-      {/if}
-    </div>
-
-    {#if showAuthor && author}
-      <div class="author">
-        <a href="https://discord.com/users/{author.id}" class="link" style="gap: 4px">
-          <img src="https://cdn.discordapp.com/avatars/{author.id}/{author.avatar}.webp" class="author-avatar"
-               alt="Author avatar" on:error={(e) => handleAvatarError(e, author.id)}/>
-          <b>{author.global_name || author.username}</b>
-        </a>
-      </div>
-    {:else if showAuthor}
-      <div class="author">
-        <a href="https://discord.com/users/{ownerId}" class="link" style="gap: 4px">
-          <img src="https://cdn.discordapp.com/embed/avatars/0.png" class="author-avatar"
-               alt="Author avatar" />
-          <b>Unknown User</b>
-        </a>
-      </div>
-    {/if}
-
-    <span class="description">
-      <slot name="description"></slot>
-    </span>
-
-    {#if !hideLinks}
-      <div class="links">
-        {#if builtIn}
-          <a href="{viewLink}" target="_blank" class="link-blue">View</a>
-        {:else if added}
-          <Navigate to="/manage/{guildId}/integrations/view/{integrationId}" styles="link-blue">View</Navigate>
-          <Navigate to="/manage/{guildId}/integrations/manage/{integrationId}" styles="link-blue">Configure</Navigate>
-          <a href="#" class="link-blue" on:click={() => dispatch("remove", {})}>Remove</a>
-        {:else}
-          {#if owned}
-            <Navigate to="/manage/{guildId}/integrations/view/{integrationId}" styles="link-blue">Preview</Navigate>
-            <Navigate to="/manage/{guildId}/integrations/configure/{integrationId}" styles="link-blue">Configure
-            </Navigate>
-          {:else}
-            <Navigate to="/manage/{guildId}/integrations/view/{integrationId}" styles="link-blue">View</Navigate>
-          {/if}
-          <Navigate to="/manage/{guildId}/integrations/activate/{integrationId}" styles="link-blue">Add to server
-          </Navigate>
-        {/if}
-      </div>
-    {/if}
-  </div>
-</div>
-
 <script>
     import Badge from "../Badge.svelte";
-    import {Navigate} from "svelte-router-spa";
-    import {createEventDispatcher} from "svelte";
-    import {getIconUrl} from "../../js/icons";
+    import { Navigate } from "svelte-router-spa";
+    import { createEventDispatcher } from "svelte";
+    import { getIconUrl } from "../../js/icons";
+    import Button from "../Button.svelte";
 
     const dispatch = createEventDispatcher();
 
@@ -101,7 +31,8 @@
 
     function handleAvatarError(ev, id) {
         const src = getIconUrl(id, "");
-        if (ev.target.src === src) { // Setting onerror to null does not work with svelte
+        if (ev.target.src === src) {
+            // Setting onerror to null does not work with svelte
             return;
         }
 
@@ -109,15 +40,134 @@
     }
 </script>
 
+<div class="wrapper">
+    {#if imageUrl !== null}
+        <img
+            src={imageUrl}
+            class="logo"
+            bind:this={logo}
+            on:error={useDefaultLogo}
+        />
+    {:else}
+        <img src="/assets/img/grey.png" class="logo" />
+    {/if}
+    <div class="details">
+        <div class="title-row">
+            <span class="title">{name}</span>
+            {#if builtIn}
+                <Badge colour="#0c8f43">Built-In</Badge>
+            {/if}
+            {#if added}
+                <Badge>Active</Badge>
+            {/if}
+            {#if guildCount !== undefined}
+                <Badge>
+                    <div class="guild-count">
+                        <i class="fas fa-server"></i>
+                        {guildCount}
+                    </div>
+                </Badge>
+            {/if}
+        </div>
+
+        {#if showAuthor && author}
+            <div class="author">
+                <a
+                    href="https://discord.com/users/{author.id}"
+                    class="link"
+                    style="gap: 4px"
+                >
+                    <img
+                        src="https://cdn.discordapp.com/avatars/{author.id}/{author.avatar}.webp"
+                        class="author-avatar"
+                        alt="Author avatar"
+                        on:error={(e) => handleAvatarError(e, author.id)}
+                    />
+                    <b>{author.global_name || author.username}</b>
+                </a>
+            </div>
+        {:else if showAuthor}
+            <div class="author">
+                <a
+                    href="https://discord.com/users/{ownerId}"
+                    class="link"
+                    style="gap: 4px"
+                >
+                    <img
+                        src="https://cdn.discordapp.com/embed/avatars/0.png"
+                        class="author-avatar"
+                        alt="Author avatar"
+                    />
+                    <b>Unknown User</b>
+                </a>
+            </div>
+        {/if}
+
+        <span class="description">
+            <slot name="description"></slot>
+        </span>
+
+        {#if !hideLinks}
+            <div class="links">
+                {#if builtIn}
+                    <a
+                        href={viewLink}
+                        target="_blank"
+                        style="text-decoration: none;"
+                    >
+                        <Button>View</Button>
+                    </a>
+                {:else if added}
+                    <Navigate
+                        to="/manage/{guildId}/integrations/view/{integrationId}"
+                        styles="link-blue">View</Navigate
+                    >
+                    <Navigate
+                        to="/manage/{guildId}/integrations/manage/{integrationId}"
+                        styles="link-blue">Configure</Navigate
+                    >
+                    <a
+                        href="#"
+                        class="link-blue"
+                        on:click={() => dispatch("remove", {})}>Remove</a
+                    >
+                {:else}
+                    {#if owned}
+                        <Navigate
+                            to="/manage/{guildId}/integrations/view/{integrationId}"
+                            styles="link-blue">Preview</Navigate
+                        >
+                        <Navigate
+                            to="/manage/{guildId}/integrations/configure/{integrationId}"
+                            styles="link-blue"
+                            >Configure
+                        </Navigate>
+                    {:else}
+                        <Navigate
+                            to="/manage/{guildId}/integrations/view/{integrationId}"
+                            styles="link-blue">View</Navigate
+                        >
+                    {/if}
+                    <Navigate
+                        to="/manage/{guildId}/integrations/activate/{integrationId}"
+                        styles="link-blue"
+                        >Add to server
+                    </Navigate>
+                {/if}
+            </div>
+        {/if}
+    </div>
+</div>
+
 <style>
     .wrapper {
         display: flex;
         flex-direction: column;
         border-radius: 10px;
 
-        background-color: #272727 !important;
+        background-color: #262b3d !important;
         box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
-        transition: all .3s ease-in-out;
+        transition: all 0.3s ease-in-out;
 
         height: 100%;
     }
@@ -128,6 +178,8 @@
         max-height: 150px;
         object-fit: cover;
         margin: auto;
+        padding: 10px;
+        border-radius: var(--border-radius-lg);
     }
 
     .details {
@@ -168,6 +220,7 @@
         flex-direction: row;
         align-items: center;
         justify-content: space-around;
+        padding-top: 10px;
     }
 
     .author {

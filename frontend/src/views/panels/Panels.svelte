@@ -171,7 +171,7 @@
                         <thead>
                             <tr>
                                 <th>Channel</th>
-                                <th class="max">Panel Title</th>
+                                <th>Panel Title</th>
                                 {#if isPremium}
                                     <th>Support Hours</th>
                                 {/if}
@@ -186,7 +186,7 @@
                                             (c) => c.id === panel.channel_id,
                                         )?.name ?? "Unknown Channel"}</td
                                     >
-                                    <td class="max">{panel.title}</td>
+                                    <td>{panel.title}</td>
                                     {#if isPremium}
                                         <td>
                                             {#if panel.has_support_hours}
@@ -265,14 +265,14 @@
                     <table style="margin-top: 10px">
                         <thead>
                             <tr>
-                                <th class="max">Panel Title</th>
+                                <th>Panel Title</th>
                                 <th style="width: 60px">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {#each multiPanels as panel}
                                 <tr>
-                                    <td class="max"
+                                    <td
                                         >{panel.embed?.title ||
                                             "Open a ticket!"}</td
                                     >

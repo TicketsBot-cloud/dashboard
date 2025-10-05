@@ -491,6 +491,7 @@
                         <div class="row">
                             <Checkbox
                                 label="Enabled"
+                                id="autoclose-enabled"
                                 bind:value={data.auto_close.enabled}
                             />
                             <Checkbox

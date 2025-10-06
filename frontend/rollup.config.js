@@ -74,6 +74,7 @@ export default {
         }),
 
         replace({
+            preventAssignment: true,
             env: JSON.stringify({
                 CLIENT_ID: process.env.CLIENT_ID,
                 REDIRECT_URI: process.env.REDIRECT_URI,

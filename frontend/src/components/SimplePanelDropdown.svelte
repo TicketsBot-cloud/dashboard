@@ -1,6 +1,6 @@
 <Dropdown {col1} {col2} {col3} {col4} bind:value label={label}>
   {#if allowNone}
-    <option value=null>
+    <option value="null">
       None
     </option>
   {/if}
@@ -19,15 +19,6 @@
     export let label;
     export let allowNone = false;
     export let panels = [];
-
-    $: value, ensureStringified();
-
-    function ensureStringified() {
-      if (value === null) {
-        value = "null";
-      }
-    }
-
     export let col1 = false;
     export let col2 = false;
     export let col3 = false;

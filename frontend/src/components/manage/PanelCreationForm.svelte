@@ -121,24 +121,36 @@
 
     function applyOverrides() {
         if (data.default_team === true) {
-            $: selectedTeams.push({ id: "default", name: "Default" });
+            selectedTeams.push({ id: "default", name: "Default" });
         }
 
         if (data.teams) {
-            $: data.teams
+            data.teams
                 .map((id) => teams.find((team) => team.id === id))
                 .forEach((team) => selectedTeams.push(team));
         }
 
         if (data.mentions) {
-            $: data.mentions
+            data.mentions
                 .map((id) => mentionItems.find((role) => role.id === id))
                 .filter((mention) => mention != null)
                 .forEach((mention) => selectedMentions.push(mention));
         }
+        
+        if (!data.transcript_channel_id) {
+            data.transcript_channel_id = "null";
+        }
+
+        if (!data.form_id) {
+            data.form_id = "null";
+        }
+
+        if (!data.exit_survey_form_id) {
+            data.exit_survey_form_id = "null";
+        }
 
         if (!data.pending_category) {
-            data.pending_category = "";
+            data.pending_category = "null";
         }
 
         data.emote = data.emote;
@@ -167,10 +179,14 @@
                 button_style: "1",
                 form_id: "null",
                 delete_mentions: false,
+                disabled: false,
                 channel_id: channels.find((c) => c.type === 0 || c.type === 5)
                     ?.id,
                 category_id: channels.find((c) => c.type === 4)?.id,
+                transcript_channel_id: "null",
                 use_server_default_naming_scheme: true,
+                exit_survey_form_id: "null",
+                pending_category: "null",
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -309,7 +325,7 @@
                     bind:value={data.pending_category}
                     disabled={!isPremium}
                 >
-                    <option value="">Disabled</option>
+                    <option value="null">Disabled</option>
                     {#each channels as channel}
                         {#if channel.type === 4}
                             <option value={channel.id}>{channel.name}</option>

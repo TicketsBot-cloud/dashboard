@@ -1,33 +1,6 @@
-<div class="guild-badge" on:click={goto(guild.id)} class:disabled={guild.permission_level === 0}>
-    <div class="guild-icon-bg">
-        {#if guild.icon === undefined || guild.icon === ""}
-            <i class="fas fa-question guild-icon-fa" class:disabled={guild.permission_level === 0}></i>
-        {:else}
-            <img class="guild-icon" src="{getIconUrl()}" alt="Guild Icon"
-                 class:disabled={guild.permission_level === 0}/>
-        {/if}
-    </div>
-
-    <div class="text-wrapper" class:disabled={guild.permission_level === 0}>
-        <span class="guild-name">
-          {guild.name}
-        </span>
-        {#if guild.permission_level === 0}
-            <span class="no-permission">
-            No permission
-            <Tooltip tip="You do not have permission to manage this server." top color="#121212">
-                <a href={`${DOCS_URL}/miscellaneous/dashboard-no-permission`} target="_blank">
-                    <i class="fas fa-circle-question form-label tooltip-icon"></i>
-                </a>
-            </Tooltip>
-            </span>
-        {/if}
-    </div>
-</div>
-
 <script>
     import Tooltip from "svelte-tooltip";
-    import {DOCS_URL} from "../js/constants";
+    import { DOCS_URL } from "../js/constants";
 
     export let guild;
 
@@ -35,15 +8,15 @@
         if (guild.icon === undefined || guild.icon === "") {
             return false;
         } else {
-            return guild.icon.startsWith('a_')
+            return guild.icon.startsWith("a_");
         }
     }
 
     function getIconUrl() {
         if (isAnimated()) {
-            return `https:\/\/cdn.discordapp.com/icons/${guild.id}/${guild.icon}.gif?size=256`
+            return `https:\/\/cdn.discordapp.com/icons/${guild.id}/${guild.icon}.gif?size=256`;
         } else {
-            return `https:\/\/cdn.discordapp.com/icons/${guild.id}/${guild.icon}.webp?size=256`
+            return `https:\/\/cdn.discordapp.com/icons/${guild.id}/${guild.icon}.webp?size=256`;
         }
     }
 
@@ -58,6 +31,53 @@
     }
 </script>
 
+<div
+    class="guild-badge"
+    on:click={goto(guild.id)}
+    class:disabled={guild.permission_level === 0}
+>
+    <div class="guild-icon-bg">
+        {#if guild.icon === undefined || guild.icon === ""}
+            <i
+                class="fas fa-question guild-icon-fa"
+                class:disabled={guild.permission_level === 0}
+            ></i>
+        {:else}
+            <img
+                class="guild-icon"
+                src={getIconUrl()}
+                alt="Guild Icon"
+                class:disabled={guild.permission_level === 0}
+            />
+        {/if}
+    </div>
+
+    <div class="text-wrapper" class:disabled={guild.permission_level === 0}>
+        <span class="guild-name">
+            {guild.name}
+        </span>
+        {#if guild.permission_level === 0}
+            <span class="no-permission">
+                No permission
+                <Tooltip
+                    tip="You do not have permission to manage this server."
+                    top
+                    color="#121212"
+                >
+                    <a
+                        href={`${DOCS_URL}/miscellaneous/dashboard-no-permission`}
+                        target="_blank"
+                    >
+                        <i
+                            class="fas fa-circle-question form-label tooltip-icon"
+                        ></i>
+                    </a>
+                </Tooltip>
+            </span>
+        {/if}
+    </div>
+</div>
+
 <style>
     :global(.guild-badge) {
         display: flex;
@@ -65,7 +85,7 @@
         box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
 
         width: 33%;
-        background-color: #121212;
+        background-color: #0a0e1b;
         height: 100px;
         margin-bottom: 10px;
         border-radius: 10px;
@@ -85,7 +105,7 @@
     :global(.guild-icon-bg) {
         height: 80px;
         width: 80px;
-        background-color: #272727;
+        background-color: #1a1f2e;
         border-radius: 50%;
         margin-left: 10px;
     }

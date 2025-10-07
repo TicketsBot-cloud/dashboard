@@ -204,11 +204,13 @@
                                         {/if}
                                     </td>
                                     <td class="actions-cell">
-                                        <ActionDropdown>
+                                        <ActionDropdown bind:this={panel.dropdownRef}>
                                             <button
                                                 disabled={panel.force_disabled}
-                                                on:click={() =>
-                                                    resendPanel(panel.panel_id)}
+                                                on:click={() => {
+                                                    resendPanel(panel.panel_id);
+                                                    panel.dropdownRef?.close();
+                                                }}
                                             >
                                                 <i class="fas fa-paper-plane"
                                                 ></i>
@@ -228,8 +230,10 @@
                                             <div class="divider"></div>
                                             <button
                                                 class="danger"
-                                                on:click={() =>
-                                                    (panelToDelete = panel)}
+                                                on:click={() => {
+                                                    panelToDelete = panel;
+                                                    panel.dropdownRef?.close();
+                                                }}
                                             >
                                                 <i class="fas fa-trash"></i>
                                                 <span>Delete</span>
@@ -273,10 +277,12 @@
                                             "Open a ticket!"}</td
                                     >
                                     <td class="actions-cell">
-                                        <ActionDropdown>
+                                        <ActionDropdown bind:this={panel.dropdownRef}>
                                             <button
-                                                on:click={() =>
-                                                    resendMultiPanel(panel.id)}
+                                                on:click={() => {
+                                                    resendMultiPanel(panel.id);
+                                                    panel.dropdownRef?.close();
+                                                }}
                                             >
                                                 <i class="fas fa-paper-plane"
                                                 ></i>
@@ -294,9 +300,10 @@
                                             <div class="divider"></div>
                                             <button
                                                 class="danger"
-                                                on:click={() =>
-                                                    (multiPanelToDelete =
-                                                        panel)}
+                                                on:click={() => {
+                                                    multiPanelToDelete = panel;
+                                                    panel.dropdownRef?.close();
+                                                }}
                                             >
                                                 <i class="fas fa-trash"></i>
                                                 <span>Delete</span>

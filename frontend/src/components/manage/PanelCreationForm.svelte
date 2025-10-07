@@ -260,29 +260,21 @@
                         <option value={form.form_id}>{form.title}</option>
                     {/each}
                 </Dropdown>
-                <div>
-                    <label for="naming-scheme-wrapper" class="form-label"
-                        >Naming Scheme</label
-                    >
-                    <div class="row" id="naming-scheme-wrapper">
-                        <div>
-                            <label class="form-label">Use Server Default</label>
-                            <Toggle
-                                hideLabel
-                                toggledColor="#66bb6a"
-                                untoggledColor="#ccc"
-                                bind:toggled={
-                                    data.use_server_default_naming_scheme
-                                }
-                            />
-                        </div>
-                    </div>
-                </div>
+            </div>
+            <div class="incomplete-row">
+                <Dropdown
+                    col4
+                    label="Naming Scheme"
+                    bind:value={data.use_server_default_naming_scheme}
+                >
+                    <option value={true}>Use Server Default</option>
+                    <option value={false}>Custom</option>
+                </Dropdown>
 
                 {#if !data.use_server_default_naming_scheme}
                     <Input
                         col4
-                        label="Naming Scheme"
+                        label="Custom Naming Scheme"
                         bind:value={data.naming_scheme}
                         placeholder="ticket-%id%"
                         tooltipText="Click here for the full placeholder list"

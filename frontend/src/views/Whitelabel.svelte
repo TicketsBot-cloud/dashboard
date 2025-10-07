@@ -352,7 +352,6 @@
     :global(.form-input:focus-visible) {
         border-color: #262b3d !important;
         background-color: #262b3d !important;
-        border-radius: var(--border-radius-md);
         color: white !important;
         outline: none;
         padding: 8px 12px;

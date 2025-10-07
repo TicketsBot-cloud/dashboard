@@ -167,7 +167,7 @@
                         </Navigate>
                     </div>
 
-                    <table style="margin-top: 10px">
+                    <table style="margin-top: 20px">
                         <thead>
                             <tr>
                                 <th>Channel</th>
@@ -258,7 +258,7 @@
                         </Navigate>
                     </div>
 
-                    <table style="margin-top: 10px">
+                    <table style="margin-top: 20px">
                         <thead>
                             <tr>
                                 <th>Panel Title</th>

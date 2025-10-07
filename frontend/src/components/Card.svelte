@@ -54,7 +54,6 @@
         border-radius: var(--border-radius-lg);
         box-shadow: var(--shadow-md);
         transition: all var(--transition-base);
-        padding-bottom: 10px;
     }
 
     .card:hover {

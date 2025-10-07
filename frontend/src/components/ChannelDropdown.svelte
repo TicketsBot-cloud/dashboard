@@ -1,6 +1,6 @@
 <Dropdown {col1} {col2} {col3} {col4} bind:value {label} {disabled} >
   {#if withNull}
-    <option value=null>
+    <option value="null">
       {nullLabel}
     </option>
   {/if}
@@ -23,17 +23,8 @@
     export let withNull = false;
     export let nullLabel = "Disabled";
     export let allowAnnouncementChannel = false;
-
-    $: value, ensureStringified();
-
     export let col1 = false;
     export let col2 = false;
     export let col3 = false;
     export let col4 = false;
-
-    function ensureStringified() {
-      if (value === null) {
-        value = "null";
-      }
-    }
 </script>

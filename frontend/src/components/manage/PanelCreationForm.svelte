@@ -232,6 +232,7 @@
             <div class="row">
                 <ChannelDropdown
                     withNull
+                    nullLabel="Use Global Setting"
                     col3
                     label="Transcript Channel"
                     allowAnnouncementChannel

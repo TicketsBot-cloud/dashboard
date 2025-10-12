@@ -8,7 +8,8 @@
     import Card from "../components/Card.svelte";
     import InviteBadge from "../components/InviteBadge.svelte";
     import Button from "../components/Button.svelte";
-    import { loadingScreen, permissionLevelCache } from "../js/stores";
+    import Sidebar from '../includes/Sidebar.svelte'
+    import {loadingScreen, permissionLevelCache, showSidebar} from "../js/stores";
 
     setDefaultHeaders();
 
@@ -44,6 +45,10 @@
         });
     }
 
+    function toggleBurger() {
+        showSidebar.update(v => !v);
+    }
+
     loadingScreen.set(false);
 </script>
 
@@ -51,6 +56,13 @@
     <div class="card-wrapper">
         <Card footer={false} fill={false}>
             <span slot="title"> Servers </span>
+
+            <span slot="title-items" class="burger-menu-container">
+                <!-- Burger menu button for mobile -->
+                <button class="burger-menu" type="button" on:click={toggleBurger} aria-label="Open sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </span>
 
             <div slot="body" style="width: 100%">
                 <span class="flex-container">
@@ -120,7 +132,31 @@
         color: white;
     }
 
-    @media (max-width: 576px) {
+    .burger-menu-container {
+        display: flex;
+        align-items: center;
+    }
+    .burger-menu {
+        display: none;
+        background: none;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 2rem;
+        color: inherit;
+    }
+    .burger-menu:active {
+        color: #333;
+        background-color: white;
+    }
+    .burger-menu i {
+        display: block;
+        padding: 6px 8px;
+    }
+    @media (max-width: 950px) {
+        .burger-menu {
+            display: inline;
+        }
         .card-wrapper {
             width: 100%;
         }

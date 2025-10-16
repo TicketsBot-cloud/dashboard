@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -158,6 +159,25 @@ func UpdateInputs(c *gin.Context) {
 		return
 	}
 
+	// Validate unique option values for all string select inputs
+	for _, input := range data.Create {
+		if input.Type == 3 {
+			if err := validateUniqueOptionValues(input.Options); err != nil {
+				c.JSON(400, utils.ErrorStr(err.Error()))
+				return
+			}
+		}
+	}
+
+	for _, input := range data.Update {
+		if input.Type == 3 {
+			if err := validateUniqueOptionValues(input.Options); err != nil {
+				c.JSON(400, utils.ErrorStr(err.Error()))
+				return
+			}
+		}
+	}
+
 	if err := saveInputs(c, formId, data, existingInputs); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
 		return
@@ -195,6 +215,39 @@ func arePositionsCorrect(body updateInputsBody) bool {
 	}
 
 	return true
+}
+
+func validateUniqueOptionValues(options []inputOption) error {
+	if len(options) == 0 {
+		return nil
+	}
+
+	valueSet := make(map[string]bool)
+	duplicates := make(map[string]bool)
+
+	for _, opt := range options {
+		if opt.Value == "" {
+			continue
+		}
+		if valueSet[opt.Value] {
+			duplicates[opt.Value] = true
+		} else {
+			valueSet[opt.Value] = true
+		}
+	}
+
+	if len(duplicates) > 0 {
+		duplicateList := make([]string, 0, len(duplicates))
+		for value := range duplicates {
+			duplicateList = append(duplicateList, value)
+		}
+
+		sort.Strings(duplicateList)
+
+		return fmt.Errorf("Duplicate option values detected: %s. Each option must have a unique value", strings.Join(duplicateList, ", "))
+	}
+
+	return nil
 }
 
 func saveInputs(ctx context.Context, formId int, data updateInputsBody, existingInputs []database.FormInput) error {

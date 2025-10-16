@@ -58,6 +58,29 @@
         data.max_length = undefined;
     }
 
+    // Check for duplicate option values
+    $: duplicateValues = (() => {
+        if (!data.options || data.type !== 3) return [];
+        const valueMap = new Map();
+        const duplicates = [];
+
+        data.options.forEach((opt, index) => {
+            if (opt.value && opt.value.trim()) {
+                if (valueMap.has(opt.value)) {
+                    if (!duplicates.includes(opt.value)) {
+                        duplicates.push(opt.value);
+                    }
+                } else {
+                    valueMap.set(opt.value, index);
+                }
+            }
+        });
+
+        return duplicates;
+    })();
+
+    $: hasDuplicateValues = duplicateValues.length > 0;
+
     $: windowWidth = 0;
 
     function forwardCreate() {
@@ -307,6 +330,15 @@
                             {/if}
                         </div>
                     </div>
+                    {#if hasDuplicateValues}
+                        <div class="validation-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>
+                                Duplicate option values detected: {duplicateValues.join(", ")}.
+                                Each option must have a unique value.
+                            </span>
+                        </div>
+                    {/if}
                     {#if data.options && data.options.length > 0}
                         <div class="dropdown-items-list">
                             {#each data.options as item, i}
@@ -339,18 +371,23 @@
                                                         e.target.value,
                                                     )}
                                             />
-                                            <Input
-                                                col2={true}
-                                                label="Value"
-                                                placeholder="Internal value"
-                                                value={item.value}
-                                                on:input={(e) =>
-                                                    updateDropdownItem(
-                                                        i,
-                                                        "value",
-                                                        e.target.value,
-                                                    )}
-                                            />
+                                            <div class="value-input-wrapper" class:has-duplicate={item.value && duplicateValues.includes(item.value)}>
+                                                <Input
+                                                    col2={true}
+                                                    label="Value"
+                                                    placeholder="Internal value"
+                                                    value={item.value}
+                                                    on:input={(e) =>
+                                                        updateDropdownItem(
+                                                            i,
+                                                            "value",
+                                                            e.target.value,
+                                                        )}
+                                                />
+                                                {#if item.value && duplicateValues.includes(item.value)}
+                                                    <span class="duplicate-indicator">Duplicate</span>
+                                                {/if}
+                                            </div>
                                         </div>
                                         <div class="dropdown-field-row">
                                             <Input
@@ -844,6 +881,47 @@
         margin: 0;
         color: var(--text-secondary, #666);
         font-size: 14px;
+    }
+
+    .validation-error {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 15px;
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        border-radius: 6px;
+        color: #dc3545;
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+
+    .validation-error i {
+        font-size: 16px;
+    }
+
+    .value-input-wrapper {
+        position: relative;
+        flex: 1;
+    }
+
+    .value-input-wrapper.has-duplicate :global(input) {
+        border-color: #dc3545 !important;
+        background-color: rgba(220, 53, 69, 0.05) !important;
+    }
+
+    .duplicate-indicator {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        font-size: 11px;
+        color: #dc3545;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: rgba(220, 53, 69, 0.1);
+        padding: 2px 6px;
+        border-radius: 3px;
+        pointer-events: none;
     }
 
     @media only screen and (max-width: 950px) {

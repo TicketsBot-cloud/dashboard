@@ -19,6 +19,7 @@
     export let formId;
 
     export let data = {};
+    export let hasValidationErrors = false;
 
     // Initialize options if not present
     $: if (data.type === 3 && !data.options) {
@@ -80,6 +81,10 @@
     })();
 
     $: hasDuplicateValues = duplicateValues.length > 0;
+
+    $: hasNoOptions = data.type === 3 && (!data.options || data.options.length === 0);
+
+    $: hasValidationErrors = hasDuplicateValues || hasNoOptions;
 
     $: windowWidth = 0;
 
@@ -330,6 +335,14 @@
                             {/if}
                         </div>
                     </div>
+                    {#if hasNoOptions}
+                        <div class="validation-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>
+                                No dropdown options added yet. Click "Add Option" to create up to 25 options.
+                            </span>
+                        </div>
+                    {/if}
                     {#if hasDuplicateValues}
                         <div class="validation-error">
                             <i class="fas fa-exclamation-triangle"></i>
@@ -406,13 +419,6 @@
                                     </div>
                                 </div>
                             {/each}
-                        </div>
-                    {:else}
-                        <div class="empty-state">
-                            <p>
-                                No dropdown options added yet. Click "Add
-                                Option" to create up to 25 options.
-                            </p>
                         </div>
                     {/if}
                 </div>

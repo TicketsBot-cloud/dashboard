@@ -159,9 +159,13 @@ func UpdateInputs(c *gin.Context) {
 		return
 	}
 
-	// Validate unique option values for all string select inputs
+	// Validate string select inputs have at least one option and unique option values
 	for _, input := range data.Create {
 		if input.Type == 3 {
+			if len(input.Options) == 0 {
+				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+				return
+			}
 			if err := validateUniqueOptionValues(input.Options); err != nil {
 				c.JSON(400, utils.ErrorStr(err.Error()))
 				return
@@ -171,6 +175,10 @@ func UpdateInputs(c *gin.Context) {
 
 	for _, input := range data.Update {
 		if input.Type == 3 {
+			if len(input.Options) == 0 {
+				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+				return
+			}
 			if err := validateUniqueOptionValues(input.Options); err != nil {
 				c.JSON(400, utils.ErrorStr(err.Error()))
 				return

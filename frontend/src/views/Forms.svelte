@@ -47,6 +47,11 @@
 
     $: windowWidth = 0;
 
+    let inputValidationErrors = {};
+
+    // Check if any input has validation errors
+    $: hasValidationErrors = Object.values(inputValidationErrors).some((hasError) => hasError === true);
+
     function getForm(formId) {
         return forms.find((form) => form.form_id === formId);
     }
@@ -369,7 +374,7 @@
             <Button
                 type="submit"
                 icon="fas fa-floppy-disk"
-                disabled={formLength === 0}
+                disabled={formLength === 0 || hasValidationErrors}
                 on:click={saveInputs}
             >
                 Save

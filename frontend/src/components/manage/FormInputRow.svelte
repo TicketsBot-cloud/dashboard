@@ -696,7 +696,7 @@
                 </div>
             {/if}
             <div class="row">
-                <div class="col-2-force">
+                <div class="col-1-force">
                     {#if withDeleteButton}
                         <form
                             on:submit|preventDefault={forwardDelete}
@@ -948,6 +948,7 @@
     .duplicate-indicator {
         position: absolute;
         top: -1px;
+        right: 0;
         font-size: 11px;
         color: #dc3545;
         font-weight: 600;

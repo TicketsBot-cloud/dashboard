@@ -297,11 +297,10 @@
                     <div class="row form-name-edit-wrapper">
                         <Input
                             col4
-                            label="Form Title"
                             placeholder="Form Title"
                             bind:value={renamedTitle}
                         />
-                        <div class="form-name-save-wrapper">
+                        <div class="form-name-save-wrapper col-4">
                             <Button
                                 icon="fas fa-floppy-disk"
                                 fullWidth={windowWidth <= 950}
@@ -313,7 +312,7 @@
                         </div>
                     </div>
                     {#if !isRenamedTitleValid}
-                        <div class="validation-error" style="margin-top: 8px; margin-bottom: 12px;">
+                        <div class="validation-error" style="margin-top: 8px;">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span>
                                 {#if !renamedTitle || renamedTitle.trim().length === 0}
@@ -462,7 +461,6 @@
 
     .row {
         display: flex;
-        flex-direction: row;
         justify-content: space-between;
         width: 100%;
         height: 100%;
@@ -481,8 +479,6 @@
 
     .form-name-save-wrapper {
         height: 48px;
-        align-self: flex-end;
-        margin-bottom: 0.5em;
     }
 
     .multiselect-super {
@@ -520,12 +516,12 @@
 
     #create-button-wrapper {
         margin-left: 15px;
-        height: 40px;
     }
 
     .validation-error {
         display: flex;
         align-items: center;
+        flex-direction: row;
         gap: 8px;
         padding: 12px 15px;
         background: rgba(220, 53, 69, 0.1);
@@ -533,6 +529,7 @@
         border-radius: 6px;
         color: #dc3545;
         font-size: 14px;
+        height: 28px;
     }
 
     .validation-error i {

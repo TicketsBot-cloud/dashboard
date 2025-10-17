@@ -80,11 +80,20 @@
         return duplicates;
     })();
 
+    // Flag for duplicate values
     $: hasDuplicateValues = duplicateValues.length > 0;
 
+    // Check for no options in string select
     $: hasNoOptions = data.type === 3 && (!data.options || data.options.length === 0);
 
-    $: hasValidationErrors = hasDuplicateValues || hasNoOptions;
+    // Validate label (required, max 45 chars)
+    $: hasInvalidLabel = !data.label || data.label.trim().length === 0 || data.label.length > 45;
+
+    // Validate description (max 100 chars)
+    $: hasInvalidDescription = data.description && data.description.length > 100;
+
+    // Overall validation error flag
+    $: hasValidationErrors = hasDuplicateValues || hasNoOptions || hasInvalidLabel || hasInvalidDescription;
 
     $: windowWidth = 0;
 
@@ -154,9 +163,9 @@
 
 <form on:submit|preventDefault={forwardCreate} class="input-form">
     <div class="row">
-        <div class="sub-row" style="flex: 1">
+        <div class="sub-row" style="flex: 1; margin-right: 10px;">
             <Input
-                col3={true}
+                col1={true}
                 label="Label"
                 bind:value={data.label}
                 placeholder="Name of the field"
@@ -243,16 +252,36 @@
             {/if}
         </div>
     </div>
+    {#if hasInvalidLabel}
+        <div class="validation-error" style="margin-top: 8px; margin-bottom: 8px;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>
+                {#if !data.label || data.label.trim().length === 0}
+                    Label is required
+                {:else}
+                    Label must be 45 characters or less (currently {data.label.length})
+                {/if}
+            </span>
+        </div>
+    {/if}
     <div class="row">
         <div class="sub-row" style="flex: 1">
             <Input
-                col3={true}
-                label="Description"
+                col1={true}
+                label="Description (Optional)"
                 bind:value={data.description}
                 placeholder="Description for the field"
             />
         </div>
     </div>
+    {#if hasInvalidDescription}
+        <div class="validation-error" style="margin-top: 8px; margin-bottom: 8px;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>
+                Description must be 100 characters or less (currently {data.description.length})
+            </span>
+        </div>
+    {/if}
 
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
@@ -386,7 +415,7 @@
                                             />
                                             <div class="value-input-wrapper" class:has-duplicate={item.value && duplicateValues.includes(item.value)}>
                                                 <Input
-                                                    col2={true}
+                                                    col1={true}
                                                     label="Value"
                                                     placeholder="Internal value"
                                                     value={item.value}
@@ -405,8 +434,8 @@
                                         <div class="dropdown-field-row">
                                             <Input
                                                 col1={true}
-                                                label="Description"
-                                                placeholder="Optional description for this option"
+                                                label="Description (Optional)"
+                                                placeholder="Description for this option"
                                                 value={item.description}
                                                 on:input={(e) =>
                                                     updateDropdownItem(
@@ -538,7 +567,7 @@
         <div class="row settings-row">
             <Textarea
                 col2={true}
-                label="Placeholder"
+                label="Placeholder (Optional)"
                 bind:value={data.placeholder}
                 minHeight="120px"
                 placeholder="Placeholder text for the field, just like this text"
@@ -546,7 +575,7 @@
             <div class="col-2 properties-group">
                 <div class="row">
                     <Dropdown
-                        col2={true}
+                        col1={true}
                         label="Style"
                         value={data.style || 1}
                         on:change={updateStyle}
@@ -918,8 +947,7 @@
 
     .duplicate-indicator {
         position: absolute;
-        top: 8px;
-        right: 10px;
+        top: -1px;
         font-size: 11px;
         color: #dc3545;
         font-weight: 600;

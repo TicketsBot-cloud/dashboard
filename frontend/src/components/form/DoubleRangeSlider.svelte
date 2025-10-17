@@ -157,7 +157,7 @@
         height: 5px;
         border-radius: 5px;
         background-color: #995df3;
-        width: 100%;
+        width: calc(100% - 10px);
         margin-bottom: 12px;
     }
 

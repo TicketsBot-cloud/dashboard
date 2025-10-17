@@ -333,6 +333,7 @@
                                     withDirectionButtons={true}
                                     index={i}
                                     {formLength}
+                                    bind:hasValidationErrors={inputValidationErrors[input.id || i]}
                                     on:delete={() =>
                                         deleteInput(activeFormId, input)}
                                     on:move={(e) =>

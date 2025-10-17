@@ -52,6 +52,10 @@
     // Check if any input has validation errors
     $: hasValidationErrors = Object.values(inputValidationErrors).some((hasError) => hasError === true);
 
+    // Validate form titles
+    $: isNewTitleValid = newTitle && newTitle.trim().length > 0 && newTitle.length <= 45;
+    $: isRenamedTitleValid = renamedTitle && renamedTitle.trim().length > 0 && renamedTitle.length <= 45;
+
     function getForm(formId) {
         return forms.find((form) => form.form_id === formId);
     }
@@ -267,10 +271,23 @@
                         <div id="create-button-wrapper">
                             <Button
                                 icon="fas fa-paper-plane"
+                                disabled={!isNewTitleValid}
                                 fullWidth={windowWidth <= 950}>Create</Button
                             >
                         </div>
                     </div>
+                    {#if newTitle && !isNewTitleValid}
+                        <div class="validation-error" style="margin-top: 8px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>
+                                {#if newTitle.trim().length === 0}
+                                    Form title is required
+                                {:else}
+                                    Form title must be 45 characters or less (currently {newTitle.length})
+                                {/if}
+                            </span>
+                        </div>
+                    {/if}
                 </form>
             </div>
             <div class="section">
@@ -288,12 +305,25 @@
                             <Button
                                 icon="fas fa-floppy-disk"
                                 fullWidth={windowWidth <= 950}
+                                disabled={!isRenamedTitleValid}
                                 on:click={updateTitle}
                             >
                                 Save
                             </Button>
                         </div>
                     </div>
+                    {#if !isRenamedTitleValid}
+                        <div class="validation-error" style="margin-top: 8px; margin-bottom: 12px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>
+                                {#if !renamedTitle || renamedTitle.trim().length === 0}
+                                    Form title is required
+                                {:else}
+                                    Form title must be 45 characters or less (currently {renamedTitle.length})
+                                {/if}
+                            </span>
+                        </div>
+                    {/if}
                 {:else}
                     <div class="row form-select-row">
                         <div class="multiselect-super">
@@ -452,6 +482,7 @@
     .form-name-save-wrapper {
         height: 48px;
         align-self: flex-end;
+        margin-bottom: 0.5em;
     }
 
     .multiselect-super {
@@ -490,6 +521,22 @@
     #create-button-wrapper {
         margin-left: 15px;
         height: 40px;
+    }
+
+    .validation-error {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 15px;
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        border-radius: 6px;
+        color: #dc3545;
+        font-size: 14px;
+    }
+
+    .validation-error i {
+        font-size: 16px;
     }
 
     @media only screen and (max-width: 950px) {

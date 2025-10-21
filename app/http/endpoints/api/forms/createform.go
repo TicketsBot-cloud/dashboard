@@ -2,6 +2,7 @@ package forms
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -20,6 +21,12 @@ func CreateForm(c *gin.Context) {
 	var data createFormBody
 	if err := c.BindJSON(&data); err != nil {
 		c.JSON(400, utils.ErrorStr("Invalid request body"))
+		return
+	}
+
+	// Validate title is not empty or whitespace-only
+	if len(strings.TrimSpace(data.Title)) == 0 {
+		c.JSON(400, utils.ErrorStr("Title is required"))
 		return
 	}
 

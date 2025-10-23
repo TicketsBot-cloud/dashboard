@@ -22,7 +22,7 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 
 	activeCount, err := dbclient.Client.CustomIntegrationGuilds.GetGuildIntegrationCount(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -38,14 +38,14 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 	}
 
 	var data activateIntegrationBody
-	if err := ctx.BindJSON(&data); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
@@ -57,7 +57,7 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 	// Check the integration is public or the user created it
 	canActivate, err := dbclient.Client.CustomIntegrationGuilds.CanActivate(ctx, integrationId, userId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -69,7 +69,7 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 	// Check the secret values are valid
 	secrets, err := dbclient.Client.CustomIntegrationSecrets.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -109,7 +109,7 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 	if integration.Public && integration.Approved && integration.ValidationUrl != nil {
 		integrationHeaders, err := dbclient.Client.CustomIntegrationHeaders.GetByIntegration(ctx, integrationId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 			return
 		}
 
@@ -129,7 +129,7 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 				ctx.JSON(400, utils.ErrorStr("Secret validation server did not respond in time (contact the integration author)"))
 				return
 			} else {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 				return
 			}
 		}
@@ -164,7 +164,7 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.CustomIntegrationGuilds.AddToGuildWithSecrets(ctx, integrationId, guildId, secretMap); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to serialize data. Please try again."))
 		return
 	}
 

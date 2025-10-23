@@ -27,29 +27,26 @@ func ListTranscripts(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 
 	var queryOptions wrappedQueryOptions
-	if err := ctx.BindJSON(&queryOptions); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+	if err := ctx.ShouldBindJSON(&queryOptions); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	opts, err := queryOptions.toQueryOptions(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	tickets, err := dbclient.Client.Tickets.GetByOptions(ctx, opts)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, gin.H{
-			"success": false,
-			"error":   err.Error(),
-		})
+		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -72,7 +69,7 @@ func ListTranscripts(ctx *gin.Context) {
 				usernames[ticket.UserId] = user.Username
 			}
 		} else {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
 			return
 		}
 	}
@@ -85,14 +82,14 @@ func ListTranscripts(ctx *gin.Context) {
 
 	ratings, err := dbclient.Client.ServiceRatings.GetMulti(ctx, guildId, ticketIds)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
 		return
 	}
 
 	// Get close reasons
 	closeReasons, err := dbclient.Client.CloseReason.GetMulti(ctx, guildId, ticketIds)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
 		return
 	}
 

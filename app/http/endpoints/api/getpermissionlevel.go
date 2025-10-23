@@ -21,7 +21,7 @@ func GetPermissionLevel(c *gin.Context) {
 	// TODO: Use proper context
 	permissionLevel, err := utils.GetPermissionLevel(c, guildId, userId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to verify permissions. Please try again."))
 		return
 	}
 

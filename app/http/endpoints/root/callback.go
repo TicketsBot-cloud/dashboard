@@ -36,7 +36,7 @@ func CallbackHandler(c *gin.Context) {
 			}
 		}
 
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to exchange OAuth code"))
 		return
 	}
 
@@ -49,7 +49,7 @@ func CallbackHandler(c *gin.Context) {
 	// Get ID + name
 	currentUser, err := rest.GetCurrentUser(context.Background(), fmt.Sprintf("Bearer %s", res.AccessToken), nil)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch current user from Discord"))
 		return
 	}
 
@@ -66,7 +66,7 @@ func CallbackHandler(c *gin.Context) {
 	if utils.Contains(scopes, "guilds") {
 		guilds, err = utils.LoadGuilds(c, res.AccessToken, currentUser.Id)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load user guilds"))
 			return
 		}
 
@@ -81,12 +81,12 @@ func CallbackHandler(c *gin.Context) {
 
 	str, err := token.SignedString([]byte(config.Conf.Server.Secret))
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to sign JWT token"))
 		return
 	}
 
 	if err := session.Store.Set(currentUser.Id, store); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save session"))
 		return
 	}
 

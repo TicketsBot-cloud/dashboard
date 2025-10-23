@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"errors"
 	"net/http"
 	"strconv"
@@ -21,7 +22,7 @@ func DeletePanel(c *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -33,12 +34,12 @@ func DeletePanel(c *gin.Context) {
 
 	panel, err := database.Client.Panel.GetById(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 		return
 	}
 
 	if panel.PanelId == 0 {
-		c.JSON(404, utils.ErrorStr("Panel not found"))
+		c.JSON(404, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
 		return
 	}
 
@@ -51,20 +52,20 @@ func DeletePanel(c *gin.Context) {
 	// Get any multi panels this panel is part of to use later
 	multiPanels, err := database.Client.MultiPanelTargets.GetMultiPanels(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 		return
 	}
 
 	// Delete welcome message embed
 	if panel.WelcomeMessageEmbed != nil {
 		if err := database.Client.Embeds.Delete(c, *panel.WelcomeMessageEmbed); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 			return
 		}
 	}
 
 	if err := database.Client.Panel.Delete(c, panelId); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 		return
 	}
 
@@ -72,7 +73,7 @@ func DeletePanel(c *gin.Context) {
 	if err := rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, panel.ChannelId, panel.MessageId); err != nil {
 		var unwrapped request.RestError
 		if !errors.As(err, &unwrapped) || unwrapped.StatusCode != 404 {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 			return
 		}
 	}
@@ -80,7 +81,7 @@ func DeletePanel(c *gin.Context) {
 	// Get premium tier
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 		return
 	}
 
@@ -93,7 +94,7 @@ func DeletePanel(c *gin.Context) {
 
 		panels, err := database.Client.MultiPanelTargets.GetPanels(c, multiPanel.Id)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 			return
 		}
 
@@ -102,13 +103,13 @@ func DeletePanel(c *gin.Context) {
 		if err != nil {
 			var unwrapped request.RestError
 			if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 				return
 			}
 			// TODO: nil message ID?
 		} else {
 			if err := database.Client.MultiPanels.UpdateMessageId(c, multiPanel.Id, messageId); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
 				return
 			}
 

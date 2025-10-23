@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"context"
 	"errors"
 	"strconv"
@@ -20,25 +21,25 @@ func ResendPanel(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	panelId, err := strconv.Atoi(ctx.Param("panelid"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to send message. Please try again."))
 		return
 	}
 
 	// get existing
 	panel, err := dbclient.Client.Panel.GetById(ctx, panelId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to load panel. Please try again."))
 		return
 	}
 
 	if panel.PanelId == 0 {
-		ctx.JSON(404, utils.ErrorStr("Panel not found"))
+		ctx.JSON(404, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
 		return
 	}
 
@@ -58,14 +59,14 @@ func ResendPanel(ctx *gin.Context) {
 	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, panel.ChannelId, panel.GuildId); err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
 			return
 		}
 	}
 
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
 		return
 	}
 
@@ -76,14 +77,14 @@ func ResendPanel(ctx *gin.Context) {
 		if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
 			ctx.JSON(500, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
 		} else {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
 		}
 
 		return
 	}
 
 	if err = dbclient.Client.Panel.UpdateMessageId(ctx, panel.PanelId, msgId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
 		return
 	}
 

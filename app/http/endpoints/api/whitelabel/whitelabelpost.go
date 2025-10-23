@@ -37,8 +37,8 @@ func WhitelabelPost() func(*gin.Context) {
 
 		// Get token
 		var data whitelabelPostBody
-		if err := c.BindJSON(&data); err != nil {
-			c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid request body"))
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid request body: malformed JSON"))
 			return
 		}
 
@@ -50,7 +50,7 @@ func WhitelabelPost() func(*gin.Context) {
 			} else if errors.As(err, &restError) && restError.StatusCode == http.StatusUnauthorized {
 				c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid token"))
 			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to parse request data"))
 			}
 
 			return
@@ -59,7 +59,7 @@ func WhitelabelPost() func(*gin.Context) {
 		// Check if this is a different token
 		existing, err := dbclient.Client.Whitelabel.GetByUserId(c, userId)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 
@@ -76,7 +76,7 @@ func WhitelabelPost() func(*gin.Context) {
 			PublicKey: bot.VerifyKey,
 			Token:     data.Token,
 		}); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 
@@ -98,11 +98,11 @@ func WhitelabelPost() func(*gin.Context) {
 		if _, err := rest.EditCurrentApplication(context.Background(), data.Token, nil, editData); err != nil {
 			// TODO: Use a transaction
 			if _, err := dbclient.Client.Whitelabel.Delete(c, bot.Id); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 				return
 			}
 
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 
@@ -113,12 +113,12 @@ func WhitelabelPost() func(*gin.Context) {
 		}
 
 		if err := tokenchange.PublishTokenChange(redis.Client.Client, tokenChangeData); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 
 		if err := createInteractions(cm, bot.Id, data.Token); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 

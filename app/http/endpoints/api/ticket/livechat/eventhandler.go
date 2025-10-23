@@ -71,7 +71,7 @@ func (c *Client) handleAuthEvent(data AuthData) error {
 	// Get the ticket
 	ticket, err := dbclient.Client.Tickets.Get(context.Background(), c.TicketId, c.GuildId)
 	if err != nil {
-		return api.NewErrorWithMessage(http.StatusInternalServerError, err, "Error retrieving ticket data")
+		return api.NewErrorWithMessage(http.StatusInternalServerError, err, "Unable to load ticket. Please try again.")
 	}
 
 	if ticket.Id == 0 || ticket.GuildId == 0 || ticket.GuildId != c.GuildId {
@@ -91,7 +91,7 @@ func (c *Client) handleAuthEvent(data AuthData) error {
 	// Check premium
 	botContext, err := botcontext.ContextForGuild(c.GuildId)
 	if err != nil {
-		return api.NewErrorWithMessage(http.StatusInternalServerError, err, "Error retrieving bot context")
+		return api.NewErrorWithMessage(http.StatusInternalServerError, err, "Unable to connect to Discord. Please try again later.")
 	}
 
 	// Verify the guild is premium

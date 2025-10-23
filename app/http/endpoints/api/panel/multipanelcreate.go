@@ -44,7 +44,7 @@ func MultiPanelCreate(c *gin.Context) {
 
 	var data multiPanelCreateData
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(400, utils.ErrorJson(err))
+		c.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
@@ -63,21 +63,21 @@ func MultiPanelCreate(c *gin.Context) {
 	// validate body & get sub-panels
 	panels, err := data.doValidations(guildId)
 	if err != nil {
-		c.JSON(400, utils.ErrorJson(err))
+		c.JSON(400, utils.ErrorStr("Failed to create multi-panel. Please try again."))
 		return
 	}
 
 	// get bot context
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	// get premium status
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 		return
 	}
 
@@ -86,9 +86,9 @@ func MultiPanelCreate(c *gin.Context) {
 	if err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped); unwrapped.StatusCode == 403 {
-			c.JSON(http.StatusBadRequest, utils.ErrorJson(errors.New("I do not have permission to send messages in the provided channel")))
+			c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
 		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 		}
 
 		return
@@ -109,7 +109,7 @@ func MultiPanelCreate(c *gin.Context) {
 
 	multiPanel.Id, err = dbclient.Client.MultiPanels.Create(c, multiPanel)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 		return
 	}
 
@@ -123,7 +123,7 @@ func MultiPanelCreate(c *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 		return
 	}
 

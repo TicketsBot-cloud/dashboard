@@ -10,7 +10,7 @@ func LogoutHandler(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
 
 	if err := session.Store.Clear(userId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to clear session. Please try again."))
 		return
 	}
 

@@ -30,25 +30,25 @@ func GetSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
 		return
 	}
 
 	// Verify panel exists and belongs to guild
 	panel, err := dbclient.Client.Panel.GetById(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found"))
+		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
 		return
 	}
 
 	hours, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
@@ -84,20 +84,20 @@ func SetSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
 		return
 	}
 
 	// Check premium status for support hours quota
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
@@ -106,7 +106,7 @@ func SetSupportHours(c *gin.Context) {
 		// Get all panels with support hours for this guild
 		allPanels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 
@@ -118,7 +118,7 @@ func SetSupportHours(c *gin.Context) {
 
 			hours, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, panel.PanelId)
 			if err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 				return
 			}
 
@@ -136,24 +136,24 @@ func SetSupportHours(c *gin.Context) {
 	// Verify panel exists and belongs to guild
 	panel, err := dbclient.Client.Panel.GetById(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found"))
+		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
 		return
 	}
 
 	var hoursRequest []supportHoursRequest
-	if err := c.BindJSON(&hoursRequest); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid request body"))
+	if err := c.ShouldBindJSON(&hoursRequest); err != nil {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
 
 	// Delete existing hours first
 	if err := dbclient.Client.PanelSupportHours.DeleteByPanelId(c, panelId); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to parse request data"))
 		return
 	}
 
@@ -168,13 +168,13 @@ func SetSupportHours(c *gin.Context) {
 		// Parse times - expecting HH:MM:SS format
 		startTime, err := time.Parse("15:04:05", req.StartTime)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid start time format: %s", err.Error())))
+			c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid start time format. Please try again."))
 			return
 		}
 
 		endTime, err := time.Parse("15:04:05", req.EndTime)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid end time format: %s", err.Error())))
+			c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid end time format. Please try again."))
 			return
 		}
 
@@ -188,7 +188,7 @@ func SetSupportHours(c *gin.Context) {
 		}
 
 		if _, err := dbclient.Client.PanelSupportHours.Upsert(c, supportHours); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 	}
@@ -202,24 +202,24 @@ func DeleteSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
 		return
 	}
 
 	// Verify panel exists and belongs to guild
 	panel, err := dbclient.Client.Panel.GetById(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found"))
+		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
 		return
 	}
 
 	if err := dbclient.Client.PanelSupportHours.DeleteByPanelId(c, panelId); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
@@ -232,26 +232,26 @@ func IsPanelActive(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
 		return
 	}
 
 	// Verify panel exists and belongs to guild
 	panel, err := dbclient.Client.Panel.GetById(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found"))
+		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
 		return
 	}
 
 	// Check if panel is currently active based on support hours
 	isActive, err := dbclient.Client.PanelSupportHours.IsActiveNow(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 

@@ -16,7 +16,7 @@ func WhitelabelDelete(c *gin.Context) {
 	// Check if this is a different token
 	botId, err := database.Client.Whitelabel.Delete(c, userId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete whitelabel bot"))
 		return
 	}
 

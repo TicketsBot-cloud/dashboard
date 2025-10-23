@@ -16,7 +16,7 @@ func VerifyWhitelabel(isApi bool) func(ctx *gin.Context) {
 
 		tier, err := rpc.PremiumClient.GetTierByUser(ctx, userId, false)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to verify premium status for user %d: %v", userId, err))
 			return
 		}
 

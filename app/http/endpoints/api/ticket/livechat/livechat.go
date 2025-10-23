@@ -27,13 +27,13 @@ func GetLiveChatHandler(sm *SocketManager) gin.HandlerFunc {
 
 		guildId, err := strconv.ParseUint(c.Param("id"), 10, 64)
 		if err != nil {
-			c.JSON(400, utils.ErrorJson(err))
+			c.JSON(400, utils.ErrorStr("Failed to process request. Please try again."))
 			return
 		}
 
 		ticketId, err := strconv.Atoi(c.Param("ticketId"))
 		if err != nil {
-			c.JSON(400, utils.ErrorJson(err))
+			c.JSON(400, utils.ErrorStr("Failed to process request. Please try again."))
 			return
 		}
 

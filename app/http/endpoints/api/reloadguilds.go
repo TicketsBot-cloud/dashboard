@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/redis"
@@ -22,14 +23,14 @@ func ReloadGuildsHandler(c *gin.Context) {
 	key := fmt.Sprintf("tickets:dashboard:guildreload:%d", userId)
 	res, err := redis.Client.SetNX(wrapper.DefaultContext(), key, 1, time.Second*10).Result()
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check rate limit"))
 		return
 	}
 
 	if !res {
 		ttl, err := redis.Client.TTL(wrapper.DefaultContext(), key).Result()
 		if err != nil {
-			c.JSON(500, utils.ErrorJson(err))
+			c.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 			return
 		}
 
@@ -50,7 +51,7 @@ func ReloadGuildsHandler(c *gin.Context) {
 				"auth":    true,
 			})
 		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to get session"))
 		}
 
 		return
@@ -72,7 +73,7 @@ func ReloadGuildsHandler(c *gin.Context) {
 		store.Expiry = time.Now().Unix() + int64(res.ExpiresIn)
 
 		if err := session.Store.Set(userId, store); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update session"))
 			return
 		}
 	}
@@ -91,7 +92,7 @@ func ReloadGuildsHandler(c *gin.Context) {
 			}
 		}
 
-		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load guilds"))
 		return
 	}
 

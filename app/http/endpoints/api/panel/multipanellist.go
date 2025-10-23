@@ -20,7 +20,7 @@ func MultiPanelList(ctx *gin.Context) {
 
 	multiPanels, err := dbclient.Client.MultiPanels.GetByGuild(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load multi-panels. Please try again."))
 		return
 	}
 
@@ -53,7 +53,7 @@ func MultiPanelList(ctx *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load multi-panels. Please try again."))
 		return
 	}
 

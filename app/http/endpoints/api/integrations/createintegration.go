@@ -44,7 +44,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 
 	ownedCount, err := dbclient.Client.CustomIntegrations.GetOwnedCount(ctx, userId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
 		return
 	}
 
@@ -54,8 +54,8 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 	}
 
 	var data integrationCreateBody
-	if err := ctx.BindJSON(&data); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
@@ -74,7 +74,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 	if data.ValidationUrl != nil {
 		sameHost, err := isSameValidationUrlHost(data.WebhookUrl, *data.ValidationUrl)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
 			return
 		}
 
@@ -86,7 +86,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 
 	integration, err := dbclient.Client.CustomIntegrations.Create(ctx, userId, data.WebhookUrl, data.ValidationUrl, data.Method, data.Name, data.Description, data.ImageUrl, data.PrivacyPolicyUrl)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
 		return
 	}
 
@@ -101,7 +101,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		if _, err := dbclient.Client.CustomIntegrationSecrets.CreateOrUpdate(ctx, integration.Id, secrets); err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
 			return
 		}
 	}
@@ -117,7 +117,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		if _, err := dbclient.Client.CustomIntegrationHeaders.CreateOrUpdate(ctx, integration.Id, headers); err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
 			return
 		}
 	}
@@ -133,7 +133,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		if _, err := dbclient.Client.CustomIntegrationPlaceholders.Set(ctx, integration.Id, placeholders); err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
 			return
 		}
 	}

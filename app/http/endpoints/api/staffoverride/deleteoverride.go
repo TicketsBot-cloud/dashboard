@@ -10,7 +10,7 @@ func DeleteOverrideHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 
 	if err := database.Client.StaffOverride.Delete(ctx, guildId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete staff override. Please try again."))
 		return
 	}
 

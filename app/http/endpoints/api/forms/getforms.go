@@ -24,19 +24,19 @@ func GetForms(c *gin.Context) {
 
 	forms, err := dbclient.Client.Forms.GetForms(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load forms"))
 		return
 	}
 
 	inputs, err := dbclient.Client.FormInput.GetInputsForGuild(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load forms"))
 		return
 	}
 
 	options, err := dbclient.Client.FormInputOption.GetAllOptionsByGuild(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load forms"))
 		return
 	}
 

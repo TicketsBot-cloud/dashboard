@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -28,53 +29,52 @@ func GetTicket(c *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	ticketId, err := strconv.Atoi(c.Param("ticketId"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid ticket ID"))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid ticket ID provided: %s", c.Param("ticketId")))
 		return
 	}
 
 	// Get the ticket struct
 	ticket, err := dbclient.Client.Tickets.Get(c, ticketId, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to load ticket. Please try again."))
 		return
 	}
 
 	if ticket.GuildId != guildId {
-		c.JSON(http.StatusForbidden, utils.ErrorStr("Ticket does not belong to guild"))
+		c.JSON(http.StatusForbidden, utils.ErrorStr("Ticket #%d does not belong to guild %d", ticketId, guildId))
 		return
 	}
 
 	if !ticket.Open {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Ticket is closed"))
+		c.JSON(http.StatusNotFound, utils.ErrorStr("Ticket #%d has been closed and is no longer accessible", ticketId))
 		return
 	}
 
 	hasPermission, requestErr := utils.HasPermissionToViewTicket(c, guildId, userId, ticket)
 	if requestErr != nil {
-		// TODO
-		c.JSON(requestErr.StatusCode, utils.ErrorJson(requestErr))
+		c.JSON(requestErr.StatusCode, app.NewError(requestErr, fmt.Sprintf("Failed to verify permissions for user %d to view ticket #%d", userId, ticketId)))
 		return
 	}
 
 	if !hasPermission {
-		c.JSON(http.StatusForbidden, utils.ErrorStr("You do not have permission to view this ticket"))
+		c.JSON(http.StatusForbidden, utils.ErrorStr("User %d does not have permission to view ticket #%d", userId, ticketId))
 		return
 	}
 
 	if ticket.ChannelId == nil {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Ticket channel not found"))
+		c.JSON(http.StatusNotFound, utils.ErrorStr("Ticket #%d has no associated Discord channel", ticketId))
 		return
 	}
 
 	messages, err := fetchMessages(botContext, ticket)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, fmt.Sprintf("Failed to fetch messages for ticket #%d from Discord", ticketId)))
 		return
 	}
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"errors"
 	"strconv"
 
@@ -18,17 +19,14 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 	// format ticket ID
 	ticketId, err := strconv.Atoi(ctx.Param("ticketId"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorStr("Invalid ticket ID"))
+		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid ticket ID provided: %s", ctx.Param("ticketId"))))
 		return
 	}
 
 	// get ticket object
 	ticket, err := dbclient.Client.Tickets.Get(ctx, ticketId, guildId)
 	if err != nil {
-		ctx.JSON(500, gin.H{
-			"success": false,
-			"error":   err.Error(),
-		})
+		ctx.JSON(500, utils.ErrorStr("Unable to load ticket. Please try again."))
 		return
 	}
 
@@ -43,7 +41,7 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 	if ticket.UserId != userId {
 		hasPermission, err := utils.HasPermissionToViewTicket(ctx, guildId, userId, ticket)
 		if err != nil {
-			ctx.JSON(err.StatusCode, utils.ErrorJson(err))
+			ctx.JSON(err.StatusCode, utils.ErrorStr("Failed to query database. Please try again."))
 			return
 		}
 
@@ -59,7 +57,7 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 		if errors.Is(err, archiverclient.ErrNotFound) {
 			ctx.JSON(404, utils.ErrorStr("Transcript not found"))
 		} else {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		}
 
 		return
@@ -69,7 +67,7 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 	payload := chatreplica.FromTranscript(transcript, ticketId)
 	// html, err := chatreplica.Render(payload)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 

@@ -31,19 +31,19 @@ func ListPanels(c *gin.Context) {
 
 	panels, err := dbclient.Client.Panel.GetByGuildWithWelcomeMessage(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
 		return
 	}
 
 	accessControlLists, err := dbclient.Client.PanelAccessControlRules.GetAllForGuild(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
 		return
 	}
 
 	allFields, err := dbclient.Client.EmbedFields.GetAllFieldsForPanels(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
 		return
 	}
 
@@ -145,7 +145,7 @@ func ListPanels(c *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
 		return
 	}
 

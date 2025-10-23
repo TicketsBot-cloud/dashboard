@@ -16,13 +16,13 @@ func GetEntitlements(ctx *gin.Context) {
 
 	entitlements, err := dbclient.Client.Entitlements.ListUserSubscriptions(ctx, userId, premium.GracePeriod)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 		return
 	}
 
 	legacyEntitlement, err := dbclient.Client.LegacyPremiumEntitlements.GetUserTier(ctx, userId, premium.GracePeriod)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 		return
 	}
 
@@ -60,7 +60,7 @@ func GetEntitlements(ctx *gin.Context) {
 
 		return nil
 	}); err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 		return
 	}
 

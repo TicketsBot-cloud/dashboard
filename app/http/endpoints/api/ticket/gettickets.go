@@ -36,13 +36,13 @@ func GetTickets(c *gin.Context) {
 
 	tickets, err := database.Client.Tickets.GetGuildOpenTicketsWithMetadata(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch open tickets for guild from database"))
 		return
 	}
 
 	panels, err := database.Client.Panel.GetByGuild(c, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panels for guild from database"))
 		return
 	}
 
@@ -63,7 +63,7 @@ func GetTickets(c *gin.Context) {
 
 	users, err := cache.Instance.GetUsers(c, userIds)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch user information from cache"))
 		return
 	}
 

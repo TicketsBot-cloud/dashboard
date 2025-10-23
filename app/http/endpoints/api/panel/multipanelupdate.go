@@ -26,7 +26,7 @@ func MultiPanelUpdate(c *gin.Context) {
 	// parse body
 	var data multiPanelCreateData
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(400, utils.ErrorStr("Invalid request body"))
+		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
 
@@ -40,19 +40,19 @@ func MultiPanelUpdate(c *gin.Context) {
 	// retrieve panel from DB
 	multiPanel, ok, err := dbclient.Client.MultiPanels.Get(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to parse request data"))
 		return
 	}
 
 	// check panel exists
 	if !ok {
-		c.JSON(404, utils.ErrorJson(errors.New("No panel with the provided ID found")))
+		c.JSON(404, utils.ErrorStr("No panel with the provided ID found"))
 		return
 	}
 
 	// check panel is in the same guild
 	if guildId != multiPanel.GuildId {
-		c.JSON(403, utils.ErrorJson(errors.New("Guild ID doesn't match")))
+		c.JSON(403, utils.ErrorStr("Guild ID doesn't match"))
 		return
 	}
 
@@ -71,7 +71,7 @@ func MultiPanelUpdate(c *gin.Context) {
 	// validate body & get sub-panels
 	panels, err := data.doValidations(guildId)
 	if err != nil {
-		c.JSON(400, utils.ErrorJson(err))
+		c.JSON(400, utils.ErrorStr("Failed to update multi-panel. Please try again."))
 		return
 	}
 
@@ -79,12 +79,12 @@ func MultiPanelUpdate(c *gin.Context) {
 		if panel.CustomId == "" {
 			panel.CustomId, err = utils.RandString(30)
 			if err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 				return
 			}
 
 			if err := dbclient.Client.Panel.Update(c, panel); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 				return
 			}
 		}
@@ -93,7 +93,7 @@ func MultiPanelUpdate(c *gin.Context) {
 	// get bot context
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -104,7 +104,7 @@ func MultiPanelUpdate(c *gin.Context) {
 	if err := rest.DeleteMessage(ctx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
 		var unwrapped request.RestError
 		if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 			return
 		}
 	}
@@ -113,7 +113,7 @@ func MultiPanelUpdate(c *gin.Context) {
 	// get premium status
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
 	}
 
@@ -123,9 +123,9 @@ func MultiPanelUpdate(c *gin.Context) {
 	if err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
-			c.JSON(http.StatusBadRequest, utils.ErrorJson(errors.New("I do not have permission to send messages in the provided channel")))
+			c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
 		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		}
 
 		return
@@ -147,14 +147,14 @@ func MultiPanelUpdate(c *gin.Context) {
 	}
 
 	if err = dbclient.Client.MultiPanels.Update(c, multiPanel.Id, updated); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
 	}
 
 	// TODO: one query for ACID purposes
 	// delete old targets
 	if err := dbclient.Client.MultiPanelTargets.DeleteAll(c, multiPanel.Id); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
 	}
 
@@ -169,7 +169,7 @@ func MultiPanelUpdate(c *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
 	}
 

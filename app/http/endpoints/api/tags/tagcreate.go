@@ -38,7 +38,7 @@ func CreateTag(ctx *gin.Context) {
 	// Max of 200 tags
 	count, err := dbclient.Client.Tag.GetTagCount(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
 		return
 	}
 
@@ -48,8 +48,8 @@ func CreateTag(ctx *gin.Context) {
 	}
 
 	var data tag
-	if err := ctx.BindJSON(&data); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
@@ -84,14 +84,14 @@ func CreateTag(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	if data.UseGuildCommand {
 		premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
 			return
 		}
 
@@ -120,7 +120,7 @@ func CreateTag(ctx *gin.Context) {
 		})
 
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to create tag. Please try again."))
 			return
 		}
 
@@ -136,7 +136,7 @@ func CreateTag(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.Tag.Set(ctx, wrapped); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to create tag. Please try again."))
 		return
 	}
 

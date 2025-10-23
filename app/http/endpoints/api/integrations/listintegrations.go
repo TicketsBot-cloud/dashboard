@@ -49,7 +49,7 @@ func ListIntegrationsHandler(ctx *gin.Context) {
 
 	availableIntegrations, err := dbclient.Client.CustomIntegrationGuilds.GetAvailableIntegrationsWithActive(ctx, guildId, userId, limit, page*pageLimit)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
 		return
 	}
 
@@ -60,7 +60,7 @@ func ListIntegrationsHandler(ctx *gin.Context) {
 		if integration.ImageUrl != nil {
 			tmp, err := utils.GenerateImageProxyToken(*integration.ImageUrl)
 			if err != nil {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
 				return
 			}
 
@@ -91,7 +91,7 @@ func ListIntegrationsHandler(ctx *gin.Context) {
 	// TODO: Use proper context
 	authors, err := cache.Instance.GetUsers(context.Background(), authorIds)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
 		return
 	}
 

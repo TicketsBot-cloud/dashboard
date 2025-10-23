@@ -24,7 +24,7 @@ func GetMembers(ctx *gin.Context) {
 	} else {
 		parsed, err := strconv.Atoi(teamId)
 		if err != nil {
-			ctx.JSON(400, utils.ErrorStr("Invalid team ID"))
+			ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid team ID provided: %s", ctx.Param("id"))))
 			return
 		}
 
@@ -49,7 +49,7 @@ func getDefaultMembers(ctx *gin.Context, guildId uint64) {
 	})
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
 		return
 	}
 
@@ -57,7 +57,7 @@ func getDefaultMembers(ctx *gin.Context, guildId uint64) {
 	if err == nil {
 		ctx.JSON(200, data)
 	} else {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
 	}
 }
 
@@ -65,7 +65,7 @@ func getTeamMembers(ctx *gin.Context, teamId int, guildId uint64) {
 	// Verify team exists
 	exists, err := dbclient.Client.SupportTeam.Exists(ctx, teamId, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
 		return
 	}
 
@@ -90,7 +90,7 @@ func getTeamMembers(ctx *gin.Context, teamId int, guildId uint64) {
 	})
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
 		return
 	}
 
@@ -98,7 +98,7 @@ func getTeamMembers(ctx *gin.Context, teamId int, guildId uint64) {
 	if err == nil {
 		ctx.JSON(200, data)
 	} else {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
 	}
 }
 

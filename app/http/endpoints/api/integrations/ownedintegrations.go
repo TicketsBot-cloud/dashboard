@@ -37,7 +37,7 @@ func GetOwnedIntegrationsHandler(ctx *gin.Context) {
 	})
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -47,7 +47,7 @@ func GetOwnedIntegrationsHandler(ctx *gin.Context) {
 		if integration.ImageUrl != nil {
 			tmp, err := utils.GenerateImageProxyToken(*integration.ImageUrl)
 			if err != nil {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 				return
 			}
 

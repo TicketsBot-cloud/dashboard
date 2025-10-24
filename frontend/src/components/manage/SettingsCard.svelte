@@ -167,7 +167,6 @@
             `${API_URL}/api/${guildId}/settings`,
             mapped,
         );
-        console.log(res);
         if (res.status === 200) {
             if (showValidations(res.data)) {
                 notifySuccess("Your settings have been saved.");

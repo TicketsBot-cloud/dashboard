@@ -104,6 +104,31 @@
         data = res.data;
     }
 
+    async function loadData() {
+        await Promise.all([
+            loadPanels(),
+            loadChannels(),
+            loadPremium(),
+            loadSettings(),
+        ]);
+
+        if (
+            data.archive_channel &&
+            !channels.some((c) => c.id === data.archive_channel)
+        ) {
+            await loadChannels(true);
+
+            const tmp = data.archive_channel;
+            data.archive_channel = null;
+
+            setTimeout(() => {
+                data.archive_channel = tmp;
+            }, 100);
+        }
+
+        doOverrides();
+    }
+
     async function updateSettings() {
         // Svelte hack - I can't even remember what this does
         let mapped = Object.fromEntries(
@@ -157,7 +182,7 @@
     function showValidations(data) {
         let success = true;
 
-        if (data.error !== null) {
+        if (data.error) {
             success = false;
             notify("Warning", data.error);
         }
@@ -256,29 +281,8 @@
     }
 
     withLoadingScreen(async () => {
-        await Promise.all([
-            loadPanels(),
-            loadChannels(),
-            loadPremium(),
-            loadSettings(),
-        ]);
+        await loadData();
         loaded = true;
-
-        if (
-            data.archive_channel &&
-            !channels.some((c) => c.id === data.archive_channel)
-        ) {
-            await loadChannels(true);
-
-            const tmp = data.archive_channel;
-            data.archive_channel = null;
-
-            setTimeout(() => {
-                data.archive_channel = tmp;
-            }, 100);
-        }
-
-        doOverrides(); // Depends on channels
     });
 </script>
 

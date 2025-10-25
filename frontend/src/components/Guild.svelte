@@ -1,8 +1,11 @@
 <script>
     import Tooltip from "svelte-tooltip";
     import { DOCS_URL } from "../js/constants";
+    import NoPermissionModal from "./NoPermissionModal.svelte";
 
     export let guild;
+
+    let showNoPermissionModal = false;
 
     function isAnimated() {
         if (guild.icon === undefined || guild.icon === "") {
@@ -28,6 +31,15 @@
         } else {
             return;
         }
+    }
+
+    function openNoPermissionModal(event) {
+        event.stopPropagation();
+        showNoPermissionModal = true;
+    }
+
+    function closeNoPermissionModal() {
+        showNoPermissionModal = false;
     }
 </script>
 
@@ -60,23 +72,29 @@
             <span class="no-permission">
                 No permission
                 <Tooltip
-                    tip="You do not have permission to manage this server."
+                    tip="Click to learn how to get access"
                     top
                     color="#121212"
                 >
-                    <a
-                        href={`${DOCS_URL}/miscellaneous/dashboard-no-permission`}
-                        target="_blank"
+                    <button
+                        class="info-button"
+                        on:click={openNoPermissionModal}
+                        aria-label="Learn how to get access"
                     >
-                        <i
-                            class="fas fa-circle-question form-label tooltip-icon"
-                        ></i>
-                    </a>
+                        <i class="fas fa-circle-question"></i>
+                    </button>
                 </Tooltip>
             </span>
         {/if}
     </div>
 </div>
+
+{#if showNoPermissionModal}
+    <NoPermissionModal
+        isOwner={guild.owner === true}
+        on:close={closeNoPermissionModal}
+    />
+{/if}
 
 <style>
     :global(.guild-badge) {
@@ -146,5 +164,38 @@
 
     .text-wrapper > .no-permission {
         opacity: 75%;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .info-button {
+        background: none;
+        border: none;
+        color: #5865f2;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        filter: drop-shadow(0 0 0px rgba(88, 101, 242, 0));
+    }
+
+    .info-button:hover {
+        color: #7289da;
+        transform: scale(1.2) rotate(15deg);
+        filter: drop-shadow(0 0 6px rgba(88, 101, 242, 0.6));
+    }
+
+    .info-button:active {
+        transform: scale(1.1) rotate(10deg);
+    }
+
+    .info-button:focus {
+        outline: 2px solid #5865f2;
+        outline-offset: 2px;
+        border-radius: 2px;
     }
 </style>

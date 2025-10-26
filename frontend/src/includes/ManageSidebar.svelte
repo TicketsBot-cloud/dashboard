@@ -11,6 +11,7 @@
 
     import ImportModal from "../components/manage/ImportModal.svelte";
     import ManageSidebarServersLink from "./ManageSidebarServersLink.svelte";
+    import { guildCache } from "../js/stores";
 
     export let currentRoute;
     export let permissionLevel;
@@ -35,6 +36,12 @@
     }
 
     async function loadGuild() {
+        const cached = $guildCache[guildId];
+        if (cached) {
+            guild = cached;
+            return;
+        }
+
         const res = await axios.get(`${API_URL}/api/${guildId}/guild`);
         if (res.status !== 200) {
             notifyError(res.data.error);
@@ -42,6 +49,10 @@
         }
 
         guild = res.data;
+        guildCache.update(cache => ({
+            ...cache,
+            [guildId]: res.data
+        }));
     }
 
     function checkGuildCache(id, newIcon, newName) {

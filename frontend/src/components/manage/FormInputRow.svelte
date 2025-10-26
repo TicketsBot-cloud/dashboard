@@ -8,6 +8,14 @@
     import Textarea from "../form/Textarea.svelte";
     import Checkbox from "../form/Checkbox.svelte";
     import DoubleRangeSlider from "../form/DoubleRangeSlider.svelte";
+    import FormInputApiConfig from "./FormInputApiConfig.svelte";
+
+    import { guildCache } from "../../js/stores";
+
+    export let guildId;
+    const guild = $guildCache[guildId];
+    $: hasApiConfigExperiment =
+        guild?.enabled_experiments?.includes("API_BASED_FORM_INPUTS") ?? false;
 
     export let withCreateButton = false;
     export let withDeleteButton = false;
@@ -22,7 +30,7 @@
     export let hasValidationErrors = false;
 
     // Initialize options if not present
-    $: if (data.type === 3 && !data.options) {
+    $: if (data.type === 3 && !data.options && !data.api_config) {
         data.options = [];
     }
 
@@ -83,17 +91,42 @@
     // Flag for duplicate values
     $: hasDuplicateValues = duplicateValues.length > 0;
 
-    // Check for no options in string select
-    $: hasNoOptions = data.type === 3 && (!data.options || data.options.length === 0);
+    // Check for no options/api_config in string select
+    $: hasNoOptionsOrApiConfig =
+        data.type === 3 &&
+        !data.api_config &&
+        (!data.options || data.options.length === 0);
+
+    // Check for both options and API config
+    $: hasBothOptionsAndApiConfig =
+        data.type === 3 &&
+        data.api_config &&
+        data.options &&
+        data.options.length > 0;
+
+    // Check for invalid API config
+    $: hasInvalidApiConfig =
+        data.type === 3 &&
+        data.api_config &&
+        (!data.api_config.endpoint_url ||
+            data.api_config.endpoint_url.trim().length === 0);
 
     // Validate label (required, max 45 chars)
-    $: hasInvalidLabel = !data.label || data.label.trim().length === 0 || data.label.length > 45;
+    $: hasInvalidLabel =
+        !data.label || data.label.trim().length === 0 || data.label.length > 45;
 
     // Validate description (max 100 chars)
-    $: hasInvalidDescription = data.description && data.description.length > 100;
+    $: hasInvalidDescription =
+        data.description && data.description.length > 100;
 
     // Overall validation error flag
-    $: hasValidationErrors = hasDuplicateValues || hasNoOptions || hasInvalidLabel || hasInvalidDescription;
+    $: hasValidationErrors =
+        hasDuplicateValues ||
+        hasNoOptionsOrApiConfig ||
+        hasBothOptionsAndApiConfig ||
+        hasInvalidApiConfig ||
+        hasInvalidLabel ||
+        hasInvalidDescription;
 
     $: windowWidth = 0;
 
@@ -253,13 +286,17 @@
         </div>
     </div>
     {#if hasInvalidLabel}
-        <div class="validation-error" style="margin-top: 8px; margin-bottom: 8px;">
+        <div
+            class="validation-error"
+            style="margin-top: 8px; margin-bottom: 8px;"
+        >
             <i class="fas fa-exclamation-triangle"></i>
             <span>
                 {#if !data.label || data.label.trim().length === 0}
                     Label is required
                 {:else}
-                    Label must be 45 characters or less (currently {data.label.length})
+                    Label must be 45 characters or less (currently {data.label
+                        .length})
                 {/if}
             </span>
         </div>
@@ -275,184 +312,261 @@
         </div>
     </div>
     {#if hasInvalidDescription}
-        <div class="validation-error" style="margin-top: 8px; margin-bottom: 8px;">
+        <div
+            class="validation-error"
+            style="margin-top: 8px; margin-bottom: 8px;"
+        >
             <i class="fas fa-exclamation-triangle"></i>
             <span>
-                Description must be 100 characters or less (currently {data.description.length})
+                Description must be 100 characters or less (currently {data
+                    .description.length})
             </span>
         </div>
     {/if}
 
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
-        <div class="row settings-row">
-            <div class="col-1">
-                <div class="dropdown-items-section">
-                    <div class="dropdown-header">
-                        <label class="form-label">String Select Options</label>
-                        {#if !data.options || data.options.length < 25}
-                            <Button
-                                icon="fas fa-plus"
-                                on:click={addDropdownItem}
-                                small={true}
+        {#if hasApiConfigExperiment}
+            <div class="row settings-row">
+                <div class="col-1">
+                    <div class="select-mode-section">
+                        <div class="select-mode-header">
+                            <label class="form-label"
+                                >String Select Source</label
                             >
-                                Add Option
-                            </Button>
-                        {/if}
-                    </div>
-                    <div class="dropdown-constraints">
-                        <div class="constraint-row">
-                            <Input
-                                col2={true}
-                                label="Minimum Selections"
-                                type="number"
-                                value={data.min_length || ""}
-                                on:input={(e) => {
-                                    const val = e.target.value;
-                                    data.min_length =
-                                        val === ""
-                                            ? undefined
-                                            : parseInt(val, 10);
-                                }}
-                                placeholder="0"
-                                min={0}
-                                max={Math.min(
-                                    data.max_length ||
-                                        data.options?.length ||
-                                        0,
-                                    data.options?.length || 0,
-                                )}
-                                disabled={!data.options?.length}
-                            />
-                            <Input
-                                col2={true}
-                                label="Maximum Selections"
-                                type="number"
-                                value={data.max_length || ""}
-                                on:input={(e) => {
-                                    const val = e.target.value;
-                                    data.max_length =
-                                        val === ""
-                                            ? undefined
-                                            : parseInt(val, 10);
-                                }}
-                                placeholder={String(data.options?.length || 0)}
-                                min={Math.max(data.min_length || 0, 1)}
-                                max={data.options?.length || 0}
-                                disabled={!data.options?.length}
-                            />
                         </div>
-                        <div class="constraint-info">
-                            {#if data.allow_multiple && (data.min_length || data.max_length)}
-                                <span class="constraint-text">
-                                    Users must select
-                                    {#if data.min_length && data.max_length}
-                                        between {data.min_length} and {data.max_length}
-                                        options
-                                    {:else if data.min_length}
-                                        at least {data.min_length} option{data.min_length >
-                                        1
-                                            ? "s"
-                                            : ""}
-                                    {:else if data.max_length}
-                                        at most {data.max_length} option{data.max_length >
-                                        1
-                                            ? "s"
-                                            : ""}
-                                    {/if}
-                                </span>
+                        <div class="select-mode-toggle">
+                            <label class="toggle-label">
+                                <input
+                                    type="radio"
+                                    name="select-mode-{data.id || 'new'}"
+                                    checked={!data.api_config}
+                                    on:change={() => {
+                                        data.api_config = undefined;
+                                        if (!data.options) data.options = [];
+                                    }}
+                                />
+                                <span>Manual Options</span>
+                            </label>
+                            <label class="toggle-label">
+                                <input
+                                    type="radio"
+                                    name="select-mode-{data.id || 'new'}"
+                                    checked={!!data.api_config}
+                                    on:change={() => {
+                                        if (!data.api_config) {
+                                            data.api_config = {
+                                                endpoint_url: "",
+                                                method: "GET",
+                                            };
+                                        }
+                                        data.options = [];
+                                    }}
+                                />
+                                <span>API Configuration</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {#if data.api_config}
+                <div class="row settings-row">
+                    <div class="col-1">
+                        <FormInputApiConfig
+                            bind:apiConfig={data.api_config}
+                            bind:hasValidationError={hasInvalidApiConfig}
+                        />
+                    </div>
+                </div>
+            {/if}
+        {/if}
+
+        {#if !data.api_config || !hasApiConfigExperiment}
+            <div class="row settings-row">
+                <div class="col-1">
+                    <div class="dropdown-items-section">
+                        <div class="dropdown-header">
+                            <label class="form-label"
+                                >String Select Options</label
+                            >
+                            {#if !data.options || data.options.length < 25}
+                                <Button
+                                    icon="fas fa-plus"
+                                    on:click={addDropdownItem}
+                                    small={true}
+                                >
+                                    Add Option
+                                </Button>
                             {/if}
                         </div>
-                    </div>
-                    {#if hasNoOptions}
-                        <div class="validation-error">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>
-                                No dropdown options added yet. Click "Add Option" to create up to 25 options.
-                            </span>
+                        <div class="dropdown-constraints">
+                            <div class="constraint-row">
+                                <Input
+                                    col2={true}
+                                    label="Minimum Selections"
+                                    type="number"
+                                    value={data.min_length || ""}
+                                    on:input={(e) => {
+                                        const val = e.target.value;
+                                        data.min_length =
+                                            val === ""
+                                                ? undefined
+                                                : parseInt(val, 10);
+                                    }}
+                                    placeholder="0"
+                                    min={0}
+                                    max={Math.min(
+                                        data.max_length ||
+                                            data.options?.length ||
+                                            0,
+                                        data.options?.length || 0,
+                                    )}
+                                    disabled={!data.options?.length}
+                                />
+                                <Input
+                                    col2={true}
+                                    label="Maximum Selections"
+                                    type="number"
+                                    value={data.max_length || ""}
+                                    on:input={(e) => {
+                                        const val = e.target.value;
+                                        data.max_length =
+                                            val === ""
+                                                ? undefined
+                                                : parseInt(val, 10);
+                                    }}
+                                    placeholder={String(
+                                        data.options?.length || 0,
+                                    )}
+                                    min={Math.max(data.min_length || 0, 1)}
+                                    max={data.options?.length || 0}
+                                    disabled={!data.options?.length}
+                                />
+                            </div>
+                            <div class="constraint-info">
+                                {#if data.allow_multiple && (data.min_length || data.max_length)}
+                                    <span class="constraint-text">
+                                        Users must select
+                                        {#if data.min_length && data.max_length}
+                                            between {data.min_length} and {data.max_length}
+                                            options
+                                        {:else if data.min_length}
+                                            at least {data.min_length} option{data.min_length >
+                                            1
+                                                ? "s"
+                                                : ""}
+                                        {:else if data.max_length}
+                                            at most {data.max_length} option{data.max_length >
+                                            1
+                                                ? "s"
+                                                : ""}
+                                        {/if}
+                                    </span>
+                                {/if}
+                            </div>
                         </div>
-                    {/if}
-                    {#if hasDuplicateValues}
-                        <div class="validation-error">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>
-                                Duplicate option values detected: {duplicateValues.join(", ")}.
-                                Each option must have a unique value.
-                            </span>
-                        </div>
-                    {/if}
-                    {#if data.options && data.options.length > 0}
-                        <div class="dropdown-items-list">
-                            {#each data.options as item, i}
-                                <div class="dropdown-item-container">
-                                    <div class="dropdown-item-header">
-                                        <span class="option-number"
-                                            >Option {i + 1}</span
-                                        >
-                                        <Button
-                                            icon="fas fa-times"
-                                            danger={true}
-                                            small={true}
-                                            on:click={() =>
-                                                removeDropdownItem(i)}
-                                        >
-                                            Remove
-                                        </Button>
-                                    </div>
-                                    <div class="dropdown-item-fields">
-                                        <div class="dropdown-field-row">
-                                            <Input
-                                                col2={true}
-                                                label="Label"
-                                                placeholder="Display text"
-                                                value={item.label}
-                                                on:input={(e) =>
-                                                    updateDropdownItem(
-                                                        i,
-                                                        "label",
-                                                        e.target.value,
-                                                    )}
-                                            />
-                                            <div class="value-input-wrapper" class:has-duplicate={item.value && duplicateValues.includes(item.value)}>
+                        {#if hasNoOptionsOrApiConfig}
+                            <div class="validation-error">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>
+                                    No dropdown options added yet. Click "Add
+                                    Option" to create up to 25 options.
+                                </span>
+                            </div>
+                        {/if}
+                        {#if hasDuplicateValues}
+                            <div class="validation-error">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>
+                                    Duplicate option values detected: {duplicateValues.join(
+                                        ", ",
+                                    )}. Each option must have a unique value.
+                                </span>
+                            </div>
+                        {/if}
+                        {#if data.options && data.options.length > 0}
+                            <div class="dropdown-items-list">
+                                {#each data.options as item, i}
+                                    <div class="dropdown-item-container">
+                                        <div class="dropdown-item-header">
+                                            <span class="option-number"
+                                                >Option {i + 1}</span
+                                            >
+                                            <Button
+                                                icon="fas fa-times"
+                                                danger={true}
+                                                small={true}
+                                                on:click={() =>
+                                                    removeDropdownItem(i)}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                        <div class="dropdown-item-fields">
+                                            <div class="dropdown-field-row">
                                                 <Input
-                                                    col1={true}
-                                                    label="Value"
-                                                    placeholder="Internal value"
-                                                    value={item.value}
+                                                    col2={true}
+                                                    label="Label"
+                                                    placeholder="Display text"
+                                                    value={item.label}
                                                     on:input={(e) =>
                                                         updateDropdownItem(
                                                             i,
-                                                            "value",
+                                                            "label",
                                                             e.target.value,
                                                         )}
                                                 />
-                                                {#if item.value && duplicateValues.includes(item.value)}
-                                                    <span class="duplicate-indicator">Duplicate</span>
-                                                {/if}
+                                                <div
+                                                    class="value-input-wrapper"
+                                                    class:has-duplicate={item.value &&
+                                                        duplicateValues.includes(
+                                                            item.value,
+                                                        )}
+                                                >
+                                                    <Input
+                                                        col1={true}
+                                                        label="Value"
+                                                        placeholder="Internal value"
+                                                        value={item.value}
+                                                        on:input={(e) =>
+                                                            updateDropdownItem(
+                                                                i,
+                                                                "value",
+                                                                e.target.value,
+                                                            )}
+                                                    />
+                                                    {#if item.value && duplicateValues.includes(item.value)}
+                                                        <span
+                                                            class="duplicate-indicator"
+                                                            >Duplicate</span
+                                                        >
+                                                    {/if}
+                                                </div>
+                                            </div>
+                                            <div class="dropdown-field-row">
+                                                <Input
+                                                    col1={true}
+                                                    label="Description (Optional)"
+                                                    placeholder="Description for this option"
+                                                    value={item.description}
+                                                    on:input={(e) =>
+                                                        updateDropdownItem(
+                                                            i,
+                                                            "description",
+                                                            e.target.value,
+                                                        )}
+                                                />
                                             </div>
                                         </div>
-                                        <div class="dropdown-field-row">
-                                            <Input
-                                                col1={true}
-                                                label="Description (Optional)"
-                                                placeholder="Description for this option"
-                                                value={item.description}
-                                                on:input={(e) =>
-                                                    updateDropdownItem(
-                                                        i,
-                                                        "description",
-                                                        e.target.value,
-                                                    )}
-                                            />
-                                        </div>
                                     </div>
-                                </div>
-                            {/each}
-                        </div>
-                    {/if}
+                                {/each}
+                            </div>
+                        {/if}
+                    </div>
                 </div>
             </div>
-        </div>
+        {/if}
     {/if}
 
     <!-- Select Types Configuration (types 5-8) -->
@@ -757,9 +871,44 @@
     }
 
     .dropdown-items-section,
-    .select-config-section {
+    .select-config-section,
+    .select-mode-section {
         width: 100%;
         padding: 10px 0;
+    }
+
+    .select-mode-section {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+
+    .select-mode-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .select-mode-toggle {
+        display: flex;
+        gap: 20px;
+    }
+
+    .toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .toggle-label input[type="radio"] {
+        cursor: pointer;
+    }
+
+    .toggle-label span {
+        user-select: none;
     }
 
     .type-selector {

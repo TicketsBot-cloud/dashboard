@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TicketsBot-cloud/common/experiments"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -36,12 +37,26 @@ type (
 		MinLength   uint16                   `json:"min_length" validate:"min=0,max=1024"` // validator interprets 0 as not set
 		MaxLength   uint16                   `json:"max_length" validate:"min=0,max=1024"`
 		Options     []inputOption            `json:"options,omitempty" validate:"omitempty,dive,required,min=1,max=25"`
+		ApiConfig   *inputApiConfigBody      `json:"api_config,omitempty" validate:"omitempty,dive"`
 	}
 
 	inputOption struct {
 		Label       string  `json:"label" validate:"required,min=1,max=100"`
 		Description *string `json:"description,omitempty" validate:"omitempty,max=100"`
 		Value       string  `json:"value" validate:"required,min=1,max=100"`
+	}
+
+	inputApiConfigBody struct {
+		EndpointUrl          string               `json:"endpoint_url" validate:"required,min=1,max=500"`
+		Method               string               `json:"method" validate:"required,min=3,max=6,oneof=GET POST PUT PATCH DELETE"`
+		CacheDurationSeconds *int                 `json:"cache_duration_seconds,omitempty" validate:"omitempty,min=0"`
+		Headers              []inputApiHeaderBody `json:"headers,omitempty" validate:"omitempty,dive"`
+	}
+
+	inputApiHeaderBody struct {
+		HeaderName  string `json:"header_name" validate:"required,min=1,max=255"`
+		HeaderValue string `json:"header_value" validate:"required,min=1,max=1000"`
+		IsSecret    bool   `json:"is_secret"`
 	}
 
 	inputUpdateBody struct {
@@ -159,34 +174,60 @@ func UpdateInputs(c *gin.Context) {
 		return
 	}
 
-	// Validate string select inputs have at least one option and unique option values
+	// Validate string select inputs have either options OR api_config, but not both
 	for _, input := range data.Create {
 		if input.Type == 3 {
-			if len(input.Options) == 0 {
-				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+			hasOptions := len(input.Options) > 0
+			hasApiConfig := input.ApiConfig != nil
+
+			if !hasOptions && !hasApiConfig {
+				c.JSON(400, utils.ErrorStr("String select inputs must have either options or an API configuration"))
 				return
 			}
-			if err := validateUniqueOptionValues(input.Options); err != nil {
-				c.JSON(400, utils.ErrorStr("%v", err))
+
+			if hasOptions && hasApiConfig {
+				c.JSON(400, utils.ErrorStr("String select inputs cannot have both options and API configuration"))
 				return
+			}
+
+			if hasOptions {
+				if err := validateUniqueOptionValues(input.Options); err != nil {
+					c.JSON(400, utils.ErrorStr("%v", err))
+					return
+				}
 			}
 		}
 	}
 
 	for _, input := range data.Update {
 		if input.Type == 3 {
-			if len(input.Options) == 0 {
-				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+			hasOptions := len(input.Options) > 0
+			hasApiConfig := input.ApiConfig != nil
+
+			if !experiments.GetGlobalManager().HasFeature(c, guildId, experiments.API_BASED_FORM_INPUTS) {
+				hasApiConfig = false
+			}
+
+			if !hasOptions && !hasApiConfig {
+				c.JSON(400, utils.ErrorStr("String select inputs must have either options or an API configuration"))
 				return
 			}
-			if err := validateUniqueOptionValues(input.Options); err != nil {
-				c.JSON(400, utils.ErrorStr("%v", err))
+
+			if hasOptions && hasApiConfig {
+				c.JSON(400, utils.ErrorStr("String select inputs cannot have both options and API configuration"))
 				return
+			}
+
+			if hasOptions {
+				if err := validateUniqueOptionValues(input.Options); err != nil {
+					c.JSON(400, utils.ErrorStr("%v", err))
+					return
+				}
 			}
 		}
 	}
 
-	if err := saveInputs(c, formId, data, existingInputs); err != nil {
+	if err := saveInputs(c, guildId, formId, data, existingInputs); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save form inputs to database"))
 		return
 	}
@@ -258,7 +299,7 @@ func validateUniqueOptionValues(options []inputOption) error {
 	return nil
 }
 
-func saveInputs(ctx context.Context, formId int, data updateInputsBody, existingInputs []database.FormInput) error {
+func saveInputs(ctx context.Context, guildId uint64, formId int, data updateInputsBody, existingInputs []database.FormInput) error {
 	// We can now update in the database
 	tx, err := dbclient.Client.BeginTx(ctx)
 	if err != nil {
@@ -344,30 +385,87 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		}
 
 		if wrapped.Type == 3 { // String Select
-			// Delete existing options
-			options, err := dbclient.Client.FormInputOption.GetOptions(ctx, wrapped.Id)
-			if err != nil {
-				return err
-			}
+			if experiments.GetGlobalManager().HasFeature(ctx, guildId, experiments.API_BASED_FORM_INPUTS) {
+				if input.ApiConfig != nil {
+					// Handle API config
+					existingConfig, ok, err := dbclient.Client.FormInputApiConfig.Get(ctx, wrapped.Id)
+					if err != nil {
+						return err
+					}
 
-			for _, option := range options {
-				if err := dbclient.Client.FormInputOption.DeleteTx(ctx, tx, option.Id); err != nil {
+					var apiConfigId int
+					if ok {
+						// Update existing API config
+						if err := dbclient.Client.FormInputApiConfig.UpdateTx(ctx, tx, existingConfig.Id, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds); err != nil {
+							return err
+						}
+						apiConfigId = existingConfig.Id
+
+						// Delete existing headers
+						if err := dbclient.Client.FormInputApiHeaders.DeleteByApiConfigTx(ctx, tx, existingConfig.Id); err != nil {
+							return err
+						}
+					} else {
+						// Create new API config
+						newId, err := dbclient.Client.FormInputApiConfig.CreateTx(ctx, tx, wrapped.Id, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds)
+						if err != nil {
+							return err
+						}
+						apiConfigId = newId
+					}
+
+					// Save headers
+					if input.ApiConfig.Headers != nil {
+						for _, header := range input.ApiConfig.Headers {
+							if _, err := dbclient.Client.FormInputApiHeaders.CreateTx(ctx, tx, apiConfigId, header.HeaderName, header.HeaderValue, header.IsSecret); err != nil {
+								return err
+							}
+						}
+					}
+
+					// Delete any existing options since we're using API config
+					options, err := dbclient.Client.FormInputOption.GetOptions(ctx, wrapped.Id)
+					if err != nil {
+						return err
+					}
+
+					for _, option := range options {
+						if err := dbclient.Client.FormInputOption.DeleteTx(ctx, tx, option.Id); err != nil {
+							return err
+						}
+					}
+				}
+			} else {
+				// Delete existing API config if switching from API to options
+				if err := dbclient.Client.FormInputApiConfig.DeleteByFormInputTx(ctx, tx, wrapped.Id); err != nil {
 					return err
 				}
-			}
 
-			// Add new options
-			for i, opt := range input.Options {
-				option := database.FormInputOption{
-					FormInputId: wrapped.Id,
-					Position:    i + 1,
-					Label:       opt.Label,
-					Description: opt.Description,
-					Value:       opt.Value,
+				// Delete existing options
+				options, err := dbclient.Client.FormInputOption.GetOptions(ctx, wrapped.Id)
+				if err != nil {
+					return err
 				}
 
-				if _, err := dbclient.Client.FormInputOption.CreateTx(ctx, tx, option); err != nil {
-					return err
+				for _, option := range options {
+					if err := dbclient.Client.FormInputOption.DeleteTx(ctx, tx, option.Id); err != nil {
+						return err
+					}
+				}
+
+				// Add new options
+				for i, opt := range input.Options {
+					option := database.FormInputOption{
+						FormInputId: wrapped.Id,
+						Position:    i + 1,
+						Label:       opt.Label,
+						Description: opt.Description,
+						Value:       opt.Value,
+					}
+
+					if _, err := dbclient.Client.FormInputOption.CreateTx(ctx, tx, option); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -444,17 +542,35 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		}
 
 		if input.Type == 3 { // String Select
-			for i, opt := range input.Options {
-				option := database.FormInputOption{
-					FormInputId: formInputId,
-					Position:    i + 1,
-					Label:       opt.Label,
-					Description: opt.Description,
-					Value:       opt.Value,
+			if input.ApiConfig != nil {
+				// Create API config
+				apiConfigId, err := dbclient.Client.FormInputApiConfig.CreateTx(ctx, tx, formInputId, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds)
+				if err != nil {
+					return err
 				}
 
-				if _, err := dbclient.Client.FormInputOption.CreateTx(ctx, tx, option); err != nil {
-					return err
+				// Save headers
+				if input.ApiConfig.Headers != nil {
+					for _, header := range input.ApiConfig.Headers {
+						if _, err := dbclient.Client.FormInputApiHeaders.CreateTx(ctx, tx, apiConfigId, header.HeaderName, header.HeaderValue, header.IsSecret); err != nil {
+							return err
+						}
+					}
+				}
+			} else {
+				// Add new options
+				for i, opt := range input.Options {
+					option := database.FormInputOption{
+						FormInputId: formInputId,
+						Position:    i + 1,
+						Label:       opt.Label,
+						Description: opt.Description,
+						Value:       opt.Value,
+					}
+
+					if _, err := dbclient.Client.FormInputOption.CreateTx(ctx, tx, option); err != nil {
+						return err
+					}
 				}
 			}
 		}

@@ -50,11 +50,17 @@
     let inputValidationErrors = {};
 
     // Check if any input has validation errors
-    $: hasValidationErrors = Object.values(inputValidationErrors).some((hasError) => hasError === true);
+    $: hasValidationErrors = Object.values(inputValidationErrors).some(
+        (hasError) => hasError === true,
+    );
 
     // Validate form titles
-    $: isNewTitleValid = newTitle && newTitle.trim().length > 0 && newTitle.length <= 45;
-    $: isRenamedTitleValid = renamedTitle && renamedTitle.trim().length > 0 && renamedTitle.length <= 45;
+    $: isNewTitleValid =
+        newTitle && newTitle.trim().length > 0 && newTitle.length <= 45;
+    $: isRenamedTitleValid =
+        renamedTitle &&
+        renamedTitle.trim().length > 0 &&
+        renamedTitle.length <= 45;
 
     function getForm(formId) {
         return forms.find((form) => form.form_id === formId);
@@ -190,28 +196,52 @@
         const data = {
             create: form.inputs
                 .filter((i) => i.is_new === true)
-                .map((i) => ({
-                    ...i,
-                    style: parseInt(i.style),
-                    placeholder: nullIfBlank(i.placeholder),
-                    // Ensure String Select has max_length set to options length if not specified
-                    max_length:
-                        i.type === 3 && !i.max_length && i.options?.length > 0
-                            ? i.options.length
-                            : i.max_length,
-                })),
+                .map((i) => {
+                    const mapped = {
+                        ...i,
+                        style: parseInt(i.style),
+                        placeholder: nullIfBlank(i.placeholder),
+                    };
+
+                    // Handle String Select (type 3)
+                    if (i.type === 3) {
+                        if (i.api_config) {
+                            // Using API config, clear options
+                            mapped.options = [];
+                        } else {
+                            // Using options, set max_length to options length if not specified
+                            if (!mapped.max_length && i.options?.length > 0) {
+                                mapped.max_length = i.options.length;
+                            }
+                        }
+                    }
+
+                    return mapped;
+                }),
             update: form.inputs
                 .filter((i) => !i.is_new)
-                .map((i) => ({
-                    ...i,
-                    style: parseInt(i.style),
-                    placeholder: nullIfBlank(i.placeholder),
-                    // Ensure String Select has max_length set to options length if not specified
-                    max_length:
-                        i.type === 3 && !i.max_length && i.options?.length > 0
-                            ? i.options.length
-                            : i.max_length,
-                })),
+                .map((i) => {
+                    const mapped = {
+                        ...i,
+                        style: parseInt(i.style),
+                        placeholder: nullIfBlank(i.placeholder),
+                    };
+
+                    // Handle String Select (type 3)
+                    if (i.type === 3) {
+                        if (i.api_config) {
+                            // Using API config, clear options
+                            mapped.options = [];
+                        } else {
+                            // Using options, set max_length to options length if not specified
+                            if (!mapped.max_length && i.options?.length > 0) {
+                                mapped.max_length = i.options.length;
+                            }
+                        }
+                    }
+
+                    return mapped;
+                }),
             delete: toDelete[activeFormId] || [],
         };
 
@@ -283,7 +313,8 @@
                                 {#if newTitle.trim().length === 0}
                                     Form title is required
                                 {:else}
-                                    Form title must be 45 characters or less (currently {newTitle.length})
+                                    Form title must be 45 characters or less
+                                    (currently {newTitle.length})
                                 {/if}
                             </span>
                         </div>
@@ -318,7 +349,8 @@
                                 {#if !renamedTitle || renamedTitle.trim().length === 0}
                                     Form title is required
                                 {:else}
-                                    Form title must be 45 characters or less (currently {renamedTitle.length})
+                                    Form title must be 45 characters or less
+                                    (currently {renamedTitle.length})
                                 {/if}
                             </span>
                         </div>
@@ -356,13 +388,16 @@
                             <div animate:flip={{ duration: 500 }}>
                                 <FormInputRow
                                     data={input}
+                                    {guildId}
                                     formId={activeFormId}
                                     withSaveButton={true}
                                     withDeleteButton={true}
                                     withDirectionButtons={true}
                                     index={i}
                                     {formLength}
-                                    bind:hasValidationErrors={inputValidationErrors[input.id || i]}
+                                    bind:hasValidationErrors={
+                                        inputValidationErrors[input.id || i]
+                                    }
                                     on:delete={() =>
                                         deleteInput(activeFormId, input)}
                                     on:move={(e) =>

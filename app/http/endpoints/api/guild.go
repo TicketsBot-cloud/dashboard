@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/TicketsBot-cloud/common/experiments"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
@@ -21,9 +22,18 @@ func GuildHandler(ctx *gin.Context) {
 		return
 	}
 
+	var enabledExperiments []experiments.Experiment
+	globalManager := experiments.GetGlobalManager()
+	for _, experiment := range experiments.List {
+		if globalManager.HasFeature(ctx, guildId, experiment) {
+			enabledExperiments = append(enabledExperiments, experiment)
+		}
+	}
+
 	ctx.JSON(200, gin.H{
-		"id":   guild.Id,
-		"name": guild.Name,
-		"icon": guild.Icon,
+		"id":                  guild.Id,
+		"name":                guild.Name,
+		"icon":                guild.Icon,
+		"enabled_experiments": enabledExperiments,
 	})
 }

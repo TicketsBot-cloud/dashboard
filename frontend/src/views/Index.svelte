@@ -26,7 +26,7 @@
         await withLoadingScreen(async () => {
             const res = await axios.post(`${API_URL}/user/guilds/reload`);
             if (res.status !== 200) {
-                notifyError(res.data.error);
+                notifyError(res.data);
                 return;
             }
 

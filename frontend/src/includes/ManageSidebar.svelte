@@ -37,7 +37,7 @@
     async function loadGuild() {
         const res = await axios.get(`${API_URL}/api/${guildId}/guild`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

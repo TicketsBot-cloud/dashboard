@@ -62,7 +62,7 @@
     async function loadPanels() {
         const res = await axios.get(`${API_URL}/api/${guildId}/panels`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -77,7 +77,7 @@
 
         const res = await axios.get(uri);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -87,7 +87,7 @@
     async function loadPremium() {
         const res = await axios.get(`${API_URL}/api/${guildId}/premium`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -97,7 +97,7 @@
     async function loadSettings() {
         const res = await axios.get(`${API_URL}/api/${guildId}/settings`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -175,7 +175,7 @@
                 await loadData();
             }
         } else {
-            notifyError(res.data.error);
+            notifyError(res.data);
         }
     }
 

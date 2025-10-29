@@ -54,7 +54,7 @@
 
         const res = await axios.post(`${API_URL}/api/admin/bot-staff/${tempUserId}`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -65,7 +65,7 @@
     async function removeStaff(userId) {
         const res = await axios.delete(`${API_URL}/api/admin/bot-staff/${userId}`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -75,7 +75,7 @@
     async function loadData() {
         const res = await axios.get(`${API_URL}/api/admin/bot-staff`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

@@ -127,7 +127,7 @@
     async function loadEntitlements() {
         const res = await axios.get(`${API_URL}/api/premium/@me/entitlements`)
         if (res.status !== 200) {
-            notifyError(`Failed to load entitlements: ${res.data.error}`)
+            notifyError(res.data)
             return;
         }
 
@@ -156,7 +156,7 @@
         });
 
         if (res.status !== 204) {
-            notifyError(`Failed to save servers: ${res.data.error}`);
+            notifyError(res.data);
             return;
         }
 

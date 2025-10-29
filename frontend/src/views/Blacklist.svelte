@@ -194,7 +194,7 @@
 
         const res = await axios.post(`${API_URL}/api/${guildId}/blacklist`, body);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -227,7 +227,7 @@
 
         const res = await axios.post(`${API_URL}/api/${guildId}/blacklist`, body);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -241,7 +241,7 @@
     async function removeUserBlacklist(user) {
         const res = await axios.delete(`${API_URL}/api/${guildId}/blacklist/user/${user.id}`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -252,7 +252,7 @@
     async function removeRoleBlacklist(roleId, role) {
         const res = await axios.delete(`${API_URL}/api/${guildId}/blacklist/role/${roleId}`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -268,7 +268,7 @@
     async function loadRoles() {
         const res = await axios.get(`${API_URL}/api/${guildId}/roles`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -278,7 +278,7 @@
     async function loadData() {
         const res = await axios.get(`${API_URL}/api/${guildId}/blacklist?page=${page}`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

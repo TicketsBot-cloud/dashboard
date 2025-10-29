@@ -21,7 +21,7 @@
     async function makePublic(data) {
         const res = await axios.post(`${API_URL}/api/integrations/${integrationId}/public`, data);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -32,7 +32,7 @@
     async function editIntegration(data) {
         const res = await axios.patch(`${API_URL}/api/integrations/${integrationId}`, data);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -43,7 +43,7 @@
     async function deleteIntegration() {
         const res = await axios.delete(`${API_URL}/api/integrations/${integrationId}`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -53,7 +53,7 @@
     async function loadIntegration() {
         const res = await axios.get(`${API_URL}/api/integrations/view/${integrationId}/detail`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

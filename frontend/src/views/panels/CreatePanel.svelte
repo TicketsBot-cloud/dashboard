@@ -48,7 +48,7 @@
             panelCreateData,
         );
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -60,12 +60,12 @@
                     supportHours,
                 );
                 if (hoursRes.status !== 200) {
-                    notifyError(hoursRes.data.error);
+                    notifyError(hoursRes.data);
                     // Don't return here, the panel is already created
                 }
             } catch (error) {
                 if (error.response && error.response.status === 403) {
-                    notifyError(error.response.data.error || "Support hours quota exceeded");
+                    notifyError(error.response.data || "Support hours quota exceeded");
                 } else {
                     notifyError("Failed to save support hours");
                 }

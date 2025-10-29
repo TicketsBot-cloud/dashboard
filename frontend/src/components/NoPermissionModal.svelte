@@ -1,5 +1,6 @@
 <script>
     import { fade } from 'svelte/transition';
+    import { DOCS_URL } from "../js/constants";
     import Card from './Card.svelte';
     import Button from './Button.svelte';
     import { createEventDispatcher } from 'svelte';
@@ -51,7 +52,7 @@
                         </li>
                     </ul>
                     <p class="learn-more">
-                        <a href="https://docs.tickets.bot/setup/staff" target="_blank" rel="noopener noreferrer">
+                        <a href={`${DOCS_URL}/setup/staff`} target="_blank" rel="noopener noreferrer">
                             Learn more about Support and Admin roles <i class="fas fa-external-link-alt"></i>
                         </a>
                     </p>

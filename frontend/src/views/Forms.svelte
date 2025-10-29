@@ -84,7 +84,7 @@
 
         const res = await axios.post(`${API_URL}/api/${guildId}/forms`, data);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -104,7 +104,7 @@
     async function deleteForm(id) {
         const res = await axios.delete(`${API_URL}/api/${guildId}/forms/${id}`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -220,7 +220,7 @@
             data,
         );
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -236,7 +236,7 @@
     async function loadForms() {
         const res = await axios.get(`${API_URL}/api/${guildId}/forms`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

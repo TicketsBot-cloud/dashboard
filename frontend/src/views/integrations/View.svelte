@@ -72,7 +72,7 @@
     async function removeIntegration() {
         const res = await axios.delete(`${API_URL}/api/${guildId}/integrations/${integrationId}`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -82,7 +82,7 @@
     async function loadIntegration() {
         let res = await axios.get(`${API_URL}/api/integrations/view/${integrationId}`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -99,7 +99,7 @@
     async function loadIsActive() {
         let res = await axios.get(`${API_URL}/api/${guildId}/integrations/${integrationId}`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

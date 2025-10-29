@@ -4,7 +4,23 @@
       <Card footer="{true}" footerRight="{true}" fill="{false}">
         <span slot="title">{$notifyTitle}</span>
 
-        <span slot="body">{$notifyMessage}</span>
+        <div slot="body">
+          <span>{$notifyMessage}</span>
+
+          {#if $notifyInternalError}
+            <div class="internal-error-container">
+              <div class="error-toggle" on:click|stopPropagation={() => internalErrorRevealed = !internalErrorRevealed}>
+                <i class="fas fa-chevron-{internalErrorRevealed ? 'up' : 'down'}"></i>
+                Click to view error details
+              </div>
+              {#if internalErrorRevealed}
+                <div class="internal-error-text" transition:slide="{{ duration: 200 }}">
+                  {$notifyInternalError}
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </div>
 
         <div slot="footer">
           <Button on:click={closeNotificationModal}>
@@ -20,13 +36,19 @@
 {/if}
 
 <script>
-    import {notifyMessage, notifyModal, notifyTitle} from "../js/stores";
+    import {notifyMessage, notifyModal, notifyTitle, notifyInternalError} from "../js/stores";
     import {closeNotificationModal} from "../js/util";
-    import {fade} from 'svelte/transition'
+    import {fade, slide} from 'svelte/transition'
     import Card from '../components/Card.svelte'
     import Button from '../components/Button.svelte'
 
     let wrapper;
+    let internalErrorRevealed = false;
+
+    // Reset the revealed state when modal closes
+    $: if (!$notifyModal) {
+        internalErrorRevealed = false;
+    }
 
     document.addEventListener('click', (e) => {
         if (!notifyModal) {
@@ -92,5 +114,41 @@
         display: flex;
         width: 100%;
         height: 100%;
+    }
+
+    .internal-error-container {
+        margin-top: 12px;
+    }
+
+    .error-toggle {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        user-select: none;
+    }
+
+    .error-toggle:hover {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .error-toggle i {
+        font-size: 0.8em;
+    }
+
+    .internal-error-text {
+        margin-top: 8px;
+        padding: 8px 12px;
+        font-family: monospace;
+        font-size: 0.85em;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: rgba(255, 200, 200, 0.9);
+        background-color: rgba(255, 100, 100, 0.1);
+        border: 1px solid rgba(255, 100, 100, 0.3);
+        border-radius: 4px;
     }
 </style>

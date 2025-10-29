@@ -55,7 +55,7 @@
 
         const res = await axios.delete(`${API_URL}/api/${guildId}/tickets/${ticketId}`, {data: data});
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -73,7 +73,7 @@
                 if (res.status === 429) {
                     notifyRatelimit();
                 } else {
-                    notifyError(res.data.error);
+                    notifyError(res.data);
                 }
             }
         } else if (e.detail.type === 'tag') {
@@ -86,7 +86,7 @@
                 if (res.status === 429) {
                     notifyRatelimit();
                 } else {
-                    notifyError(res.data.error);
+                    notifyError(res.data);
                 }
             }
         }
@@ -116,7 +116,7 @@
     async function loadMessages() {
         const res = await axios.get(`${API_URL}/api/${guildId}/tickets/${ticketId}`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -126,7 +126,7 @@
     async function loadPremium() {
         const res = await axios.get(`${API_URL}/api/${guildId}/premium?include_voting=true`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -136,7 +136,7 @@
     async function loadTags() {
         const res = await axios.get(`${API_URL}/api/${guildId}/tags`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

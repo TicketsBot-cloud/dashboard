@@ -54,7 +54,7 @@
   async function updateColours() {
     const res = await axios.post(`${API_URL}/api/${guildId}/customisation/colours`, colours);
     if (res.status !== 200) {
-      notifyError(res.data.error);
+      notifyError(res.data);
       return;
     }
 
@@ -64,7 +64,7 @@
   async function loadColours() {
     const res = await axios.get(`${API_URL}/api/${guildId}/customisation/colours`);
     if (res.status !== 200) {
-      notifyError(res.data.error);
+      notifyError(res.data);
       return;
     }
 
@@ -74,7 +74,7 @@
   async function loadPremium() {
     const res = await axios.get(`${API_URL}/api/${guildId}/premium?include_voting=true`);
     if (res.status !== 200) {
-      notifyError(res.data.error);
+      notifyError(res.data);
       return;
     }
 

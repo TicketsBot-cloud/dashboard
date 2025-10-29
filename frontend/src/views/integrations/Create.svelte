@@ -14,7 +14,7 @@
     async function createIntegration(data) {
         const res = await axios.post(`${API_URL}/api/integrations`, data);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

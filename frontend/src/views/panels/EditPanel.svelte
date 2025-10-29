@@ -78,7 +78,7 @@
 
         const res = await axios.patch(`${API_URL}/api/${guildId}/panels/${panelId}`, panelData);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -87,12 +87,12 @@
             try {
                 const hoursRes = await axios.post(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`, panelData.support_hours);
                 if (hoursRes.status !== 200) {
-                    notifyError(hoursRes.data.error);
+                    notifyError(hoursRes.data);
                     return;
                 }
             } catch (error) {
                 if (error.response && error.response.status === 403) {
-                    notifyError(error.response.data.error || "Support hours quota exceeded");
+                    notifyError(error.response.data || "Support hours quota exceeded");
                 } else {
                     notifyError("Failed to save support hours");
                 }

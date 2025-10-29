@@ -44,7 +44,7 @@
     async function loadActiveOverride() {
         const res = await axios.get(`${API_URL}/api/${guildId}/staff-override`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -58,7 +58,7 @@
 
         const res = await axios.post(`${API_URL}/api/${guildId}/staff-override`, data);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -70,7 +70,7 @@
     async function removeOverride() {
         const res = await axios.delete(`${API_URL}/api/${guildId}/staff-override`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

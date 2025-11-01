@@ -24,34 +24,34 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 
 	var settings Settings
-	if err := ctx.BindJSON(&settings); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+	if err := ctx.ShouldBindJSON(&settings); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	// Get a list of all channel IDs
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	// TODO: Use proper context
 	channels, err := botContext.GetGuildChannels(context.Background(), guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to fetch your server's channels. Please try again."))
 		return
 	}
 
 	// Includes voting
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
 		return
 	}
 
 	if err := settings.Validate(ctx, guildId, premiumTier); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("%v", err))
 		return
 	}
 
@@ -73,10 +73,9 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 		addToWaitGroup(group, guildId, settings.updateColours)
 	}
 
-	// TODO: Errors
-	var errStr *string = nil
 	if err := group.Wait(); err != nil {
-		errStr = utils.Ptr(err.Error())
+		ctx.JSON(500, utils.ErrorStr("Failed to save settings. Please try again."))
+		return
 	}
 
 	validWelcomeMessage := settings.updateWelcomeMessage(guildId)
@@ -94,7 +93,6 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 		"archive_channel": validArchiveChannel,
 		"category":        validCategory,
 		"naming_scheme":   validNamingScheme,
-		"error":           errStr,
 	})
 }
 

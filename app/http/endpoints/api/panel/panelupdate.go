@@ -29,13 +29,13 @@ func UpdatePanel(c *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	var data panelBody
-	if err := c.BindJSON(&data); err != nil {
-		c.JSON(400, utils.ErrorStr("Invalid request body"))
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
 
@@ -48,7 +48,7 @@ func UpdatePanel(c *gin.Context) {
 	// get existing
 	existing, err := dbclient.Client.Panel.GetById(c, panelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to parse request data"))
 		return
 	}
 
@@ -68,21 +68,21 @@ func UpdatePanel(c *gin.Context) {
 
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 		return
 	}
 
 	// TODO: Use proper context
 	channels, err := botContext.GetGuildChannels(context.Background(), guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 		return
 	}
 
 	// TODO: Use proper context
 	roles, err := botContext.GetGuildRoles(context.Background(), guildId)
 	if err != nil {
-		c.JSON(500, utils.ErrorJson(err))
+		c.JSON(500, utils.ErrorStr("Unable to load roles. Please try again."))
 		return
 	}
 
@@ -101,7 +101,7 @@ func UpdatePanel(c *gin.Context) {
 		if errors.As(err, &validationError) {
 			c.JSON(400, utils.ErrorStr(validationError.Error()))
 		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 		}
 
 		return
@@ -165,11 +165,11 @@ func UpdatePanel(c *gin.Context) {
 					// Swallow error
 					// TODO: Make channel_id column nullable, and set to null
 				} else {
-					_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 					return
 				}
 			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
 		}
@@ -180,7 +180,7 @@ func UpdatePanel(c *gin.Context) {
 	if data.WelcomeMessage == nil {
 		if existing.WelcomeMessageEmbed != nil { // If welcome message wasn't null, but now is, delete the embed
 			if err := dbclient.Client.Embeds.Delete(c, *existing.WelcomeMessageEmbed); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
 		} // else, welcomeMessageEmbed will be nil
@@ -192,7 +192,7 @@ func UpdatePanel(c *gin.Context) {
 
 			id, err := dbclient.Client.Embeds.CreateWithFields(c, embed, fields)
 			if err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
 
@@ -205,7 +205,7 @@ func UpdatePanel(c *gin.Context) {
 			embed.GuildId = guildId
 
 			if err := dbclient.Client.Embeds.UpdateWithFields(c, embed, fields); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
 		}
@@ -237,6 +237,7 @@ func UpdatePanel(c *gin.Context) {
 		ExitSurveyFormId:    data.ExitSurveyFormId,
 		PendingCategory:     data.PendingCategory,
 		DeleteMentions:      data.DeleteMentions,
+		TranscriptChannelId: data.TranscriptChannelId,
 	}
 
 	// insert mention data
@@ -254,7 +255,7 @@ func UpdatePanel(c *gin.Context) {
 		} else {
 			roleId, err := strconv.ParseUint(mention, 10, 64)
 			if err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
 
@@ -294,7 +295,7 @@ func UpdatePanel(c *gin.Context) {
 	})
 
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 		return
 	}
 
@@ -305,7 +306,7 @@ func UpdatePanel(c *gin.Context) {
 	// first, get any multipanels this panel belongs to
 	multiPanels, err := dbclient.Client.MultiPanelTargets.GetMultiPanels(c, existing.PanelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 		return
 	}
 
@@ -317,7 +318,7 @@ func UpdatePanel(c *gin.Context) {
 
 		panels, err := dbclient.Client.MultiPanelTargets.GetPanels(c, multiPanel.Id)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 			return
 		}
 
@@ -335,14 +336,14 @@ func UpdatePanel(c *gin.Context) {
 					c.JSON(400, utils.ErrorStr("Error sending panel message: "+unwrapped.ApiError.Message))
 				}
 			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 			}
 
 			return
 		}
 
 		if err := dbclient.Client.MultiPanels.UpdateMessageId(c, multiPanel.Id, messageId); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 			return
 		}
 

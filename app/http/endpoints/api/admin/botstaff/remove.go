@@ -11,12 +11,12 @@ import (
 func RemoveBotStaffHandler(ctx *gin.Context) {
 	userId, err := strconv.ParseUint(ctx.Param("userid"), 10, 64)
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to delete record. Please try again."))
 		return
 	}
 
 	if err := database.Client.BotStaff.Delete(ctx, userId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete record. Please try again."))
 		return
 	}
 

@@ -13,12 +13,12 @@ func RemoveUserBlacklistHandler(ctx *gin.Context) {
 
 	userId, err := strconv.ParseUint(ctx.Param("user"), 10, 64)
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to remove from blacklist. Please try again."))
 		return
 	}
 
 	if err := database.Client.Blacklist.Remove(ctx, guildId, userId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to remove from blacklist. Please try again."))
 		return
 	}
 

@@ -13,7 +13,7 @@ func WhitelabelGetErrors(c *gin.Context) {
 
 	errors, err := database.Client.WhitelabelErrors.GetRecent(c, userId, 10)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load whitelabel bots"))
 		return
 	}
 

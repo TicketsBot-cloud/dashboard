@@ -21,7 +21,7 @@ func ListSelfTranscripts(ctx *gin.Context) {
 
 	page, err := strconv.Atoi(ctx.Query("page"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to fetch records. Please try again."))
 		return
 	}
 
@@ -40,7 +40,7 @@ func ListSelfTranscripts(ctx *gin.Context) {
 
 	tickets, err := dbclient.Client.Tickets.GetByOptions(ctx, opts)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
 		return
 	}
 
@@ -79,7 +79,7 @@ func ListSelfTranscripts(ctx *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
 		return
 	}
 

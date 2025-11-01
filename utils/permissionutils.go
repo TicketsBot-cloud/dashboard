@@ -60,7 +60,7 @@ func HasPermissionToViewTicket(ctx context.Context, guildId, userId uint64, tick
 	// Admin override
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		return false, api.NewInternalServerError(err, "Error retrieving guild context")
+		return false, api.NewInternalServerError(err, "Unable to connect to Discord. Please try again later.")
 	}
 
 	if botContext.IsBotAdmin(ctx, userId) {

@@ -20,7 +20,7 @@ func UpdateIntegrationSecretsHandler(ctx *gin.Context) {
 	// Check integration is active
 	active, err := dbclient.Client.CustomIntegrationGuilds.IsActive(ctx, integrationId, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return
 	}
 
@@ -30,14 +30,14 @@ func UpdateIntegrationSecretsHandler(ctx *gin.Context) {
 	}
 
 	var data activateIntegrationBody
-	if err := ctx.BindJSON(&data); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 	// Check the secret values are valid
 	secrets, err := dbclient.Client.CustomIntegrationSecrets.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
@@ -72,7 +72,7 @@ func UpdateIntegrationSecretsHandler(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.CustomIntegrationSecretValues.UpdateAll(ctx, guildId, integrationId, secretMap); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return
 	}
 

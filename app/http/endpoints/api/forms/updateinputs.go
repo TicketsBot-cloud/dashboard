@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -56,20 +57,20 @@ func UpdateInputs(c *gin.Context) {
 
 	formId, err := strconv.Atoi(c.Param("form_id"))
 	if err != nil {
-		c.JSON(400, utils.ErrorStr("Invalid form ID"))
+		c.JSON(400, utils.ErrorStr("Invalid form ID provided: %s", c.Param("form_id")))
 		return
 	}
 
 	var data updateInputsBody
-	if err := c.BindJSON(&data); err != nil {
-		c.JSON(400, utils.ErrorJson(err))
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
 		if !errors.As(err, &validationErrors) {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "An error occurred while validating the integration"))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Form input validation failed unexpectedly"))
 			return
 		}
 
@@ -80,37 +81,37 @@ func UpdateInputs(c *gin.Context) {
 
 	fieldCount := len(data.Create) + len(data.Update)
 	if fieldCount <= 0 || fieldCount > 5 {
-		c.JSON(400, utils.ErrorStr("Forms must have between 1 and 5 inputs"))
+		c.JSON(400, utils.ErrorStr("Forms must have between 1 and 5 inputs (current: %d inputs)", fieldCount))
 		return
 	}
 
 	// Verify form exists and is from the right guild
 	form, ok, err := dbclient.Client.Forms.Get(c, formId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch form from database"))
 		return
 	}
 
 	if !ok {
-		c.JSON(404, utils.ErrorStr("Form not found"))
+		c.JSON(404, utils.ErrorStr("Form #%d not found", formId))
 		return
 	}
 
 	if form.GuildId != guildId {
-		c.JSON(403, utils.ErrorStr("Form does not belong to this guild"))
+		c.JSON(403, utils.ErrorStr("Form #%d does not belong to guild %d", formId, guildId))
 		return
 	}
 
 	existingInputs, err := dbclient.Client.FormInput.GetInputs(c, formId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch form inputs from database"))
 		return
 	}
 
 	// Verify that the UPDATE inputs exist
 	for _, input := range data.Update {
 		if !utils.ExistsMap(existingInputs, input.Id, idMapper) {
-			c.JSON(400, utils.ErrorStr("Input (to be updated) not found"))
+			c.JSON(400, utils.ErrorStr("Input #%d (to be updated) not found in form #%d", input.Id, formId))
 			return
 		}
 	}
@@ -118,7 +119,7 @@ func UpdateInputs(c *gin.Context) {
 	// Verify that the DELETE inputs exist
 	for _, id := range data.Delete {
 		if !utils.ExistsMap(existingInputs, id, idMapper) {
-			c.JSON(400, utils.ErrorStr("Input (to be deleted) not found"))
+			c.JSON(400, utils.ErrorStr("Input #%d (to be deleted) not found in form #%d", id, formId))
 			return
 		}
 	}
@@ -126,7 +127,7 @@ func UpdateInputs(c *gin.Context) {
 	// Ensure no overlap between DELETE and UPDATE
 	for _, id := range data.Delete {
 		if utils.ExistsMap(data.Update, id, idMapperBody) {
-			c.JSON(400, utils.ErrorStr("Delete and update overlap"))
+			c.JSON(400, utils.ErrorStr("Input #%d cannot be both deleted and updated", id))
 			return
 		}
 	}
@@ -141,25 +142,52 @@ func UpdateInputs(c *gin.Context) {
 
 	// Now verify that the contents match exactly
 	if len(remainingExisting) != len(data.Update) {
-		c.JSON(400, utils.ErrorStr("All inputs must be included in the update array"))
+		c.JSON(400, utils.ErrorStr("All %d existing inputs must be included in the update array (found %d)", len(remainingExisting), len(data.Update)))
 		return
 	}
 
 	for _, input := range data.Update {
 		if !utils.Exists(remainingExisting, input.Id) {
-			c.JSON(400, utils.ErrorStr("All inputs must be included in the update array"))
+			c.JSON(400, utils.ErrorStr("Input #%d must be included in the update array", input.Id))
 			return
 		}
 	}
 
 	// Verify that the positions are unique, and are in ascending order
 	if !arePositionsCorrect(data) {
-		c.JSON(400, utils.ErrorStr("Positions must be unique and in ascending order"))
+		c.JSON(400, utils.ErrorStr("Input positions must be unique and in ascending order (1, 2, 3, etc.)"))
 		return
 	}
 
+	// Validate string select inputs have at least one option and unique option values
+	for _, input := range data.Create {
+		if input.Type == 3 {
+			if len(input.Options) == 0 {
+				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+				return
+			}
+			if err := validateUniqueOptionValues(input.Options); err != nil {
+				c.JSON(400, utils.ErrorStr("%v", err))
+				return
+			}
+		}
+	}
+
+	for _, input := range data.Update {
+		if input.Type == 3 {
+			if len(input.Options) == 0 {
+				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+				return
+			}
+			if err := validateUniqueOptionValues(input.Options); err != nil {
+				c.JSON(400, utils.ErrorStr("%v", err))
+				return
+			}
+		}
+	}
+
 	if err := saveInputs(c, formId, data, existingInputs); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save form inputs to database"))
 		return
 	}
 
@@ -195,6 +223,39 @@ func arePositionsCorrect(body updateInputsBody) bool {
 	}
 
 	return true
+}
+
+func validateUniqueOptionValues(options []inputOption) error {
+	if len(options) == 0 {
+		return nil
+	}
+
+	valueSet := make(map[string]bool)
+	duplicates := make(map[string]bool)
+
+	for _, opt := range options {
+		if opt.Value == "" {
+			continue
+		}
+		if valueSet[opt.Value] {
+			duplicates[opt.Value] = true
+		} else {
+			valueSet[opt.Value] = true
+		}
+	}
+
+	if len(duplicates) > 0 {
+		duplicateList := make([]string, 0, len(duplicates))
+		for value := range duplicates {
+			duplicateList = append(duplicateList, value)
+		}
+
+		sort.Strings(duplicateList)
+
+		return fmt.Errorf("Duplicate option values detected: %s. Each option must have a unique value", strings.Join(duplicateList, ", "))
+	}
+
+	return nil
 }
 
 func saveInputs(ctx context.Context, formId int, data updateInputsBody, existingInputs []database.FormInput) error {

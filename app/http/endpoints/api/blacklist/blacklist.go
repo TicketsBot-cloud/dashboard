@@ -39,14 +39,14 @@ func GetBlacklistHandler(ctx *gin.Context) {
 
 	blacklistedUsers, err := database.Client.Blacklist.GetBlacklistedUsers(ctx, guildId, pageLimit, offset)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
 		return
 	}
 
 	// TODO: Use proper context
 	userObjects, err := cache.Instance.GetUsers(context.Background(), blacklistedUsers)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
 		return
 	}
 
@@ -67,7 +67,7 @@ func GetBlacklistHandler(ctx *gin.Context) {
 
 	blacklistedRoles, err := database.Client.RoleBlacklist.GetBlacklistedRoles(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
 		return
 	}
 

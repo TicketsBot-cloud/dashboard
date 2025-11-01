@@ -17,7 +17,7 @@ func WhitelabelStatusDelete(c *gin.Context) {
 	// Get bot
 	bot, err := database.Client.Whitelabel.GetByUserId(c, userId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete whitelabel bot"))
 		return
 	}
 
@@ -29,7 +29,7 @@ func WhitelabelStatusDelete(c *gin.Context) {
 
 	// Update in database
 	if err := database.Client.WhitelabelStatuses.Delete(c, bot.BotId); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete whitelabel bot"))
 		return
 	}
 

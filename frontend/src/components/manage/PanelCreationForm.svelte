@@ -170,9 +170,21 @@
                 .filter((mention) => mention != null)
                 .forEach((mention) => selectedMentions.push(mention));
         }
+        
+        if (!data.transcript_channel_id) {
+            data.transcript_channel_id = "null";
+        }
+
+        if (!data.form_id) {
+            data.form_id = "null";
+        }
+
+        if (!data.exit_survey_form_id) {
+            data.exit_survey_form_id = "null";
+        }
 
         if (!data.pending_category) {
-            data.pending_category = "";
+            data.pending_category = "null";
         }
 
         data.emote = data.emote;
@@ -201,10 +213,14 @@
                 button_style: "1",
                 form_id: "null",
                 delete_mentions: false,
+                disabled: false,
                 channel_id: channels.find((c) => c.type === 0 || c.type === 5)
                     ?.id,
                 category_id: channels.find((c) => c.type === 4)?.id,
+                transcript_channel_id: "null",
                 use_server_default_naming_scheme: true,
+                exit_survey_form_id: "null",
+                pending_category: "null",
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -264,14 +280,21 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-2">
-                    <Checkbox
-                        label="Delete Mentions (Delete mentions after ticket opening)"
-                        col2={true}
-                        tool
-                        bind:value={data.delete_mentions}
-                    />
-                </div>
+                <ChannelDropdown
+                    withNull
+                    nullLabel="Use Global Setting"
+                    col3
+                    label="Transcript Channel"
+                    allowAnnouncementChannel
+                    {channels}
+                    bind:value={data.transcript_channel_id}
+                />
+                <Checkbox
+                    label="Delete Mentions (Delete mentions after ticket opening)"
+                    col2
+                    tool
+                    bind:value={data.delete_mentions}
+                />
             </div>
             <div class="incomplete-row">
                 <CategoryDropdown
@@ -287,29 +310,21 @@
                         <option value={form.form_id}>{form.title}</option>
                     {/each}
                 </Dropdown>
-                <div>
-                    <label for="naming-scheme-wrapper" class="form-label"
-                        >Naming Scheme</label
-                    >
-                    <div class="row" id="naming-scheme-wrapper">
-                        <div>
-                            <label class="form-label">Use Server Default</label>
-                            <Toggle
-                                hideLabel
-                                toggledColor="#66bb6a"
-                                untoggledColor="#ccc"
-                                bind:toggled={
-                                    data.use_server_default_naming_scheme
-                                }
-                            />
-                        </div>
-                    </div>
-                </div>
+            </div>
+            <div class="incomplete-row">
+                <Dropdown
+                    col4
+                    label="Naming Scheme"
+                    bind:value={data.use_server_default_naming_scheme}
+                >
+                    <option value={true}>Use Server Default</option>
+                    <option value={false}>Custom</option>
+                </Dropdown>
 
                 {#if !data.use_server_default_naming_scheme}
                     <Input
                         col4
-                        label="Naming Scheme"
+                        label="Custom Naming Scheme"
                         bind:value={data.naming_scheme}
                         placeholder="ticket-%id%"
                         tooltipText="Click here for the full placeholder list"
@@ -337,7 +352,7 @@
                     bind:value={data.pending_category}
                     disabled={!isPremium}
                 >
-                    <option value="">Disabled</option>
+                    <option value="null">Disabled</option>
                     {#each channels as channel}
                         {#if channel.type === 4}
                             <option value={channel.id}>{channel.name}</option>

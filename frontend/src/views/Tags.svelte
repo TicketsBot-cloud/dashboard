@@ -4,6 +4,19 @@
     <TagEditor {isPremium} bind:data={editData} on:cancel={cancelEdit} on:confirm={editTag}/>
 {/if}
 
+{#if tagToDelete !== null}
+    <ConfirmationModal
+        icon="fas fa-trash-can"
+        isDangerous
+        on:cancel={() => (tagToDelete = null)}
+        on:confirm={() => deleteTag(tagToDelete)}
+    >
+        <span slot="title">Delete Tag</span>
+        <span slot="body">Are you sure you want to delete the tag <strong>{tagToDelete}</strong>?</span>
+        <span slot="confirm">Delete</span>
+    </ConfirmationModal>
+{/if}
+
 <div class="content">
     <Card footer footerRight>
         <span slot="title">Tags</span>
@@ -21,7 +34,7 @@
                         <td>{id}</td>
                         <td class="actions">
                             <Button type="button" on:click={() => openEditModal(id)}>Edit</Button>
-                            <Button type="button" danger={true} on:click={() => deleteTag(id)}>Delete</Button>
+                            <Button type="button" danger={true} on:click={() => tagToDelete = id}>Delete</Button>
                         </td>
                     </tr>
                 {/each}
@@ -42,6 +55,7 @@
     import {API_URL} from "../js/constants";
     import {setDefaultHeaders} from '../includes/Auth.svelte'
     import TagEditor from "../components/manage/TagEditor.svelte";
+    import ConfirmationModal from "../components/ConfirmationModal.svelte";
 
     export let currentRoute;
     let guildId = currentRoute.namedParams.id;
@@ -53,6 +67,7 @@
 
     let tagCreateModal = false;
     let tagEditModal = false;
+    let tagToDelete = null;
 
     function openCreateModal(id) {
         tagCreateModal = true;
@@ -141,12 +156,14 @@
         const res = await axios.delete(`${API_URL}/api/${guildId}/tags`, {data: data});
         if (res.status !== 204) {
             notifyError(res.data.error);
+            tagToDelete = null;
             return;
         }
 
         notifySuccess(`Tag deleted successfully`);
         delete tags[id];
         tags = tags;
+        tagToDelete = null;
     }
 
     async function loadTags() {

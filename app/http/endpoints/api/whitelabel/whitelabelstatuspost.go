@@ -23,7 +23,7 @@ func WhitelabelStatusPost(c *gin.Context) {
 	// Get bot
 	bot, err := database.Client.Whitelabel.GetByUserId(c, userId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
@@ -35,8 +35,8 @@ func WhitelabelStatusPost(c *gin.Context) {
 
 	// Parse status
 	var data statusUpdateBody
-	if err := c.BindJSON(&data); err != nil {
-		c.JSON(400, utils.ErrorStr("Invalid request body"))
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
 
@@ -62,7 +62,7 @@ func WhitelabelStatusPost(c *gin.Context) {
 
 	// Update in database
 	if err := database.Client.WhitelabelStatuses.Set(c, bot.BotId, data.Status, int16(data.StatusType)); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 

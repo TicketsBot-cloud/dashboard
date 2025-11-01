@@ -20,14 +20,14 @@ func RemoveMember(ctx *gin.Context) {
 
 	snowflake, err := strconv.ParseUint(ctx.Param("snowflake"), 10, 64)
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
 	// get entity type
 	typeParsed, err := strconv.Atoi(ctx.Query("type"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
@@ -43,7 +43,7 @@ func RemoveMember(ctx *gin.Context) {
 	} else {
 		parsed, err := strconv.Atoi(teamId)
 		if err != nil {
-			ctx.JSON(400, utils.ErrorStr("Invalid team ID"))
+			ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid team ID provided: %s", ctx.Param("id"))))
 			return
 		}
 
@@ -63,7 +63,7 @@ func removeDefaultMember(ctx *gin.Context, guildId, selfId, snowflake uint64, en
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
@@ -71,14 +71,14 @@ func removeDefaultMember(ctx *gin.Context, guildId, selfId, snowflake uint64, en
 	if isAdmin {
 		botCtx, err := botcontext.ContextForGuild(guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 			return
 		}
 
 		// TODO: Use proper context
 		guild, err := botCtx.GetGuild(context.Background(), guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 			return
 		}
 
@@ -96,21 +96,21 @@ func removeDefaultMember(ctx *gin.Context, guildId, selfId, snowflake uint64, en
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
 	// Remove on-call role
 	metadata, err := dbclient.Client.GuildMetadata.Get(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
 	if metadata.OnCallRole != nil {
 		botContext, err := botcontext.ContextForGuild(guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 			return
 		}
 
@@ -126,25 +126,25 @@ func removeDefaultMember(ctx *gin.Context, guildId, selfId, snowflake uint64, en
 				}
 			} else {
 				if err, ok := err.(request.RestError); !ok || err.StatusCode != 404 {
-					ctx.JSON(500, utils.ErrorJson(err))
+					ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 					return
 				}
 			}
 		} else if entityType == entityTypeRole {
 			// Recreate role
 			if err := dbclient.Client.GuildMetadata.SetOnCallRole(ctx, guildId, nil); err != nil {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 				return
 			}
 
 			// TODO: Use proper context
 			if err := botContext.DeleteGuildRole(context.Background(), guildId, *metadata.OnCallRole); err != nil && !isUnknownRoleError(err) {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 				return
 			}
 
 			if _, err := createOnCallRole(botContext, guildId, nil); err != nil {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 				return
 			}
 		} else {
@@ -159,7 +159,7 @@ func removeDefaultMember(ctx *gin.Context, guildId, selfId, snowflake uint64, en
 func removeTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, entityType entityType) {
 	team, exists, err := dbclient.Client.SupportTeam.GetById(ctx, guildId, teamId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch team from database: %v", err)))
 		return
 	}
 
@@ -177,7 +177,7 @@ func removeTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, e
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
@@ -185,7 +185,7 @@ func removeTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, e
 	if team.OnCallRole != nil {
 		botContext, err := botcontext.ContextForGuild(guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 			return
 		}
 
@@ -202,7 +202,7 @@ func removeTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, e
 			} else {
 				var err request.RestError
 				if !errors.As(err, &err) || err.StatusCode != 404 {
-					ctx.JSON(500, utils.ErrorJson(err))
+					ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 					return
 				}
 			}
@@ -212,18 +212,18 @@ func removeTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, e
 		} else if entityType == entityTypeRole {
 			// Recreate role
 			if err := dbclient.Client.SupportTeam.SetOnCallRole(ctx, teamId, nil); err != nil {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 				return
 			}
 
 			// TODO: Use proper context
 			if err := botContext.DeleteGuildRole(context.Background(), guildId, *team.OnCallRole); err != nil && !isUnknownRoleError(err) {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 				return
 			}
 
 			if _, err := createOnCallRole(botContext, guildId, &team); err != nil {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 				return
 			}
 		} else {

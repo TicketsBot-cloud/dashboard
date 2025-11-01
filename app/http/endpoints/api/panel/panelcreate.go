@@ -26,28 +26,29 @@ import (
 const freePanelLimit = 3
 
 type panelBody struct {
-	ChannelId         uint64                            `json:"channel_id,string"`
-	MessageId         uint64                            `json:"message_id,string"`
-	Title             string                            `json:"title"`
-	Content           string                            `json:"content"`
-	Colour            uint32                            `json:"colour"`
-	CategoryId        uint64                            `json:"category_id,string"`
-	Emoji             types.Emoji                       `json:"emote"`
-	WelcomeMessage    *types.CustomEmbed                `json:"welcome_message" validate:"omitempty,dive"`
-	Mentions          []string                          `json:"mentions"`
-	WithDefaultTeam   bool                              `json:"default_team"`
-	Teams             []int                             `json:"teams"`
-	ImageUrl          *string                           `json:"image_url,omitempty"`
-	ThumbnailUrl      *string                           `json:"thumbnail_url,omitempty"`
-	ButtonStyle       component.ButtonStyle             `json:"button_style,string"`
-	ButtonLabel       string                            `json:"button_label"`
-	FormId            *int                              `json:"form_id"`
-	NamingScheme      *string                           `json:"naming_scheme"`
-	Disabled          bool                              `json:"disabled"`
-	ExitSurveyFormId  *int                              `json:"exit_survey_form_id"`
-	AccessControlList []database.PanelAccessControlRule `json:"access_control_list"`
-	PendingCategory   *uint64                           `json:"pending_category,string"`
-	DeleteMentions    bool                              `json:"delete_mentions"`
+	ChannelId           uint64                            `json:"channel_id,string"`
+	MessageId           uint64                            `json:"message_id,string"`
+	Title               string                            `json:"title"`
+	Content             string                            `json:"content"`
+	Colour              uint32                            `json:"colour"`
+	CategoryId          uint64                            `json:"category_id,string"`
+	Emoji               types.Emoji                       `json:"emote"`
+	WelcomeMessage      *types.CustomEmbed                `json:"welcome_message" validate:"omitempty,dive"`
+	Mentions            []string                          `json:"mentions"`
+	WithDefaultTeam     bool                              `json:"default_team"`
+	Teams               []int                             `json:"teams"`
+	ImageUrl            *string                           `json:"image_url,omitempty"`
+	ThumbnailUrl        *string                           `json:"thumbnail_url,omitempty"`
+	ButtonStyle         component.ButtonStyle             `json:"button_style,string"`
+	ButtonLabel         string                            `json:"button_label"`
+	FormId              *int                              `json:"form_id"`
+	NamingScheme        *string                           `json:"naming_scheme"`
+	Disabled            bool                              `json:"disabled"`
+	ExitSurveyFormId    *int                              `json:"exit_survey_form_id"`
+	AccessControlList   []database.PanelAccessControlRule `json:"access_control_list"`
+	PendingCategory     *uint64                           `json:"pending_category,string"`
+	DeleteMentions      bool                              `json:"delete_mentions"`
+	TranscriptChannelId *uint64                           `json:"transcript_channel_id,string"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -74,14 +75,14 @@ func CreatePanel(c *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	var data panelBody
 
-	if err := c.BindJSON(&data); err != nil {
-		c.JSON(400, utils.ErrorStr("Invalid request body"))
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
@@ -90,19 +91,19 @@ func CreatePanel(c *gin.Context) {
 	// Check panel quota
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
 		return
 	}
 
 	if premiumTier == premium.None {
 		panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch existing panels"))
 			return
 		}
 
 		if len(panels) >= freePanelLimit {
-			c.JSON(402, utils.ErrorStr("You have exceeded your panel quota. Purchase premium to unlock more panels."))
+			c.JSON(402, utils.ErrorStr("Panel quota exceeded: You have %d/%d panels. Purchase premium to unlock more panels.", len(panels), freePanelLimit))
 			return
 		}
 	}
@@ -115,13 +116,13 @@ func CreatePanel(c *gin.Context) {
 
 	channels, err := botContext.GetGuildChannels(ctx, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch guild channels from Discord"))
 		return
 	}
 
 	roles, err := botContext.GetGuildRoles(ctx, guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to load roles from Discord. Please try again."))
 		return
 	}
 
@@ -140,7 +141,7 @@ func CreatePanel(c *gin.Context) {
 		if errors.As(err, &validationError) {
 			c.JSON(400, utils.ErrorStr(validationError.Error()))
 		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Panel validation failed unexpectedly"))
 		}
 
 		return
@@ -150,7 +151,7 @@ func CreatePanel(c *gin.Context) {
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
 		if ok := errors.As(err, &validationErrors); !ok {
-			c.JSON(500, utils.ErrorStr("An error occurred while validating the panel"))
+			c.JSON(500, utils.ErrorStr("An error occurred while validating the panel structure"))
 			return
 		}
 
@@ -161,7 +162,7 @@ func CreatePanel(c *gin.Context) {
 
 	customId, err := utils.RandString(30)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to generate unique panel ID"))
 		return
 	}
 
@@ -171,12 +172,12 @@ func CreatePanel(c *gin.Context) {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) {
 			if unwrapped.StatusCode == http.StatusForbidden {
-				c.JSON(400, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+				c.JSON(400, utils.ErrorStr("Bot does not have permission to send messages in channel %d", data.ChannelId))
 			} else {
-				c.JSON(400, utils.ErrorStr("Error sending panel message: "+unwrapped.ApiError.Message))
+				c.JSON(400, utils.ErrorStr("Failed to send panel message to channel %d: %s", data.ChannelId, unwrapped.ApiError.Message))
 			}
 		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to send panel message to Discord"))
 		}
 
 		return
@@ -203,7 +204,7 @@ func CreatePanel(c *gin.Context) {
 
 		id, err := dbclient.Client.Embeds.CreateWithFields(c, embed, fields)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message embed to database"))
 			return
 		}
 
@@ -235,6 +236,7 @@ func CreatePanel(c *gin.Context) {
 		ExitSurveyFormId:    data.ExitSurveyFormId,
 		PendingCategory:     data.PendingCategory,
 		DeleteMentions:      data.DeleteMentions,
+		TranscriptChannelId: data.TranscriptChannelId,
 	}
 
 	createOptions := panelCreateOptions{
@@ -255,7 +257,7 @@ func CreatePanel(c *gin.Context) {
 		} else {
 			roleId, err := strconv.ParseUint(mention, 10, 64)
 			if err != nil {
-				c.JSON(400, utils.ErrorStr("Invalid role ID"))
+				c.JSON(400, utils.ErrorStr("Invalid role ID in mentions: %s", mention))
 				return
 			}
 
@@ -267,7 +269,7 @@ func CreatePanel(c *gin.Context) {
 
 	panelId, err := storePanel(c, panel, createOptions)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel to database"))
 		return
 	}
 

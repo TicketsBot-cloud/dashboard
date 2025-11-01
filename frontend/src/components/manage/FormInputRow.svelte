@@ -19,6 +19,7 @@
     export let formId;
 
     export let data = {};
+    export let hasValidationErrors = false;
 
     // Initialize options if not present
     $: if (data.type === 3 && !data.options) {
@@ -57,6 +58,42 @@
         data.min_length = undefined;
         data.max_length = undefined;
     }
+
+    // Check for duplicate option values
+    $: duplicateValues = (() => {
+        if (!data.options || data.type !== 3) return [];
+        const valueMap = new Map();
+        const duplicates = [];
+
+        data.options.forEach((opt, index) => {
+            if (opt.value && opt.value.trim()) {
+                if (valueMap.has(opt.value)) {
+                    if (!duplicates.includes(opt.value)) {
+                        duplicates.push(opt.value);
+                    }
+                } else {
+                    valueMap.set(opt.value, index);
+                }
+            }
+        });
+
+        return duplicates;
+    })();
+
+    // Flag for duplicate values
+    $: hasDuplicateValues = duplicateValues.length > 0;
+
+    // Check for no options in string select
+    $: hasNoOptions = data.type === 3 && (!data.options || data.options.length === 0);
+
+    // Validate label (required, max 45 chars)
+    $: hasInvalidLabel = !data.label || data.label.trim().length === 0 || data.label.length > 45;
+
+    // Validate description (max 100 chars)
+    $: hasInvalidDescription = data.description && data.description.length > 100;
+
+    // Overall validation error flag
+    $: hasValidationErrors = hasDuplicateValues || hasNoOptions || hasInvalidLabel || hasInvalidDescription;
 
     $: windowWidth = 0;
 
@@ -126,9 +163,9 @@
 
 <form on:submit|preventDefault={forwardCreate} class="input-form">
     <div class="row">
-        <div class="sub-row" style="flex: 1">
+        <div class="sub-row" style="flex: 1; margin-right: 10px;">
             <Input
-                col3={true}
+                col1={true}
                 label="Label"
                 bind:value={data.label}
                 placeholder="Name of the field"
@@ -215,16 +252,36 @@
             {/if}
         </div>
     </div>
+    {#if hasInvalidLabel}
+        <div class="validation-error" style="margin-top: 8px; margin-bottom: 8px;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>
+                {#if !data.label || data.label.trim().length === 0}
+                    Label is required
+                {:else}
+                    Label must be 45 characters or less (currently {data.label.length})
+                {/if}
+            </span>
+        </div>
+    {/if}
     <div class="row">
         <div class="sub-row" style="flex: 1">
             <Input
-                col3={true}
-                label="Description"
+                col1={true}
+                label="Description (Optional)"
                 bind:value={data.description}
                 placeholder="Description for the field"
             />
         </div>
     </div>
+    {#if hasInvalidDescription}
+        <div class="validation-error" style="margin-top: 8px; margin-bottom: 8px;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>
+                Description must be 100 characters or less (currently {data.description.length})
+            </span>
+        </div>
+    {/if}
 
     <!-- String Select Options (type 3 only) -->
     {#if data.type == 3}
@@ -307,6 +364,23 @@
                             {/if}
                         </div>
                     </div>
+                    {#if hasNoOptions}
+                        <div class="validation-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>
+                                No dropdown options added yet. Click "Add Option" to create up to 25 options.
+                            </span>
+                        </div>
+                    {/if}
+                    {#if hasDuplicateValues}
+                        <div class="validation-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>
+                                Duplicate option values detected: {duplicateValues.join(", ")}.
+                                Each option must have a unique value.
+                            </span>
+                        </div>
+                    {/if}
                     {#if data.options && data.options.length > 0}
                         <div class="dropdown-items-list">
                             {#each data.options as item, i}
@@ -339,24 +413,29 @@
                                                         e.target.value,
                                                     )}
                                             />
-                                            <Input
-                                                col2={true}
-                                                label="Value"
-                                                placeholder="Internal value"
-                                                value={item.value}
-                                                on:input={(e) =>
-                                                    updateDropdownItem(
-                                                        i,
-                                                        "value",
-                                                        e.target.value,
-                                                    )}
-                                            />
+                                            <div class="value-input-wrapper" class:has-duplicate={item.value && duplicateValues.includes(item.value)}>
+                                                <Input
+                                                    col1={true}
+                                                    label="Value"
+                                                    placeholder="Internal value"
+                                                    value={item.value}
+                                                    on:input={(e) =>
+                                                        updateDropdownItem(
+                                                            i,
+                                                            "value",
+                                                            e.target.value,
+                                                        )}
+                                                />
+                                                {#if item.value && duplicateValues.includes(item.value)}
+                                                    <span class="duplicate-indicator">Duplicate</span>
+                                                {/if}
+                                            </div>
                                         </div>
                                         <div class="dropdown-field-row">
                                             <Input
                                                 col1={true}
-                                                label="Description"
-                                                placeholder="Optional description for this option"
+                                                label="Description (Optional)"
+                                                placeholder="Description for this option"
                                                 value={item.description}
                                                 on:input={(e) =>
                                                     updateDropdownItem(
@@ -369,13 +448,6 @@
                                     </div>
                                 </div>
                             {/each}
-                        </div>
-                    {:else}
-                        <div class="empty-state">
-                            <p>
-                                No dropdown options added yet. Click "Add
-                                Option" to create up to 25 options.
-                            </p>
                         </div>
                     {/if}
                 </div>
@@ -495,7 +567,7 @@
         <div class="row settings-row">
             <Textarea
                 col2={true}
-                label="Placeholder"
+                label="Placeholder (Optional)"
                 bind:value={data.placeholder}
                 minHeight="120px"
                 placeholder="Placeholder text for the field, just like this text"
@@ -503,7 +575,7 @@
             <div class="col-2 properties-group">
                 <div class="row">
                     <Dropdown
-                        col2={true}
+                        col1={true}
                         label="Style"
                         value={data.style || 1}
                         on:change={updateStyle}
@@ -624,7 +696,7 @@
                 </div>
             {/if}
             <div class="row">
-                <div class="col-2-force">
+                <div class="col-1-force">
                     {#if withDeleteButton}
                         <form
                             on:submit|preventDefault={forwardDelete}
@@ -844,6 +916,47 @@
         margin: 0;
         color: var(--text-secondary, #666);
         font-size: 14px;
+    }
+
+    .validation-error {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 15px;
+        background: rgba(220, 53, 69, 0.1);
+        border: 1px solid rgba(220, 53, 69, 0.3);
+        border-radius: 6px;
+        color: #dc3545;
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+
+    .validation-error i {
+        font-size: 16px;
+    }
+
+    .value-input-wrapper {
+        position: relative;
+        flex: 1;
+    }
+
+    .value-input-wrapper.has-duplicate :global(input) {
+        border-color: #dc3545 !important;
+        background-color: rgba(220, 53, 69, 0.05) !important;
+    }
+
+    .duplicate-indicator {
+        position: absolute;
+        top: -1px;
+        right: 0;
+        font-size: 11px;
+        color: #dc3545;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: rgba(220, 53, 69, 0.1);
+        padding: 2px 6px;
+        border-radius: 3px;
+        pointer-events: none;
     }
 
     @media only screen and (max-width: 950px) {

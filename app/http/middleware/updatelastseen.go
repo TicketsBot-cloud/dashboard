@@ -22,7 +22,7 @@ func UpdateLastSeen(req *gin.Context) {
 	defer cancel()
 
 	if err := database.Client.DashboardUsers.UpdateLastSeen(ctx, userId); err != nil {
-		req.AbortWithStatusJSON(500, utils.ErrorStr(err.Error()))
+		req.AbortWithStatusJSON(500, utils.ErrorStr("Failed to update last seen for user %d: %v", userId, err))
 		return
 	}
 

@@ -22,7 +22,7 @@ func AuthenticateToken(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		ctx.AbortWithStatusJSON(401, utils.ErrorJson(err))
+		ctx.AbortWithStatusJSON(401, utils.ErrorStr("Failed to parse token: %v", err))
 		return
 	}
 

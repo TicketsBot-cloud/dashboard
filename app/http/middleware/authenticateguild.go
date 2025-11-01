@@ -32,7 +32,7 @@ func AuthenticateGuild(requiredPermissionLevel permission.PermissionLevel) gin.H
 					ctx.JSON(404, utils.ErrorStr("Guild not found"))
 					ctx.Abort()
 				} else {
-					ctx.JSON(500, utils.ErrorJson(err))
+					ctx.JSON(500, utils.ErrorStr("Failed to fetch guild owner from cache: %v", err))
 					ctx.Abort()
 				}
 
@@ -45,7 +45,7 @@ func AuthenticateGuild(requiredPermissionLevel permission.PermissionLevel) gin.H
 			// TODO: Use proper context
 			permLevel, err := utils.GetPermissionLevel(context.Background(), parsed, userId)
 			if err != nil {
-				ctx.JSON(500, utils.ErrorJson(err))
+				ctx.JSON(500, utils.ErrorStr("Failed to fetch user permission level: %v", err))
 				ctx.Abort()
 				return
 			}

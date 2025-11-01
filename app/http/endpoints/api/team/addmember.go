@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"strconv"
 
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -13,14 +14,14 @@ func AddMember(ctx *gin.Context) {
 
 	snowflake, err := strconv.ParseUint(ctx.Param("snowflake"), 10, 64)
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
 	// get entity type
 	typeParsed, err := strconv.Atoi(ctx.Query("type"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -46,7 +47,7 @@ func AddMember(ctx *gin.Context) {
 	} else {
 		parsed, err := strconv.Atoi(teamId)
 		if err != nil {
-			ctx.JSON(400, utils.ErrorStr("Invalid team ID"))
+			ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid team ID provided: %s", ctx.Param("id"))))
 			return
 		}
 
@@ -64,7 +65,7 @@ func addDefaultMember(ctx *gin.Context, guildId, snowflake uint64, entityType en
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -74,7 +75,7 @@ func addDefaultMember(ctx *gin.Context, guildId, snowflake uint64, entityType en
 func addTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, entityType entityType) {
 	exists, err := dbclient.Client.SupportTeam.Exists(ctx, teamId, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -91,7 +92,7 @@ func addTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, enti
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 

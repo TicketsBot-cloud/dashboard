@@ -28,7 +28,7 @@ func GetWhitelabelCreateInteractions() func(*gin.Context) {
 		// Get bot
 		bot, err := database.Client.Whitelabel.GetByUserId(c, userId)
 		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create whitelabel bot"))
 			return
 		}
 
@@ -40,9 +40,9 @@ func GetWhitelabelCreateInteractions() func(*gin.Context) {
 
 		if err := createInteractions(cm, bot.BotId, bot.Token); err != nil {
 			if errors.Is(err, ErrInteractionCreateCooldown) {
-				c.JSON(http.StatusTooManyRequests, utils.ErrorJson(err))
+				c.JSON(http.StatusTooManyRequests, utils.ErrorStr("Failed to create whitelabel bot. Please try again."))
 			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create whitelabel bot"))
 			}
 
 			return

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"strconv"
 
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -13,24 +14,24 @@ func DeleteTeam(ctx *gin.Context) {
 
 	teamId, err := strconv.Atoi(ctx.Param("teamid"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
 	// check team belongs to guild
 	exists, err := dbclient.Client.SupportTeam.Exists(ctx, teamId, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 
 	if !exists {
-		ctx.JSON(400, utils.ErrorStr("Team not found"))
+		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Team not found: %d", teamId)))
 		return
 	}
 
 	if err := dbclient.Client.SupportTeam.Delete(ctx, teamId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 		return
 	}
 

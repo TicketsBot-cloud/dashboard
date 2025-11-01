@@ -39,7 +39,7 @@ func CurrentQueue(ctx *gin.Context) {
 
 	permissionLevel, err := utils.GetPermissionLevel(ctx, guildId, userId)
 	if err != nil {
-		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
@@ -88,7 +88,7 @@ func PresignURL(ctx *gin.Context) {
 	// Get "file_size" query parameter
 	fileSize, err := strconv.ParseInt(ctx.Query("file_size"), 10, 64)
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -112,13 +112,13 @@ func PresignURL(ctx *gin.Context) {
 
 	botCtx, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	guild, err := botCtx.GetGuild(context.Background(), guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -132,7 +132,7 @@ func PresignURL(ctx *gin.Context) {
 		"Content-Type": []string{fileContentType},
 	})
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 
@@ -146,7 +146,7 @@ func GetRuns(ctx *gin.Context) {
 
 	permissionLevel, err := utils.GetPermissionLevel(ctx, guildId, userId)
 	if err != nil {
-		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
@@ -157,7 +157,7 @@ func GetRuns(ctx *gin.Context) {
 
 	runs, err := dbclient.Client.ImportLogs.GetRuns(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 

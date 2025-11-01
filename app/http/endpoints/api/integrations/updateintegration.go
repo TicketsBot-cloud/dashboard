@@ -51,8 +51,8 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 	}
 
 	var data integrationUpdateBody
-	if err := ctx.BindJSON(&data); err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
@@ -75,7 +75,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 
 	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return
 	}
 
@@ -92,7 +92,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 	if data.ValidationUrl != nil {
 		sameHost, err := isSameValidationUrlHost(data.WebhookUrl, *data.ValidationUrl)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorJson(err))
+			ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 			return
 		}
 
@@ -118,7 +118,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return
 	}
 
@@ -144,7 +144,7 @@ func (b *integrationUpdateBody) updatePlaceholders(ctx *gin.Context, integration
 	// Verify IDs are valid for the integration
 	existingPlaceholders, err := dbclient.Client.CustomIntegrationPlaceholders.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -181,7 +181,7 @@ func (b *integrationUpdateBody) updatePlaceholders(ctx *gin.Context, integration
 	}
 
 	if _, err := dbclient.Client.CustomIntegrationPlaceholders.Set(ctx, integrationId, placeholders); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -192,7 +192,7 @@ func (b *integrationUpdateBody) updateHeaders(ctx *gin.Context, integrationId in
 	// Verify IDs are valid for the integration
 	existingHeaders, err := dbclient.Client.CustomIntegrationHeaders.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -230,7 +230,7 @@ func (b *integrationUpdateBody) updateHeaders(ctx *gin.Context, integrationId in
 	}
 
 	if _, err := dbclient.Client.CustomIntegrationHeaders.CreateOrUpdate(ctx, integrationId, headers); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -241,7 +241,7 @@ func (b *integrationUpdateBody) updateSecrets(ctx *gin.Context, integrationId in
 	// Verify IDs are valid for the integration
 	existingSecrets, err := dbclient.Client.CustomIntegrationSecrets.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -278,7 +278,7 @@ func (b *integrationUpdateBody) updateSecrets(ctx *gin.Context, integrationId in
 	}
 
 	if _, err := dbclient.Client.CustomIntegrationSecrets.CreateOrUpdate(ctx, integrationId, secrets); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
 		return false
 	}
 

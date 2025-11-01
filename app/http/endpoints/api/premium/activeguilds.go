@@ -21,13 +21,13 @@ func SetActiveGuilds(ctx *gin.Context) {
 
 	var body setActiveGuildsBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-		ctx.JSON(http.StatusBadRequest, utils.ErrorJson(err))
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	legacyEntitlement, err := dbclient.Client.LegacyPremiumEntitlements.GetUserTier(ctx, userId, premium.PatreonGracePeriod)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 		return
 	}
 
@@ -38,7 +38,7 @@ func SetActiveGuilds(ctx *gin.Context) {
 
 	tx, err := dbclient.Client.BeginTx(ctx)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to start database transaction. Please try again."))
 		return
 	}
 
@@ -47,7 +47,7 @@ func SetActiveGuilds(ctx *gin.Context) {
 	// Validate under the limit
 	limit, ok, err := dbclient.Client.MultiServerSkus.GetPermittedServerCount(ctx, tx, legacyEntitlement.SkuId)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 		return
 	}
 
@@ -65,7 +65,7 @@ func SetActiveGuilds(ctx *gin.Context) {
 	for _, guildId := range body.SelectedGuilds {
 		permissionLevel, err := utils.GetPermissionLevel(ctx, guildId, userId)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+			ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 			return
 		}
 
@@ -77,7 +77,7 @@ func SetActiveGuilds(ctx *gin.Context) {
 
 	existingGuildEntitlements, err := dbclient.Client.LegacyPremiumEntitlementGuilds.ListForUser(ctx, tx, userId)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 		return
 	}
 
@@ -85,12 +85,12 @@ func SetActiveGuilds(ctx *gin.Context) {
 	for _, existingEntitlement := range existingGuildEntitlements {
 		if !utils.Contains(body.SelectedGuilds, existingEntitlement.GuildId) {
 			if err := dbclient.Client.LegacyPremiumEntitlementGuilds.DeleteByEntitlement(ctx, tx, existingEntitlement.EntitlementId); err != nil {
-				ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
 				return
 			}
 
 			if err := dbclient.Client.Entitlements.DeleteById(ctx, tx, existingEntitlement.EntitlementId); err != nil {
-				ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
 				return
 			}
 		}
@@ -106,12 +106,12 @@ func SetActiveGuilds(ctx *gin.Context) {
 		if !utils.Contains(existingGuildIds, guildId) {
 			created, err := dbclient.Client.Entitlements.Create(ctx, tx, &guildId, &userId, legacyEntitlement.SkuId, model.EntitlementSourcePatreon, nil)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to create database record. Please try again."))
 				return
 			}
 
 			if err := dbclient.Client.LegacyPremiumEntitlementGuilds.Insert(ctx, tx, userId, guildId, created.Id); err != nil {
-				ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to create database record. Please try again."))
 				return
 			}
 		}
@@ -123,7 +123,7 @@ func SetActiveGuilds(ctx *gin.Context) {
 		if utils.Contains(body.SelectedGuilds, existingEntitlement.GuildId) {
 			entitlement, err := dbclient.Client.Entitlements.GetById(ctx, tx, existingEntitlement.EntitlementId)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 				return
 			}
 
@@ -137,17 +137,17 @@ func SetActiveGuilds(ctx *gin.Context) {
 			} else {
 				// If we need to switch the SKU, then delete and recreate the entitlement
 				if err := dbclient.Client.LegacyPremiumEntitlementGuilds.DeleteByEntitlement(ctx, tx, existingEntitlement.EntitlementId); err != nil {
-					ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+					ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
 					return
 				}
 
 				if err := dbclient.Client.Entitlements.DeleteById(ctx, tx, existingEntitlement.EntitlementId); err != nil {
-					ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+					ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
 					return
 				}
 
 				if _, err := dbclient.Client.Entitlements.Create(ctx, tx, &existingEntitlement.GuildId, &userId, legacyEntitlement.SkuId, model.EntitlementSourcePatreon, entitlement.ExpiresAt); err != nil {
-					ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+					ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to create database record. Please try again."))
 					return
 				}
 			}
@@ -155,7 +155,7 @@ func SetActiveGuilds(ctx *gin.Context) {
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorJson(err))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to commit database transaction. Please try again."))
 		return
 	}
 

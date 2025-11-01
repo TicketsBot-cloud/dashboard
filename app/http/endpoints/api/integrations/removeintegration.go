@@ -18,7 +18,7 @@ func RemoveIntegrationHandler(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.CustomIntegrationGuilds.RemoveFromGuild(ctx, integrationId, guildId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete integration. Please try again."))
 		return
 	}
 

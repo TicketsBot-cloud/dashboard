@@ -19,7 +19,7 @@ func DeleteIntegrationHandler(ctx *gin.Context) {
 
 	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete integration. Please try again."))
 		return
 	}
 
@@ -35,7 +35,7 @@ func DeleteIntegrationHandler(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.CustomIntegrations.Delete(ctx, integration.Id); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to delete integration. Please try again."))
 		return
 	}
 

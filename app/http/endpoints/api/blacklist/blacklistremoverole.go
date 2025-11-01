@@ -13,12 +13,12 @@ func RemoveRoleBlacklistHandler(ctx *gin.Context) {
 
 	roleId, err := strconv.ParseUint(ctx.Param("role"), 10, 64)
 	if err != nil {
-		ctx.JSON(400, utils.ErrorJson(err))
+		ctx.JSON(400, utils.ErrorStr("Failed to remove from blacklist. Please try again."))
 		return
 	}
 
 	if err := database.Client.RoleBlacklist.Remove(ctx, guildId, roleId); err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to remove from blacklist. Please try again."))
 		return
 	}
 

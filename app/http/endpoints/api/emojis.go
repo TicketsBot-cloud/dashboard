@@ -13,14 +13,14 @@ func EmojisHandler(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	// TODO: Use proper context
 	emojis, err := botContext.GetGuildEmojis(context.Background(), guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}
 

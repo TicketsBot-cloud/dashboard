@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
@@ -12,7 +13,7 @@ func TagsListHandler(ctx *gin.Context) {
 
 	tags, err := database.Client.Tag.GetByGuild(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorJson(err))
+		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
 		return
 	}
 

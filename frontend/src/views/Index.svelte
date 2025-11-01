@@ -9,9 +9,12 @@
     import InviteBadge from "../components/InviteBadge.svelte";
     import Button from "../components/Button.svelte";
     import Sidebar from '../includes/Sidebar.svelte'
+    import NoPermissionModal from "../components/NoPermissionModal.svelte";
     import {loadingScreen, permissionLevelCache, showSidebar} from "../js/stores";
 
     setDefaultHeaders();
+
+    let showNoPermissionModal = false;
 
     let guilds = window.localStorage.getItem("guilds")
         ? JSON.parse(window.localStorage.getItem("guilds"))
@@ -49,6 +52,14 @@
         showSidebar.update(v => !v);
     }
 
+    function openNoPermissionModal() {
+        showNoPermissionModal = true;
+    }
+
+    function closeNoPermissionModal() {
+        showNoPermissionModal = false;
+    }
+
     loadingScreen.set(false);
 </script>
 
@@ -65,7 +76,7 @@
             </span>
 
             <div slot="body" style="width: 100%">
-                <span class="flex-container">
+                <span>
                     <h2>Your Servers</h2>
                 </span>
                 <div id="guild-container">
@@ -79,9 +90,15 @@
                 </div>
 
                 <br />
-                <span class="flex-container">
+                <span>
                     <h2>Other Servers</h2>
-                    <i>You do not have access to managing these servers.</i>
+                    <i>You do not have access to managing these servers. <button
+                        class="help-link"
+                        on:click={openNoPermissionModal}
+                        aria-label="Learn how to get access"
+                    >
+                        Click here to learn why
+                    </button>.</i>
                 </span>
 
                 <div id="guild-container">
@@ -92,7 +109,7 @@
                     {/each}
                 </div>
 
-                <div class="flex-container" id="refresh-container">
+                <div id="refresh-container">
                     <Button icon="fas fa-sync" on:click={refreshGuilds}>
                         Refresh list
                     </Button>
@@ -101,6 +118,12 @@
         </Card>
     </div>
 </div>
+
+{#if showNoPermissionModal}
+    <NoPermissionModal
+        on:close={closeNoPermissionModal}
+    />
+{/if}
 
 <style>
     .content {
@@ -130,6 +153,29 @@
 
         margin: 10px 0;
         color: white;
+    }
+
+    .help-link {
+        background: none;
+        border: none;
+        color: #5865f2;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+        font-style: italic;
+        font-size: inherit;
+        text-decoration: underline;
+        transition: color 0.2s;
+    }
+
+    .help-link:hover {
+        color: #7289da;
+    }
+
+    .help-link:focus {
+        outline: 2px solid #5865f2;
+        outline-offset: 2px;
+        border-radius: 2px;
     }
 
     .burger-menu-container {

@@ -19,14 +19,14 @@ func MultiPanelDelete(c *gin.Context) {
 
 	multiPanelId, err := strconv.Atoi(c.Param("panelid"))
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete multi-panel"))
 		return
 	}
 
 	// get bot context
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -47,23 +47,23 @@ func MultiPanelDelete(c *gin.Context) {
 		if errors.As(err, &unwrapped) {
 			// Swallow 403 / 404
 			if unwrapped.StatusCode != http.StatusForbidden && unwrapped.StatusCode != http.StatusNotFound {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete multi-panel"))
 				return
 			}
 		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete multi-panel"))
 			return
 		}
 	}
 
 	success, err := dbclient.Client.MultiPanels.Delete(c, guildId, multiPanelId)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete multi-panel"))
 		return
 	}
 
 	if !success {
-		c.JSON(404, utils.ErrorJson(errors.New("No panel with matching ID found")))
+		c.JSON(404, utils.ErrorStr("No panel with matching ID found"))
 		return
 	}
 

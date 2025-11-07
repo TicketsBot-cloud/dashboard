@@ -4,7 +4,7 @@ go 1.24.0
 
 toolchain go1.24.2
 
-replace github.com/TicketsBot-cloud/database => ../database
+//replace github.com/TicketsBot-cloud/database => ../database
 
 //replace github.com/TicketsBot-cloud/gdl => ../gdl
 
@@ -19,8 +19,8 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250807224931-e188ad18a850
-	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
-	github.com/TicketsBot-cloud/database v0.0.0-20251005195038-fd63a423fcb7
+	github.com/TicketsBot-cloud/common v0.0.0-20251026182733-99fa0dc31d90
+	github.com/TicketsBot-cloud/database v0.0.0-20251107204613-c96c07a0eb63
 	github.com/TicketsBot-cloud/gdl v0.0.0-20251007163257-7e59b92d02dd
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
 	github.com/TicketsBot-cloud/worker v0.0.0-20251007163454-37483445234a

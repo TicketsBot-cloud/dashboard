@@ -49,6 +49,7 @@ type panelBody struct {
 	PendingCategory     *uint64                           `json:"pending_category,string"`
 	DeleteMentions      bool                              `json:"delete_mentions"`
 	TranscriptChannelId *uint64                           `json:"transcript_channel_id,string"`
+	UseThreads          bool                              `json:"use_threads"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -237,6 +238,7 @@ func CreatePanel(c *gin.Context) {
 		PendingCategory:     data.PendingCategory,
 		DeleteMentions:      data.DeleteMentions,
 		TranscriptChannelId: data.TranscriptChannelId,
+		UseThreads:          data.UseThreads,
 	}
 
 	createOptions := panelCreateOptions{

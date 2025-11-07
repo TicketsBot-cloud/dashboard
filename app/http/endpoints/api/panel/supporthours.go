@@ -18,6 +18,12 @@ import (
 
 // supportHoursResponse represents the API response format for support hours
 type supportHoursResponse struct {
+	Timezone string                   `json:"timezone"`
+	Hours    []supportHoursHourConfig `json:"hours"`
+}
+
+// supportHoursHourConfig represents individual hour configuration
+type supportHoursHourConfig struct {
 	DayOfWeek int    `json:"day_of_week"`
 	StartTime string `json:"start_time"`
 	EndTime   string `json:"end_time"`
@@ -53,10 +59,13 @@ func GetSupportHours(c *gin.Context) {
 	}
 
 	// Convert to response format
-	var response []supportHoursResponse
-	if hours != nil {
+	var timezone string = "Europe/London"
+	var hourConfigs []supportHoursHourConfig
+
+	if hours != nil && len(hours) > 0 {
+		timezone = hours[0].Timezone
 		for _, h := range hours {
-			response = append(response, supportHoursResponse{
+			hourConfigs = append(hourConfigs, supportHoursHourConfig{
 				DayOfWeek: h.DayOfWeek,
 				StartTime: h.StartTime.Format("15:04:05"),
 				EndTime:   h.EndTime.Format("15:04:05"),
@@ -64,18 +73,29 @@ func GetSupportHours(c *gin.Context) {
 			})
 		}
 	} else {
-		response = []supportHoursResponse{}
+		hourConfigs = []supportHoursHourConfig{}
+	}
+
+	response := supportHoursResponse{
+		Timezone: timezone,
+		Hours:    hourConfigs,
 	}
 
 	c.JSON(http.StatusOK, response)
 }
 
-// supportHoursRequest represents the API request format for support hours
-type supportHoursRequest struct {
+// supportHoursPayload represents individual hour configuration in requests
+type supportHoursPayload struct {
 	DayOfWeek int    `json:"day_of_week"`
 	StartTime string `json:"start_time"`
 	EndTime   string `json:"end_time"`
 	Enabled   bool   `json:"enabled"`
+}
+
+// supportHoursRequestBody represents the API request format for support hours
+type supportHoursRequestBody struct {
+	Timezone string                `json:"timezone" binding:"required"`
+	Hours    []supportHoursPayload `json:"hours" binding:"required"`
 }
 
 func SetSupportHours(c *gin.Context) {
@@ -145,9 +165,15 @@ func SetSupportHours(c *gin.Context) {
 		return
 	}
 
-	var hoursRequest []supportHoursRequest
-	if err := c.ShouldBindJSON(&hoursRequest); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid request body: malformed JSON"))
+	var requestBody supportHoursRequestBody
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid request body: timezone and hours are required"))
+		return
+	}
+
+	// Validate timezone
+	if !database.IsValidTimezone(requestBody.Timezone) {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid timezone: %s", requestBody.Timezone)))
 		return
 	}
 
@@ -158,7 +184,7 @@ func SetSupportHours(c *gin.Context) {
 	}
 
 	// Convert request to database format and save
-	for _, req := range hoursRequest {
+	for _, req := range requestBody.Hours {
 		// Validate day of week
 		if req.DayOfWeek < 0 || req.DayOfWeek > 6 {
 			c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid day of week"))
@@ -185,6 +211,7 @@ func SetSupportHours(c *gin.Context) {
 			StartTime: startTime,
 			EndTime:   endTime,
 			Enabled:   req.Enabled,
+			Timezone:  requestBody.Timezone,
 		}
 
 		if _, err := dbclient.Client.PanelSupportHours.Upsert(c, supportHours); err != nil {

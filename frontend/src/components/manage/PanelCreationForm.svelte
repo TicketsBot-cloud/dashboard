@@ -136,7 +136,7 @@
                 .filter((mention) => mention != null)
                 .forEach((mention) => selectedMentions.push(mention));
         }
-        
+
         if (!data.transcript_channel_id) {
             data.transcript_channel_id = "null";
         }
@@ -507,7 +507,7 @@
                 >{/if}</span
         >
         <div slot="content" class="col-1" style="padding-top: 10px;">
-            {#if !false}
+            {#if !isPremium}
                 <div class="free-feature-notice">
                     <i class="fas fa-clock"></i>
                     <div class="feature-notice-text">

@@ -83,7 +83,7 @@
         }
 
         // Save support hours (free users get 1 panel, premium unlimited)
-        if (panelData.support_hours && panelData.support_hours.length > 0) {
+        if (panelData.support_hours && panelData.support_hours.hours && panelData.support_hours.hours.length > 0) {
             try {
                 const hoursRes = await axios.post(`${API_URL}/api/${guildId}/panels/${panelId}/support-hours`, panelData.support_hours);
                 if (hoursRes.status !== 200) {
@@ -134,7 +134,7 @@
                     }
                 } catch (e) {
                     // Support hours are optional, so we don't show an error
-                    panelData.support_hours = [];
+                    panelData.support_hours = { timezone: "UTC", hours: [] };
                 }
             }
         });

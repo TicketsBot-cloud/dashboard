@@ -238,6 +238,7 @@ func UpdatePanel(c *gin.Context) {
 		PendingCategory:     data.PendingCategory,
 		DeleteMentions:      data.DeleteMentions,
 		TranscriptChannelId: data.TranscriptChannelId,
+		UseThreads:          data.UseThreads,
 	}
 
 	// insert mention data

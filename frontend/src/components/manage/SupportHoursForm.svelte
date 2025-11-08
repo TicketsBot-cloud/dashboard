@@ -17,42 +17,6 @@
         "Saturday",
     ];
 
-    const timezoneOptions = [
-        { label: "UTC", value: "UTC" },
-        { label: "Eastern Time (America/New_York)", value: "America/New_York" },
-        { label: "Central Time (America/Chicago)", value: "America/Chicago" },
-        { label: "Mountain Time (America/Denver)", value: "America/Denver" },
-        {
-            label: "Pacific Time (America/Los_Angeles)",
-            value: "America/Los_Angeles",
-        },
-        {
-            label: "Alaska Time (America/Anchorage)",
-            value: "America/Anchorage",
-        },
-        { label: "Hawaii Time (Pacific/Honolulu)", value: "Pacific/Honolulu" },
-        { label: "London (Europe/London)", value: "Europe/London" },
-        { label: "Paris (Europe/Paris)", value: "Europe/Paris" },
-        { label: "Berlin (Europe/Berlin)", value: "Europe/Berlin" },
-        { label: "Moscow (Europe/Moscow)", value: "Europe/Moscow" },
-        { label: "Dubai (Asia/Dubai)", value: "Asia/Dubai" },
-        { label: "India (Asia/Kolkata)", value: "Asia/Kolkata" },
-        { label: "Bangkok (Asia/Bangkok)", value: "Asia/Bangkok" },
-        { label: "Hong Kong (Asia/Hong_Kong)", value: "Asia/Hong_Kong" },
-        { label: "Shanghai (Asia/Shanghai)", value: "Asia/Shanghai" },
-        { label: "Tokyo (Asia/Tokyo)", value: "Asia/Tokyo" },
-        { label: "Seoul (Asia/Seoul)", value: "Asia/Seoul" },
-        { label: "Singapore (Asia/Singapore)", value: "Asia/Singapore" },
-        { label: "Perth (Australia/Perth)", value: "Australia/Perth" },
-        { label: "Sydney (Australia/Sydney)", value: "Australia/Sydney" },
-        {
-            label: "Melbourne (Australia/Melbourne)",
-            value: "Australia/Melbourne",
-        },
-        { label: "Brisbane (Australia/Brisbane)", value: "Australia/Brisbane" },
-        { label: "Auckland (Pacific/Auckland)", value: "Pacific/Auckland" },
-    ];
-
     let timezone = "Europe/London";
     let currentTimeDisplay = "";
     let hours = daysOfWeek.map((_, index) => ({
@@ -69,8 +33,8 @@
 
     function updateCurrentTimeDisplay(tz) {
         const now = new Date();
-        const tzData = timezones.find(t => t.tzCode === tz);
-        
+        const tzData = timezones.find((t) => t.tzCode === tz);
+
         if (!tzData) {
             currentTimeDisplay = "Invalid timezone";
             return;
@@ -78,23 +42,25 @@
 
         try {
             // Create formatter for the timezone
-            const formatter = new Intl.DateTimeFormat('en-US', {
+            const formatter = new Intl.DateTimeFormat("en-US", {
                 timeZone: tz,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
                 hour12: false,
-                weekday: 'long'
+                weekday: "long",
             });
 
             const parts = formatter.formatToParts(now);
             const timeStr = formatter.format(now);
-            
+
             // Extract time components
-            const weekday = parts.find(p => p.type === 'weekday')?.value || '';
-            const hour = parts.find(p => p.type === 'hour')?.value || '00';
-            const minute = parts.find(p => p.type === 'minute')?.value || '00';
-            
+            const weekday =
+                parts.find((p) => p.type === "weekday")?.value || "";
+            const hour = parts.find((p) => p.type === "hour")?.value || "00";
+            const minute =
+                parts.find((p) => p.type === "minute")?.value || "00";
+
             // Format: "It is currently HH:MM on Monday in America/New_York (UTC-05:00)"
             const offset = tzData.utc;
             currentTimeDisplay = `It is currently ${hour}:${minute} on ${weekday} in ${tz} (${offset})`;

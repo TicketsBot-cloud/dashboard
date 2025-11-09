@@ -22,7 +22,7 @@ import (
 type tag struct {
 	Id              string             `json:"id" validate:"required,min=1,max=16"`
 	UseGuildCommand bool               `json:"use_guild_command"`
-	Content         *string            `json:"content" validate:"omitempty,min=1,max=4096"`
+	Content         *string            `json:"content" validate:"omitempty,min=1,max=2000"`
 	UseEmbed        bool               `json:"use_embed"`
 	Embed           *types.CustomEmbed `json:"embed" validate:"omitempty,dive"`
 }
@@ -80,6 +80,15 @@ func CreateTag(ctx *gin.Context) {
 	if !data.verifyContent() {
 		ctx.JSON(400, utils.ErrorStr("You have not provided any content for the tag"))
 		return
+	}
+
+	// Validate total embed character count
+	if data.Embed != nil {
+		totalChars := data.Embed.TotalCharacterCount()
+		if totalChars > 6000 {
+			ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Total embed characters (%d) exceeds Discord's 6000 character limit", totalChars)))
+			return
+		}
 	}
 
 	botContext, err := botcontext.ContextForGuild(guildId)

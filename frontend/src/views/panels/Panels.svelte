@@ -39,7 +39,7 @@
             `${API_URL}/api/${guildId}/panels/${panelId}`,
         );
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -51,7 +51,7 @@
             `${API_URL}/api/${guildId}/panels/${panelId}`,
         );
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -64,7 +64,7 @@
             `${API_URL}/api/${guildId}/multipanels/${id}`,
         );
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -76,7 +76,7 @@
             `${API_URL}/api/${guildId}/multipanels/${id}`,
         );
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

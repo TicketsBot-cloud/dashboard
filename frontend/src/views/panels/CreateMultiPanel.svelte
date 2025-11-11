@@ -77,7 +77,7 @@
 
         const res = await axios.post(`${API_URL}/api/${guildId}/multipanels`, data);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
         } else {
             navigateTo(`/manage/${guildId}/panels?created=true`)
         }

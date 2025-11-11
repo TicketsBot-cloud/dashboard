@@ -152,7 +152,7 @@
     async function loadPanels() {
         const res = await axios.get(`${API_URL}/api/${guildId}/panels`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -165,7 +165,7 @@
             paginationSettings,
         );
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return false;
         }
 

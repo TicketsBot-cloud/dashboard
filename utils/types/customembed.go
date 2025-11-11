@@ -7,7 +7,7 @@ import (
 )
 
 type CustomEmbed struct {
-	Title        *string        `json:"title" validate:"omitempty,min=1,max=255"`
+	Title        *string        `json:"title" validate:"omitempty,min=1,max=256"`
 	Description  *string        `json:"description" validate:"omitempty,min=1,max=4096"`
 	Url          *string        `json:"url" validate:"omitempty,url,max=255"`
 	Colour       Colour         `json:"colour" validate:"gte=0,lte=16777215"`
@@ -20,7 +20,7 @@ type CustomEmbed struct {
 }
 
 type Author struct {
-	Name    *string `json:"name" validate:"omitempty,min=1,max=255"`
+	Name    *string `json:"name" validate:"omitempty,min=1,max=256"`
 	IconUrl *string `json:"icon_url" validate:"omitempty,url,max=255"`
 	Url     *string `json:"url" validate:"omitempty,url,max=255"`
 }
@@ -31,7 +31,7 @@ type Footer struct {
 }
 
 type Field struct {
-	Name   string `json:"name" validate:"min=1,max=255"`
+	Name   string `json:"name" validate:"min=1,max=256"`
 	Value  string `json:"value" validate:"min=1,max=1024"`
 	Inline bool   `json:"inline"`
 }
@@ -138,4 +138,32 @@ func (c *CustomEmbed) IntoDiscordEmbed() *embed.Embed {
 	}
 
 	return e
+}
+
+// TotalCharacterCount returns the total number of characters in the embed
+func (c *CustomEmbed) TotalCharacterCount() int {
+	total := 0
+
+	if c.Title != nil {
+		total += len(*c.Title)
+	}
+
+	if c.Description != nil {
+		total += len(*c.Description)
+	}
+
+	if c.Author.Name != nil {
+		total += len(*c.Author.Name)
+	}
+
+	if c.Footer.Text != nil {
+		total += len(*c.Footer.Text)
+	}
+
+	for _, field := range c.Fields {
+		total += len(field.Name)
+		total += len(field.Value)
+	}
+
+	return total
 }

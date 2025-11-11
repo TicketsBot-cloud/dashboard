@@ -78,7 +78,7 @@
 
         const res = await axios.patch(`${API_URL}/api/${guildId}/multipanels/${multiPanelId}`, data);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
         } else {
             navigateTo(`/manage/${guildId}/panels?edited=true`)
         }

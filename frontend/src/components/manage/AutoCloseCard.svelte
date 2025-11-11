@@ -77,7 +77,7 @@
 
         const res = await axios.post(`${API_URL}/api/${guildId}/autoclose`, data);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -87,7 +87,7 @@
     async function loadPremium() {
         const res = await axios.get(`${API_URL}/api/${guildId}/premium`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -97,7 +97,7 @@
     async function loadSettings() {
         const res = await axios.get(`${API_URL}/api/${guildId}/autoclose`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

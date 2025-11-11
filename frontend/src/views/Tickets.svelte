@@ -101,7 +101,7 @@
     async function loadTickets() {
         const res = await axios.get(`${API_URL}/api/${guildId}/tickets`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

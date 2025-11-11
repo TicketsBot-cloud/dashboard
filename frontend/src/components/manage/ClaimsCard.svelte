@@ -54,14 +54,14 @@
         if (res.status === 200 && res.data.success) {
             notifySuccess("Your settings have been saved.");
         } else {
-            notifyError(res.data.error);
+            notifyError(res.data);
         }
     }
 
     async function loadData() {
         const res = await axios.get(`${API_URL}/api/${guildId}/claimsettings`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

@@ -221,6 +221,7 @@
                 use_server_default_naming_scheme: true,
                 exit_survey_form_id: "null",
                 pending_category: "null",
+                use_threads: false,
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -294,6 +295,14 @@
                     col2
                     tool
                     bind:value={data.delete_mentions}
+                />
+            </div>
+            <div class="row">
+                <Checkbox
+                    label="Create Tickets as Threads"
+                    col2
+                    tool
+                    bind:value={data.use_threads}
                 />
             </div>
             <div class="incomplete-row">

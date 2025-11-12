@@ -27,7 +27,7 @@
             if (res.status === 429) {
                 notifyRatelimit();
             } else {
-                notifyError(res.data.error);
+                notifyError(res.data);
             }
 
             return {cancelled: true}

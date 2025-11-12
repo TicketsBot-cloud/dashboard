@@ -151,9 +151,9 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 		if statusCode > 299 {
 			if useClientError {
 				ctx.JSON(400, gin.H{
-					"success":      false,
-					"error":        "Integration rejected the secret values (contact the integration author for help)",
-					"client_error": parsed.Error,
+					"success":        false,
+					"error":          "Integration rejected the secret values (contact the integration author for help)",
+					"internal_error": parsed.Error,
 				})
 			} else {
 				ctx.JSON(400, utils.ErrorStr("Integration rejected the secret values (contact the integration author for help)"))

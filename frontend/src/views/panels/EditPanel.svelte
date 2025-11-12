@@ -69,7 +69,6 @@
     let teams = [];
     let forms = [];
     let isPremium = false;
-
     let panelData;
     let supportHours = [];
 
@@ -78,7 +77,7 @@
 
         const res = await axios.patch(`${API_URL}/api/${guildId}/panels/${panelId}`, panelData);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

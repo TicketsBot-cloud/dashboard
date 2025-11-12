@@ -24,7 +24,7 @@
     async function invite() {
         const res = await axios.get(`${API_URL}/user/whitelabel/`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -42,7 +42,7 @@
 
         const res = await axios.post(`${API_URL}/user/whitelabel/`, data);
         if (res.status !== 200 || !res.data.success) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -63,7 +63,7 @@
             if (res.status === 429) {
                 notifyRatelimit();
             } else {
-                notifyError(res.data.error);
+                notifyError(res.data);
             }
 
             return;
@@ -79,7 +79,7 @@
             if (res.status === 429) {
                 notifyRatelimit();
             } else {
-                notifyError(res.data.error);
+                notifyError(res.data);
             }
 
             return;
@@ -104,7 +104,7 @@
             }
 
             if (res.status !== 404) {
-                notifyError(res.data.error);
+                notifyError(res.data);
             }
 
             return true;
@@ -121,7 +121,7 @@
     async function loadErrors() {
         const res = await axios.get(`${API_URL}/user/whitelabel/errors`);
         if (res.status !== 200 || !res.data.success) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -144,7 +144,7 @@
             opts,
         );
         if (res.status !== 200 || !res.data.success) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -156,7 +156,7 @@
     async function disable() {
         const res = await axios.delete(`${API_URL}/user/whitelabel/`);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -352,7 +352,6 @@
     :global(.form-input:focus-visible) {
         border-color: #262b3d !important;
         background-color: #262b3d !important;
-        border-radius: var(--border-radius-md);
         color: white !important;
         outline: none;
         padding: 8px 12px;

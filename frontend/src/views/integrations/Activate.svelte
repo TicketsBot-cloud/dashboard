@@ -79,11 +79,7 @@
 
         let res = await axios.post(`${API_URL}/api/${guildId}/integrations/${integrationId}`, data);
         if (res.status !== 204) {
-            if (res.data.client_error) {
-                notifyError(`${res.data.error}: ${res.data.client_error}`);
-            } else {
-                notifyError(res.data.error);
-            }
+            notifyError(res.data);
             return;
         }
 
@@ -93,7 +89,7 @@
     async function loadIntegration() {
         let res = await axios.get(`${API_URL}/api/integrations/view/${integrationId}`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

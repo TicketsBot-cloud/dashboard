@@ -224,10 +224,6 @@
             on:change={emitChange}
         />
         <div class="info-section">
-            <div class="utc-notice">
-                <i class="fas fa-clock"></i>
-                <span>All times are in <strong>{timezone}</strong></span>
-            </div>
             <div class="current-time-notice">
                 <i class="fas fa-globe"></i>
                 <span>{currentTimeDisplay}</span>

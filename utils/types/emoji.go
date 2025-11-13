@@ -58,8 +58,12 @@ func (e *Emoji) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// Allow null emoji (no emoji provided)
 	if raw == nil {
-		return fmt.Errorf("emoji data was nil")
+		e.IsCustomEmoji = false
+		e.Name = ""
+		e.Id = nil
+		return nil
 	}
 
 	switch v := raw.(type) {

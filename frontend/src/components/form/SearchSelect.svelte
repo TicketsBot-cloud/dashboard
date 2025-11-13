@@ -1,5 +1,8 @@
 <script>
     import { fly } from 'svelte/transition';
+    import { createEventDispatcher } from 'svelte';
+
+    const dispatch = createEventDispatcher();
 
     /**
      * Generic searchable select component
@@ -44,14 +47,15 @@
     }
 
     function selectOption(opt) {
-        // Don't allow selecting disabled options
-        if (opt.disabled) return;
-        
-        value = opt.value;
-        searchInput = '';
-        showDropdown = false;
-        highlightedIndex = -1;
-    }
+         // Don't allow selecting disabled options
+         if (opt.disabled) return;
+         
+         value = opt.value;
+         searchInput = '';
+         showDropdown = false;
+         highlightedIndex = -1;
+         dispatch('change', { value: opt.value });
+     }
 
     function getDisplayText(opt) {
         return opt.label;

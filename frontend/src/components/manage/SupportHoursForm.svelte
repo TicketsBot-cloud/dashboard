@@ -4,6 +4,18 @@
     import SearchSelect from "../form/SearchSelect.svelte";
     import timezones from "timezones-list";
 
+    const timezoneList = [
+        {
+            label: "UTC",
+            tzCode: "UTC",
+            name: "UTC",
+            utc: "+00:00",
+        },
+        ...timezones,
+    ];
+
+    console.log(timezoneList);
+
     export let data = [];
 
     const dispatch = createEventDispatcher();
@@ -33,7 +45,7 @@
 
     function updateCurrentTimeDisplay(tz) {
         const now = new Date();
-        const tzData = timezones.find((t) => t.tzCode === tz);
+        const tzData = timezoneList.find((t) => t.tzCode === tz);
 
         if (!tzData) {
             currentTimeDisplay = "Invalid timezone";
@@ -215,7 +227,7 @@
     <div class="form-group">
         <SearchSelect
             bind:value={timezone}
-            options={timezones.map((tz) => ({
+            options={timezoneList.map((tz) => ({
                 label: tz.label,
                 value: tz.tzCode,
             }))}

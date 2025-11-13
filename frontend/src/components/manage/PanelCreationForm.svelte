@@ -39,7 +39,7 @@
     let selectedMentions = [];
 
     let lastCustomEmoji = undefined;
-    let lastUnicodeEmoji = '📩';
+    let lastUnicodeEmoji = "📩";
     // Unicode emoji regex
     const unicodeEmojiRegex = /^\p{Emoji}$/u;
     function validateUnicodeEmoji(value) {
@@ -103,7 +103,8 @@
             if (lastCustomEmoji) {
                 data.emote = lastCustomEmoji;
             } else {
-                data.emote = emojis && emojis.length > 0 ? emojis[0] : undefined;
+                data.emote =
+                    emojis && emojis.length > 0 ? emojis[0] : undefined;
             }
         } else {
             // Save the current custom emoji before switching to unicode
@@ -139,6 +140,7 @@
     }
 
     function handleSupportHoursChange(e) {
+        console.log(e.detail);
         data.support_hours = e.detail;
     }
 
@@ -483,7 +485,11 @@
                                 />
                             </div>
                         {:else}
-                            <EmojiInput col1="true" placeholder="Button Emoji" bind:value={data.emote} />
+                            <EmojiInput
+                                col1="true"
+                                placeholder="Button Emoji"
+                                bind:value={data.emote}
+                            />
                         {/if}
                     </div>
                 </div>

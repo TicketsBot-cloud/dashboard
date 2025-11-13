@@ -43,6 +43,7 @@
     // Unicode emoji regex
     const unicodeEmojiRegex = /^\p{Emoji}$/u;
     function validateUnicodeEmoji(value) {
+        if (value === "") return true;
         if (typeof value !== "string") return false;
         if (/^<a?:\w+:\d+>$/.test(value)) return false;
         // Disallow spaces
@@ -105,12 +106,12 @@
                 data.emote = emojis && emojis.length > 0 ? emojis[0] : undefined;
             }
         } else {
-            // Save the current custom emoji before switching to default
+            // Save the current custom emoji before switching to unicode
             if (data.emote && typeof data.emote === "object") {
                 lastCustomEmoji = data.emote;
             }
-            // Restore last unicode emoji if available
-            data.emote = lastUnicodeEmoji || '📩';
+            // Restore last unicode emoji
+            data.emote = lastUnicodeEmoji;
         }
     }
 
@@ -211,6 +212,7 @@
                 default_team: true,
                 teams: [],
                 button_style: "1",
+                button_label: "Open a ticket!",
                 form_id: "null",
                 delete_mentions: false,
                 disabled: false,
@@ -449,9 +451,9 @@
                 />
 
                 <div class="col-2" style="z-index: 1">
-                    <label for="emoji-pick-wrapper" class="form-label"
-                        >Button Emoji</label
-                    >
+                    <label for="emoji-pick-wrapper" class="form-label">
+                        Button Emoji
+                    </label>
                     <div id="emoji-pick-wrapper" class="row" style="gap: 2%">
                         <div class="col">
                             <label
@@ -481,7 +483,7 @@
                                 />
                             </div>
                         {:else}
-                            <EmojiInput col1="true" bind:value={data.emote} />
+                            <EmojiInput col1="true" placeholder="Button Emoji" bind:value={data.emote} />
                         {/if}
                     </div>
                 </div>

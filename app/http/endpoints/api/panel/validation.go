@@ -35,8 +35,6 @@ func DefaultApplicators(data *panelBody) []defaults.DefaultApplicator {
 		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.Content, "By clicking the button, a ticket will be opened for you."),
 		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ImageUrl, nil),
 		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ThumbnailUrl, nil),
-		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.ButtonLabel, data.Title),
-		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.ButtonLabel, "Open a ticket!"), // Title could have been blank
 		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.NamingScheme, nil),
 	}
 }
@@ -68,6 +66,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateThumbnailUrl,
 		validateButtonStyle,
 		validateButtonLabel,
+		validateButtonLabelOrEmoji,
 		validateFormId,
 		validateExitSurveyFormId,
 		validateTeams,
@@ -126,6 +125,11 @@ func validateEmoji(c PanelValidationContext) validation.ValidationFunc {
 	return func() error {
 		emoji := c.Data.Emoji
 
+		// If no emoji is provided (empty name), skip validation
+		if len(emoji.Name) == 0 && !emoji.IsCustomEmoji {
+			return nil
+		}
+
 		if emoji.IsCustomEmoji {
 			if emoji.Id == nil {
 				return validation.NewInvalidInputError("Custom emoji was missing ID")
@@ -147,10 +151,6 @@ func validateEmoji(c PanelValidationContext) validation.ValidationFunc {
 				return validation.NewInvalidInputError("Emoji name mismatch")
 			}
 		} else {
-			if len(emoji.Name) == 0 {
-				return validation.NewInvalidInputError("Emoji name was empty")
-			}
-
 			// Convert from :emoji: to unicode if we need to
 			name := strings.TrimSpace(emoji.Name)
 			name = strings.Replace(name, ":", "", -1)
@@ -201,6 +201,19 @@ func validateButtonLabel(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
 		if len(ctx.Data.ButtonLabel) > 80 {
 			return validation.NewInvalidInputError("Button label must be less than 80 characters")
+		}
+
+		return nil
+	}
+}
+
+func validateButtonLabelOrEmoji(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		hasLabel := len(strings.TrimSpace(ctx.Data.ButtonLabel)) > 0
+		hasEmoji := len(strings.TrimSpace(ctx.Data.Emoji.Name)) > 0
+
+		if !hasLabel && !hasEmoji {
+			return validation.NewInvalidInputError("Button must have at least one of label or emoji")
 		}
 
 		return nil

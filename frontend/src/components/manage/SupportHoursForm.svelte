@@ -1,6 +1,20 @@
 <script>
     import { createEventDispatcher, onMount } from "svelte";
     import BetaAlert from "../BetaAlert.svelte";
+    import SearchSelect from "../form/SearchSelect.svelte";
+    import timezones from "timezones-list";
+
+    const timezoneList = [
+        {
+            label: "UTC",
+            tzCode: "UTC",
+            name: "UTC",
+            utc: "+00:00",
+        },
+        ...timezones,
+    ];
+
+    console.log(timezoneList);
 
     export let data = [];
 
@@ -15,6 +29,8 @@
         "Saturday",
     ];
 
+    let timezone = "Europe/London";
+    let currentTimeDisplay = "";
     let hours = daysOfWeek.map((_, index) => ({
         day_of_week: index,
         enabled: false,
@@ -22,18 +38,74 @@
         end_time: "17:00",
     }));
 
-    onMount(() => {
-        if (data && data.length > 0) {
-            data.forEach((item) => {
-                if (item.day_of_week >= 0 && item.day_of_week < 7) {
-                    hours[item.day_of_week] = {
-                        day_of_week: item.day_of_week,
-                        enabled: item.enabled,
-                        start_time: formatTime(item.start_time),
-                        end_time: formatTime(item.end_time),
-                    };
-                }
+    // Update current time display whenever timezone changes
+    $: {
+        updateCurrentTimeDisplay(timezone);
+    }
+
+    function updateCurrentTimeDisplay(tz) {
+        const now = new Date();
+        const tzData = timezoneList.find((t) => t.tzCode === tz);
+
+        if (!tzData) {
+            currentTimeDisplay = "Invalid timezone";
+            return;
+        }
+
+        try {
+            // Create formatter for the timezone
+            const formatter = new Intl.DateTimeFormat("en-US", {
+                timeZone: tz,
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+                weekday: "long",
             });
+
+            const parts = formatter.formatToParts(now);
+            const timeStr = formatter.format(now);
+
+            // Extract time components
+            const weekday =
+                parts.find((p) => p.type === "weekday")?.value || "";
+            const hour = parts.find((p) => p.type === "hour")?.value || "00";
+            const minute =
+                parts.find((p) => p.type === "minute")?.value || "00";
+
+            // Format: "It is currently HH:MM on Monday in America/New_York (UTC-05:00)"
+            const offset = tzData.utc;
+            currentTimeDisplay = `It is currently ${hour}:${minute} on ${weekday} in ${tz} (${offset})`;
+        } catch (e) {
+            currentTimeDisplay = `Timezone: ${tz}`;
+        }
+    }
+
+    onMount(() => {
+        // Handle new response format with timezone and hours
+        if (data && typeof data === "object") {
+            // New format: { timezone, hours: [...] }
+            if (data.timezone) {
+                timezone = data.timezone;
+            }
+
+            const hoursArray = data.hours || data;
+            if (
+                hoursArray &&
+                Array.isArray(hoursArray) &&
+                hoursArray.length > 0
+            ) {
+                hoursArray.forEach((item) => {
+                    if (item.day_of_week >= 0 && item.day_of_week < 7) {
+                        hours[item.day_of_week] = {
+                            day_of_week: item.day_of_week,
+                            enabled: item.enabled,
+                            start_time: formatTime(item.start_time),
+                            end_time: formatTime(item.end_time),
+                        };
+                    }
+                });
+            }
         }
     });
 
@@ -128,12 +200,15 @@
                 end_time: `${h.end_time}:00`,
                 enabled: true,
             }));
-        dispatch("change", enabledHours);
+        dispatch("change", {
+            timezone,
+            hours: enabledHours,
+        });
     }
 
     // Export function to get current data
     export function getData() {
-        return hours
+        const enabledHours = hours
             .filter((h) => h.enabled)
             .map((h) => ({
                 day_of_week: h.day_of_week,
@@ -141,15 +216,29 @@
                 end_time: `${h.end_time}:00`,
                 enabled: true,
             }));
+        return {
+            timezone,
+            hours: enabledHours,
+        };
     }
 </script>
 
 <div class="support-hours-container">
     <div class="form-group">
+        <SearchSelect
+            bind:value={timezone}
+            options={timezoneList.map((tz) => ({
+                label: tz.label,
+                value: tz.tzCode,
+            }))}
+            label="Timezone"
+            placeholder="Search timezones..."
+            on:change={emitChange}
+        />
         <div class="info-section">
-            <div class="utc-notice">
-                <i class="fas fa-clock"></i>
-                <span>All times are in UTC</span>
+            <div class="current-time-notice">
+                <i class="fas fa-globe"></i>
+                <span>{currentTimeDisplay}</span>
             </div>
             {#if !hours.some((h) => h.enabled)}
                 <div class="default-notice">
@@ -262,6 +351,7 @@
     }
 
     .utc-notice,
+    .current-time-notice,
     .default-notice,
     .restriction-notice {
         display: flex;
@@ -276,6 +366,10 @@
 
     .utc-notice i {
         color: #4fc3f7;
+    }
+
+    .current-time-notice i {
+        color: #995df3;
     }
 
     .default-notice i {

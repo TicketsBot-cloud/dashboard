@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/TicketsBot-cloud/common/collections"
 	"github.com/TicketsBot-cloud/common/permission"
@@ -14,6 +15,7 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/guild"
 	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/jackc/pgtype"
 	errgroup "golang.org/x/sync/errgroup"
 )
@@ -32,6 +34,7 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 		Limit: 200,
 	}
 
+	request.Client.Timeout = 10 * time.Second
 	guilds, err := rest.GetCurrentUserGuilds(ctx, authHeader, nil, data)
 	if err != nil {
 		return nil, err

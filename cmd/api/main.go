@@ -90,8 +90,6 @@ func main() {
 	utils.ArchiverClient = archiverclient.NewArchiverClient(archiverclient.NewProxyRetriever(config.Conf.Bot.ObjectStore), []byte(config.Conf.Bot.AesKey))
 	utils.SecureProxyClient = secureproxy.NewSecureProxy(config.Conf.SecureProxyUrl)
 
-	utils.LoadEmoji()
-
 	i18n.Init()
 
 	if config.Conf.Bot.ProxyUrl != "" {

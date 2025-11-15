@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/validation"
@@ -151,16 +152,15 @@ func validateEmoji(c PanelValidationContext) validation.ValidationFunc {
 				return validation.NewInvalidInputError("Emoji name mismatch")
 			}
 		} else {
-			// Convert from :emoji: to unicode if we need to
+			// Validate Unicode emoji
 			name := strings.TrimSpace(emoji.Name)
-			name = strings.Replace(name, ":", "", -1)
 
-			unicode, ok := utils.GetEmoji(name)
-			if !ok {
+			// Must be valid UTF-8
+			if !utf8.ValidString(name) {
 				return validation.NewInvalidInputError("Invalid emoji")
 			}
 
-			emoji.Name = unicode
+			emoji.Name = name
 		}
 
 		return nil

@@ -155,6 +155,7 @@ func UpdatePanel(c *gin.Context) {
 	if shouldUpdateMessage {
 		// TODO: Use proper context
 		if existing.ChannelId != nil && existing.MessageId != nil {
+			// delete old message, ignoring error
 			_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, *existing.ChannelId, *existing.MessageId)
 		}
 

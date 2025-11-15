@@ -179,11 +179,11 @@
                         <tbody>
                             {#each panels as panel}
                                 <tr>
-                                    <td
-                                        >#{channels.find(
-                                            (c) => c.id === panel.channel_id,
-                                        )?.name ?? "Unknown Channel"}</td
-                                    >
+                                  {#if panel.channel_id == null || panel.channel_id == "null"}
+                                    <td>None</td>
+                                  {:else}
+                                    <td>#{channels.find((c) => c.id === panel.channel_id)?.name ?? "Unknown Channel"}</td>
+                                  {/if}
                                     <td>{panel.title}</td>
                                     <td>
                                         {#if panel.has_support_hours}
@@ -206,7 +206,7 @@
                                     <td class="actions-cell">
                                         <ActionDropdown bind:this={panel.dropdownRef}>
                                             <button
-                                                disabled={panel.force_disabled}
+                                                disabled={panel.force_disabled || panel.channel_id == null || panel.channel_id == "null"}
                                                 on:click={() => {
                                                     resendPanel(panel.panel_id);
                                                     panel.dropdownRef?.close();

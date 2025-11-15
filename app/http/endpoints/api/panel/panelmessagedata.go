@@ -27,7 +27,11 @@ type panelMessageData struct {
 	IsPremium                bool
 }
 
-func panelIntoMessageData(panel database.Panel, isPremium bool) panelMessageData {
+func panelIntoMessageData(panel database.Panel, isPremium bool) *panelMessageData {
+	if panel.ChannelId == nil {
+		return nil
+	}
+
 	var emote *emoji.Emoji
 	if panel.EmojiName != nil { // No emoji = nil
 		if panel.EmojiId == nil { // Unicode emoji
@@ -42,8 +46,8 @@ func panelIntoMessageData(panel database.Panel, isPremium bool) panelMessageData
 		}
 	}
 
-	return panelMessageData{
-		ChannelId:      panel.ChannelId,
+	return &panelMessageData{
+		ChannelId:      *panel.ChannelId,
 		Title:          panel.Title,
 		Content:        panel.Content,
 		CustomId:       panel.CustomId,

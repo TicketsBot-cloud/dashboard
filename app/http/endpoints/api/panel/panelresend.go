@@ -54,6 +54,11 @@ func ResendPanel(ctx *gin.Context) {
 		return
 	}
 
+	if panel.ChannelId == nil {
+		ctx.JSON(400, utils.ErrorStr("This panel has no selected channel."))
+		return
+	}
+
 	// delete old message
 	// TODO: Use proper context
 	if panel.MessageId != nil {

@@ -409,6 +409,8 @@
                     label="Panel Channel"
                     allowAnnouncementChannel
                     col4
+                    withNull
+                    nullLabel={"None"}
                     {channels}
                     bind:value={data.channel_id}
                 />

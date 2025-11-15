@@ -99,8 +99,11 @@ func validateContent(ctx PanelValidationContext) validation.ValidationFunc {
 
 func validateChannelId(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
+		if ctx.Data.ChannelId == nil {
+			return nil
+		}
 		for _, ch := range ctx.Channels {
-			if ch.Id == ctx.Data.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews) {
+			if ch.Id == *ctx.Data.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews) {
 				return nil
 			}
 		}

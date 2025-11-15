@@ -1,8 +1,8 @@
 package api
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -70,11 +70,13 @@ func DeletePanel(c *gin.Context) {
 	}
 
 	// TODO: Set timeout on context
-	if err := rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, panel.ChannelId, panel.MessageId); err != nil {
-		var unwrapped request.RestError
-		if !errors.As(err, &unwrapped) || unwrapped.StatusCode != 404 {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
-			return
+	if panel.ChannelId != nil && panel.MessageId != nil {
+		if err := rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, *panel.ChannelId, *panel.MessageId); err != nil {
+			var unwrapped request.RestError
+			if !errors.As(err, &unwrapped) || unwrapped.StatusCode != 404 {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
+				return
+			}
 		}
 	}
 

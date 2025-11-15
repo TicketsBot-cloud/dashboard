@@ -173,7 +173,7 @@ func CreatePanel(c *gin.Context) {
 
 	messageData := data.IntoPanelMessageData(customId, premiumTier > premium.None)
 	var newMsgId *uint64
-	if data.MessageId != nil {
+	if messageData != nil {
 		msgId, err := messageData.send(botContext)
 		if err != nil {
 			var unwrapped request.RestError

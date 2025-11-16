@@ -161,26 +161,28 @@ func UpdatePanel(c *gin.Context) {
 
 		if data.ChannelId == nil {
 			messageData := data.IntoPanelMessageData(existing.CustomId, premiumTier > premium.None)
-			messageId, err := messageData.send(botContext)
-			if err != nil {
-				var unwrapped request.RestError
-				if errors.As(err, &unwrapped) {
-					if unwrapped.StatusCode == 403 {
-						c.JSON(403, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
-						return
-					} else if unwrapped.StatusCode == 404 {
-						// Swallow error
-						dbclient.Client.Panel.UpdateChannelId(c, existing.PanelId, nil)
+			if messageData != nil {
+				messageId, err := messageData.send(botContext)
+				if err != nil {
+					var unwrapped request.RestError
+					if errors.As(err, &unwrapped) {
+						if unwrapped.StatusCode == 403 {
+							c.JSON(403, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+							return
+						} else if unwrapped.StatusCode == 404 {
+							// Swallow error
+							dbclient.Client.Panel.UpdateChannelId(c, existing.PanelId, nil)
+						} else {
+							_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+							return
+						}
 					} else {
 						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 						return
 					}
-				} else {
-					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-					return
 				}
+				newMessageId = &messageId
 			}
-			newMessageId = &messageId
 		}
 	}
 

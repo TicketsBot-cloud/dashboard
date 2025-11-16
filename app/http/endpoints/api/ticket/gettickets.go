@@ -5,8 +5,9 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
-	"github.com/TicketsBot-cloud/dashboard/database"
+	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
+	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/gin-gonic/gin"
 )
@@ -34,13 +35,33 @@ func GetTickets(c *gin.Context) {
 	userId := c.Keys["userid"].(uint64)
 	guildId := c.Keys["guildid"].(uint64)
 
-	tickets, err := database.Client.Tickets.GetGuildOpenTicketsWithMetadata(c, guildId)
+	if c.Request.Method == "POST" {
+		var queryOptions wrappedQueryOptions
+		if bindErr := c.ShouldBindJSON(&queryOptions); bindErr == nil {
+			opts, optsErr := queryOptions.toQueryOptions(guildId)
+			if optsErr != nil {
+				_ = c.AbortWithError(http.StatusBadRequest, app.NewError(optsErr, "Invalid filter parameters"))
+				return
+			}
+
+			plainTickets, err := dbclient.Client.Tickets.GetByOptions(c, opts)
+			if err != nil {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch filtered tickets from database"))
+				return
+			}
+
+			buildResponseFromPlainTickets(c, plainTickets, guildId, userId)
+			return
+		}
+	}
+
+	tickets, err := dbclient.Client.Tickets.GetGuildOpenTicketsWithMetadata(c, guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch open tickets for guild from database"))
 		return
 	}
 
-	panels, err := database.Client.Panel.GetByGuild(c, guildId)
+	panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panels for guild from database"))
 		return
@@ -67,6 +88,87 @@ func GetTickets(c *gin.Context) {
 		return
 	}
 
+	data := make([]ticketData, len(tickets))
+	for i, ticket := range tickets {
+		data[i] = ticketData{
+			TicketId:            ticket.Id,
+			PanelId:             ticket.PanelId,
+			UserId:              ticket.Ticket.UserId,
+			ClaimedBy:           ticket.ClaimedBy,
+			OpenedAt:            ticket.OpenTime,
+			LastResponseTime:    ticket.LastMessageTime,
+			LastResponseIsStaff: ticket.UserIsStaff,
+		}
+	}
+
+	c.JSON(200, listTicketsResponse{
+		Tickets:       data,
+		PanelTitles:   panelTitles,
+		ResolvedUsers: users,
+		SelfId:        userId,
+	})
+}
+
+func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticket, guildId, userId uint64) {
+	if len(plainTickets) == 0 {
+		c.JSON(200, listTicketsResponse{
+			Tickets:       []ticketData{},
+			PanelTitles:   make(map[int]string),
+			ResolvedUsers: make(map[uint64]user.User),
+			SelfId:        userId,
+		})
+		return
+	}
+
+	// Convert plain tickets to tickets with metadata by fetching metadata separately
+	tickets := make([]database.TicketWithMetadata, len(plainTickets))
+	for i, plainTicket := range plainTickets {
+		// Start with the plain ticket
+		tickets[i] = database.TicketWithMetadata{
+			Ticket: plainTicket,
+		}
+
+		// Fetch claim information
+		claimedByUserId, err := dbclient.Client.TicketClaims.Get(c, guildId, plainTicket.Id)
+		if err == nil && claimedByUserId != 0 {
+			tickets[i].ClaimedBy = &claimedByUserId
+		}
+
+		// Fetch last message information
+		lastMsg, err := dbclient.Client.TicketLastMessage.Get(c, guildId, plainTicket.Id)
+		if err == nil {
+			tickets[i].TicketLastMessage = lastMsg
+		}
+	}
+
+	panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panels for guild from database"))
+		return
+	}
+
+	panelTitles := make(map[int]string)
+	for _, panel := range panels {
+		panelTitles[panel.PanelId] = panel.Title
+	}
+
+	// Get user objects
+	userIds := make([]uint64, 0, int(float32(len(tickets))*1.5))
+	for _, ticket := range tickets {
+		userIds = append(userIds, ticket.Ticket.UserId)
+
+		if ticket.ClaimedBy != nil {
+			userIds = append(userIds, *ticket.ClaimedBy)
+		}
+	}
+
+	users, err := cache.Instance.GetUsers(c, userIds)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch user information from cache"))
+		return
+	}
+
+	// Build ticketData from tickets with metadata
 	data := make([]ticketData, len(tickets))
 	for i, ticket := range tickets {
 		data[i] = ticketData{

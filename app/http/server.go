@@ -171,6 +171,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 		guildApiNoAuth.GET("/transcripts/:ticketId/render", rl(middleware.RateLimitTypeGuild, 10, 10*time.Second), api_transcripts.GetTranscriptRenderHandler)
 
 		guildAuthApiSupport.GET("/tickets", api_ticket.GetTickets)
+		guildAuthApiSupport.POST("/tickets", api_ticket.GetTickets)
 		guildAuthApiSupport.GET("/tickets/:ticketId", api_ticket.GetTicket)
 		guildAuthApiSupport.POST("/tickets/:ticketId", rl(middleware.RateLimitTypeGuild, 5, time.Second*5), api_ticket.SendMessage)
 		guildAuthApiSupport.POST("/tickets/:ticketId/tag", rl(middleware.RateLimitTypeGuild, 5, time.Second*5), api_ticket.SendTag)

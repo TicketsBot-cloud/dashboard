@@ -13,6 +13,8 @@
     import ColumnSelector from "../components/ColumnSelector.svelte";
     import Dropdown from "../components/form/Dropdown.svelte";
     import Checkbox from "../components/form/Checkbox.svelte";
+    import Input from "../components/form/Input.svelte";
+    import PanelDropdown from "../components/PanelDropdown.svelte";
 
     export let currentRoute;
     let guildId = currentRoute.namedParams.id;
@@ -28,6 +30,10 @@
     let sortMethod = "unclaimed";
     let onlyShowMyTickets = false;
 
+    let filterSettings = {};
+    let panels = [];
+    let selectedPanel;
+
     let data = {
         tickets: [],
         panel_titles: {},
@@ -35,6 +41,39 @@
     };
 
     let filtered = [];
+
+    let handleInputTicketId = () => {
+        filterSettings.username = undefined;
+        filterSettings.userId = undefined;
+
+        if (filterSettings.ticketId === "") {
+            filterSettings.ticketId = undefined;
+        }
+    };
+
+    let handleInputUsername = () => {
+        filterSettings.ticketId = undefined;
+        filterSettings.userId = undefined;
+
+        if (filterSettings.username === "") {
+            filterSettings.username = undefined;
+        }
+    };
+
+    let handleInputUserId = () => {
+        filterSettings.ticketId = undefined;
+        filterSettings.username = undefined;
+
+        if (filterSettings.userId === "") {
+            filterSettings.userId = undefined;
+        }
+    };
+
+    let handleInputClaimedById = () => {
+        if (filterSettings.claimedById == "") {
+            filterSettings.claimedById = undefined;
+        }
+    };
 
     function filterTickets() {
         filtered = data.tickets.filter((ticket) => {
@@ -98,8 +137,33 @@
         }
     }
 
+    async function applyFilters() {
+        await loadTickets();
+    }
+
+    async function loadPanels() {
+        const res = await axios.get(`${API_URL}/api/${guildId}/panels`);
+        if (res.status !== 200) {
+            notifyError(res.data);
+            return;
+        }
+
+        panels = res.data;
+    }
+
     async function loadTickets() {
-        const res = await axios.get(`${API_URL}/api/${guildId}/tickets`);
+        const filterParams = {
+            id: filterSettings.ticketId,
+            username: filterSettings.username,
+            user_id: filterSettings.userId,
+            claimed_by_id: filterSettings.claimedById,
+            panel_id: selectedPanel,
+        };
+
+        const res = await axios.post(
+            `${API_URL}/api/${guildId}/tickets`,
+            filterParams
+        );
         if (res.status !== 200) {
             notifyError(res.data);
             return;
@@ -165,33 +229,93 @@
         loadFilterSettings();
 
         setDefaultHeaders();
-        await loadTickets();
+        await Promise.all([loadPanels(), loadTickets()]);
     });
 </script>
 
 <main>
-    <Card footer={false}>
+    <Card footer footerRight ref="filter-card">
         <span slot="title">
             <i class="fas fa-filter"></i>
             Filters
         </span>
-        <div slot="body" class="filter-wrapper">
-            <Dropdown col2 label="Sort Tickets By..." bind:value={sortMethod}>
-                <option value="id_asc"
-                    >Ticket ID (Ascending) / Oldest First</option
-                >
-                <option value="id_desc"
-                    >Ticket ID (Descending) / Newest First</option
-                >
-                <option value="unclaimed"
-                    >Unclaimed & Awaiting Response First</option
-                >
-            </Dropdown>
 
-            <Checkbox
-                label="Only Show Unclaimed Tickets & Tickets Claimed By Me"
-                bind:value={onlyShowMyTickets}
-            />
+        <div slot="body" class="body-wrapper-filter">
+            <div class="form-wrapper">
+                <div class="row">
+                    <Dropdown
+                        col2="true"
+                        label="Sort Tickets By..."
+                        bind:value={sortMethod}
+                    >
+                        <option value="id_asc"
+                            >Ticket ID (Ascending) / Oldest First</option
+                        >
+                        <option value="id_desc"
+                            >Ticket ID (Descending) / Newest First</option
+                        >
+                        <option value="unclaimed"
+                            >Unclaimed & Awaiting Response First</option
+                        >
+                    </Dropdown>
+
+                    <div class="col-2 checkbox-container">
+                        <Checkbox
+                            label="Only Show Unclaimed Tickets & Tickets Claimed By Me"
+                            bind:value={onlyShowMyTickets}
+                        />
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="row">
+                    <Input
+                        col4="true"
+                        label="Ticket ID"
+                        placeholder="Ticket ID"
+                        on:input={handleInputTicketId}
+                        bind:value={filterSettings.ticketId}
+                    />
+
+                    <Input
+                        col4="true"
+                        label="Username"
+                        placeholder="Username"
+                        on:input={handleInputUsername}
+                        bind:value={filterSettings.username}
+                    />
+
+                    <Input
+                        col4="true"
+                        label="User ID"
+                        placeholder="User ID"
+                        on:input={handleInputUserId}
+                        bind:value={filterSettings.userId}
+                    />
+
+                    <Input
+                        col4="true"
+                        label="Claimed By Id"
+                        placeholder="Claimed By"
+                        on:input={handleInputClaimedById}
+                        bind:value={filterSettings.claimedById}
+                    />
+                </div>
+                <div class="row">
+                    <div class="col-4">
+                        <PanelDropdown
+                            label="Panel"
+                            isMulti={false}
+                            bind:panels
+                            bind:selected={selectedPanel}
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div slot="footer">
+            <Button icon="fas fa-search" on:click={applyFilters}>Filter</Button>
         </div>
     </Card>
 
@@ -359,10 +483,25 @@
         height: 100%;
     }
 
-    .filter-wrapper {
+    .body-wrapper-filter {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+    }
+
+    .form-wrapper {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+    }
+
+    .row {
         display: flex;
         flex-direction: row;
-        gap: 1rem;
+        justify-content: flex-start;
+        gap: 2%;
         width: 100%;
         height: 100%;
     }
@@ -388,10 +527,37 @@
         width: 100%;
     }
 
-    @media only screen and (max-width: 1400px) {
-        .filter-wrapper {
+    .checkbox-container {
+        display: flex;
+        align-self: flex-end;
+        padding-bottom: 8px;
+    }
+
+    .divider {
+        width: calc(100% + 48px);
+        margin-left: -24px;
+        margin-right: -24px;
+        border-top: 1px solid var(--border-color);
+        margin-top: 16px;
+        margin-bottom: 16px;
+    }
+
+    :global([ref="filter-card"]) {
+        min-height: 180px !important;
+    }
+
+    @media only screen and (max-width: 950px) {
+        .row {
             flex-direction: column;
-            gap: 8px;
+        }
+
+        .checkbox-container {
+            padding-bottom: 0;
+            align-self: flex-start;
+        }
+
+        :global([ref="filter-card"]) {
+            min-height: 380px !important;
         }
     }
 </style>

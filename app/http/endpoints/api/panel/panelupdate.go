@@ -146,31 +146,42 @@ func UpdatePanel(c *gin.Context) {
 		existing.ButtonLabel != data.ButtonLabel ||
 		existing.Disabled != data.Disabled
 
-	newMessageId := existing.MessageId
+	var newMessageId *uint64
+	if existing.ChannelId != nil && data.ChannelId != nil {
+		// old message exists and provided channel exists
+		newMessageId = existing.MessageId
+	}
 
 	if shouldUpdateMessage {
-		// delete old message, ignoring error
 		// TODO: Use proper context
-		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
+		if existing.ChannelId != nil && existing.MessageId != nil {
+			// delete old message, ignoring error
+			_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, *existing.ChannelId, *existing.MessageId)
+		}
 
-		messageData := data.IntoPanelMessageData(existing.CustomId, premiumTier > premium.None)
-		newMessageId, err = messageData.send(botContext)
-		if err != nil {
-			var unwrapped request.RestError
-			if errors.As(err, &unwrapped) {
-				if unwrapped.StatusCode == 403 {
-					c.JSON(403, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
-					return
-				} else if unwrapped.StatusCode == 404 {
-					// Swallow error
-					// TODO: Make channel_id column nullable, and set to null
-				} else {
-					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-					return
+		if data.ChannelId == nil {
+			messageData := data.IntoPanelMessageData(existing.CustomId, premiumTier > premium.None)
+			if messageData != nil {
+				messageId, err := messageData.send(botContext)
+				if err != nil {
+					var unwrapped request.RestError
+					if errors.As(err, &unwrapped) {
+						if unwrapped.StatusCode == 403 {
+							c.JSON(403, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+							return
+						} else if unwrapped.StatusCode == 404 {
+							// Swallow error
+							dbclient.Client.Panel.UpdateChannelId(c, existing.PanelId, nil)
+						} else {
+							_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+							return
+						}
+					} else {
+						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+						return
+					}
 				}
-			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-				return
+				newMessageId = &messageId
 			}
 		}
 	}

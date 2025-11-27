@@ -113,7 +113,7 @@
             {#if isPremium}
                 <i class="fas fa-paper-plane send-button" on:click={sendMessage}/>
                 <div class="tag-selector">
-                    <Button type="button" noShadow on:click={openTagSelector}>Select Tag</Button>
+                    <Button type="button" noShadow on:click={openTagSelector} disabled={Object.keys(tags).length === 0} >Select Tag</Button>
                 </div>
             {/if}
         </form>

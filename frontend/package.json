@@ -30,6 +30,7 @@
     "svelte-emoji-selector": "^1.0.1",
     "svelte-router-spa": "^6.0.3",
     "svelte-select": "^5.6.1",
-    "svelte-tooltip": "^1.2.0"
+    "svelte-tooltip": "^1.2.0",
+    "timezones-list": "^3.1.0"
   }
 }

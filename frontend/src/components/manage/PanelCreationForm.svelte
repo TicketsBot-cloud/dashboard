@@ -38,6 +38,20 @@
     let selectedTeams = seedDefault ? [{ id: "default", name: "Default" }] : [];
     let selectedMentions = [];
 
+    let lastCustomEmoji = undefined;
+    let lastUnicodeEmoji = "📩";
+    // Unicode emoji regex
+    const unicodeEmojiRegex = /^\p{Emoji}$/u;
+    function validateUnicodeEmoji(value) {
+        if (value === "") return true;
+        if (typeof value !== "string") return false;
+        if (/^<a?:\w+:\d+>$/.test(value)) return false;
+        // Disallow spaces
+        if (/\s/.test(value)) return false;
+        // Only allow if matches single unicode emoji
+        return unicodeEmojiRegex.test(value);
+    }
+
     // Replace spaces with dashes in naming scheme as the user types
     $: if (
         data.naming_scheme !== undefined &&
@@ -85,9 +99,20 @@
     function handleEmojiTypeChange(e) {
         let isCustomEmoji = e.detail;
         if (isCustomEmoji) {
-            data.emote = undefined;
+            // Restore last selected custom emoji if available, else first emoji
+            if (lastCustomEmoji) {
+                data.emote = lastCustomEmoji;
+            } else {
+                data.emote =
+                    emojis && emojis.length > 0 ? emojis[0] : undefined;
+            }
         } else {
-            data.emote = "📩";
+            // Save the current custom emoji before switching to unicode
+            if (data.emote && typeof data.emote === "object") {
+                lastCustomEmoji = data.emote;
+            }
+            // Restore last unicode emoji
+            data.emote = lastUnicodeEmoji;
         }
     }
 
@@ -97,6 +122,17 @@
             id: emoji.id,
             name: emoji.name,
         };
+        lastCustomEmoji = data.emote;
+    }
+
+    // Track changes to EmojiInput (unicode emoji)
+    $: if (!data.use_custom_emoji && typeof data.emote === "string") {
+        if (validateUnicodeEmoji(data.emote)) {
+            lastUnicodeEmoji = data.emote;
+        } else {
+            // Revert to last valid unicode emoji if invalid input is detected
+            data.emote = lastUnicodeEmoji;
+        }
     }
 
     function updateColour() {
@@ -104,6 +140,7 @@
     }
 
     function handleSupportHoursChange(e) {
+        console.log(e.detail);
         data.support_hours = e.detail;
     }
 
@@ -136,7 +173,7 @@
                 .filter((mention) => mention != null)
                 .forEach((mention) => selectedMentions.push(mention));
         }
-        
+
         if (!data.transcript_channel_id) {
             data.transcript_channel_id = "null";
         }
@@ -177,6 +214,7 @@
                 default_team: true,
                 teams: [],
                 button_style: "1",
+                button_label: "Open a ticket!",
                 form_id: "null",
                 delete_mentions: false,
                 disabled: false,
@@ -187,6 +225,7 @@
                 use_server_default_naming_scheme: true,
                 exit_survey_form_id: "null",
                 pending_category: "null",
+                use_threads: false,
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -260,6 +299,14 @@
                     col2
                     tool
                     bind:value={data.delete_mentions}
+                />
+            </div>
+            <div class="row">
+                <Checkbox
+                    label="Create Tickets as Threads"
+                    col2
+                    tool
+                    bind:value={data.use_threads}
                 />
             </div>
             <div class="incomplete-row">
@@ -406,9 +453,9 @@
                 />
 
                 <div class="col-2" style="z-index: 1">
-                    <label for="emoji-pick-wrapper" class="form-label"
-                        >Button Emoji</label
-                    >
+                    <label for="emoji-pick-wrapper" class="form-label">
+                        Button Emoji
+                    </label>
                     <div id="emoji-pick-wrapper" class="row" style="gap: 2%">
                         <div class="col">
                             <label
@@ -432,12 +479,17 @@
                                     selectedValue={data.emote}
                                     optionIdentifier="id"
                                     nameMapper={emojiNameMapper}
-                                    placeholderAlwaysShow={true}
+                                    isSearchable={false}
+                                    isClearable={false}
                                     on:input={handleCustomEmojiChange}
                                 />
                             </div>
                         {:else}
-                            <EmojiInput col1="true" bind:value={data.emote} />
+                            <EmojiInput
+                                col1="true"
+                                placeholder="Button Emoji"
+                                bind:value={data.emote}
+                            />
                         {/if}
                     </div>
                 </div>
@@ -498,7 +550,7 @@
                 >{/if}</span
         >
         <div slot="content" class="col-1" style="padding-top: 10px;">
-            {#if !false}
+            {#if !isPremium}
                 <div class="free-feature-notice">
                     <i class="fas fa-clock"></i>
                     <div class="feature-notice-text">

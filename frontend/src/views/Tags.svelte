@@ -101,7 +101,7 @@
 
         const res = await axios.put(`${API_URL}/api/${guildId}/tags`, data);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -117,7 +117,7 @@
             // Delete old tag
             const res = await axios.delete(`${API_URL}/api/${guildId}/tags`, {data: {tag_id: editId}});
             if (res.status !== 204) {
-                notifyError(res.data.error);
+                notifyError(res.data);
                 return;
             }
 
@@ -135,7 +135,7 @@
 
         const res = await axios.put(`${API_URL}/api/${guildId}/tags`, data);
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -155,7 +155,7 @@
 
         const res = await axios.delete(`${API_URL}/api/${guildId}/tags`, {data: data});
         if (res.status !== 204) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             tagToDelete = null;
             return;
         }
@@ -169,7 +169,7 @@
     async function loadTags() {
         const res = await axios.get(`${API_URL}/api/${guildId}/tags`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 
@@ -188,7 +188,7 @@
     async function loadPremium() {
         const res = await axios.get(`${API_URL}/api/${guildId}/premium`);
         if (res.status !== 200) {
-            notifyError(res.data.error);
+            notifyError(res.data);
             return;
         }
 

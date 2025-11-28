@@ -20,18 +20,14 @@
         ? JSON.parse(window.localStorage.getItem("guilds"))
         : [];
     if (guilds.length > 0) {
-        guilds = guilds.sort((a, b) => {
-            if (a.permission_level > 0 && b.permission_level <= 0) return -1;
-            if (a.permission_level <= 0 && b.permission_level > 0) return 1;
-            return a.name?.localeCompare(b.name);
-        });
+        guilds = sortGuilds(guilds);
     }
 
     async function refreshGuilds() {
         await withLoadingScreen(async () => {
             const res = await axios.post(`${API_URL}/user/guilds/reload`);
             if (res.status !== 200) {
-                notifyError(res.data.error);
+                notifyError(res.data);
                 return;
             }
 
@@ -43,8 +39,16 @@
                 return;
             }
 
-            guilds = res.data.guilds;
+            guilds = sortGuilds(res.data.guilds);
             window.localStorage.setItem("guilds", JSON.stringify(guilds));
+        });
+    }
+
+    function sortGuilds(guilds) {
+        return guilds.sort((a, b) => {
+            if (a.permission_level > 0 && b.permission_level <= 0) return -1;
+            if (a.permission_level <= 0 && b.permission_level > 0) return 1;
+            return a.name?.localeCompare(b.name);
         });
     }
 

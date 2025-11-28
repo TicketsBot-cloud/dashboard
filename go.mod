@@ -19,9 +19,9 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250807224931-e188ad18a850
-	github.com/TicketsBot-cloud/common v0.0.0-20250509064208-a2d357175463
-	github.com/TicketsBot-cloud/database v0.0.0-20251005195038-fd63a423fcb7
-	github.com/TicketsBot-cloud/gdl v0.0.0-20251007163257-7e59b92d02dd
+	github.com/TicketsBot-cloud/common v0.0.0-20251026182733-99fa0dc31d90
+	github.com/TicketsBot-cloud/database v0.0.0-20251113112806-d6f43633dd81
+	github.com/TicketsBot-cloud/gdl v0.0.0-20251114175831-d4fde7035386
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
 	github.com/TicketsBot-cloud/worker v0.0.0-20251007163454-37483445234a
 	github.com/apex/log v1.1.2
@@ -49,7 +49,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/sync v0.18.0
 )
 
 require (
@@ -135,12 +135,12 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
+	golang.org/x/crypto v0.44.0 // indirect
 	golang.org/x/exp v0.0.0-20251009144603-d2f985daa21b // indirect
-	golang.org/x/net v0.45.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/term v0.36.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

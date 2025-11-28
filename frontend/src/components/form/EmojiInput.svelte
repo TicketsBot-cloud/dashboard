@@ -48,14 +48,40 @@
 <style>
     input {
         width: 100%;
+        height: 48px;
+        margin: 0;
         border-top-right-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
+    }
+
+    input:focus {
+        box-shadow: none !important;
+    }
+
+    input:focus-visible {
+        height: 48px;
+        margin: 0;
     }
 
     .wrapper {
         display: flex;
         flex-direction: row;
         width: 100%;
+    }
+
+    .wrapper:focus-within input {
+        border-color: #262b3d;
+        background-color: #262b3d;
+    }
+
+    .wrapper:focus-within :global(.svelte-emoji-picker__trigger) {
+        border-color: #262b3d !important;
+        background-color: #262b3d !important;
+    }
+
+    .wrapper:focus-within {
+        box-shadow: 0 0 0 3px rgba(153, 93, 243, 0.1);
+        border-radius: var(--border-radius-sm);
     }
 
     :global(.svelte-emoji-picker__trigger) {

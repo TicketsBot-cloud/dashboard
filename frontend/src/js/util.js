@@ -11,14 +11,21 @@ export function errorPage(message) {
     navigateTo(`/error?message=${encodeURIComponent(message)}`)
 }
 
-export function notify(title, message) {
+export function notify(title, message, internalError = null) {
     Stores.notifyTitle.set(title);
     Stores.notifyMessage.set(message);
+    Stores.notifyInternalError.set(internalError);
     Stores.notifyModal.set(true);
 }
 
-export function notifyError(message) {
-    notify('Error', message);
+export function notifyError(messageOrData, internalError = null) {
+    if (typeof messageOrData === 'object') {
+        const message = messageOrData.error || 'An error occurred';
+        const internal = messageOrData.internal_error || null;
+        notify('Error', message, internal);
+    } else {
+        notify('Error', messageOrData, internalError);
+    }
 }
 
 export function notifySuccess(message) {
@@ -31,6 +38,7 @@ export function notifyRatelimit() {
 
 export function closeNotificationModal() {
     Stores.notifyModal.set(false);
+    Stores.notifyInternalError.set(null);
 }
 
 export function colourToInt(colour) {

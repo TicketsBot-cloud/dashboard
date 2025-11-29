@@ -11,6 +11,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	messagetypes "github.com/TicketsBot-cloud/gdl/objects/channel/message"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
@@ -82,6 +83,9 @@ func SendMessage(ctx *gin.Context) {
 		body.Message.Content = body.Message.Content[0:1999]
 	}
 
+	// Process placeholders in message content
+	processedContent := replacePlaceholders(ctx, body.Message.Content, &ticket, botContext)
+
 	// Preferably send via a webhook
 	webhook, err := database.Client.Webhooks.Get(ctx, guildId, ticketId)
 	if err != nil {
@@ -105,9 +109,12 @@ func SendMessage(ctx *gin.Context) {
 			}
 
 			webhookData = rest.WebhookBody{
-				Content:   body.Message.Content,
+				Content:   processedContent,
 				Username:  guild.Name,
 				AvatarUrl: guild.IconUrl(),
+				AllowedMentions: messagetypes.AllowedMention{
+					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+				},
 			}
 		} else {
 			user, err := botContext.GetUser(context.Background(), userId)
@@ -117,9 +124,12 @@ func SendMessage(ctx *gin.Context) {
 			}
 
 			webhookData = rest.WebhookBody{
-				Content:   body.Message.Content,
+				Content:   processedContent,
 				Username:  user.EffectiveName(),
 				AvatarUrl: user.AvatarUrl(256),
+				AllowedMentions: messagetypes.AllowedMention{
+					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+				},
 			}
 		}
 
@@ -140,7 +150,7 @@ func SendMessage(ctx *gin.Context) {
 		}
 	}
 
-	message := body.Message.Content
+	message := processedContent
 	if !settings.AnonymiseDashboardResponses {
 		user, err := botContext.GetUser(context.Background(), userId)
 		if err != nil {
@@ -160,7 +170,12 @@ func SendMessage(ctx *gin.Context) {
 		return
 	}
 
-	if _, err = rest.CreateMessage(ctx, botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{Content: message}); err != nil {
+	if _, err = rest.CreateMessage(ctx, botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{
+		Content: message,
+		AllowedMentions: messagetypes.AllowedMention{
+			Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+		},
+	}); err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to send message to ticket #%d in channel %d", ticketId, *ticket.ChannelId))
 		return
 	}

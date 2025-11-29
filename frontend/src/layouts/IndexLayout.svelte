@@ -34,7 +34,8 @@
         id: 0,
         username: 'Unknown',
         avatar: '',
-        admin: false
+        admin: false,
+        tier: -1
     };
 
     onMount(() => {

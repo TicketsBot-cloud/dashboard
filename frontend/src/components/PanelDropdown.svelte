@@ -13,7 +13,7 @@
     export let isMulti = true;
     export let isSearchable = false;
 
-    let selectedRaw = isMulti ? panels.filter((p) => selected.includes(p.panel_id)) : selected;
+    let selectedRaw = isMulti ? selected.map(panelId => panels.find(p => p.panel_id === panelId)).filter(p => p !== undefined) : selected;
 
     function labelMapper(panel) {
         return panel.title || "";
@@ -46,7 +46,7 @@
     function applyOverrides() {
         if (isMulti) {
             //selected = [];
-            selectedRaw = panels.filter((p) => selected.includes(p.panel_id));
+            selectedRaw = selected.map(panelId => panels.find(p => p.panel_id === panelId)).filter(p => p !== undefined);
         } else {
             if (selectedRaw) {
                 selectedRaw = selectedRaw.panel_id;

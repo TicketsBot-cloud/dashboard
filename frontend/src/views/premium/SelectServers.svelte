@@ -11,7 +11,7 @@
                 </span>
             </div>
             <div class="servers">
-                {#each getAdminGuilds(guilds) as guild}
+                {#each getSelectableGuilds(guilds) as guild}
                     <div class="server" class:active={selected.includes(guild.id)} class:pointer={selected.length < limit || selected.includes(guild.id)}
                          on:click={() => toggleSelected(guild.id)}>
                         <img src="{getIconUrl(guild.id, guild.icon)}" alt="Guild Icon" on:error={(e) => handleImgLoadError(e, guild.id)} />
@@ -102,6 +102,11 @@
 
     function getAdminGuilds(guilds) {
         return guilds.filter(g => g.permission_level === 2);
+    }
+
+    function getSelectableGuilds(guilds) {
+        // Include both admin guilds AND guilds with active subscriptions
+        return guilds.filter(g => g.permission_level === 2 || selected.includes(g.id));
     }
 
     let failed = [];

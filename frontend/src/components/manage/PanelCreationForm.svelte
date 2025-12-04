@@ -136,7 +136,6 @@
     }
 
     function handleSupportHoursChange(e) {
-        console.log(e.detail);
         data.support_hours = e.detail;
     }
 

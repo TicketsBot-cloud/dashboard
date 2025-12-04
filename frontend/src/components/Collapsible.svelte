@@ -31,16 +31,20 @@
         if (expanded) {
             updateSize();
         } else {
-            content.style.maxHeight = "0";
+            if (content) {
+                content.style.maxHeight = "0";
+            }
         }
     }
 
     function updateSize() {
-        content.style.maxHeight = `100%`;
+        if (content) {
+            content.style.maxHeight = `100%`;
+        }
     }
 
     function updateIfExpanded() {
-        if (expanded) {
+        if (expanded && content) {
             updateSize();
         }
     }

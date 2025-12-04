@@ -160,11 +160,12 @@ func MultiPanelUpdate(c *gin.Context) {
 
 	// insert new targets
 	group, _ := errgroup.WithContext(context.Background())
-	for _, panel := range panels {
+	for i, panel := range panels {
+		i := i
 		panel := panel
 
 		group.Go(func() error {
-			return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId)
+			return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId, i)
 		})
 	}
 

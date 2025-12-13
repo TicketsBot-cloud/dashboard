@@ -61,8 +61,26 @@ func SetActiveGuilds(ctx *gin.Context) {
 		return
 	}
 
-	// Validate has admin in each server
+	existingGuildEntitlements, err := dbclient.Client.LegacyPremiumEntitlementGuilds.ListForUser(ctx, tx, userId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
+		return
+	}
+
+	// Build list of existing guild IDs for quick lookup
+	existingGuildIds := make([]uint64, len(existingGuildEntitlements))
+	for i, existingEntitlement := range existingGuildEntitlements {
+		existingGuildIds[i] = existingEntitlement.GuildId
+	}
+
+	// Users can remove subscriptions from servers they no longer have admin in
 	for _, guildId := range body.SelectedGuilds {
+		// Skip validation if this guild already has a subscription
+		if utils.Contains(existingGuildIds, guildId) {
+			continue
+		}
+
+		// For new guilds being added, validate admin permissions
 		permissionLevel, err := utils.GetPermissionLevel(ctx, guildId, userId)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
@@ -73,12 +91,6 @@ func SetActiveGuilds(ctx *gin.Context) {
 			ctx.JSON(http.StatusForbidden, utils.ErrorStr("Missing permissions in guild %d", guildId))
 			return
 		}
-	}
-
-	existingGuildEntitlements, err := dbclient.Client.LegacyPremiumEntitlementGuilds.ListForUser(ctx, tx, userId)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
-		return
 	}
 
 	// Remove entitlements from guilds that are no longer selected
@@ -97,11 +109,6 @@ func SetActiveGuilds(ctx *gin.Context) {
 	}
 
 	// Create entitlements for guilds that were not previously selected, but now are
-	existingGuildIds := make([]uint64, len(existingGuildEntitlements))
-	for i, existingEntitlement := range existingGuildEntitlements {
-		existingGuildIds[i] = existingEntitlement.GuildId
-	}
-
 	for _, guildId := range body.SelectedGuilds {
 		if !utils.Contains(existingGuildIds, guildId) {
 			created, err := dbclient.Client.Entitlements.Create(ctx, tx, &guildId, &userId, legacyEntitlement.SkuId, model.EntitlementSourcePatreon, nil)

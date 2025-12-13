@@ -11,9 +11,17 @@ import (
 )
 
 func MultiPanelList(ctx *gin.Context) {
+	type panelConfiguration struct {
+		PanelId         int     `json:"panel_id"`
+		CustomLabel     *string `json:"custom_label"`
+		Description     *string `json:"description"`
+		CustomEmojiName *string `json:"custom_emoji_name"`
+		CustomEmojiId   *uint64 `json:"custom_emoji_id,string"`
+	}
+
 	type multiPanelResponse struct {
 		database.MultiPanel
-		Panels []int `json:"panels"`
+		Panels []panelConfiguration `json:"panels"`
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
@@ -41,12 +49,18 @@ func MultiPanelList(ctx *gin.Context) {
 				return err
 			}
 
-			panelIds := make([]int, len(panels))
+			configs := make([]panelConfiguration, len(panels))
 			for i, panel := range panels {
-				panelIds[i] = panel.PanelId
+				configs[i] = panelConfiguration{
+					PanelId:         panel.PanelId,
+					CustomLabel:     panel.CustomLabel,
+					Description:     panel.Description,
+					CustomEmojiName: panel.CustomEmojiName,
+					CustomEmojiId:   panel.CustomEmojiId,
+				}
 			}
 
-			data[i].Panels = panelIds
+			data[i].Panels = configs
 
 			return nil
 		})

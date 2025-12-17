@@ -5,15 +5,21 @@ import (
 
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
-	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 )
 
 func MultiPanelList(ctx *gin.Context) {
 	type multiPanelResponse struct {
-		database.MultiPanel
-		Panels []int `json:"panels"`
+		Id                    int                `json:"id"`
+		MessageId             uint64             `json:"message_id,string"`
+		ChannelId             uint64             `json:"channel_id,string"`
+		GuildId               uint64             `json:"guild_id,string"`
+		SelectMenu            bool               `json:"select_menu"`
+		SelectMenuPlaceholder *string            `json:"select_menu_placeholder"`
+		Embed                 *types.CustomEmbed `json:"embed"`
+		Panels                []int              `json:"panels"`
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
@@ -30,8 +36,19 @@ func MultiPanelList(ctx *gin.Context) {
 		i := i
 		multiPanel := multiPanel
 
+		var transformedEmbed *types.CustomEmbed
+		if multiPanel.Embed != nil {
+			transformedEmbed = types.NewCustomEmbed(multiPanel.Embed.CustomEmbed, multiPanel.Embed.Fields)
+		}
+
 		data[i] = multiPanelResponse{
-			MultiPanel: multiPanel,
+			Id:                    multiPanel.Id,
+			MessageId:             multiPanel.MessageId,
+			ChannelId:             multiPanel.ChannelId,
+			GuildId:               multiPanel.GuildId,
+			SelectMenu:            multiPanel.SelectMenu,
+			SelectMenuPlaceholder: multiPanel.SelectMenuPlaceholder,
+			Embed:                 transformedEmbed,
 		}
 
 		// TODO: Use a join

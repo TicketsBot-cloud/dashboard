@@ -37,6 +37,22 @@
         }
     }
 
+    export function open() {
+        if (!expanded) {
+            expanded = true;
+            updateSize();
+        }
+    }
+
+    export function close() {
+        if (expanded) {
+            expanded = false;
+            if (content) {
+                content.style.maxHeight = "0";
+            }
+        }
+    }
+
     function updateSize() {
         if (content) {
             content.style.maxHeight = `100%`;

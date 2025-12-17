@@ -38,7 +38,37 @@ func multiPanelIntoMessageData(panel database.MultiPanel, isPremium bool) multiP
 	}
 }
 
-func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.Panel) (uint64, error) {
+func getEffectiveLabel(panel database.Panel, customLabel *string) string {
+	if customLabel != nil && *customLabel != "" {
+		return *customLabel
+	}
+	return panel.ButtonLabel
+}
+
+func getEffectiveEmoji(panel database.Panel, customEmojiName *string, customEmojiId *uint64) *string {
+	if customEmojiId != nil && *customEmojiId != 0 {
+		if customEmojiName != nil && *customEmojiName != "" {
+			return customEmojiName
+		}
+		return nil
+	}
+	if customEmojiName != nil && *customEmojiName != "" {
+		return customEmojiName
+	}
+	return panel.EmojiName
+}
+
+func getEffectiveEmojiId(panel database.Panel, customEmojiName *string, customEmojiId *uint64) *uint64 {
+	if customEmojiId != nil && *customEmojiId != 0 {
+		return customEmojiId
+	}
+	if customEmojiName != nil && *customEmojiName != "" {
+		return nil
+	}
+	return panel.EmojiId
+}
+
+func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
 	if !d.IsPremium {
 		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
 	}
@@ -46,13 +76,16 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 	var components []component.Component
 	if d.SelectMenu {
 		options := make([]component.SelectOption, len(panels))
-		for i, panel := range panels {
-			emoji := types.NewEmoji(panel.EmojiName, panel.EmojiId).IntoGdl()
+		for i, pwc := range panels {
+			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId).IntoGdl()
 
 			options[i] = component.SelectOption{
-				Label: panel.ButtonLabel,
-				Value: panel.CustomId,
-				Emoji: emoji,
+				Label:       getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
+				Value:       pwc.CustomId,
+				Description: pwc.Description,
+				Emoji:       emoji,
 			}
 		}
 
@@ -78,15 +111,17 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 		}
 	} else {
 		buttons := make([]component.Component, len(panels))
-		for i, panel := range panels {
-			emoji := types.NewEmoji(panel.EmojiName, panel.EmojiId).IntoGdl()
+		for i, pwc := range panels {
+			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId).IntoGdl()
 
 			buttons[i] = component.BuildButton(component.Button{
-				Label:    panel.ButtonLabel,
-				CustomId: panel.CustomId,
-				Style:    component.ButtonStyle(panel.ButtonStyle),
+				Label:    getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
+				CustomId: pwc.CustomId,
+				Style:    component.ButtonStyle(pwc.ButtonStyle),
 				Emoji:    emoji,
-				Disabled: panel.Disabled,
+				Disabled: pwc.Disabled,
 			})
 		}
 

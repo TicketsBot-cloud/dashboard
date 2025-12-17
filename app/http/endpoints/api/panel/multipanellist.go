@@ -11,15 +11,23 @@ import (
 )
 
 func MultiPanelList(ctx *gin.Context) {
+	type panelConfiguration struct {
+		PanelId         int     `json:"panel_id"`
+		CustomLabel     *string `json:"custom_label"`
+		Description     *string `json:"description"`
+		CustomEmojiName *string `json:"custom_emoji_name"`
+		CustomEmojiId   *uint64 `json:"custom_emoji_id,string"`
+	}
+
 	type multiPanelResponse struct {
-		Id                    int                `json:"id"`
-		MessageId             uint64             `json:"message_id,string"`
-		ChannelId             uint64             `json:"channel_id,string"`
-		GuildId               uint64             `json:"guild_id,string"`
-		SelectMenu            bool               `json:"select_menu"`
-		SelectMenuPlaceholder *string            `json:"select_menu_placeholder"`
-		Embed                 *types.CustomEmbed `json:"embed"`
-		Panels                []int              `json:"panels"`
+		Id                    int                   `json:"id"`
+		MessageId             uint64                `json:"message_id,string"`
+		ChannelId             uint64                `json:"channel_id,string"`
+		GuildId               uint64                `json:"guild_id,string"`
+		SelectMenu            bool                  `json:"select_menu"`
+		SelectMenuPlaceholder *string               `json:"select_menu_placeholder"`
+		Embed                 *types.CustomEmbed    `json:"embed"`
+		Panels                []panelConfiguration  `json:"panels"`
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
@@ -58,12 +66,18 @@ func MultiPanelList(ctx *gin.Context) {
 				return err
 			}
 
-			panelIds := make([]int, len(panels))
+			configs := make([]panelConfiguration, len(panels))
 			for i, panel := range panels {
-				panelIds[i] = panel.PanelId
+				configs[i] = panelConfiguration{
+					PanelId:         panel.PanelId,
+					CustomLabel:     panel.CustomLabel,
+					Description:     panel.Description,
+					CustomEmojiName: panel.CustomEmojiName,
+					CustomEmojiId:   panel.CustomEmojiId,
+				}
 			}
 
-			data[i].Panels = panelIds
+			data[i].Panels = configs
 
 			return nil
 		})

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/TicketsBot-cloud/common/premium"
@@ -21,12 +22,27 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type panelConfiguration struct {
+	PanelId         int     `json:"panel_id"`
+	CustomEmojiName *string `json:"custom_emoji_name" validate:"omitempty,max=32"`
+	CustomEmojiId   *uint64 `json:"custom_emoji_id,string"`
+	CustomLabel     *string `json:"custom_label" validate:"omitempty,max=80"`
+	Description     *string `json:"description" validate:"omitempty,max=100"`
+}
+
+func getEffectiveLabelForValidation(buttonLabel string, customLabel *string) string {
+	if customLabel != nil && *customLabel != "" {
+		return *customLabel
+	}
+	return buttonLabel
+}
+
 type multiPanelCreateData struct {
-	ChannelId             uint64             `json:"channel_id,string"`
-	SelectMenu            bool               `json:"select_menu"`
-	SelectMenuPlaceholder *string            `json:"select_menu_placeholder,omitempty" validate:"omitempty,max=150"`
-	Panels                []int              `json:"panels"`
-	Embed                 *types.CustomEmbed `json:"embed" validate:"omitempty,dive"`
+	ChannelId             uint64                `json:"channel_id,string"`
+	SelectMenu            bool                  `json:"select_menu"`
+	SelectMenuPlaceholder *string               `json:"select_menu_placeholder,omitempty" validate:"omitempty,max=150"`
+	Panels                []panelConfiguration  `json:"panels" validate:"dive"`
+	Embed                 *types.CustomEmbed    `json:"embed" validate:"omitempty,dive"`
 }
 
 func (d *multiPanelCreateData) IntoMessageData(isPremium bool) multiPanelMessageData {
@@ -67,6 +83,26 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
+	// Validate labels for dropdown mode
+	if data.SelectMenu {
+		for _, panel := range panels {
+			panelConfig := data.Panels[0]
+			for i, cfg := range data.Panels {
+				if panels[i].PanelId == cfg.PanelId {
+					panelConfig = cfg
+					break
+				}
+			}
+
+			effectiveLabel := getEffectiveLabelForValidation(panel.ButtonLabel, panelConfig.CustomLabel)
+
+			if effectiveLabel == "" {
+				c.JSON(400, utils.ErrorStr(fmt.Sprintf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)))
+				return
+			}
+		}
+	}
+
 	// get bot context
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
@@ -81,8 +117,20 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
+	// Create PanelWithCustomization by combining panels with their configurations
+	panelsWithCustom := make([]database.PanelWithCustomization, len(panels))
+	for i, panel := range panels {
+		panelsWithCustom[i] = database.PanelWithCustomization{
+			Panel:           panel,
+			CustomLabel:     data.Panels[i].CustomLabel,
+			Description:     data.Panels[i].Description,
+			CustomEmojiName: data.Panels[i].CustomEmojiName,
+			CustomEmojiId:   data.Panels[i].CustomEmojiId,
+		}
+	}
+
 	messageData := data.IntoMessageData(premiumTier > premium.None)
-	messageId, err := messageData.send(botContext, panels)
+	messageId, err := messageData.send(botContext, panelsWithCustom)
 	if err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped); unwrapped.StatusCode == 403 {
@@ -118,8 +166,21 @@ func MultiPanelCreate(c *gin.Context) {
 		i := i
 		panel := panel
 
+		// Find matching panel config by panel_id
+		var panelConfig *panelConfiguration
+		for _, cfg := range data.Panels {
+			if cfg.PanelId == panel.PanelId {
+				panelConfig = &cfg
+				break
+			}
+		}
+
 		group.Go(func() error {
-			return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId, i)
+			if panelConfig != nil {
+				return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId, i, panelConfig.CustomLabel, panelConfig.Description, panelConfig.CustomEmojiName, panelConfig.CustomEmojiId)
+			} else {
+				return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId, i, nil, nil, nil, nil)
+			}
 		})
 	}
 
@@ -191,11 +252,11 @@ func (d *multiPanelCreateData) validatePanels(guildId uint64) (panels []database
 		return nil, err
 	}
 
-	for _, panelId := range d.Panels {
+	for _, panelConfig := range d.Panels {
 		var valid bool
 		// find panel struct
 		for _, panel := range existingPanels {
-			if panel.PanelId == panelId {
+			if panel.PanelId == panelConfig.PanelId {
 				valid = true
 				panels = append(panels, panel)
 			}

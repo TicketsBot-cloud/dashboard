@@ -8,11 +8,13 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
-	"github.com/TicketsBot-cloud/dashboard/database"
+	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
+	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
+	messagetypes "github.com/TicketsBot-cloud/gdl/objects/channel/message"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
@@ -58,7 +60,7 @@ func SendTag(ctx *gin.Context) {
 	}
 
 	// Get ticket
-	ticket, err := database.Client.Tickets.Get(ctx, ticketId, guildId)
+	ticket, err := dbclient.Client.Tickets.Get(ctx, ticketId, guildId)
 
 	// Verify the ticket exists
 	if ticket.UserId == 0 {
@@ -73,7 +75,7 @@ func SendTag(ctx *gin.Context) {
 	}
 
 	// Get tag
-	tag, ok, err := database.Client.Tag.Get(ctx, guildId, body.TagId)
+	tag, ok, err := dbclient.Client.Tag.Get(ctx, guildId, body.TagId)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to fetch tag '%s' from database for guild %d", body.TagId, guildId))
 		return
@@ -85,22 +87,42 @@ func SendTag(ctx *gin.Context) {
 	}
 
 	// Preferably send via a webhook
-	webhook, err := database.Client.Webhooks.Get(ctx, guildId, ticketId)
+	webhook, err := dbclient.Client.Webhooks.Get(ctx, guildId, ticketId)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to fetch webhook for ticket #%d in guild %d", ticketId, guildId))
 		return
 	}
 
-	settings, err := database.Client.Settings.Get(ctx, guildId)
+	settings, err := dbclient.Client.Settings.Get(ctx, guildId)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to fetch guild settings for guild %d", guildId))
 		return
 	}
 
+	// Process placeholders in tag content
+	processedContent := tag.Content
+	if processedContent != nil {
+		replaced := replacePlaceholders(ctx, *processedContent, &ticket, botContext)
+		processedContent = &replaced
+	}
+
+	// Process placeholders in embed
 	var embeds []*embed.Embed
 	if tag.Embed != nil {
+		// Make a copy of the embed to avoid modifying the original
+		embedCopy := *tag.Embed.CustomEmbed
+		replacePlaceholdersInEmbed(ctx, &embedCopy, &ticket, botContext)
+
+		// Process placeholders in embed fields
+		fieldsCopy := make([]database.EmbedField, len(tag.Embed.Fields))
+		for i, field := range tag.Embed.Fields {
+			fieldsCopy[i] = field
+			fieldsCopy[i].Name = replacePlaceholders(ctx, field.Name, &ticket, botContext)
+			fieldsCopy[i].Value = replacePlaceholders(ctx, field.Value, &ticket, botContext)
+		}
+
 		embeds = []*embed.Embed{
-			types.NewCustomEmbed(tag.Embed.CustomEmbed, tag.Embed.Fields).IntoDiscordEmbed(),
+			types.NewCustomEmbed(&embedCopy, fieldsCopy).IntoDiscordEmbed(),
 		}
 	}
 
@@ -114,10 +136,13 @@ func SendTag(ctx *gin.Context) {
 			}
 
 			webhookData = rest.WebhookBody{
-				Content:   utils.ValueOrZero(tag.Content),
+				Content:   utils.ValueOrZero(processedContent),
 				Embeds:    embeds,
 				Username:  guild.Name,
 				AvatarUrl: guild.IconUrl(),
+				AllowedMentions: messagetypes.AllowedMention{
+					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+				},
 			}
 		} else {
 			user, err := botContext.GetUser(context.Background(), userId)
@@ -127,10 +152,13 @@ func SendTag(ctx *gin.Context) {
 			}
 
 			webhookData = rest.WebhookBody{
-				Content:   utils.ValueOrZero(tag.Content),
+				Content:   utils.ValueOrZero(processedContent),
 				Embeds:    embeds,
 				Username:  user.EffectiveName(),
 				AvatarUrl: user.AvatarUrl(256),
+				AllowedMentions: messagetypes.AllowedMention{
+					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+				},
 			}
 		}
 
@@ -141,7 +169,7 @@ func SendTag(ctx *gin.Context) {
 			// We can delete the webhook in this case
 			var unwrapped request.RestError
 			if errors.As(err, &unwrapped); unwrapped.StatusCode == 403 || unwrapped.StatusCode == 404 {
-				go database.Client.Webhooks.Delete(ctx, guildId, ticketId)
+				go dbclient.Client.Webhooks.Delete(ctx, guildId, ticketId)
 			}
 		} else {
 			ctx.JSON(200, gin.H{
@@ -151,7 +179,7 @@ func SendTag(ctx *gin.Context) {
 		}
 	}
 
-	message := utils.ValueOrZero(tag.Content)
+	message := utils.ValueOrZero(processedContent)
 	if !settings.AnonymiseDashboardResponses {
 		user, err := botContext.GetUser(context.Background(), userId)
 		if err != nil {
@@ -171,7 +199,13 @@ func SendTag(ctx *gin.Context) {
 		return
 	}
 
-	if _, err = rest.CreateMessage(ctx, botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{Content: message, Embeds: embeds}); err != nil {
+	if _, err = rest.CreateMessage(ctx, botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{
+		Content: message,
+		Embeds:  embeds,
+		AllowedMentions: messagetypes.AllowedMention{
+			Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+		},
+	}); err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to send tag '%s' to ticket #%d in channel %d", body.TagId, ticketId, *ticket.ChannelId))
 		return
 	}

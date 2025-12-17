@@ -59,6 +59,11 @@ func CreateTag(ctx *gin.Context) {
 		data.Embed = nil
 	}
 
+	// Convert empty strings to nil for optional embed fields
+	if data.Embed != nil {
+		cleanEmbedFields(data.Embed)
+	}
+
 	// TODO: Limit command amount
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
@@ -176,4 +181,43 @@ func (t *tag) verifyContent() bool {
 	}
 
 	return false
+}
+
+// cleanEmbedFields converts empty strings to nil for optional embed fields
+func cleanEmbedFields(embed *types.CustomEmbed) {
+	// Clean main embed fields
+	if embed.Title != nil && *embed.Title == "" {
+		embed.Title = nil
+	}
+	if embed.Description != nil && *embed.Description == "" {
+		embed.Description = nil
+	}
+	if embed.Url != nil && *embed.Url == "" {
+		embed.Url = nil
+	}
+	if embed.ImageUrl != nil && *embed.ImageUrl == "" {
+		embed.ImageUrl = nil
+	}
+	if embed.ThumbnailUrl != nil && *embed.ThumbnailUrl == "" {
+		embed.ThumbnailUrl = nil
+	}
+
+	// Clean author fields
+	if embed.Author.Name != nil && *embed.Author.Name == "" {
+		embed.Author.Name = nil
+	}
+	if embed.Author.IconUrl != nil && *embed.Author.IconUrl == "" {
+		embed.Author.IconUrl = nil
+	}
+	if embed.Author.Url != nil && *embed.Author.Url == "" {
+		embed.Author.Url = nil
+	}
+
+	// Clean footer fields
+	if embed.Footer.Text != nil && *embed.Footer.Text == "" {
+		embed.Footer.Text = nil
+	}
+	if embed.Footer.IconUrl != nil && *embed.Footer.IconUrl == "" {
+		embed.Footer.IconUrl = nil
+	}
 }

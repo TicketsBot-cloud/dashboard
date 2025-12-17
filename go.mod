@@ -18,12 +18,12 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 
 require (
 	github.com/BurntSushi/toml v1.2.1
-	github.com/TicketsBot-cloud/archiverclient v0.0.0-20250807224931-e188ad18a850
+	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20251026182733-99fa0dc31d90
-	github.com/TicketsBot-cloud/database v0.0.0-20251113112806-d6f43633dd81
-	github.com/TicketsBot-cloud/gdl v0.0.0-20251114175831-d4fde7035386
-	github.com/TicketsBot-cloud/logarchiver v0.0.0-20250809082842-70aa389bcbdf
-	github.com/TicketsBot-cloud/worker v0.0.0-20251007163454-37483445234a
+	github.com/TicketsBot-cloud/database v0.0.0-20251213191234-a4ff495ab1be
+	github.com/TicketsBot-cloud/gdl v0.0.0-20251129162044-695f8e5079eb
+	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
+	github.com/TicketsBot-cloud/worker v0.0.0-20251212162840-a9cc9bbf5692
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0
@@ -49,7 +49,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 )
 
 require (
@@ -95,7 +95,7 @@ require (
 	github.com/jackc/pgproto3/v2 v2.3.3 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx v3.6.2+incompatible // indirect
-	github.com/jackc/pgx/v5 v5.7.5 // indirect
+	github.com/jackc/pgx/v5 v5.7.6 // indirect
 	github.com/jackc/puddle v1.3.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.6.7 // indirect
@@ -135,12 +135,12 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect
-	golang.org/x/crypto v0.44.0 // indirect
-	golang.org/x/exp v0.0.0-20251009144603-d2f985daa21b // indirect
-	golang.org/x/net v0.46.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/term v0.38.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

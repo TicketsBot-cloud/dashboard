@@ -14,8 +14,6 @@
         ...timezones,
     ];
 
-    console.log(timezoneList);
-
     export let data = [];
 
     const dispatch = createEventDispatcher();

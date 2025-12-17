@@ -19,9 +19,9 @@
         );
     }
 
-    let active = isActive();
+    let active;
 
-    $: active;
+    $: active = isActive();
 
     onMount(() => {
         active = isActive();

@@ -49,6 +49,11 @@
 
     let inputValidationErrors = {};
 
+    // Clear validation errors when switching forms
+    $: if (activeFormId !== null) {
+        inputValidationErrors = {};
+    }
+
     // Check if any input has validation errors
     $: hasValidationErrors = Object.values(inputValidationErrors).some((hasError) => hasError === true);
 
@@ -143,10 +148,17 @@
         let form = getForm(formId);
 
         let idx = form.inputs.findIndex((i) => i === input);
+
+        // Clean up validation error for the deleted input
+        delete inputValidationErrors[input.id || idx];
+
         form.inputs.splice(idx, 1);
         for (let i = idx; i < form.inputs.length; i++) {
             form.inputs[i].position--;
         }
+
+        // Trigger reactivity for inputValidationErrors
+        inputValidationErrors = inputValidationErrors;
 
         forms = forms;
 

@@ -23,6 +23,13 @@ type transcriptMetadata struct {
 	HasTranscript bool    `json:"has_transcript"`
 }
 
+type paginatedTranscripts struct {
+	Transcripts []transcriptMetadata `json:"transcripts"`
+	TotalCount  int                   `json:"total_count"`
+	TotalPages  int                   `json:"total_pages"`
+	CurrentPage int                   `json:"current_page"`
+}
+
 func ListTranscripts(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 
@@ -113,5 +120,31 @@ func ListTranscripts(ctx *gin.Context) {
 		transcripts[i] = transcript
 	}
 
-	ctx.JSON(200, transcripts)
+	// Get total count for pagination
+	totalCount, err := dbclient.Client.Tickets.CountByOptions(ctx, opts)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch total count. Please try again."))
+		return
+	}
+
+	// Calculate total pages
+	totalPages := (totalCount + pageLimit - 1) / pageLimit
+	if totalPages == 0 {
+		totalPages = 1 // At least 1 page even if empty
+	}
+
+	// Get current page from query options
+	currentPage := queryOptions.Page
+	if currentPage == 0 {
+		currentPage = 1
+	}
+
+	response := paginatedTranscripts{
+		Transcripts: transcripts,
+		TotalCount:  totalCount,
+		TotalPages:  totalPages,
+		CurrentPage: currentPage,
+	}
+
+	ctx.JSON(200, response)
 }

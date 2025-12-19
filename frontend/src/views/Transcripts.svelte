@@ -26,6 +26,9 @@
 
     const pageLimit = 15;
     let page = 1;
+    let jumpToPage = page;          // Bound to page input field
+    let totalPages = 1;             // Total number of pages from API
+    let totalCount = 0;             // Total number of transcripts
 
     // Show Columns logic
     let selectedColumns = [
@@ -38,6 +41,12 @@
     const columnStorageKey = "transcript_list:selected_columns:new";
 
     $: (selectedColumns, updateColumnStorage());
+
+    $: isAtEnd = page >= totalPages;
+
+    $: if (page) {
+        jumpToPage = page;
+    }
 
     function updateColumnStorage() {
         window.localStorage.setItem(
@@ -106,6 +115,7 @@
         loading = true;
         if (await loadData(paginationSettings)) {
             page--;
+            jumpToPage = page;
         }
         loading = false;
     }
@@ -113,10 +123,7 @@
     async function loadNext() {
         if (loading) return;
 
-        if (
-            transcripts.length < pageLimit ||
-            transcripts[transcripts.length - 1].ticket_id === 1
-        ) {
+        if (isAtEnd) {
             return;
         }
 
@@ -125,8 +132,104 @@
         loading = true;
         if (await loadData(paginationSettings)) {
             page++;
+            jumpToPage = page;
         }
         loading = false;
+    }
+
+    async function loadFirst() {
+        if (loading || page === 1) return;
+
+        let paginationSettings = buildPaginationSettings(1);
+        loading = true;
+        if (await loadData(paginationSettings)) {
+            page = 1;
+            jumpToPage = 1;
+        }
+        loading = false;
+    }
+
+    async function loadPrevious2() {
+        if (loading || page <= 2) return;
+
+        const targetPage = Math.max(1, page - 2);
+        let paginationSettings = buildPaginationSettings(targetPage);
+
+        loading = true;
+        if (await loadData(paginationSettings)) {
+            page = targetPage;
+            jumpToPage = targetPage;
+        }
+        loading = false;
+    }
+
+    async function loadNext2() {
+        if (loading) return;
+
+        if (page + 2 > totalPages) return;
+
+        const targetPage = page + 2;
+        let paginationSettings = buildPaginationSettings(targetPage);
+
+        loading = true;
+        if (await loadData(paginationSettings)) {
+            page = targetPage;
+            jumpToPage = targetPage;
+        }
+        loading = false;
+    }
+
+    async function loadLast() {
+        if (loading || page === totalPages) return;
+
+        let paginationSettings = buildPaginationSettings(totalPages);
+
+        loading = true;
+        if (await loadData(paginationSettings)) {
+            page = totalPages;
+            jumpToPage = totalPages;
+        }
+        loading = false;
+    }
+
+    async function jumpToSpecificPage() {
+        if (loading) return;
+
+        let targetPage = parseInt(jumpToPage);
+        if (isNaN(targetPage) || targetPage < 1) {
+            jumpToPage = page; // Reset to current page
+            return;
+        }
+
+        // If target page is higher than total pages, go to last page instead
+        if (targetPage > totalPages) {
+            targetPage = totalPages;
+        }
+
+        // Don't reload current page
+        if (targetPage === page) {
+            jumpToPage = page;
+            return;
+        }
+
+        let paginationSettings = buildPaginationSettings(targetPage);
+
+        loading = true;
+        const success = await loadData(paginationSettings);
+
+        if (success) {
+            page = targetPage;
+        } else {
+            jumpToPage = page;
+        }
+
+        loading = false;
+    }
+
+    function handlePageInputKeydown(event) {
+        if (event.key === 'Enter') {
+            jumpToSpecificPage();
+        }
     }
 
     function buildPaginationSettings(page) {
@@ -147,6 +250,7 @@
         let opts = buildPaginationSettings(1);
         await loadData(opts);
         page = 1;
+        jumpToPage = 1;
     }
 
     async function loadPanels() {
@@ -169,7 +273,9 @@
             return false;
         }
 
-        transcripts = res.data;
+        transcripts = res.data.transcripts;
+        totalCount = res.data.total_count;
+        totalPages = res.data.total_pages;
         return true;
     }
 
@@ -361,22 +467,90 @@
                     </table>
 
                     <div
-                        class="nav"
-                        class:nav-margin={transcripts.length === 0}
+                        class="pagination-controls"
+                        class:pagination-controls-margin={transcripts.length === 0}
                     >
-                        <i
-                            class="fas fa-chevron-left"
-                            class:hidden={page === 1}
+                        <!-- First page -->
+                        <button
+                            class="pagination-btn"
+                            class:disabled={page === 1 || loading}
+                            on:click={loadFirst}
+                            disabled={page === 1 || loading}
+                            title="Go to first page"
+                        >
+                            <i class="fas fa-angles-left"></i>
+                        </button>
+
+                        <!-- Previous 2 pages -->
+                        <button
+                            class="pagination-btn"
+                            class:disabled={page <= 2 || loading}
+                            on:click={loadPrevious2}
+                            disabled={page <= 2 || loading}
+                            title="Go back 2 pages"
+                        >
+                            <i class="fas fa-backward"></i>
+                        </button>
+
+                        <!-- Previous page -->
+                        <button
+                            class="pagination-btn"
+                            class:disabled={page === 1 || loading}
                             on:click={loadPrevious}
-                        ></i>
-                        <span>Page {page}</span>
-                        <i
-                            class="fas fa-chevron-right"
-                            class:hidden={transcripts.length < pageLimit ||
-                                transcripts[transcripts.length - 1]
-                                    .ticket_id === 1}
+                            disabled={page === 1 || loading}
+                            title="Previous page"
+                        >
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+
+                        <!-- Page input -->
+                        <div class="page-input-wrapper">
+                            <input
+                                id="page-jump"
+                                type="number"
+                                class="page-input"
+                                min="1"
+                                max={totalPages}
+                                bind:value={jumpToPage}
+                                on:keydown={handlePageInputKeydown}
+                                on:blur={jumpToSpecificPage}
+                                disabled={loading}
+                                placeholder={`1-${totalPages}`}
+                            />
+                        </div>
+
+                        <!-- Next page -->
+                        <button
+                            class="pagination-btn"
+                            class:disabled={isAtEnd || loading}
                             on:click={loadNext}
-                        ></i>
+                            disabled={isAtEnd || loading}
+                            title="Next page"
+                        >
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+
+                        <!-- Next 2 pages -->
+                        <button
+                            class="pagination-btn"
+                            class:disabled={page + 2 > totalPages || loading}
+                            on:click={loadNext2}
+                            disabled={page + 2 > totalPages || loading}
+                            title="Go forward 2 pages"
+                        >
+                            <i class="fas fa-forward"></i>
+                        </button>
+
+                        <!-- Last page -->
+                        <button
+                            class="pagination-btn"
+                            class:disabled={page === totalPages || loading}
+                            on:click={loadLast}
+                            disabled={page === totalPages || loading}
+                            title="Go to last page"
+                        >
+                            <i class="fas fa-angles-right"></i>
+                        </button>
                     </div>
                 </div>
             </Card>
@@ -424,23 +598,6 @@
 
     table.nice > tbody > tr > td {
         padding: 10px;
-    }
-
-    .link {
-        justify-content: flex-end;
-    }
-
-    .flex {
-        display: flex;
-        justify-content: flex-end;
-        width: 100%;
-    }
-
-    :global(table.nice > tbody > tr > td.flex) {
-        text-align: right;
-        padding-right: 10px !important;
-        padding-left: 10px !important;
-        width: 100%;
     }
 
     :global(table.nice > thead > tr > th:last-child) {
@@ -493,29 +650,95 @@
         padding: 10px 0 10px 10px;
     }
 
-    .nav {
+    .pagination-controls {
         display: flex;
         flex-direction: row;
         justify-content: center;
         align-items: center;
+        gap: 8px;
+        padding: 16px 0;
     }
 
-    .nav > i {
-        color: #995df3;
-        cursor: pointer;
-    }
-
-    .nav > span {
-        margin: 0 5px;
-    }
-
-    .nav-margin {
+    .pagination-controls-margin {
         margin-top: 15px;
     }
 
-    .hidden {
-        color: #6c757d !important;
-        cursor: default !important;
+    .pagination-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: var(--background-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        color: #995df3;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .pagination-btn:hover:not(.disabled) {
+        background: var(--background-hover);
+        border-color: var(--border-color-hover);
+        transform: translateY(-1px);
+    }
+
+    .pagination-btn:active:not(.disabled) {
+        transform: translateY(0);
+    }
+
+    .pagination-btn.disabled {
+        color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .pagination-btn i {
+        font-size: 14px;
+    }
+
+    .page-input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .page-input {
+        width: 60px;
+        height: 36px;
+        padding: 6px 10px;
+        background: var(--background-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        color: var(--text-primary);
+        font-size: 14px;
+        text-align: center;
+        transition: all var(--transition-fast);
+    }
+
+    .page-input:hover:not(:disabled) {
+        border-color: var(--border-color-hover);
+    }
+
+    .page-input:focus {
+        outline: none;
+        border-color: #995df3;
+        box-shadow: 0 0 0 2px rgba(153, 93, 243, 0.2);
+    }
+
+    .page-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Remove spinner from number input */
+    .page-input::-webkit-inner-spin-button,
+    .page-input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .page-input[type=number] {
+        appearance: textfield;
     }
 
     @media only screen and (max-width: 950px) {
@@ -531,6 +754,22 @@
     @media only screen and (max-width: 576px) {
         .col {
             width: 100%;
+        }
+
+        .pagination-controls {
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            width: 32px;
+            height: 32px;
+        }
+
+        .page-input {
+            width: 50px;
+            height: 32px;
+            font-size: 13px;
         }
     }
 

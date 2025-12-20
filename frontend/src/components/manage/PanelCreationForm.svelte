@@ -32,6 +32,7 @@
     export let teams = [];
     export let forms = [];
     export let isPremium = false;
+    export let settings = {};
 
     let teamsWithDefault = [];
     let mentionItems = [];
@@ -185,6 +186,10 @@
             data.pending_category = "null";
         }
 
+        if (!data.ticket_notification_channel) {
+            data.ticket_notification_channel = "null";
+        }
+
         data.emote = data.emote;
 
         if (!data.colour) {
@@ -221,6 +226,7 @@
                 exit_survey_form_id: "null",
                 pending_category: "null",
                 use_threads: false,
+                ticket_notification_channel: "null",
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -283,7 +289,7 @@
                 <ChannelDropdown
                     withNull
                     nullLabel="Use Global Setting"
-                    col3
+                    col2
                     label="Transcript Channel"
                     allowAnnouncementChannel
                     {channels}
@@ -296,23 +302,32 @@
                     bind:value={data.delete_mentions}
                 />
             </div>
-            <div class="row">
+            <div class="incomplete-row">
                 <Checkbox
                     label="Create Tickets as Threads"
                     col2
                     tool
                     bind:value={data.use_threads}
                 />
+                <ChannelDropdown
+                    withNull
+                    nullLabel="Use Global Setting"
+                    col2
+                    label="Ticket Notification Channel (for Threads)"
+                    {channels}
+                    disabled={!data.use_threads && !settings.use_threads}
+                    bind:value={data.ticket_notification_channel}
+                />
             </div>
             <div class="incomplete-row">
                 <CategoryDropdown
                     label="Ticket Category"
-                    col3
+                    col2
                     {channels}
                     bind:value={data.category_id}
                 />
 
-                <Dropdown col4 label="Form" bind:value={data.form_id}>
+                <Dropdown col2 label="Form" bind:value={data.form_id}>
                     <option value="null">None</option>
                     {#each forms as form}
                         <option value={form.form_id}>{form.title}</option>
@@ -321,7 +336,7 @@
             </div>
             <div class="incomplete-row">
                 <Dropdown
-                    col4
+                    col2
                     label="Naming Scheme"
                     bind:value={data.use_server_default_naming_scheme}
                 >
@@ -331,7 +346,7 @@
 
                 {#if !data.use_server_default_naming_scheme}
                     <Input
-                        col4
+                        col2
                         label="Custom Naming Scheme"
                         bind:value={data.naming_scheme}
                         placeholder="ticket-%id%"
@@ -342,7 +357,7 @@
             </div>
             <div class="incomplete-row">
                 <Dropdown
-                    col3
+                    col2
                     label="Exit Survey Form"
                     premiumBadge={true}
                     bind:value={data.exit_survey_form_id}
@@ -354,7 +369,7 @@
                     {/each}
                 </Dropdown>
                 <Dropdown
-                    col3
+                    col2
                     label="Awaiting Response Category"
                     premiumBadge={true}
                     bind:value={data.pending_category}

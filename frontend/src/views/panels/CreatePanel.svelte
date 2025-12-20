@@ -16,6 +16,7 @@
         loadForms,
         loadPremium,
         loadRoles,
+        loadSettings,
         loadTeams,
     } from "../../js/common";
     import axios from "axios";
@@ -33,6 +34,7 @@
     let teams = [];
     let forms = [];
     let isPremium = false;
+    let settings = {};
 
     let panelCreateData;
 
@@ -97,6 +99,9 @@
                 loadPremium(guildId, false)
                     .then((r) => (isPremium = r))
                     .catch((e) => notifyError(e)),
+                loadSettings(guildId)
+                    .then((r) => (settings = r))
+                    .catch((e) => notifyError(e)),
             ]);
         });
     });
@@ -120,6 +125,7 @@
                     {teams}
                     {forms}
                     {isPremium}
+                    {settings}
                     bind:data={panelCreateData}
                 />
                 <div class="submit-wrapper">

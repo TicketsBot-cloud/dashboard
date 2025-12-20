@@ -18,6 +18,7 @@
         loadPanels,
         loadPremium,
         loadRoles,
+        loadSettings,
         loadTeams,
     } from "../../js/common";
     import axios from "axios";
@@ -36,6 +37,7 @@
     let teams = [];
     let forms = [];
     let isPremium = false;
+    let settings = {};
     let panelData;
     let supportHours = [];
 
@@ -117,6 +119,9 @@
                 loadPanels(guildId)
                     .then((r) => (panels = r))
                     .catch((e) => notifyError(e)),
+                loadSettings(guildId)
+                    .then((r) => (settings = r))
+                    .catch((e) => notifyError(e)),
             ]);
 
             panelData = panels.find((p) => p.panel_id === panelId);
@@ -161,6 +166,7 @@
                     {teams}
                     {forms}
                     {isPremium}
+                    {settings}
                     bind:data={panelData}
                     seedDefault={false}
                 />

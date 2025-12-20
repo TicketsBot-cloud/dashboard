@@ -119,8 +119,34 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 		return errors.New("You must select a ticket notification channel")
 	}
 
+	// Check if any panels depend on global thread mode before disabling it
 	if !s.Settings.UseThreads {
+		panels, err := dbclient.Client.Panel.GetByGuild(ctx, guildId)
+		if err != nil {
+			return fmt.Errorf("Failed to check panel dependencies: %w", err)
+		}
+
+		for _, panel := range panels {
+			if panel.UseThreads && panel.TicketNotificationChannel == nil {
+				return errors.New("Cannot disable global thread mode: panel \"" + panel.Title + "\" is using the global notification channel setting. Please configure a notification channel for this panel first, or disable thread mode on the panel.")
+			}
+		}
+
 		s.TicketNotificationChannel = nil
+	}
+
+	// Check if any panels depend on global notification channel before removing it
+	if s.TicketNotificationChannel == nil && s.Settings.UseThreads {
+		panels, err := dbclient.Client.Panel.GetByGuild(ctx, guildId)
+		if err != nil {
+			return fmt.Errorf("Failed to check panel dependencies: %w", err)
+		}
+
+		for _, panel := range panels {
+			if panel.UseThreads && panel.TicketNotificationChannel == nil {
+				return errors.New("Cannot remove global notification channel: panel \"" + panel.Title + "\" is using it. Please configure a notification channel for this panel first, or disable thread mode on the panel.")
+			}
+		}
 	}
 
 	if s.Language != nil {

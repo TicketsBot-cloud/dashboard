@@ -76,3 +76,12 @@ export async function loadForms(guildId) {
 
     return res.data || [];
 }
+
+export async function loadSettings(guildId) {
+    const res = await axios.get(`${API_URL}/api/${guildId}/settings`);
+    if (res.status !== 200) {
+        throw new Error(`Failed to load settings: ${res.data.error}`);
+    }
+
+    return res.data;
+}

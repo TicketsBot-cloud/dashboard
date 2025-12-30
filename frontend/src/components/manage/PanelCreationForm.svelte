@@ -17,6 +17,7 @@
     import AccessControlList from "./AccessControlList.svelte";
     import { DOCS_URL } from "../../js/constants";
     import SupportHoursForm from "./SupportHoursForm.svelte";
+    import emojiRegex from "emoji-regex";
 
     export let guildId;
     export let seedDefault = true;
@@ -40,16 +41,11 @@
 
     let lastCustomEmoji = undefined;
     let lastUnicodeEmoji = "📩";
-    // Unicode emoji regex
-    const unicodeEmojiRegex = /^\p{Emoji}$/u;
+
     function validateUnicodeEmoji(value) {
         if (value === "") return true;
-        if (typeof value !== "string") return false;
-        if (/^<a?:\w+:\d+>$/.test(value)) return false;
-        // Disallow spaces
-        if (/\s/.test(value)) return false;
-        // Only allow if matches single unicode emoji
-        return unicodeEmojiRegex.test(value);
+        const matches = value.match(emojiRegex());
+        return matches !== null && matches.length === 1 && matches[0] === value;
     }
 
     // Replace spaces with dashes in naming scheme as the user types
@@ -140,7 +136,6 @@
     }
 
     function handleSupportHoursChange(e) {
-        console.log(e.detail);
         data.support_hours = e.detail;
     }
 

@@ -1,7 +1,6 @@
 import IndexLayout from './layouts/IndexLayout.svelte'
 import ManageLayout from './layouts/ManageLayout.svelte'
 import ErrorLayout from './layouts/ErrorPage.svelte'
-import TranscriptViewLayout from './layouts/TranscriptViewLayout.svelte'
 import AdminLayout from './layouts/AdminLayout.svelte';
 
 import Index from './views/Index.svelte'
@@ -13,7 +12,6 @@ import Settings from './views/Settings.svelte'
 import Error from './views/Error.svelte'
 import Error404 from './views/Error404.svelte'
 import Transcripts from './views/Transcripts.svelte'
-import TranscriptView from './views/TranscriptView.svelte'
 import Blacklist from './views/Blacklist.svelte'
 import Panels from './views/panels/Panels.svelte'
 import Tags from './views/Tags.svelte'
@@ -37,7 +35,7 @@ import EditMultiPanel from "./views/panels/EditMultiPanel.svelte";
 import SelectServers from "./views/premium/SelectServers.svelte";
 import Import from './views/Import.svelte'
 
-import TranscriptsView2 from './views/TranscriptView2.svelte'
+import TranscriptsView from './views/TranscriptView.svelte'
 
 import LegalLayout from "./layouts/LegalLayout.svelte"
 import PrivacyPolicy from "./views/legal/PrivacyPolicy.svelte"
@@ -88,19 +86,8 @@ export const routes = [
                     },
                     {
                         name: 'view/:ticketid',
-                        component: TranscriptsView2, // Switched to the new view for now
+                        component: TranscriptsView,
                         layout: ManageLayout,
-                    }
-                ]
-            },
-            // Backwards compatibility
-            {
-                name: 'logs',
-                nestedRoutes: [
-                    {
-                        name: 'view/:ticketid',
-                        component: TranscriptView,
-                        layout: TranscriptViewLayout,
                     }
                 ]
             },

@@ -308,7 +308,7 @@ func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc 
 		}
 
 		// Validate placeholders used
-		validPlaceholders := []string{"id", "username", "nickname", "id_padded"}
+		validPlaceholders := []string{"id", "username", "nickname", "id_padded", "claimed", "claim_indicator", "claimed_by"}
 		for _, match := range placeholderPattern.FindAllStringSubmatch(*ctx.Data.NamingScheme, -1) {
 			if len(match) < 2 { // Infallible
 				return errors.New("Infallible: Regex match length was < 2")

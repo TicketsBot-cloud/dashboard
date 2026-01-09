@@ -75,6 +75,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateWelcomeMessage,
 		validateAccessControlList,
 		validatePendingCategory,
+		validateTicketNotificationChannel,
 	}
 }
 
@@ -307,7 +308,7 @@ func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc 
 		}
 
 		// Validate placeholders used
-		validPlaceholders := []string{"id", "username", "nickname", "id_padded"}
+		validPlaceholders := []string{"id", "username", "nickname", "id_padded", "claimed", "claim_indicator", "claimed_by"}
 		for _, match := range placeholderPattern.FindAllStringSubmatch(*ctx.Data.NamingScheme, -1) {
 			if len(match) < 2 { // Infallible
 				return errors.New("Infallible: Regex match length was < 2")
@@ -394,4 +395,48 @@ func validateEmbed(e *types.CustomEmbed) error {
 	}
 
 	return validation.NewInvalidInputError("Your embed message does not contain any content")
+}
+
+func validateTicketNotificationChannel(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		// If UseThreads is false, clear the TicketNotificationChannel
+		if !ctx.Data.UseThreads {
+			ctx.Data.TicketNotificationChannel = nil
+			return nil
+		}
+
+		// If UseThreads is true, we need either a panel-specific channel OR a global channel
+		if ctx.Data.TicketNotificationChannel == nil {
+			// Panel wants to use global setting - check if global notification channel exists
+			globalCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			defer cancel()
+
+			settings, err := dbclient.Client.Settings.Get(globalCtx, ctx.GuildId)
+			if err != nil {
+				return fmt.Errorf("Failed to fetch global settings: %w", err)
+			}
+
+			if settings.TicketNotificationChannel == nil {
+				return validation.NewInvalidInputError("You must select a ticket notification channel for this panel, or configure a global ticket notification channel in settings")
+			}
+		} else {
+			// Validate the panel-specific channel
+			channelFound := false
+			for _, ch := range ctx.Channels {
+				if ch.Id == *ctx.Data.TicketNotificationChannel {
+					channelFound = true
+					if ch.Type != channel.ChannelTypeGuildText {
+						return validation.NewInvalidInputError("Ticket notification channel must be a text channel")
+					}
+					break
+				}
+			}
+
+			if !channelFound {
+				return validation.NewInvalidInputError("Ticket notification channel not found")
+			}
+		}
+
+		return nil
+	}
 }

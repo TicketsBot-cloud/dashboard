@@ -10,7 +10,7 @@
 
             {#if !$loadingScreen}
                 <div style="margin-top: 10px">
-                    <MultiPanelCreationForm {guildId} {channels} {panels} bind:data={multiPanelCreateData}/>
+                    <MultiPanelCreationForm {guildId} {channels} {panels} {emojis} bind:data={multiPanelCreateData} bind:panelCustomizations/>
 
                     <div class="submit-wrapper">
                         <Button icon="fas fa-paper-plane" fullWidth={true} on:click={createMultiPanel}>Create
@@ -56,7 +56,7 @@
     import Card from "../../components/Card.svelte";
     import {onMount} from "svelte";
     import {notifyError, removeBlankEmbedFields, setBlankStringsToNull, withLoadingScreen} from "../../js/util";
-    import {loadChannels, loadPanels} from "../../js/common";
+    import {loadChannels, loadPanels, loadEmojis} from "../../js/common";
     import axios from "axios";
     import {API_URL} from "../../js/constants";
     import {navigateTo} from "svelte-router-spa";
@@ -66,11 +66,22 @@
 
     let channels = [];
     let panels = [];
+    let emojis = [];
 
     let multiPanelCreateData;
+    let panelCustomizations = {};
 
     async function createMultiPanel() {
         const data = structuredClone(multiPanelCreateData);
+
+        // Transform panels array to include customizations
+        data.panels = data.panels.map(panelId => ({
+            panel_id: panelId,
+            custom_emoji_name: panelCustomizations[panelId]?.custom_emoji_name?.trim() || null,
+            custom_emoji_id: panelCustomizations[panelId]?.custom_emoji_id || null,
+            custom_label: panelCustomizations[panelId]?.custom_label?.trim() || null,
+            description: panelCustomizations[panelId]?.description?.trim() || null
+        }));
 
         setBlankStringsToNull(data);
         removeBlankEmbedFields(data);
@@ -88,6 +99,7 @@
             await Promise.all([
                 loadChannels(guildId).then(r => channels = r).catch(e => notifyError(e)),
                 loadPanels(guildId).then(r => panels = r).catch(e => notifyError(e)),
+                loadEmojis(guildId).then(r => emojis = r).catch(e => notifyError(e)),
             ])
         });
     });

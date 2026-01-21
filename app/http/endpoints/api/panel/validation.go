@@ -294,7 +294,14 @@ func validateTeams(ctx PanelValidationContext) validation.ValidationFunc {
 	}
 }
 
-var placeholderPattern = regexp.MustCompile(`%(\w+)%`)
+// Match anything that looks like a placeholder
+var placeholderPattern = regexp.MustCompile(`%([^%]+)%`)
+
+// Strict patterns for specific placeholder types
+var simplePlaceholderPattern = regexp.MustCompile(`^[a-z_]+$`)
+var dateWithFormatPattern = regexp.MustCompile(`^date:([ymd\-\/\._ ]+)$`)
+var dateOffsetPattern = regexp.MustCompile(`^date_(days|weeks|months):(-?\d+)(?::([ymd\-\/\._ ]+))?$`)
+var dateTimestampPattern = regexp.MustCompile(`^date_timestamp:(\d+)(?::([ymd\-\/\._ ]+))?$`)
 
 // Discord filters out illegal characters (such as +, $, ") when creating the channel for us
 func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc {
@@ -308,16 +315,39 @@ func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc 
 		}
 
 		// Validate placeholders used
-		validPlaceholders := []string{"id", "username", "nickname", "id_padded", "claimed", "claim_indicator", "claimed_by"}
+		validPlaceholders := []string{"id", "username", "nickname", "id_padded", "claimed", "claim_indicator", "claimed_by", "date"}
 		for _, match := range placeholderPattern.FindAllStringSubmatch(*ctx.Data.NamingScheme, -1) {
-			if len(match) < 2 { // Infallible
+			if len(match) < 2 {
 				return errors.New("Infallible: Regex match length was < 2")
 			}
 
-			placeholder := match[1]
-			if !utils.Contains(validPlaceholders, placeholder) {
-				return validation.NewInvalidInputError(fmt.Sprintf("Invalid naming scheme placeholder: %s", placeholder))
+			content := match[1]
+
+			// Check if it's a date_days, date_weeks, or date_months placeholder
+			if dateOffsetPattern.MatchString(content) {
+				continue
 			}
+
+			// Check if it's a date_timestamp placeholder
+			if dateTimestampPattern.MatchString(content) {
+				continue
+			}
+
+			// Check if it's a date with format
+			if dateWithFormatPattern.MatchString(content) {
+				continue
+			}
+
+			// Check if it's a simple placeholder (no parameters)
+			if simplePlaceholderPattern.MatchString(content) {
+				if utils.Contains(validPlaceholders, content) {
+					continue
+				}
+				return validation.NewInvalidInputError(fmt.Sprintf("Invalid naming scheme placeholder: %s", content))
+			}
+
+			// If we get here, it's a malformed placeholder
+			return validation.NewInvalidInputError(fmt.Sprintf("Invalid placeholder format: %s", content))
 		}
 
 		return nil

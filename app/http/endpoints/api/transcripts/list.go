@@ -32,6 +32,7 @@ type paginatedTranscripts struct {
 
 func ListTranscripts(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	var queryOptions wrappedQueryOptions
 	if err := ctx.ShouldBindJSON(&queryOptions); err != nil {
@@ -43,6 +44,24 @@ func ListTranscripts(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
+	}
+
+	// Check if user is a panel team member only (not admin or guild-wide support)
+	isPanelTeamOnly, err := utils.IsPanelTeamMemberOnly(ctx, guildId, userId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to check user permissions"))
+		return
+	}
+
+	// Get accessible panels for panel team members
+	if isPanelTeamOnly {
+		panelIds, err := utils.GetAccessiblePanelIds(ctx, guildId, userId)
+		if err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to get accessible panels"))
+			return
+		}
+
+		opts.FilterByPanelIds = panelIds
 	}
 
 	tickets, err := dbclient.Client.Tickets.GetByOptions(ctx, opts)

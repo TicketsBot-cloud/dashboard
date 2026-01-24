@@ -46,6 +46,7 @@
         const touch = e.touches[0];
 
         if (previousTouch && moving) {
+            e.preventDefault();
             e.movementX = touch.pageX - previousTouch.pageX;
             onMouseMove(e);
         }
@@ -142,7 +143,7 @@
     on:mouseup={onMouseUp}
     on:touchend={onMouseUp}
     on:mousemove={onMouseMove}
-    on:touchmove={onTouchMove}
+    on:touchmove|nonpassive={onTouchMove}
 />
 
 <style>
@@ -159,10 +160,12 @@
         background-color: #995df3;
         width: calc(100% - 10px);
         margin-bottom: 12px;
+        touch-action: none;
     }
 
     .slider {
         position: absolute;
+        touch-action: none;
     }
 
     .label {

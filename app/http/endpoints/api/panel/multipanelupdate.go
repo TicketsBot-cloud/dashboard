@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -75,6 +76,31 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
+	// Validate labels for dropdown mode
+	if data.SelectMenu {
+		for _, panel := range panels {
+			var panelConfig *panelConfiguration
+			for _, cfg := range data.Panels {
+				if panel.PanelId == cfg.PanelId {
+					panelConfig = &cfg
+					break
+				}
+			}
+
+			var effectiveLabel string
+			if panelConfig != nil {
+				effectiveLabel = getEffectiveLabelForValidation(panel.ButtonLabel, panelConfig.CustomLabel)
+			} else {
+				effectiveLabel = panel.ButtonLabel
+			}
+
+			if effectiveLabel == "" {
+				c.JSON(400, utils.ErrorStr(fmt.Sprintf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)))
+				return
+			}
+		}
+	}
+
 	for _, panel := range panels {
 		if panel.CustomId == "" {
 			panel.CustomId, err = utils.RandString(30)
@@ -104,6 +130,18 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
+	// Create PanelWithCustomization by combining panels with their configurations
+	panelsWithCustom := make([]database.PanelWithCustomization, len(panels))
+	for i, panel := range panels {
+		panelsWithCustom[i] = database.PanelWithCustomization{
+			Panel:           panel,
+			CustomLabel:     data.Panels[i].CustomLabel,
+			Description:     data.Panels[i].Description,
+			CustomEmojiName: data.Panels[i].CustomEmojiName,
+			CustomEmojiId:   data.Panels[i].CustomEmojiId,
+		}
+	}
+
 	messageData := data.IntoMessageData(premiumTier > premium.None)
 	var messageId uint64
 
@@ -121,7 +159,7 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 		cancel()
 
-		messageId, err = messageData.send(botContext, panels)
+		messageId, err = messageData.send(botContext, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
 			if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
@@ -134,11 +172,11 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	} else {
 		// Try to edit existing message
-		err = messageData.edit(botContext, multiPanel.MessageId, panels)
+		err = messageData.edit(botContext, multiPanel.MessageId, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
 			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008) {
-				messageId, err = messageData.send(botContext, panels)
+				messageId, err = messageData.send(botContext, panelsWithCustom)
 				if err != nil {
 					var unwrapped2 request.RestError
 					if errors.As(err, &unwrapped2) && unwrapped2.StatusCode == 403 {
@@ -194,8 +232,21 @@ func MultiPanelUpdate(c *gin.Context) {
 		i := i
 		panel := panel
 
+		// Find matching panel config by panel_id
+		var panelConfig *panelConfiguration
+		for _, cfg := range data.Panels {
+			if cfg.PanelId == panel.PanelId {
+				panelConfig = &cfg
+				break
+			}
+		}
+
 		group.Go(func() error {
-			return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId, i)
+			if panelConfig != nil {
+				return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId, i, panelConfig.CustomLabel, panelConfig.Description, panelConfig.CustomEmojiName, panelConfig.CustomEmojiId)
+			} else {
+				return dbclient.Client.MultiPanelTargets.Insert(c, multiPanel.Id, panel.PanelId, i, nil, nil, nil, nil)
+			}
 		})
 	}
 

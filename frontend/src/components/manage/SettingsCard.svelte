@@ -486,6 +486,18 @@
                                 on:change={validateType}
                             />
                         </div>
+                        <div class="row">
+                             <Dropdown
+                                col1
+                                label="Panel Switch Behavior"
+                                bind:value={data.claim_settings.switch_panel_claim_behavior}
+                            >
+                                <option value={0}>Auto Unclaim - Automatically unclaim if claimer has no access to new panel</option>
+                                <option value={1}>Block Switch - Prevent switching if claimer has no access to new panel</option>
+                                <option value={2}>Remove On Unclaim - Allow switch, remove claimer's access when they unclaim</option>
+                                <option value={3}>Keep Access - Allow switch and keep claimer's access even after unclaiming</option>
+                            </Dropdown>
+                        </div>
                     </div>
                 </Collapsible>
 

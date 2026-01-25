@@ -29,7 +29,7 @@ type (
 		Label       string                   `json:"label" validate:"required,min=1,max=45"`
 		Description *string                  `json:"description,omitempty" validate:"omitempty,max=100"`
 		Placeholder *string                  `json:"placeholder,omitempty" validate:"omitempty,min=1,max=100"`
-		Type        int                      `json:"type" validate:"required,min=3,max=8"`
+		Type        int                      `json:"type" validate:"required,oneof=3 4 5 6 7 8 21 22"`
 		Position    int                      `json:"position" validate:"required,min=1,max=5"`
 		Style       component.TextStyleTypes `json:"style" validate:"omitempty,required,min=1,max=2"`
 		Required    bool                     `json:"required"`
@@ -159,11 +159,17 @@ func UpdateInputs(c *gin.Context) {
 		return
 	}
 
-	// Validate string select inputs have at least one option and unique option values
+	// Validate inputs that require options (String Select, RadioGroup, CheckboxGroup)
+	optionTypes := map[int]string{
+		3:  "String select",
+		21: "Radio group",
+		22: "Checkbox group",
+	}
+
 	for _, input := range data.Create {
-		if input.Type == 3 {
+		if typeName, requiresOptions := optionTypes[input.Type]; requiresOptions {
 			if len(input.Options) == 0 {
-				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+				c.JSON(400, utils.ErrorStr("%s inputs must have at least one option", typeName))
 				return
 			}
 			if err := validateUniqueOptionValues(input.Options); err != nil {
@@ -174,9 +180,9 @@ func UpdateInputs(c *gin.Context) {
 	}
 
 	for _, input := range data.Update {
-		if input.Type == 3 {
+		if typeName, requiresOptions := optionTypes[input.Type]; requiresOptions {
 			if len(input.Options) == 0 {
-				c.JSON(400, utils.ErrorStr("String select inputs must have at least one option"))
+				c.JSON(400, utils.ErrorStr("%s inputs must have at least one option", typeName))
 				return
 			}
 			if err := validateUniqueOptionValues(input.Options); err != nil {
@@ -283,8 +289,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		minLength := input.MinLength
 		maxLength := input.MaxLength
 
-		// Handle select types (3, 5-8)
-		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) {
+		// Handle select types (3, 5-8, 21, 22)
+		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 21 || input.Type == 22 {
 			// Enforce min_length constraints (0-25)
 			if minLength < 0 {
 				minLength = 0
@@ -293,8 +299,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			}
 
 			// Handle max_length based on type
-			if input.Type == 3 {
-				// String Select: use options length as max, can be lower but not higher
+			if input.Type == 3 || input.Type == 21 || input.Type == 22 {
+				// String Select, RadioGroup, CheckboxGroup: use options length as max, can be lower but not higher
 				optionsLength := uint16(len(input.Options))
 				if optionsLength > 0 {
 					if maxLength == 0 || maxLength > optionsLength {
@@ -343,7 +349,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return err
 		}
 
-		if wrapped.Type == 3 { // String Select
+		if wrapped.Type == 3 || wrapped.Type == 21 || wrapped.Type == 22 { // String Select, RadioGroup, CheckboxGroup
 			// Delete existing options
 			options, err := dbclient.Client.FormInputOption.GetOptions(ctx, wrapped.Id)
 			if err != nil {
@@ -383,8 +389,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		minLength := input.MinLength
 		maxLength := input.MaxLength
 
-		// Handle select types (3, 5-8)
-		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) {
+		// Handle select types (3, 5-8, 21, 22)
+		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 21 || input.Type == 22 {
 			// Enforce min_length constraints (0-25)
 			if minLength < 0 {
 				minLength = 0
@@ -393,8 +399,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			}
 
 			// Handle max_length based on type
-			if input.Type == 3 {
-				// String Select: use options length as max, can be lower but not higher
+			if input.Type == 3 || input.Type == 21 || input.Type == 22 {
+				// String Select, RadioGroup, CheckboxGroup: use options length as max, can be lower but not higher
 				optionsLength := uint16(len(input.Options))
 				if optionsLength > 0 {
 					if maxLength == 0 || maxLength > optionsLength {
@@ -443,7 +449,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return err
 		}
 
-		if input.Type == 3 { // String Select
+		if input.Type == 3 || input.Type == 21 || input.Type == 22 { // String Select, RadioGroup, CheckboxGroup
 			for i, opt := range input.Options {
 				option := database.FormInputOption{
 					FormInputId: formInputId,

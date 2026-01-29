@@ -20,7 +20,6 @@
           <NavElement icon="fas fa-poll-h" link="/manage/{guildId}/forms" on:click={closeDropdown}>Forms</NavElement>
           <NavElement icon="fas fa-users" link="/manage/{guildId}/teams" on:click={closeDropdown}>Staff Teams</NavElement>
           <NavElement icon="fas fa-robot" link="/manage/{guildId}/integrations" on:click={closeDropdown}>Integrations</NavElement>
-          <NavElement icon="fas fa-file-import" link="/manage/{guildId}/import" on:click={closeDropdown}>Import</NavElement>
         {/if}
 
         <NavElement icon="fas fa-ticket-alt" link="/manage/{guildId}/tickets" on:click={closeDropdown}>Tickets</NavElement>

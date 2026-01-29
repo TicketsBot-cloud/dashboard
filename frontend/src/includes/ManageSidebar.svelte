@@ -9,13 +9,10 @@
     import SubNavigation from "./SubNavigation.svelte";
     import SubNavigationLink from "./SubNavigationLink.svelte";
 
-    import ImportModal from "../components/manage/ImportModal.svelte";
     import ManageSidebarServersLink from "./ManageSidebarServersLink.svelte";
 
     export let currentRoute;
     export let permissionLevel;
-
-    let importModal = false;
 
     $: isAdmin = permissionLevel >= 2;
     $: isMod = permissionLevel >= 1;
@@ -81,9 +78,6 @@
     });
 </script>
 
-{#if importModal}
-    <ImportModal {guildId} on:close={() => (importModal = false)} />
-{/if}
 <section class="sidebar">
     <header>
         <img
@@ -150,12 +144,6 @@
                     title="Integrations"
                     icon="fa-robot"
                     href="/manage/{guildId}/integrations"
-                />
-                <ManageSidebarLink
-                    {currentRoute}
-                    title="Import"
-                    icon="fa-file-import"
-                    href="/manage/{guildId}/import"
                 />
             {/if}
 

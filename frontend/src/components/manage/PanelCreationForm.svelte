@@ -327,6 +327,14 @@
                     bind:value={data.category_id}
                 />
 
+                <Dropdown col2 label="Ticket Limit" bind:value={data.ticket_limit}>
+                    <option value={null}>Use Global Setting</option>
+                    {#each Array.from({ length: 10 }, (_, i) => i + 1) as n}
+                        <option value={n}>{n}</option>
+                    {/each}
+                </Dropdown>
+            </div>
+            <div class="incomplete-row">
                 <Dropdown col2 label="Form" bind:value={data.form_id}>
                     <option value="null">None</option>
                     {#each forms as form}

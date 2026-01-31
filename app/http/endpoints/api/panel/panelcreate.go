@@ -51,6 +51,7 @@ type panelBody struct {
 	TranscriptChannelId       *uint64                           `json:"transcript_channel_id,string"`
 	UseThreads                bool                              `json:"use_threads"`
 	TicketNotificationChannel *uint64                           `json:"ticket_notification_channel,string"`
+	TicketLimit               *uint8                            `json:"ticket_limit"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -241,6 +242,7 @@ func CreatePanel(c *gin.Context) {
 		TranscriptChannelId:       data.TranscriptChannelId,
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,
+		TicketLimit:               data.TicketLimit,
 	}
 
 	createOptions := panelCreateOptions{

@@ -175,6 +175,7 @@
         color: #9a9a9a;
         font-size: 12px;
         user-select: none;
+        pointer-events: none;
     }
 
     .slider > div {

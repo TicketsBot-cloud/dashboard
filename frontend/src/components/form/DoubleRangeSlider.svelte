@@ -10,6 +10,7 @@
     export let end;
 
     const sliderDiameter = 20;
+    const sliderPadding = 5;
 
     let line;
     let leftSlider, rightSlider;
@@ -95,9 +96,9 @@
             on:mousedown={onMouseDown}
             on:touchstart={onMouseDown}
             style="
-            left: min({rightParent?.style?.left ||
+            left: calc(min({rightParent?.style?.left ||
                 `${width}px`}, max(0px, min({width -
-                sliderDiameter / 2}px, {leftOffset}px)));
+                sliderDiameter / 2}px, {leftOffset}px))) - {sliderPadding}px);
             "
         >
             <div
@@ -113,9 +114,9 @@
             on:mousedown={onMouseDown}
             on:touchstart={onMouseDown}
             style="
-            left: max({leftParent?.style?.left ||
+            left: calc(max({leftParent?.style?.left ||
                 `${width}px`}, max(0px, min({width -
-                sliderDiameter / 2}px, {rightOffset}px)));
+                sliderDiameter / 2}px, {rightOffset}px))) - {sliderPadding}px);
             "
         >
             <div
@@ -154,7 +155,8 @@
 
     .slider {
         position: absolute;
-        top: -8px;
+        top: -13px;
+        padding: 5px;
         touch-action: none;
     }
 

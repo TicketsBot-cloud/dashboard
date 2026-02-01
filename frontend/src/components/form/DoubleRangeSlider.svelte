@@ -165,6 +165,7 @@
 
     .slider {
         position: absolute;
+        top: -8px;
         touch-action: none;
     }
 
@@ -180,7 +181,6 @@
 
     .slider > div {
         position: relative;
-        top: -8px;
         left: 0;
         border-radius: 50%;
         background-color: white;

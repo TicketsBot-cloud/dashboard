@@ -161,7 +161,7 @@ func resolveUsernames(ctx context.Context, entries []database.AuditLogEntry) map
 		return usernames
 	}
 
-	rows, err := cache.Instance.Query(ctx, `SELECT "user_id", "data"->>'Username' FROM users WHERE "user_id" = ANY($1)`, userIds)
+	rows, err := cache.Instance.Query(ctx, `SELECT "user_id", "data"->>'username' FROM users WHERE "user_id" = ANY($1)`, userIds)
 	if err != nil {
 		return usernames
 	}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -34,6 +35,7 @@ var (
 
 func CreateTag(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	// Max of 200 tags
 	count, err := dbclient.Client.Tag.GetTagCount(ctx, guildId)
@@ -154,6 +156,14 @@ func CreateTag(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionTagCreate,
+		ResourceType: database.AuditResourceTag,
+		ResourceId:   audit.StringPtr(data.Id),
+		NewData:      data,
+	})
 	ctx.Status(204)
 }
 

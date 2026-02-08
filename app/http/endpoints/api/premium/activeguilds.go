@@ -6,9 +6,11 @@ import (
 	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -166,5 +168,11 @@ func SetActiveGuilds(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionPremiumSetActiveGuilds,
+		ResourceType: dbmodel.AuditResourcePremium,
+		NewData:      body,
+	})
 	ctx.Status(http.StatusNoContent)
 }

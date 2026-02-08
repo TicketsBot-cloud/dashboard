@@ -9,6 +9,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -23,6 +24,7 @@ import (
 
 func MultiPanelUpdate(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	// parse body
 	var data multiPanelCreateData
@@ -225,6 +227,15 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionMultiPanelUpdate,
+		ResourceType: database.AuditResourceMultiPanel,
+		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+		OldData:      multiPanel,
+		NewData:      updated,
+	})
 	c.JSON(200, gin.H{
 		"success": true,
 		"data":    multiPanel,

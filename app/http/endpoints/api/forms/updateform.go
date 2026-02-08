@@ -6,13 +6,16 @@ import (
 	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
 func UpdateForm(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	var data createFormBody
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -58,5 +61,14 @@ func UpdateForm(c *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionFormUpdate,
+		ResourceType: dbmodel.AuditResourceForm,
+		ResourceId:   audit.StringPtr(strconv.Itoa(formId)),
+		OldData:      form,
+		NewData:      data,
+	})
 	c.JSON(200, utils.SuccessResponse)
 }

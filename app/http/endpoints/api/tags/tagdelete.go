@@ -2,9 +2,12 @@ package api
 
 import (
 	"fmt"
+
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,6 +17,7 @@ type deleteBody struct {
 
 func DeleteTag(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	var body deleteBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -57,5 +61,13 @@ func DeleteTag(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionTagDelete,
+		ResourceType: dbmodel.AuditResourceTag,
+		ResourceId:   audit.StringPtr(body.TagId),
+		OldData:      tag,
+	})
 	ctx.Status(204)
 }

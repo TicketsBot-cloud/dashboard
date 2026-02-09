@@ -137,6 +137,7 @@
         font-size: 13px;
         line-height: 1.6;
         overflow-x: auto;
+        text-align: left !important;
     }
 
     .diff-row {

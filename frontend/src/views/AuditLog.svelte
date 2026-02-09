@@ -267,7 +267,7 @@
             <Card footer={false}>
                 <span slot="title">
                     <i class="fas fa-history"></i>
-                    Audit Log ({totalCount} entries)
+                    Audit Logs ({totalCount} entries)
                 </span>
 
                 <div slot="body" class="main-col">

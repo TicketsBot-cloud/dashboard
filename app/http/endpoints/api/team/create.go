@@ -2,6 +2,9 @@ package api
 
 import (
 	"fmt"
+	"strconv"
+
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -14,6 +17,7 @@ func CreateTeam(ctx *gin.Context) {
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	var data body
 	if err := ctx.ShouldBindJSON(&data); err != nil {
@@ -43,6 +47,14 @@ func CreateTeam(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionTeamCreate,
+		ResourceType: database.AuditResourceTeam,
+		ResourceId:   audit.StringPtr(strconv.Itoa(id)),
+		NewData:      data,
+	})
 	ctx.JSON(200, database.SupportTeam{
 		Id:      id,
 		GuildId: guildId,

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -22,6 +23,7 @@ import (
 
 func UpdateSettingsHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	var settings Settings
 	if err := ctx.ShouldBindJSON(&settings); err != nil {
@@ -52,6 +54,13 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 
 	if err := settings.Validate(ctx, guildId, premiumTier); err != nil {
 		ctx.JSON(400, utils.ErrorStr("%v", err))
+		return
+	}
+
+	// Fetch current settings before mutation for audit diff
+	oldSettings, err := loadSettings(ctx, guildId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to save settings. Please try again."))
 		return
 	}
 
@@ -86,6 +95,15 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	settings.updateUsersCanClose(guildId)
 	settings.updateCloseConfirmation(guildId)
 	settings.updateFeedbackEnabled(guildId)
+
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionSettingsUpdate,
+		ResourceType: database.AuditResourceSettings,
+		OldData:      oldSettings,
+		NewData:      settings,
+	})
 
 	ctx.JSON(200, gin.H{
 		"welcome_message": validWelcomeMessage,

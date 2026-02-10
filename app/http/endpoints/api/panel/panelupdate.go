@@ -8,6 +8,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/app/http/validation"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -26,6 +27,7 @@ import (
 
 func UpdatePanel(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
@@ -353,6 +355,16 @@ func UpdatePanel(c *gin.Context) {
 		// TODO: Use proper context
 		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
 	}
+
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionPanelUpdate,
+		ResourceType: database.AuditResourcePanel,
+		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+		OldData:      existing,
+		NewData:      panel,
+	})
 
 	c.JSON(200, utils.SuccessResponse)
 }

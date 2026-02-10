@@ -6,6 +6,7 @@ import (
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/botstaff"
+	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
 	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
@@ -194,6 +195,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 		guildAuthApiAdmin.GET("/staff-override", api_override.GetOverrideHandler)
 		guildAuthApiAdmin.POST("/staff-override", api_override.CreateOverrideHandler)
 		guildAuthApiAdmin.DELETE("/staff-override", api_override.DeleteOverrideHandler)
+
+		guildAuthApiAdmin.POST("/audit-logs", middleware.AdminOnly, api_audit.GetAuditLogs)
 
 		guildAuthApiAdmin.GET("/integrations/available", api_integrations.ListIntegrationsHandler)
 		guildAuthApiAdmin.GET("/integrations/:integrationid", api_integrations.IsIntegrationActiveHandler)

@@ -112,13 +112,13 @@ func PresignURL(ctx *gin.Context) {
 
 	botCtx, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	guild, err := botCtx.GetGuild(context.Background(), guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 
@@ -132,7 +132,7 @@ func PresignURL(ctx *gin.Context) {
 		"Content-Type": []string{fileContentType},
 	})
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 
@@ -157,7 +157,7 @@ func GetRuns(ctx *gin.Context) {
 
 	runs, err := dbclient.Client.ImportLogs.GetRuns(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 

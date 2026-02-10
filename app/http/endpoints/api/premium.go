@@ -4,9 +4,9 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
-	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +15,7 @@ func PremiumHandler(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -24,7 +24,7 @@ func PremiumHandler(ctx *gin.Context) {
 
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, includeVoting, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to verify premium status. Please try again."))
 		return
 	}
 

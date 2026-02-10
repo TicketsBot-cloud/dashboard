@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -37,7 +38,7 @@ func GetOwnedIntegrationsHandler(ctx *gin.Context) {
 	})
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 
@@ -47,7 +48,7 @@ func GetOwnedIntegrationsHandler(ctx *gin.Context) {
 		if integration.ImageUrl != nil {
 			tmp, err := utils.GenerateImageProxyToken(*integration.ImageUrl)
 			if err != nil {
-				ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+				_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 				return
 			}
 

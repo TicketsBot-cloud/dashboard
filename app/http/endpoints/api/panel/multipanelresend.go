@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -31,7 +32,7 @@ func MultiPanelResend(ctx *gin.Context) {
 	// retrieve panel from DB
 	multiPanel, ok, err := dbclient.Client.MultiPanels.Get(ctx, panelId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 		return
 	}
 
@@ -50,7 +51,7 @@ func MultiPanelResend(ctx *gin.Context) {
 	// get bot context
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -59,7 +60,7 @@ func MultiPanelResend(ctx *gin.Context) {
 	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
-			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 			return
 		}
 	}
@@ -67,13 +68,13 @@ func MultiPanelResend(ctx *gin.Context) {
 	// get premium status
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to verify premium status. Please try again."))
 		return
 	}
 
 	panels, err := dbclient.Client.MultiPanelTargets.GetPanels(ctx, multiPanel.Id)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 		return
 	}
 
@@ -83,16 +84,16 @@ func MultiPanelResend(ctx *gin.Context) {
 	if err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
-			ctx.JSON(500, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+			_ = ctx.AbortWithError(500, app.NewError(err, "I do not have permission to send messages in the provided channel"))
 		} else {
-			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 		}
 
 		return
 	}
 
 	if err = dbclient.Client.MultiPanels.UpdateMessageId(ctx, multiPanel.Id, messageId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 		return
 	}
 

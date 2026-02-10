@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/database"
@@ -34,7 +35,7 @@ func DeleteTag(ctx *gin.Context) {
 	// Fetch tag to see if we need to delete a guild command
 	tag, exists, err := database.Client.Tag.Get(ctx, guildId, body.TagId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch tag from database: %v", err)))
 		return
 	}
 
@@ -46,18 +47,18 @@ func DeleteTag(ctx *gin.Context) {
 	if tag.ApplicationCommandId != nil {
 		botContext, err := botcontext.ContextForGuild(guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 			return
 		}
 
 		if err := botContext.DeleteGuildCommand(ctx, guildId, *tag.ApplicationCommandId); err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to delete tag. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to delete tag. Please try again."))
 			return
 		}
 	}
 
 	if err := database.Client.Tag.Delete(ctx, guildId, body.TagId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to delete tag. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to delete tag. Please try again."))
 		return
 	}
 

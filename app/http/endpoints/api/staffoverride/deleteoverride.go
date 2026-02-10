@@ -1,9 +1,9 @@
 package api
 
 import (
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
-	"github.com/TicketsBot-cloud/dashboard/utils"
 	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +13,7 @@ func DeleteOverrideHandler(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
 
 	if err := database.Client.StaffOverride.Delete(ctx, guildId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to delete staff override. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to delete staff override. Please try again."))
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/TicketsBot-cloud/common/permission"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
@@ -50,7 +51,7 @@ func AddBlacklistHandler(ctx *gin.Context) {
 		// Max of 250 blacklisted users
 		count, err := database.Client.Blacklist.GetBlacklistedCount(ctx, guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Invalid request data. Please check your input and try again."))
 			return
 		}
 
@@ -62,7 +63,7 @@ func AddBlacklistHandler(ctx *gin.Context) {
 		// TODO: Use proper context
 		permLevel, err := utils.GetPermissionLevel(context.Background(), guildId, body.Snowflake)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load blacklist. Please try again."))
 			return
 		}
 
@@ -72,7 +73,7 @@ func AddBlacklistHandler(ctx *gin.Context) {
 		}
 
 		if err := database.Client.Blacklist.Add(ctx, guildId, body.Snowflake); err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load blacklist. Please try again."))
 			return
 		}
 
@@ -96,7 +97,7 @@ func AddBlacklistHandler(ctx *gin.Context) {
 				})
 				return
 			} else {
-				ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
+				_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load blacklist. Please try again."))
 				return
 			}
 		}
@@ -111,7 +112,7 @@ func AddBlacklistHandler(ctx *gin.Context) {
 		// Max of 50 blacklisted roles
 		count, err := database.Client.RoleBlacklist.GetBlacklistedCount(ctx, guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load blacklist. Please try again."))
 			return
 		}
 
@@ -121,7 +122,7 @@ func AddBlacklistHandler(ctx *gin.Context) {
 		}
 
 		if err := database.Client.RoleBlacklist.Add(ctx, guildId, body.Snowflake); err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load blacklist. Please try again."))
 			return
 		}
 

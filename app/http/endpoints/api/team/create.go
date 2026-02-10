@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -32,7 +33,7 @@ func CreateTeam(ctx *gin.Context) {
 
 	_, exists, err := dbclient.Client.SupportTeam.GetByName(ctx, guildId, data.Name)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch team from database: %v", err)))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch team from database: %v", err)))
 		return
 	}
 
@@ -43,7 +44,7 @@ func CreateTeam(ctx *gin.Context) {
 
 	id, err := dbclient.Client.SupportTeam.Create(ctx, guildId, data.Name)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to create team. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create team. Please try again."))
 		return
 	}
 

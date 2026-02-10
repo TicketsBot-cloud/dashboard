@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/gdl/objects/member"
@@ -14,7 +15,7 @@ func SearchMembers(ctx *gin.Context) {
 
 	botCtx, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -34,7 +35,7 @@ func SearchMembers(ctx *gin.Context) {
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 

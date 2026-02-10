@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -95,13 +96,13 @@ func GetAuditLogs(ctx *gin.Context) {
 
 	entries, err := dbclient.Client.AuditLog.Query(ctx, opts)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch audit logs. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch audit logs. Please try again."))
 		return
 	}
 
 	totalCount, err := dbclient.Client.AuditLog.Count(ctx, opts)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch audit log count. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch audit log count. Please try again."))
 		return
 	}
 

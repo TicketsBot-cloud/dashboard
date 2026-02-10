@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -68,7 +69,7 @@ func addDefaultMember(ctx *gin.Context, guildId, userId, snowflake uint64, entit
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 
@@ -86,7 +87,7 @@ func addDefaultMember(ctx *gin.Context, guildId, userId, snowflake uint64, entit
 func addTeamMember(ctx *gin.Context, teamId int, guildId, userId, snowflake uint64, entityType entityType, typeParsed int) {
 	exists, err := dbclient.Client.SupportTeam.Exists(ctx, teamId, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 
@@ -103,7 +104,7 @@ func addTeamMember(ctx *gin.Context, teamId int, guildId, userId, snowflake uint
 	}
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 

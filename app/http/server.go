@@ -39,6 +39,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	router.Use(sentrygin.New(sentrygin.Options{}))
 	router.Use(gin.Recovery())
 	router.Use(middleware.Logging(logger))
+	router.Use(middleware.SentryError)
 	router.Use(middleware.ErrorHandler)
 
 	router.RemoteIPHeaders = config.Conf.Server.RealIpHeaders

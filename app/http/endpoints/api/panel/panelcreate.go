@@ -155,7 +155,7 @@ func CreatePanel(c *gin.Context) {
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
 		if ok := errors.As(err, &validationErrors); !ok {
-			c.JSON(500, utils.ErrorStr("An error occurred while validating the panel structure"))
+			_ = c.AbortWithError(500, app.NewError(err, "An error occurred while validating the panel structure"))
 			return
 		}
 

@@ -3,6 +3,7 @@ package api
 import (
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -27,7 +28,7 @@ func GetIntegrationDetailedHandler(ctx *gin.Context) {
 
 	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 		return
 	}
 
@@ -45,7 +46,7 @@ func GetIntegrationDetailedHandler(ctx *gin.Context) {
 	// Get placeholders
 	placeholders, err := dbclient.Client.CustomIntegrationPlaceholders.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 		return
 	}
 
@@ -57,7 +58,7 @@ func GetIntegrationDetailedHandler(ctx *gin.Context) {
 	// Get headers
 	headers, err := dbclient.Client.CustomIntegrationHeaders.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 		return
 	}
 
@@ -69,7 +70,7 @@ func GetIntegrationDetailedHandler(ctx *gin.Context) {
 	// Get secrets
 	secrets, err := dbclient.Client.CustomIntegrationSecrets.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 		return
 	}
 

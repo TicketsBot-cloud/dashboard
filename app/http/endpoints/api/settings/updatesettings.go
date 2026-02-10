@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -34,21 +35,21 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	// Get a list of all channel IDs
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	// TODO: Use proper context
 	channels, err := botContext.GetGuildChannels(context.Background(), guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to fetch your server's channels. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to fetch your server's channels. Please try again."))
 		return
 	}
 
 	// Includes voting
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to verify premium status. Please try again."))
 		return
 	}
 
@@ -60,7 +61,7 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	// Fetch current settings before mutation for audit diff
 	oldSettings, err := loadSettings(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to save settings. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to save settings. Please try again."))
 		return
 	}
 
@@ -83,7 +84,7 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to save settings. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to save settings. Please try again."))
 		return
 	}
 

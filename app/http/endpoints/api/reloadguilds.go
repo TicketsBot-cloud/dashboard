@@ -30,7 +30,7 @@ func ReloadGuildsHandler(c *gin.Context) {
 	if !res {
 		ttl, err := redis.Client.TTL(wrapper.DefaultContext(), key).Result()
 		if err != nil {
-			c.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+			_ = c.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 			return
 		}
 

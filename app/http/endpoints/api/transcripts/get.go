@@ -1,12 +1,13 @@
 package api
 
 import (
-	"fmt"
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/archiverclient"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
@@ -26,7 +27,7 @@ func GetTranscriptHandler(ctx *gin.Context) {
 	// get ticket object
 	ticket, err := dbclient.Client.Tickets.Get(ctx, ticketId, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to load ticket. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to load ticket. Please try again."))
 		return
 	}
 
@@ -57,7 +58,7 @@ func GetTranscriptHandler(ctx *gin.Context) {
 		if errors.Is(err, archiverclient.ErrNotFound) {
 			ctx.JSON(404, utils.ErrorStr("Transcript not found"))
 		} else {
-			ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 		}
 
 		return

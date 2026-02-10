@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -31,7 +32,7 @@ func SendTag(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -51,7 +52,7 @@ func SendTag(ctx *gin.Context) {
 	// Verify guild is premium
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to verify premium status for guild %d", guildId))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to verify premium status for guild %d", guildId)))
 		return
 	}
 
@@ -78,7 +79,7 @@ func SendTag(ctx *gin.Context) {
 	// Get tag
 	tag, ok, err := dbclient.Client.Tag.Get(ctx, guildId, body.TagId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch tag '%s' from database for guild %d", body.TagId, guildId))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch tag '%s' from database for guild %d", body.TagId, guildId)))
 		return
 	}
 
@@ -90,13 +91,13 @@ func SendTag(ctx *gin.Context) {
 	// Preferably send via a webhook
 	webhook, err := dbclient.Client.Webhooks.Get(ctx, guildId, ticketId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch webhook for ticket #%d in guild %d", ticketId, guildId))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch webhook for ticket #%d in guild %d", ticketId, guildId)))
 		return
 	}
 
 	settings, err := dbclient.Client.Settings.Get(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch guild settings for guild %d", guildId))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch guild settings for guild %d", guildId)))
 		return
 	}
 
@@ -132,7 +133,7 @@ func SendTag(ctx *gin.Context) {
 		if settings.AnonymiseDashboardResponses {
 			guild, err := botContext.GetGuild(context.Background(), guildId)
 			if err != nil {
-				ctx.JSON(500, utils.ErrorStr("Failed to fetch guild information for guild %d", guildId))
+				_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch guild information for guild %d", guildId)))
 				return
 			}
 
@@ -148,7 +149,7 @@ func SendTag(ctx *gin.Context) {
 		} else {
 			user, err := botContext.GetUser(context.Background(), userId)
 			if err != nil {
-				ctx.JSON(500, utils.ErrorStr("Failed to fetch user information for user %d", userId))
+				_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch user information for user %d", userId)))
 				return
 			}
 
@@ -184,7 +185,7 @@ func SendTag(ctx *gin.Context) {
 	if !settings.AnonymiseDashboardResponses {
 		user, err := botContext.GetUser(context.Background(), userId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to fetch user information for user %d", userId))
+			_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch user information for user %d", userId)))
 			return
 		}
 
@@ -207,7 +208,7 @@ func SendTag(ctx *gin.Context) {
 			Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
 		},
 	}); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to send tag '%s' to ticket #%d in channel %d", body.TagId, ticketId, *ticket.ChannelId))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to send tag '%s' to ticket #%d in channel %d", body.TagId, ticketId, *ticket.ChannelId)))
 		return
 	}
 

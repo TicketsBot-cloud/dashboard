@@ -3,6 +3,7 @@ package api
 import (
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -21,7 +22,7 @@ func RemoveIntegrationHandler(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.CustomIntegrationGuilds.RemoveFromGuild(ctx, integrationId, guildId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to delete integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to delete integration. Please try again."))
 		return
 	}
 

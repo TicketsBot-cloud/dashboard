@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -21,7 +22,7 @@ func RemoveBotStaffHandler(ctx *gin.Context) {
 	}
 
 	if err := database.Client.BotStaff.Delete(ctx, userId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to delete record. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to delete record. Please try again."))
 		return
 	}
 

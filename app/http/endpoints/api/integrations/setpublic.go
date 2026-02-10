@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/config"
@@ -26,7 +27,7 @@ func SetIntegrationPublicHandler(ctx *gin.Context) {
 
 	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 
@@ -69,12 +70,12 @@ func SetIntegrationPublicHandler(ctx *gin.Context) {
 	)
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 
 	if err := dbclient.Client.CustomIntegrations.SetPublic(ctx, integration.Id); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to process request. Please try again."))
 		return
 	}
 

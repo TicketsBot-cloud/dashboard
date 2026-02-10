@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -60,7 +61,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 	if err := validate.Struct(data); err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if !ok {
-			ctx.JSON(500, utils.ErrorStr("An error occurred while validating the integration"))
+			_ = ctx.AbortWithError(500, app.NewError(err, "An error occurred while validating the integration"))
 			return
 		}
 
@@ -76,7 +77,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 
 	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return
 	}
 
@@ -93,7 +94,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 	if data.ValidationUrl != nil {
 		sameHost, err := isSameValidationUrlHost(data.WebhookUrl, *data.ValidationUrl)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 			return
 		}
 
@@ -119,7 +120,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return
 	}
 
@@ -152,7 +153,7 @@ func (b *integrationUpdateBody) updatePlaceholders(ctx *gin.Context, integration
 	// Verify IDs are valid for the integration
 	existingPlaceholders, err := dbclient.Client.CustomIntegrationPlaceholders.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -189,7 +190,7 @@ func (b *integrationUpdateBody) updatePlaceholders(ctx *gin.Context, integration
 	}
 
 	if _, err := dbclient.Client.CustomIntegrationPlaceholders.Set(ctx, integrationId, placeholders); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -200,7 +201,7 @@ func (b *integrationUpdateBody) updateHeaders(ctx *gin.Context, integrationId in
 	// Verify IDs are valid for the integration
 	existingHeaders, err := dbclient.Client.CustomIntegrationHeaders.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -238,7 +239,7 @@ func (b *integrationUpdateBody) updateHeaders(ctx *gin.Context, integrationId in
 	}
 
 	if _, err := dbclient.Client.CustomIntegrationHeaders.CreateOrUpdate(ctx, integrationId, headers); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -249,7 +250,7 @@ func (b *integrationUpdateBody) updateSecrets(ctx *gin.Context, integrationId in
 	// Verify IDs are valid for the integration
 	existingSecrets, err := dbclient.Client.CustomIntegrationSecrets.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return false
 	}
 
@@ -286,7 +287,7 @@ func (b *integrationUpdateBody) updateSecrets(ctx *gin.Context, integrationId in
 	}
 
 	if _, err := dbclient.Client.CustomIntegrationSecrets.CreateOrUpdate(ctx, integrationId, secrets); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to update integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to update integration. Please try again."))
 		return false
 	}
 

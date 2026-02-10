@@ -6,6 +6,7 @@ import (
 
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -47,7 +48,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 
 	ownedCount, err := dbclient.Client.CustomIntegrations.GetOwnedCount(ctx, userId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create integration. Please try again."))
 		return
 	}
 
@@ -65,7 +66,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 	if err := validate.Struct(data); err != nil {
 		validationErrors, ok := err.(validator.ValidationErrors)
 		if !ok {
-			ctx.JSON(500, utils.ErrorStr("An error occurred while validating the integration"))
+			_ = ctx.AbortWithError(500, app.NewError(err, "An error occurred while validating the integration"))
 			return
 		}
 
@@ -77,7 +78,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 	if data.ValidationUrl != nil {
 		sameHost, err := isSameValidationUrlHost(data.WebhookUrl, *data.ValidationUrl)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create integration. Please try again."))
 			return
 		}
 
@@ -89,7 +90,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 
 	integration, err := dbclient.Client.CustomIntegrations.Create(ctx, userId, data.WebhookUrl, data.ValidationUrl, data.Method, data.Name, data.Description, data.ImageUrl, data.PrivacyPolicyUrl)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create integration. Please try again."))
 		return
 	}
 
@@ -104,7 +105,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		if _, err := dbclient.Client.CustomIntegrationSecrets.CreateOrUpdate(ctx, integration.Id, secrets); err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create integration. Please try again."))
 			return
 		}
 	}
@@ -120,7 +121,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		if _, err := dbclient.Client.CustomIntegrationHeaders.CreateOrUpdate(ctx, integration.Id, headers); err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create integration. Please try again."))
 			return
 		}
 	}
@@ -136,7 +137,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		if _, err := dbclient.Client.CustomIntegrationPlaceholders.Set(ctx, integration.Id, placeholders); err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to create integration. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create integration. Please try again."))
 			return
 		}
 	}

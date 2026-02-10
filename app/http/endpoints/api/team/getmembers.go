@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	syncutils "github.com/TicketsBot-cloud/common/utils"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -49,7 +50,7 @@ func getDefaultMembers(ctx *gin.Context, guildId uint64) {
 	})
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load teams. Please try again."))
 		return
 	}
 
@@ -57,7 +58,7 @@ func getDefaultMembers(ctx *gin.Context, guildId uint64) {
 	if err == nil {
 		ctx.JSON(200, data)
 	} else {
-		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load teams. Please try again."))
 	}
 }
 
@@ -65,7 +66,7 @@ func getTeamMembers(ctx *gin.Context, teamId int, guildId uint64) {
 	// Verify team exists
 	exists, err := dbclient.Client.SupportTeam.Exists(ctx, teamId, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load teams. Please try again."))
 		return
 	}
 
@@ -90,7 +91,7 @@ func getTeamMembers(ctx *gin.Context, teamId int, guildId uint64) {
 	})
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load teams. Please try again."))
 		return
 	}
 
@@ -98,7 +99,7 @@ func getTeamMembers(ctx *gin.Context, teamId int, guildId uint64) {
 	if err == nil {
 		ctx.JSON(200, data)
 	} else {
-		ctx.JSON(500, utils.ErrorStr("Failed to load teams. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load teams. Please try again."))
 	}
 }
 

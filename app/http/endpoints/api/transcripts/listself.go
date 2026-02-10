@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -40,7 +41,7 @@ func ListSelfTranscripts(ctx *gin.Context) {
 
 	tickets, err := dbclient.Client.Tickets.GetByOptions(ctx, opts)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 		return
 	}
 
@@ -79,7 +80,7 @@ func ListSelfTranscripts(ctx *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 		return
 	}
 

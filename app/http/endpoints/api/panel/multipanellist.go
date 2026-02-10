@@ -3,8 +3,8 @@ package api
 import (
 	"context"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
-	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
@@ -20,21 +20,21 @@ func MultiPanelList(ctx *gin.Context) {
 	}
 
 	type multiPanelResponse struct {
-		Id                    int                   `json:"id"`
-		MessageId             uint64                `json:"message_id,string"`
-		ChannelId             uint64                `json:"channel_id,string"`
-		GuildId               uint64                `json:"guild_id,string"`
-		SelectMenu            bool                  `json:"select_menu"`
-		SelectMenuPlaceholder *string               `json:"select_menu_placeholder"`
-		Embed                 *types.CustomEmbed    `json:"embed"`
-		Panels                []panelConfiguration  `json:"panels"`
+		Id                    int                  `json:"id"`
+		MessageId             uint64               `json:"message_id,string"`
+		ChannelId             uint64               `json:"channel_id,string"`
+		GuildId               uint64               `json:"guild_id,string"`
+		SelectMenu            bool                 `json:"select_menu"`
+		SelectMenuPlaceholder *string              `json:"select_menu_placeholder"`
+		Embed                 *types.CustomEmbed   `json:"embed"`
+		Panels                []panelConfiguration `json:"panels"`
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
 
 	multiPanels, err := dbclient.Client.MultiPanels.GetByGuild(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load multi-panels. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load multi-panels. Please try again."))
 		return
 	}
 
@@ -84,7 +84,7 @@ func MultiPanelList(ctx *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load multi-panels. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load multi-panels. Please try again."))
 		return
 	}
 

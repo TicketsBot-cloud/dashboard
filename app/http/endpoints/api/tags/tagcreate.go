@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -40,7 +41,7 @@ func CreateTag(ctx *gin.Context) {
 	// Max of 200 tags
 	count, err := dbclient.Client.Tag.GetTagCount(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
+		_ = ctx.AbortWithError(500, app.NewError(err, fmt.Sprintf("Failed to fetch tag from database: %v", err)))
 		return
 	}
 
@@ -70,7 +71,7 @@ func CreateTag(ctx *gin.Context) {
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
 		if ok := errors.As(err, &validationErrors); !ok {
-			ctx.JSON(500, utils.ErrorStr("An error occurred while validating the integration"))
+			_ = ctx.AbortWithError(500, app.NewError(err, "An error occurred while validating the integration"))
 			return
 		}
 
@@ -100,14 +101,14 @@ func CreateTag(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	if data.UseGuildCommand {
 		premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Unable to verify premium status. Please try again."))
 			return
 		}
 
@@ -136,7 +137,7 @@ func CreateTag(ctx *gin.Context) {
 		})
 
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to create tag. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create tag. Please try again."))
 			return
 		}
 
@@ -152,7 +153,7 @@ func CreateTag(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.Tag.Set(ctx, wrapped); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to create tag. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to create tag. Please try again."))
 		return
 	}
 

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -24,7 +25,7 @@ func ResendPanel(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -37,7 +38,7 @@ func ResendPanel(ctx *gin.Context) {
 	// get existing
 	panel, err := dbclient.Client.Panel.GetById(ctx, panelId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to load panel. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to load panel. Please try again."))
 		return
 	}
 
@@ -62,14 +63,14 @@ func ResendPanel(ctx *gin.Context) {
 	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, panel.ChannelId, panel.GuildId); err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
-			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 			return
 		}
 	}
 
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to verify premium status. Please try again."))
 		return
 	}
 
@@ -78,16 +79,16 @@ func ResendPanel(ctx *gin.Context) {
 	if err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
-			ctx.JSON(500, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+			_ = ctx.AbortWithError(500, app.NewError(err, "I do not have permission to send messages in the provided channel"))
 		} else {
-			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 		}
 
 		return
 	}
 
 	if err = dbclient.Client.Panel.UpdateMessageId(ctx, panel.PanelId, msgId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to send message. Please try again."))
 		return
 	}
 

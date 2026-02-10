@@ -1,8 +1,8 @@
 package api
 
 import (
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/database"
-	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,7 +11,7 @@ func GetOverrideHandler(ctx *gin.Context) {
 
 	hasOverride, err := database.Client.StaffOverride.HasActiveOverride(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load staff overrides. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load staff overrides. Please try again."))
 		return
 	}
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
-	"github.com/TicketsBot-cloud/dashboard/utils"
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
@@ -20,7 +20,7 @@ type userData struct {
 func ListBotStaffHandler(ctx *gin.Context) {
 	staff, err := database.Client.BotStaff.GetAll(ctx)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 		return
 	}
 
@@ -53,7 +53,7 @@ func ListBotStaffHandler(ctx *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 		return
 	}
 

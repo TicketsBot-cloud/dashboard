@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -38,7 +39,7 @@ func GetIntegrationHandler(ctx *gin.Context) {
 
 	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 		return
 	}
 
@@ -55,7 +56,7 @@ func GetIntegrationHandler(ctx *gin.Context) {
 
 	placeholders, err := dbclient.Client.CustomIntegrationPlaceholders.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 		return
 	}
 
@@ -66,7 +67,7 @@ func GetIntegrationHandler(ctx *gin.Context) {
 
 	secrets, err := dbclient.Client.CustomIntegrationSecrets.GetByIntegration(ctx, integrationId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 		return
 	}
 
@@ -79,7 +80,7 @@ func GetIntegrationHandler(ctx *gin.Context) {
 	if integration.ImageUrl != nil {
 		tmp, err := utils.GenerateImageProxyToken(*integration.ImageUrl)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to load integrations. Please try again."))
 			return
 		}
 

@@ -9,8 +9,8 @@ import (
 )
 
 type ErrorResponse struct {
-	Error         string  `json:"error"`
-	InternalError *string `json:"internal_error,omitempty"`
+	Success bool   `json:"success"`
+	Error   string `json:"error"`
 }
 
 type copyWriter struct {
@@ -30,23 +30,18 @@ func ErrorHandler(c *gin.Context) {
 
 	if len(c.Errors) > 0 {
 		var message string
-		var internalError *string
 
 		var apiError *app.ApiError
 		if errors.As(c.Errors[0], &apiError) {
 			message = apiError.ExternalMessage
-			if apiError.InternalError != nil {
-				errStr := apiError.InternalError.Error()
-				internalError = &errStr
-			}
 		} else {
 			message = "An error occurred processing your request"
 		}
 
 		c.Writer = cw.ResponseWriter
 		c.JSON(-1, ErrorResponse{
-			Error:         message,
-			InternalError: internalError,
+			Success: false,
+			Error:   message,
 		})
 
 		return
@@ -56,7 +51,8 @@ func ErrorHandler(c *gin.Context) {
 		c.Writer = cw.ResponseWriter
 
 		c.JSON(-1, ErrorResponse{
-			Error: "An internal server error occurred",
+			Success: false,
+			Error:   "An internal server error occurred",
 		})
 
 		return

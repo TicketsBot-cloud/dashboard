@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
@@ -25,9 +26,9 @@ type transcriptMetadata struct {
 
 type paginatedTranscripts struct {
 	Transcripts []transcriptMetadata `json:"transcripts"`
-	TotalCount  int                   `json:"total_count"`
-	TotalPages  int                   `json:"total_pages"`
-	CurrentPage int                   `json:"current_page"`
+	TotalCount  int                  `json:"total_count"`
+	TotalPages  int                  `json:"total_pages"`
+	CurrentPage int                  `json:"current_page"`
 }
 
 func ListTranscripts(ctx *gin.Context) {
@@ -41,19 +42,19 @@ func ListTranscripts(ctx *gin.Context) {
 
 	opts, err := queryOptions.toQueryOptions(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	tickets, err := dbclient.Client.Tickets.GetByOptions(ctx, opts)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
@@ -76,7 +77,7 @@ func ListTranscripts(ctx *gin.Context) {
 				usernames[ticket.UserId] = user.Username
 			}
 		} else {
-			ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+			_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 			return
 		}
 	}
@@ -89,14 +90,14 @@ func ListTranscripts(ctx *gin.Context) {
 
 	ratings, err := dbclient.Client.ServiceRatings.GetMulti(ctx, guildId, ticketIds)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 		return
 	}
 
 	// Get close reasons
 	closeReasons, err := dbclient.Client.CloseReason.GetMulti(ctx, guildId, ticketIds)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch records. Please try again."))
 		return
 	}
 
@@ -123,7 +124,7 @@ func ListTranscripts(ctx *gin.Context) {
 	// Get total count for pagination
 	totalCount, err := dbclient.Client.Tickets.CountByOptions(ctx, opts)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch total count. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to fetch total count. Please try again."))
 		return
 	}
 

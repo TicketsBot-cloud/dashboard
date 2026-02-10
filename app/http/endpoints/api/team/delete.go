@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -24,7 +25,7 @@ func DeleteTeam(ctx *gin.Context) {
 	// check team belongs to guild
 	team, exists, err := dbclient.Client.SupportTeam.GetById(ctx, guildId, teamId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to delete team. Please try again."))
 		return
 	}
 
@@ -34,7 +35,7 @@ func DeleteTeam(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.SupportTeam.Delete(ctx, teamId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to delete team. Please try again."))
 		return
 	}
 

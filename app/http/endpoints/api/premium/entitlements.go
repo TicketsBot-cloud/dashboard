@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
-	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
@@ -16,13 +16,13 @@ func GetEntitlements(ctx *gin.Context) {
 
 	entitlements, err := dbclient.Client.Entitlements.ListUserSubscriptions(ctx, userId, premium.GracePeriod)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to query database. Please try again."))
 		return
 	}
 
 	legacyEntitlement, err := dbclient.Client.LegacyPremiumEntitlements.GetUserTier(ctx, userId, premium.GracePeriod)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to query database. Please try again."))
 		return
 	}
 
@@ -60,7 +60,7 @@ func GetEntitlements(ctx *gin.Context) {
 
 		return nil
 	}); err != nil {
-		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to query database. Please try again."))
 		return
 	}
 

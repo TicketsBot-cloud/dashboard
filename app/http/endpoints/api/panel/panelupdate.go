@@ -84,7 +84,7 @@ func UpdatePanel(c *gin.Context) {
 	// TODO: Use proper context
 	roles, err := botContext.GetGuildRoles(context.Background(), guildId)
 	if err != nil {
-		c.JSON(500, utils.ErrorStr("Unable to load roles. Please try again."))
+		_ = c.AbortWithError(500, app.NewError(err, "Unable to load roles. Please try again."))
 		return
 	}
 
@@ -113,7 +113,7 @@ func UpdatePanel(c *gin.Context) {
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
 		if !errors.As(err, &validationErrors) {
-			c.JSON(500, utils.ErrorStr("An error occurred while validating the panel"))
+			_ = c.AbortWithError(500, app.NewError(err, "An error occurred while validating the panel"))
 			return
 		}
 

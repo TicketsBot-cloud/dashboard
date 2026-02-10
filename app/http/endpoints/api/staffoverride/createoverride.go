@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -28,7 +29,7 @@ func CreateOverrideHandler(ctx *gin.Context) {
 
 	expires := time.Now().Add(time.Hour * time.Duration(body.TimePeriod))
 	if err := database.Client.StaffOverride.Set(ctx, guildId, expires); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+		_ = ctx.AbortWithError(500, app.NewError(err, "Invalid request data. Please check your input and try again."))
 		return
 	}
 

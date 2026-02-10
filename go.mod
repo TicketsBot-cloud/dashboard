@@ -19,7 +19,7 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
-	github.com/TicketsBot-cloud/common v0.0.0-20260204202134-e94e9e642ef7
+	github.com/TicketsBot-cloud/common v0.0.0-20260210200939-e29bc465e46b
 	github.com/TicketsBot-cloud/database v0.0.0-20260210192531-2f4d3be7a6a1
 	github.com/TicketsBot-cloud/gdl v0.0.0-20251129162044-695f8e5079eb
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
@@ -75,7 +75,6 @@ require (
 	github.com/elliotchance/orderedmap v1.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
-	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect

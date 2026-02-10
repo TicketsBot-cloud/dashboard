@@ -1,6 +1,7 @@
 package http
 
 import (
+	nethttp "net/http"
 	"time"
 
 	"github.com/TicketsBot-cloud/common/permission"
@@ -31,7 +32,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
+func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server {
 	logger.Info("Starting HTTP server")
 
 	router := gin.New()
@@ -83,7 +84,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 	router.POST("/callback", middleware.VerifyXTicketsHeader, root.CallbackHandler)
 	router.POST("/logout", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, root.LogoutHandler)
 
-	apiGroup := router.Group("/api", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.UpdateLastSeen)
+	apiGroup := router.Group("/api", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.SentryUser, middleware.UpdateLastSeen)
 	{
 		{
 			integrationGroup := apiGroup.Group("/integrations")
@@ -104,9 +105,9 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 		}
 	}
 
-	guildAuthApiAdmin := apiGroup.Group("/:id", middleware.AuthenticateGuild(permission.Admin))
-	guildAuthApiSupport := apiGroup.Group("/:id", middleware.AuthenticateGuild(permission.Support))
-	guildApiNoAuth := apiGroup.Group("/:id", middleware.ParseGuildId)
+	guildAuthApiAdmin := apiGroup.Group("/:id", middleware.AuthenticateGuild(permission.Admin), middleware.SentryUser)
+	guildAuthApiSupport := apiGroup.Group("/:id", middleware.AuthenticateGuild(permission.Support), middleware.SentryUser)
+	guildApiNoAuth := apiGroup.Group("/:id", middleware.ParseGuildId, middleware.SentryUser)
 	{
 		guildAuthApiSupport.GET("/guild", api.GuildHandler)
 		guildAuthApiSupport.GET("/channels", api.ChannelsHandler)
@@ -238,9 +239,18 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) {
 		adminGroup.DELETE("/bot-staff/:userid", botstaff.RemoveBotStaffHandler)
 	}
 
-	if err := router.Run(config.Conf.Server.Host); err != nil {
-		panic(err)
+	srv := &nethttp.Server{
+		Addr:    config.Conf.Server.Host,
+		Handler: router,
 	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != nethttp.ErrServerClosed {
+			panic(err)
+		}
+	}()
+
+	return srv
 }
 
 func rl(rlType middleware.RateLimitType, limit int, period time.Duration) func(*gin.Context) {

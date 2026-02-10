@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/TicketsBot-cloud/archiverclient"
 	"github.com/TicketsBot-cloud/common/chatrelay"
@@ -116,7 +121,26 @@ func main() {
 	}
 
 	logger.Info("Starting server")
-	app.StartServer(logger, socketManager)
+	srv := app.StartServer(logger, socketManager)
+
+	shutdownCh := make(chan os.Signal, 1)
+	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM)
+	<-shutdownCh
+
+	logger.Info("Received shutdown signal")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("HTTP server shutdown error", zap.Error(err))
+	}
+
+	if !sentry.Flush(2 * time.Second) {
+		logger.Warn("Sentry flush timed out, some events may be lost")
+	}
+
+	logger.Info("Shutdown complete")
 }
 
 func ListenChat(client *redis.RedisClient, sm *livechat.SocketManager) {

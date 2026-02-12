@@ -162,9 +162,7 @@
                     icon="fa-file-import"
                     href="/manage/{guildId}/import"
                 />
-            {/if}
 
-            {#if isBotStaff}
                 <ManageSidebarLink
                     {currentRoute}
                     title="Audit Log"

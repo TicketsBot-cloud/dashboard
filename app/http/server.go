@@ -197,7 +197,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.POST("/staff-override", api_override.CreateOverrideHandler)
 		guildAuthApiAdmin.DELETE("/staff-override", api_override.DeleteOverrideHandler)
 
-		guildAuthApiAdmin.POST("/audit-logs", middleware.AdminOnly, api_audit.GetAuditLogs)
+		guildAuthApiAdmin.POST("/audit-logs", api_audit.GetAuditLogs)
 
 		guildAuthApiAdmin.GET("/integrations/available", api_integrations.ListIntegrationsHandler)
 		guildAuthApiAdmin.GET("/integrations/:integrationid", api_integrations.IsIntegrationActiveHandler)

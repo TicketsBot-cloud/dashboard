@@ -242,6 +242,7 @@ func UpdatePanel(c *gin.Context) {
 		TranscriptChannelId:       data.TranscriptChannelId,
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,
+		CooldownSeconds:           data.CooldownSeconds,
 	}
 
 	// insert mention data

@@ -1,5 +1,6 @@
 <script>
     import Input from "../form/Input.svelte";
+    import Number from "../form/Number.svelte";
     import Textarea from "../form/Textarea.svelte";
     import Colour from "../form/Colour.svelte";
     import ChannelDropdown from "../ChannelDropdown.svelte";
@@ -227,6 +228,7 @@
                 pending_category: "null",
                 use_threads: false,
                 ticket_notification_channel: "null",
+                cooldown_seconds: 0,
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -382,6 +384,15 @@
                         {/if}
                     {/each}
                 </Dropdown>
+            </div>
+            <div class="incomplete-row">
+                <Number
+                    col2
+                    label="Ticket Open Cooldown (seconds)"
+                    min={0}
+                    max={86400}
+                    bind:value={data.cooldown_seconds}
+                />
             </div>
         </div>
     </Collapsible>

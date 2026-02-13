@@ -3,6 +3,7 @@
     import BetaAlert from "../BetaAlert.svelte";
     import SearchSelect from "../form/SearchSelect.svelte";
     import timezones from "timezones-list";
+    import Dropdown from "../form/Dropdown.svelte";
 
     const timezoneList = [
         {
@@ -316,23 +317,25 @@
         {#if hours.some((h) => h.enabled)}
             <div class="settings-section">
                 <div class="setting-group">
-                    <label class="setting-label" for="out-of-hours-behaviour">
-                        Out-of-hours behaviour
-                    </label>
-                    <select
-                        id="out-of-hours-behaviour"
-                        class="setting-select"
+                    <Dropdown
+                        label="Out-of-hours behaviour"
                         bind:value={outOfHoursBehaviour}
                         on:change={emitChange}
                     >
-                        <option value="block_creation">Block ticket creation</option>
-                        <option value="allow_with_warning">Allow with warning</option>
-                    </select>
+                        <option value="block_creation"
+                            >Block ticket creation</option
+                        >
+                        <option value="allow_with_warning"
+                            >Allow with warning</option
+                        >
+                    </Dropdown>
                     <span class="setting-description">
                         {#if outOfHoursBehaviour === "block_creation"}
-                            Users will not be able to open tickets outside of support hours.
+                            Users will not be able to open tickets outside of
+                            support hours.
                         {:else}
-                            Users can still open tickets outside of support hours, but will see a warning message.
+                            Users can still open tickets outside of support
+                            hours, but will see a warning message.
                         {/if}
                     </span>
                 </div>
@@ -406,7 +409,6 @@
         flex-wrap: wrap;
     }
 
-    .utc-notice,
     .current-time-notice,
     .default-notice,
     .restriction-notice {
@@ -418,10 +420,6 @@
         border-radius: 6px;
         font-size: 13px;
         color: rgba(255, 255, 255, 0.7);
-    }
-
-    .utc-notice i {
-        color: #4fc3f7;
     }
 
     .current-time-notice i {
@@ -578,28 +576,6 @@
         color: rgba(255, 255, 255, 0.7);
     }
 
-    .setting-select {
-        padding: 8px 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 6px;
-        background: rgba(0, 0, 0, 0.3);
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        appearance: auto;
-    }
-
-    .setting-select:hover {
-        border-color: rgba(255, 255, 255, 0.2);
-        background: rgba(0, 0, 0, 0.4);
-    }
-
-    .setting-select:focus {
-        outline: none;
-        border-color: #66bb6a;
-    }
-
     .setting-description {
         font-size: 12px;
         color: rgba(255, 255, 255, 0.5);
@@ -691,7 +667,6 @@
             flex-direction: column;
         }
 
-        .utc-notice,
         .default-notice {
             width: 100%;
         }

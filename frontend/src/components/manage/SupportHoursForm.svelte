@@ -29,6 +29,8 @@
 
     let timezone = "Europe/London";
     let currentTimeDisplay = "";
+    let outOfHoursBehaviour = "block_creation";
+    let outOfHoursMessage = "";
     let hours = daysOfWeek.map((_, index) => ({
         day_of_week: index,
         enabled: false,
@@ -85,6 +87,14 @@
             // New format: { timezone, hours: [...] }
             if (data.timezone) {
                 timezone = data.timezone;
+            }
+
+            if (data.out_of_hours_behaviour) {
+                outOfHoursBehaviour = data.out_of_hours_behaviour;
+            }
+
+            if (data.out_of_hours_message) {
+                outOfHoursMessage = data.out_of_hours_message;
             }
 
             const hoursArray = data.hours || data;
@@ -201,6 +211,8 @@
         dispatch("change", {
             timezone,
             hours: enabledHours,
+            out_of_hours_behaviour: outOfHoursBehaviour,
+            out_of_hours_message: outOfHoursMessage,
         });
     }
 
@@ -217,6 +229,8 @@
         return {
             timezone,
             hours: enabledHours,
+            out_of_hours_behaviour: outOfHoursBehaviour,
+            out_of_hours_message: outOfHoursMessage,
         };
     }
 </script>
@@ -298,6 +312,50 @@
                 </div>
             {/each}
         </div>
+
+        {#if hours.some((h) => h.enabled)}
+            <div class="settings-section">
+                <div class="setting-group">
+                    <label class="setting-label" for="out-of-hours-behaviour">
+                        Out-of-hours behaviour
+                    </label>
+                    <select
+                        id="out-of-hours-behaviour"
+                        class="setting-select"
+                        bind:value={outOfHoursBehaviour}
+                        on:change={emitChange}
+                    >
+                        <option value="block_creation">Block ticket creation</option>
+                        <option value="allow_with_warning">Allow with warning</option>
+                    </select>
+                    <span class="setting-description">
+                        {#if outOfHoursBehaviour === "block_creation"}
+                            Users will not be able to open tickets outside of support hours.
+                        {:else}
+                            Users can still open tickets outside of support hours, but will see a warning message.
+                        {/if}
+                    </span>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label" for="out-of-hours-message">
+                        Custom out-of-hours message
+                    </label>
+                    <textarea
+                        id="out-of-hours-message"
+                        class="setting-textarea"
+                        bind:value={outOfHoursMessage}
+                        on:input={emitChange}
+                        placeholder="Leave empty to use the default message"
+                        maxlength="500"
+                        rows="3"
+                    ></textarea>
+                    <span class="setting-char-count">
+                        {outOfHoursMessage.length}/500
+                    </span>
+                </div>
+            </div>
+        {/if}
 
         <div class="actions">
             <button
@@ -495,6 +553,89 @@
     .status-label.open-24-7 {
         background: rgba(79, 195, 247, 0.15);
         color: #4fc3f7;
+    }
+
+    .settings-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+    }
+
+    .setting-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .setting-label {
+        font-weight: 500;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .setting-select {
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.3);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        appearance: auto;
+    }
+
+    .setting-select:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    .setting-select:focus {
+        outline: none;
+        border-color: #66bb6a;
+    }
+
+    .setting-description {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .setting-textarea {
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.3);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+        transition: all 0.2s ease;
+    }
+
+    .setting-textarea:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    .setting-textarea:focus {
+        outline: none;
+        border-color: #66bb6a;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .setting-textarea::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .setting-char-count {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.4);
+        text-align: right;
     }
 
     .actions {

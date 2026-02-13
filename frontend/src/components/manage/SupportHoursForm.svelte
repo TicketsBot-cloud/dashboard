@@ -4,6 +4,7 @@
     import SearchSelect from "../form/SearchSelect.svelte";
     import timezones from "timezones-list";
     import Dropdown from "../form/Dropdown.svelte";
+    import Textarea from "../form/Textarea.svelte";
 
     const timezoneList = [
         {
@@ -341,18 +342,14 @@
                 </div>
 
                 <div class="setting-group">
-                    <label class="setting-label" for="out-of-hours-message">
-                        Custom out-of-hours message
-                    </label>
-                    <textarea
-                        id="out-of-hours-message"
-                        class="setting-textarea"
+                    <Textarea
+                        label="Custom out-of-hours message"
                         bind:value={outOfHoursMessage}
                         on:input={emitChange}
                         placeholder="Leave empty to use the default message"
                         maxlength="500"
                         rows="3"
-                    ></textarea>
+                    />
                     <span class="setting-char-count">
                         {outOfHoursMessage.length}/500
                     </span>

@@ -83,8 +83,11 @@
     // Flag for duplicate values
     $: hasDuplicateValues = duplicateValues.length > 0;
 
-    // Check for no options in types that require options (3, 21, 22)
-    $: hasNoOptions = (data.type === 3 || data.type === 21 || data.type === 22) && (!data.options || data.options.length === 0);
+    // Check for invalid option count in types that require options (3, 21, 22)
+    // Radio Group (21) requires 2-10 options, Checkbox Group (22) requires 1-10, String Select (3) requires 1-25
+    $: minOptionsRequired = data.type === 21 ? 2 : 1;
+    $: maxOptionsAllowed = (data.type === 21 || data.type === 22) ? 10 : 25;
+    $: hasNoOptions = (data.type === 3 || data.type === 21 || data.type === 22) && (!data.options || data.options.length < minOptionsRequired || data.options.length > maxOptionsAllowed);
 
     // Validate label (required, max 45 chars)
     $: hasInvalidLabel = !data.label || data.label.trim().length === 0 || data.label.length > 45;
@@ -124,7 +127,7 @@
         if (!data.options) {
             data.options = [];
         }
-        if (data.options.length < 25) {
+        if (data.options.length < maxOptionsAllowed) {
             data.options = [
                 ...data.options,
                 {
@@ -302,7 +305,7 @@
                                 Checkbox Group Options
                             {/if}
                         </label>
-                        {#if !data.options || data.options.length < 25}
+                        {#if !data.options || data.options.length < maxOptionsAllowed}
                             <Button
                                 icon="fas fa-plus"
                                 on:click={addDropdownItem}
@@ -380,7 +383,11 @@
                         <div class="validation-error">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span>
-                                No options added yet. Click "Add Option" to create up to 25 options.
+                                {#if data.options && data.options.length > maxOptionsAllowed}
+                                    Too many options. Maximum is {maxOptionsAllowed} (currently {data.options.length}).
+                                {:else}
+                                    At least {minOptionsRequired} option{minOptionsRequired > 1 ? "s are" : " is"} required. Click "Add Option" to create up to {maxOptionsAllowed} options.
+                                {/if}
                             </span>
                         </div>
                     {/if}

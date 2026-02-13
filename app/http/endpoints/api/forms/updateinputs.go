@@ -167,28 +167,16 @@ func UpdateInputs(c *gin.Context) {
 	}
 
 	for _, input := range data.Create {
-		if typeName, requiresOptions := optionTypes[input.Type]; requiresOptions {
-			if len(input.Options) == 0 {
-				c.JSON(400, utils.ErrorStr("%s inputs must have at least one option", typeName))
-				return
-			}
-			if err := validateUniqueOptionValues(input.Options); err != nil {
-				c.JSON(400, utils.ErrorStr("%v", err))
-				return
-			}
+		if err := validateInputOptions(input, optionTypes); err != nil {
+			c.JSON(400, utils.ErrorStr("%v", err))
+			return
 		}
 	}
 
 	for _, input := range data.Update {
-		if typeName, requiresOptions := optionTypes[input.Type]; requiresOptions {
-			if len(input.Options) == 0 {
-				c.JSON(400, utils.ErrorStr("%s inputs must have at least one option", typeName))
-				return
-			}
-			if err := validateUniqueOptionValues(input.Options); err != nil {
-				c.JSON(400, utils.ErrorStr("%v", err))
-				return
-			}
+		if err := validateInputOptions(input.inputCreateBody, optionTypes); err != nil {
+			c.JSON(400, utils.ErrorStr("%v", err))
+			return
 		}
 	}
 
@@ -262,6 +250,36 @@ func validateUniqueOptionValues(options []inputOption) error {
 	}
 
 	return nil
+}
+
+func validateInputOptions(input inputCreateBody, optionTypes map[int]string) error {
+	typeName, requiresOptions := optionTypes[input.Type]
+	if !requiresOptions {
+		return nil
+	}
+
+	// Radio Group (type 21) requires 2-10 options, Checkbox Group (type 22) requires 1-10 options
+	if input.Type == 21 {
+		if len(input.Options) < 2 {
+			return fmt.Errorf("Radio group inputs must have at least 2 options")
+		}
+		if len(input.Options) > 10 {
+			return fmt.Errorf("Radio group inputs must have at most 10 options")
+		}
+	} else if input.Type == 22 {
+		if len(input.Options) == 0 {
+			return fmt.Errorf("%s inputs must have at least one option", typeName)
+		}
+		if len(input.Options) > 10 {
+			return fmt.Errorf("Checkbox group inputs must have at most 10 options")
+		}
+	} else {
+		if len(input.Options) == 0 {
+			return fmt.Errorf("%s inputs must have at least one option", typeName)
+		}
+	}
+
+	return validateUniqueOptionValues(input.Options)
 }
 
 func saveInputs(ctx context.Context, formId int, data updateInputsBody, existingInputs []database.FormInput) error {

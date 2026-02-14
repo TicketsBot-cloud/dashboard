@@ -19,6 +19,7 @@
     import { DOCS_URL } from "../../js/constants";
     import SupportHoursForm from "./SupportHoursForm.svelte";
     import emojiRegex from "emoji-regex";
+    import Button from "../Button.svelte";
 
     export let guildId;
     export let seedDefault = true;
@@ -304,24 +305,42 @@
                     bind:value={data.delete_mentions}
                 />
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Checkbox
                     label="Create Tickets as Threads"
-                    col2
+                    col4
                     tool
                     bind:value={data.use_threads}
                 />
                 <ChannelDropdown
                     withNull
                     nullLabel="Use Global Setting"
-                    col2
+                    col4
                     label="Ticket Notification Channel (for Threads)"
                     {channels}
                     disabled={!data.use_threads && !settings.use_threads}
                     bind:value={data.ticket_notification_channel}
                 />
+
+                <Number
+                    col4
+                    label="Ticket Open Cooldown (seconds)"
+                    min={0}
+                    bind:value={data.cooldown_seconds}
+                />
+
+                <div class="col-4">
+                    <label class="form-label">&nbsp;</label>
+                    <Button
+                        fullWidth
+                        type="button"
+                        on:click={() => {
+                            alert("AAAA");
+                        }}>Reset Cooldowns</Button
+                    >
+                </div>
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <CategoryDropdown
                     label="Ticket Category"
                     col2
@@ -336,7 +355,7 @@
                     {/each}
                 </Dropdown>
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Dropdown
                     col2
                     label="Naming Scheme"
@@ -357,7 +376,7 @@
                     />
                 {/if}
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Dropdown
                     col2
                     label="Exit Survey Form"
@@ -384,15 +403,6 @@
                         {/if}
                     {/each}
                 </Dropdown>
-            </div>
-            <div class="incomplete-row">
-                <Number
-                    col2
-                    label="Ticket Open Cooldown (seconds)"
-                    min={0}
-                    max={86400}
-                    bind:value={data.cooldown_seconds}
-                />
             </div>
         </div>
     </Collapsible>

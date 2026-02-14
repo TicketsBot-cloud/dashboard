@@ -8,6 +8,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -100,6 +101,7 @@ type supportHoursRequestBody struct {
 
 func SetSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
@@ -177,6 +179,13 @@ func SetSupportHours(c *gin.Context) {
 		return
 	}
 
+	// Fetch existing hours for audit log
+	oldHours, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, panelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
 	// Delete existing hours first
 	if err := dbclient.Client.PanelSupportHours.DeleteByPanelId(c, panelId); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to parse request data"))
@@ -220,11 +229,21 @@ func SetSupportHours(c *gin.Context) {
 		}
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionSupportHoursSet,
+		ResourceType: database.AuditResourceSupportHours,
+		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+		OldData:      oldHours,
+		NewData:      requestBody,
+	})
 	c.JSON(http.StatusOK, utils.SuccessResponse)
 }
 
 func DeleteSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
@@ -245,11 +264,26 @@ func DeleteSupportHours(c *gin.Context) {
 		return
 	}
 
+	// Fetch existing hours for audit log
+	oldHoursDelete, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, panelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
 	if err := dbclient.Client.PanelSupportHours.DeleteByPanelId(c, panelId); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionSupportHoursDelete,
+		ResourceType: database.AuditResourceSupportHours,
+		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+		OldData:      oldHoursDelete,
+	})
 	c.JSON(http.StatusOK, utils.SuccessResponse)
 }
 

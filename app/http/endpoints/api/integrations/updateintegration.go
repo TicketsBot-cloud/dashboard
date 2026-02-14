@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -137,6 +138,13 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   database.AuditActionUserIntegrationUpdate,
+		ResourceType: database.AuditResourceUserIntegration,
+		ResourceId:   audit.StringPtr(strconv.Itoa(integrationId)),
+		NewData:      data,
+	})
 	ctx.JSON(200, integration)
 }
 

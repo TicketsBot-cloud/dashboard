@@ -5,13 +5,16 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
 func DeleteForm(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	formId, err := strconv.Atoi(c.Param("form_id"))
 	if err != nil {
@@ -40,5 +43,13 @@ func DeleteForm(c *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionFormDelete,
+		ResourceType: dbmodel.AuditResourceForm,
+		ResourceId:   audit.StringPtr(strconv.Itoa(formId)),
+		OldData:      form,
+	})
 	c.JSON(200, utils.SuccessResponse)
 }

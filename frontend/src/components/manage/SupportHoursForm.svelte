@@ -1,6 +1,5 @@
 <script>
     import { createEventDispatcher, onMount, tick } from "svelte";
-    import BetaAlert from "../BetaAlert.svelte";
     import SearchSelect from "../form/SearchSelect.svelte";
     import timezones from "timezones-list";
     import Colour from "../form/Colour.svelte";
@@ -289,7 +288,6 @@
                 </div>
             {/if}
         </div>
-        <BetaAlert style="width: 100%" />
         <div class="days-container">
             {#each daysOfWeek as day, index}
                 <div class="day-row" class:enabled={hours[index].enabled}>
@@ -361,6 +359,14 @@
                     </span>
                 </div>
 
+                <div class="setting-group">
+                    <Colour
+                        label="Embed Colour"
+                        on:change={updateColour}
+                        bind:value={tempColour}
+                    />
+                </div>
+
                 <div class="settings-group">
                     <Input
                         label="Custom out-of-hours title"
@@ -383,14 +389,6 @@
                     <span class="setting-char-count">
                         {outOfHoursMessage.length}/500
                     </span>
-                </div>
-
-                <div class="setting-group">
-                    <Colour
-                        label="Embed Colour"
-                        on:change={updateColour}
-                        bind:value={tempColour}
-                    />
                 </div>
             </div>
         {/if}
@@ -591,7 +589,7 @@
     .settings-section {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 10px;
         padding: 16px;
         background: rgba(0, 0, 0, 0.2);
         border-radius: 8px;
@@ -600,47 +598,11 @@
     .setting-group {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-    }
-
-    .setting-label {
-        font-weight: 500;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: rgba(255, 255, 255, 0.7);
     }
 
     .setting-description {
-        font-size: 12px;
+        font-size: 11px;
         color: rgba(255, 255, 255, 0.5);
-    }
-
-    .setting-textarea {
-        padding: 8px 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 6px;
-        background: rgba(0, 0, 0, 0.3);
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 14px;
-        font-family: inherit;
-        resize: vertical;
-        transition: all 0.2s ease;
-    }
-
-    .setting-textarea:hover {
-        border-color: rgba(255, 255, 255, 0.2);
-        background: rgba(0, 0, 0, 0.4);
-    }
-
-    .setting-textarea:focus {
-        outline: none;
-        border-color: #66bb6a;
-        background: rgba(0, 0, 0, 0.5);
-    }
-
-    .setting-textarea::placeholder {
-        color: rgba(255, 255, 255, 0.3);
     }
 
     .setting-char-count {

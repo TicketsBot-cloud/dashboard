@@ -5,8 +5,10 @@ import (
 
 	"github.com/TicketsBot-cloud/common/whitelabeldelete"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,5 +28,10 @@ func WhitelabelDelete(c *gin.Context) {
 
 	}
 
+	audit.Log(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionWhitelabelDelete,
+		ResourceType: dbmodel.AuditResourceWhitelabel,
+	})
 	c.Status(http.StatusNoContent)
 }

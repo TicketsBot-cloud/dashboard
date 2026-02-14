@@ -6,10 +6,12 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
@@ -17,6 +19,7 @@ import (
 
 func MultiPanelResend(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	// parse panel ID
 	panelId, err := strconv.Atoi(ctx.Param("panelid"))
@@ -93,6 +96,13 @@ func MultiPanelResend(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionMultiPanelResend,
+		ResourceType: database.AuditResourceMultiPanel,
+		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+	})
 	ctx.JSON(200, gin.H{
 		"success": true,
 	})

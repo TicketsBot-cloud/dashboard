@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -54,6 +55,7 @@ var validate = validator.New()
 
 func UpdateInputs(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	formId, err := strconv.Atoi(c.Param("form_id"))
 	if err != nil {
@@ -191,6 +193,15 @@ func UpdateInputs(c *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionFormInputsUpdate,
+		ResourceType: database.AuditResourceFormInput,
+		ResourceId:   audit.StringPtr(strconv.Itoa(formId)),
+		OldData:      existingInputs,
+		NewData:      data,
+	})
 	c.Status(204)
 }
 

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
@@ -76,5 +78,11 @@ func SetIntegrationPublicHandler(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionUserIntegrationSetPublic,
+		ResourceType: dbmodel.AuditResourceUserIntegration,
+		ResourceId:   audit.StringPtr(strconv.Itoa(integration.Id)),
+	})
 	ctx.Status(204)
 }

@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -168,5 +170,12 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionGuildIntegrationActivate,
+		ResourceType: dbmodel.AuditResourceGuildIntegration,
+		ResourceId:   audit.StringPtr(strconv.Itoa(integrationId)),
+	})
 	ctx.Status(204)
 }

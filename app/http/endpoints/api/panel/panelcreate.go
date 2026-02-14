@@ -8,6 +8,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/app/http/validation"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -74,6 +75,7 @@ var validate = validator.New()
 
 func CreatePanel(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
@@ -276,6 +278,15 @@ func CreatePanel(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel to database"))
 		return
 	}
+
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionPanelCreate,
+		ResourceType: database.AuditResourcePanel,
+		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+		NewData:      data,
+	})
 
 	c.JSON(200, gin.H{
 		"success":  true,

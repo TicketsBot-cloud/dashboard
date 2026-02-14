@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/worker/bot/command/manager"
 	"github.com/gin-gonic/gin"
@@ -48,6 +50,12 @@ func GetWhitelabelCreateInteractions() func(*gin.Context) {
 			return
 		}
 
+		audit.Log(audit.LogEntry{
+			UserId:       userId,
+			ActionType:   dbmodel.AuditActionWhitelabelCreateInteractions,
+			ResourceType: dbmodel.AuditResourceWhitelabel,
+			ResourceId:   audit.StringPtr(fmt.Sprintf("%d", bot.BotId)),
+		})
 		c.JSON(200, utils.SuccessResponse)
 	}
 }

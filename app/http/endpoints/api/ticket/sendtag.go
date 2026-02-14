@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -210,6 +211,14 @@ func SendTag(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionTicketSendTag,
+		ResourceType: database.AuditResourceTicket,
+		ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
+		Metadata:     map[string]interface{}{"tag_id": body.TagId},
+	})
 	ctx.JSON(200, gin.H{
 		"success": true,
 	})

@@ -8,9 +8,11 @@ import (
 
 	"github.com/TicketsBot-cloud/common/closerelay"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -71,5 +73,13 @@ func CloseTicket(c *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionTicketClose,
+		ResourceType: dbmodel.AuditResourceTicket,
+		ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
+		Metadata:     map[string]interface{}{"reason": data.Reason},
+	})
 	c.JSON(200, utils.SuccessResponse)
 }

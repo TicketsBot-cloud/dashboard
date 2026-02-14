@@ -3,13 +3,16 @@ package api
 import (
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
 func UpdateIntegrationSecretsHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	integrationId, err := strconv.Atoi(ctx.Param("integrationid"))
 	if err != nil {
@@ -76,5 +79,18 @@ func UpdateIntegrationSecretsHandler(ctx *gin.Context) {
 		return
 	}
 
+	// Log which secrets were updated (names only, not values)
+	secretNames := make([]string, 0, len(data.Secrets))
+	for name := range data.Secrets {
+		secretNames = append(secretNames, name)
+	}
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionGuildIntegrationUpdate,
+		ResourceType: dbmodel.AuditResourceGuildIntegration,
+		ResourceId:   audit.StringPtr(strconv.Itoa(integrationId)),
+		NewData:      map[string]interface{}{"secrets_updated": secretNames},
+	})
 	ctx.Status(204)
 }

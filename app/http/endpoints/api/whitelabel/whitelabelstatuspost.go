@@ -3,11 +3,15 @@ package api
 import (
 	"net/http"
 
+	"fmt"
+
 	"github.com/TicketsBot-cloud/common/statusupdates"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/gin-gonic/gin"
 )
@@ -69,5 +73,12 @@ func WhitelabelStatusPost(c *gin.Context) {
 	// Send status update to sharder
 	go statusupdates.Publish(redis.Client.Client, bot.BotId)
 
+	audit.Log(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionWhitelabelStatusSet,
+		ResourceType: dbmodel.AuditResourceWhitelabel,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("%d", bot.BotId)),
+		NewData:      data,
+	})
 	c.JSON(200, utils.SuccessResponse)
 }

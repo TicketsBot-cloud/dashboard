@@ -8,6 +8,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -100,6 +101,7 @@ type supportHoursRequestBody struct {
 
 func SetSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
@@ -177,6 +179,13 @@ func SetSupportHours(c *gin.Context) {
 		return
 	}
 
+	// Fetch existing hours for audit log
+	oldHours, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, panelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
 	// Delete existing hours first
 	if err := dbclient.Client.PanelSupportHours.DeleteByPanelId(c, panelId); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to parse request data"))
@@ -220,11 +229,68 @@ func SetSupportHours(c *gin.Context) {
 		}
 	}
 
+	// Only log if there are actually hours being set (not an empty array which is effectively a delete)
+	if len(requestBody.Hours) > 0 {
+		// Convert oldHours to the same format as requestBody for better diff comparison
+		var oldHoursFormatted *supportHoursResponse
+		hasChanges := false
+
+		if len(oldHours) > 0 {
+			var oldHourConfigs []supportHoursHourConfig
+			oldTimezone := oldHours[0].Timezone
+			for _, h := range oldHours {
+				oldHourConfigs = append(oldHourConfigs, supportHoursHourConfig{
+					DayOfWeek: h.DayOfWeek,
+					StartTime: h.StartTime.Format("15:04:05"),
+					EndTime:   h.EndTime.Format("15:04:05"),
+					Enabled:   h.Enabled,
+				})
+			}
+			oldHoursFormatted = &supportHoursResponse{
+				Timezone: oldTimezone,
+				Hours:    oldHourConfigs,
+			}
+
+			// Check if anything actually changed
+			if oldTimezone != requestBody.Timezone || len(oldHourConfigs) != len(requestBody.Hours) {
+				hasChanges = true
+			} else {
+				// Check each hour config for changes
+				for i, oldConfig := range oldHourConfigs {
+					newConfig := requestBody.Hours[i]
+					if oldConfig.DayOfWeek != newConfig.DayOfWeek ||
+						oldConfig.StartTime != newConfig.StartTime ||
+						oldConfig.EndTime != newConfig.EndTime ||
+						oldConfig.Enabled != newConfig.Enabled {
+						hasChanges = true
+						break
+					}
+				}
+			}
+		} else {
+			// No old hours, so this is a new configuration
+			hasChanges = true
+		}
+
+		// Only log if something actually changed
+		if hasChanges {
+			audit.Log(audit.LogEntry{
+				GuildId:      audit.Uint64Ptr(guildId),
+				UserId:       userId,
+				ActionType:   database.AuditActionSupportHoursSet,
+				ResourceType: database.AuditResourceSupportHours,
+				ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+				OldData:      oldHoursFormatted,
+				NewData:      requestBody,
+			})
+		}
+	}
 	c.JSON(http.StatusOK, utils.SuccessResponse)
 }
 
 func DeleteSupportHours(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
@@ -245,11 +311,45 @@ func DeleteSupportHours(c *gin.Context) {
 		return
 	}
 
+	// Fetch existing hours for audit log
+	oldHoursDelete, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, panelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
 	if err := dbclient.Client.PanelSupportHours.DeleteByPanelId(c, panelId); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
 	}
 
+	// Only log if there were actually support hours to delete
+	if len(oldHoursDelete) > 0 {
+		// Convert oldHoursDelete to the same format as the response for better readability
+		var oldHourConfigs []supportHoursHourConfig
+		oldTimezone := oldHoursDelete[0].Timezone
+		for _, h := range oldHoursDelete {
+			oldHourConfigs = append(oldHourConfigs, supportHoursHourConfig{
+				DayOfWeek: h.DayOfWeek,
+				StartTime: h.StartTime.Format("15:04:05"),
+				EndTime:   h.EndTime.Format("15:04:05"),
+				Enabled:   h.Enabled,
+			})
+		}
+		oldHoursFormatted := supportHoursResponse{
+			Timezone: oldTimezone,
+			Hours:    oldHourConfigs,
+		}
+
+		audit.Log(audit.LogEntry{
+			GuildId:      audit.Uint64Ptr(guildId),
+			UserId:       userId,
+			ActionType:   database.AuditActionSupportHoursDelete,
+			ResourceType: database.AuditResourceSupportHours,
+			ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+			OldData:      oldHoursFormatted,
+		})
+	}
 	c.JSON(http.StatusOK, utils.SuccessResponse)
 }
 

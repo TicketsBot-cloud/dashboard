@@ -8,6 +8,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -38,11 +39,11 @@ func getEffectiveLabelForValidation(buttonLabel string, customLabel *string) str
 }
 
 type multiPanelCreateData struct {
-	ChannelId             uint64                `json:"channel_id,string"`
-	SelectMenu            bool                  `json:"select_menu"`
-	SelectMenuPlaceholder *string               `json:"select_menu_placeholder,omitempty" validate:"omitempty,max=150"`
-	Panels                []panelConfiguration  `json:"panels" validate:"dive"`
-	Embed                 *types.CustomEmbed    `json:"embed" validate:"omitempty,dive"`
+	ChannelId             uint64               `json:"channel_id,string"`
+	SelectMenu            bool                 `json:"select_menu"`
+	SelectMenuPlaceholder *string              `json:"select_menu_placeholder,omitempty" validate:"omitempty,max=150"`
+	Panels                []panelConfiguration `json:"panels" validate:"dive"`
+	Embed                 *types.CustomEmbed   `json:"embed" validate:"omitempty,dive"`
 }
 
 func (d *multiPanelCreateData) IntoMessageData(isPremium bool) multiPanelMessageData {
@@ -57,6 +58,7 @@ func (d *multiPanelCreateData) IntoMessageData(isPremium bool) multiPanelMessage
 
 func MultiPanelCreate(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	var data multiPanelCreateData
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -189,6 +191,14 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionMultiPanelCreate,
+		ResourceType: database.AuditResourceMultiPanel,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("%d", multiPanel.Id)),
+		NewData:      data,
+	})
 	c.JSON(200, gin.H{
 		"success": true,
 		"data":    multiPanel,

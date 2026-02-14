@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/TicketsBot-cloud/common/permission"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -35,6 +37,7 @@ const (
 
 func AddBlacklistHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	var body blacklistAddBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -42,7 +45,8 @@ func AddBlacklistHandler(ctx *gin.Context) {
 		return
 	}
 
-	if body.EntityType == entityTypeUser {
+	switch body.EntityType {
+	case entityTypeUser:
 		// Max of 250 blacklisted users
 		count, err := database.Client.Blacklist.GetBlacklistedCount(ctx, guildId)
 		if err != nil {
@@ -72,6 +76,14 @@ func AddBlacklistHandler(ctx *gin.Context) {
 			return
 		}
 
+		audit.Log(audit.LogEntry{
+			GuildId:      audit.Uint64Ptr(guildId),
+			UserId:       userId,
+			ActionType:   dbmodel.AuditActionBlacklistAdd,
+			ResourceType: dbmodel.AuditResourceBlacklist,
+			NewData:      map[string]any{"entity_type": "user", "snowflake": body.Snowflake},
+		})
+
 		// Resolve user
 		// TODO: Use proper context
 		user, err := cache.Instance.GetUser(context.Background(), body.Snowflake)
@@ -95,7 +107,7 @@ func AddBlacklistHandler(ctx *gin.Context) {
 			Id:       body.Snowflake,
 			Username: user.Username,
 		})
-	} else if body.EntityType == entityTypeRole {
+	case entityTypeRole:
 		// Max of 50 blacklisted roles
 		count, err := database.Client.RoleBlacklist.GetBlacklistedCount(ctx, guildId)
 		if err != nil {
@@ -113,11 +125,19 @@ func AddBlacklistHandler(ctx *gin.Context) {
 			return
 		}
 
+		audit.Log(audit.LogEntry{
+			GuildId:      audit.Uint64Ptr(guildId),
+			UserId:       userId,
+			ActionType:   dbmodel.AuditActionBlacklistAdd,
+			ResourceType: dbmodel.AuditResourceBlacklist,
+			NewData:      map[string]any{"entity_type": "role", "snowflake": body.Snowflake},
+		})
+
 		ctx.JSON(200, blacklistAddResponse{
 			Success: true,
 			Id:      body.Snowflake,
 		})
-	} else {
+	default:
 		ctx.JSON(400, utils.ErrorStr("Invalid entity type"))
 		return
 	}

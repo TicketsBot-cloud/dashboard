@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
 func AddMember(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	snowflake, err := strconv.ParseUint(ctx.Param("snowflake"), 10, 64)
 	if err != nil {
@@ -43,7 +46,7 @@ func AddMember(ctx *gin.Context) {
 
 	teamId := ctx.Param("teamid")
 	if teamId == "default" {
-		addDefaultMember(ctx, guildId, snowflake, entityType)
+		addDefaultMember(ctx, guildId, userId, snowflake, entityType, typeParsed)
 	} else {
 		parsed, err := strconv.Atoi(teamId)
 		if err != nil {
@@ -51,11 +54,11 @@ func AddMember(ctx *gin.Context) {
 			return
 		}
 
-		addTeamMember(ctx, parsed, guildId, snowflake, entityType)
+		addTeamMember(ctx, parsed, guildId, userId, snowflake, entityType, typeParsed)
 	}
 }
 
-func addDefaultMember(ctx *gin.Context, guildId, snowflake uint64, entityType entityType) {
+func addDefaultMember(ctx *gin.Context, guildId, userId, snowflake uint64, entityType entityType, typeParsed int) {
 	var err error
 	switch entityType {
 	case entityTypeUser:
@@ -69,10 +72,18 @@ func addDefaultMember(ctx *gin.Context, guildId, snowflake uint64, entityType en
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionTeamMemberAdd,
+		ResourceType: dbmodel.AuditResourceTeamMember,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("default/%d", snowflake)),
+		NewData:      map[string]interface{}{"snowflake": snowflake, "type": typeParsed},
+	})
 	ctx.JSON(200, utils.SuccessResponse)
 }
 
-func addTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, entityType entityType) {
+func addTeamMember(ctx *gin.Context, teamId int, guildId, userId, snowflake uint64, entityType entityType, typeParsed int) {
 	exists, err := dbclient.Client.SupportTeam.Exists(ctx, teamId, guildId)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
@@ -96,5 +107,13 @@ func addTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, enti
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionTeamMemberAdd,
+		ResourceType: dbmodel.AuditResourceTeamMember,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("%d/%d", teamId, snowflake)),
+		NewData:      map[string]interface{}{"team_id": teamId, "snowflake": snowflake, "type": typeParsed},
+	})
 	ctx.JSON(200, utils.SuccessResponse)
 }

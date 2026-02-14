@@ -6,9 +6,11 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
@@ -16,6 +18,7 @@ import (
 
 func MultiPanelDelete(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	multiPanelId, err := strconv.Atoi(c.Param("panelid"))
 	if err != nil {
@@ -67,5 +70,13 @@ func MultiPanelDelete(c *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionMultiPanelDelete,
+		ResourceType: dbmodel.AuditResourceMultiPanel,
+		ResourceId:   audit.StringPtr(strconv.Itoa(multiPanelId)),
+		OldData:      panel,
+	})
 	c.JSON(200, utils.SuccessResponse)
 }

@@ -585,6 +585,7 @@
                 <SupportHoursForm
                     bind:data={data.support_hours}
                     on:change={handleSupportHoursChange}
+                    {isPremium}
                 />
             </div>
         </div>

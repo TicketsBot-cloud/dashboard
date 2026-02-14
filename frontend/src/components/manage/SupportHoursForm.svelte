@@ -3,9 +3,11 @@
     import BetaAlert from "../BetaAlert.svelte";
     import SearchSelect from "../form/SearchSelect.svelte";
     import timezones from "timezones-list";
+    import Colour from "../form/Colour.svelte";
     import Dropdown from "../form/Dropdown.svelte";
     import Textarea from "../form/Textarea.svelte";
     import Input from "../form/Input.svelte";
+    import { colourToInt, intToColour } from "../../js/util";
 
     const timezoneList = [
         {
@@ -35,6 +37,7 @@
     let outOfHoursBehaviour = "block_creation";
     let outOfHoursTitle = "";
     let outOfHoursMessage = "";
+    let tempColour = "#FC3F35";
     let hours = daysOfWeek.map((_, index) => ({
         day_of_week: index,
         enabled: false,
@@ -105,6 +108,10 @@
                 outOfHoursMessage = data.out_of_hours_message;
             }
 
+            if (data.out_of_hours_colour) {
+                tempColour = intToColour(data.out_of_hours_colour);
+            }
+
             const hoursArray = data.hours || data;
             if (
                 hoursArray &&
@@ -144,6 +151,10 @@
             hours[index].start_time = "09:00";
             hours[index].end_time = "17:00";
         }
+        emitChange();
+    }
+
+    function updateColour() {
         emitChange();
     }
 
@@ -222,6 +233,7 @@
             out_of_hours_behaviour: outOfHoursBehaviour,
             out_of_hours_title: outOfHoursTitle,
             out_of_hours_message: outOfHoursMessage,
+            out_of_hours_colour: colourToInt(tempColour),
         });
     }
 
@@ -241,6 +253,7 @@
             out_of_hours_behaviour: outOfHoursBehaviour,
             out_of_hours_title: outOfHoursTitle,
             out_of_hours_message: outOfHoursMessage,
+            out_of_hours_colour: colourToInt(tempColour),
         };
     }
 </script>
@@ -370,6 +383,14 @@
                     <span class="setting-char-count">
                         {outOfHoursMessage.length}/500
                     </span>
+                </div>
+
+                <div class="setting-group">
+                    <Colour
+                        label="Embed Colour"
+                        on:change={updateColour}
+                        bind:value={tempColour}
+                    />
                 </div>
             </div>
         {/if}

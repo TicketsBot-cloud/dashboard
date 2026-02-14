@@ -24,6 +24,7 @@ type supportHoursResponse struct {
 	OutOfHoursBehaviour string                   `json:"out_of_hours_behaviour"`
 	OutOfHoursTitle     string                   `json:"out_of_hours_title"`
 	OutOfHoursMessage   string                   `json:"out_of_hours_message"`
+	OutOfHoursColour    int                      `json:"out_of_hours_colour"`
 }
 
 // supportHoursAuditData is used for audit log old/new data to include both hours and settings
@@ -96,10 +97,14 @@ func GetSupportHours(c *gin.Context) {
 	outOfHoursBehaviour := string(database.OutOfHoursBehaviourBlockCreation)
 	var outOfHoursTitle string
 	var outOfHoursMessage string
+	outOfHoursColour := 0xFC3F35
 	if settingsExist {
 		outOfHoursBehaviour = string(settings.OutOfHoursBehaviour)
 		outOfHoursTitle = settings.OutOfHoursTitle
 		outOfHoursMessage = settings.OutOfHoursMessage
+		if settings.OutOfHoursColour != 0 {
+			outOfHoursColour = settings.OutOfHoursColour
+		}
 	}
 
 	response := supportHoursResponse{
@@ -108,6 +113,7 @@ func GetSupportHours(c *gin.Context) {
 		OutOfHoursBehaviour: outOfHoursBehaviour,
 		OutOfHoursTitle:     outOfHoursTitle,
 		OutOfHoursMessage:   outOfHoursMessage,
+		OutOfHoursColour:    outOfHoursColour,
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -128,6 +134,7 @@ type supportHoursRequestBody struct {
 	OutOfHoursBehaviour string                `json:"out_of_hours_behaviour"`
 	OutOfHoursTitle     string                `json:"out_of_hours_title"`
 	OutOfHoursMessage   string                `json:"out_of_hours_message"`
+	OutOfHoursColour    int                   `json:"out_of_hours_colour"`
 }
 
 func SetSupportHours(c *gin.Context) {
@@ -293,6 +300,7 @@ func SetSupportHours(c *gin.Context) {
 		OutOfHoursBehaviour: database.OutOfHoursBehaviour(behaviour),
 		OutOfHoursTitle:     outOfHoursTitle,
 		OutOfHoursMessage:   outOfHoursMessage,
+		OutOfHoursColour:    requestBody.OutOfHoursColour,
 	}); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return

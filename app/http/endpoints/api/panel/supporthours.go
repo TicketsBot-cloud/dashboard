@@ -295,17 +295,12 @@ func SetSupportHours(c *gin.Context) {
 		return
 	}
 
-	outOfHoursColour := requestBody.OutOfHoursColour
-	if premiumTier == premium.None {
-		outOfHoursColour = 0
-	}
-
 	if err := dbclient.Client.PanelSupportHoursSettings.Set(c, database.PanelSupportHoursSettings{
 		PanelId:             panelId,
 		OutOfHoursBehaviour: database.OutOfHoursBehaviour(behaviour),
 		OutOfHoursTitle:     outOfHoursTitle,
 		OutOfHoursMessage:   outOfHoursMessage,
-		OutOfHoursColour:    outOfHoursColour,
+		OutOfHoursColour:    requestBody.OutOfHoursColour,
 	}); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 		return
@@ -318,7 +313,7 @@ func SetSupportHours(c *gin.Context) {
 	if string(oldSettings.OutOfHoursBehaviour) != behaviour ||
 		oldSettings.OutOfHoursTitle != outOfHoursTitle ||
 		oldSettings.OutOfHoursMessage != outOfHoursMessage ||
-		oldSettings.OutOfHoursColour != outOfHoursColour {
+		oldSettings.OutOfHoursColour != requestBody.OutOfHoursColour {
 		hasChanges = true
 	}
 

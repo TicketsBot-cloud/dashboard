@@ -311,18 +311,51 @@ func SetSupportHours(c *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
-		GuildId:      audit.Uint64Ptr(guildId),
-		UserId:       userId,
-		ActionType:   database.AuditActionSupportHoursSet,
-		ResourceType: database.AuditResourceSupportHours,
-		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
-		OldData: supportHoursAuditData{
-			Hours:    oldHours,
-			Settings: oldSettings,
-		},
-		NewData: requestBody,
-	})
+	// Check if anything actually changed before logging
+	hasChanges := false
+
+	// Check settings changes
+	if string(oldSettings.OutOfHoursBehaviour) != behaviour ||
+		oldSettings.OutOfHoursTitle != outOfHoursTitle ||
+		oldSettings.OutOfHoursMessage != outOfHoursMessage ||
+		oldSettings.OutOfHoursColour != outOfHoursColour {
+		hasChanges = true
+	}
+
+	// Check hours changes
+	if !hasChanges {
+		if len(oldHours) != len(requestBody.Hours) {
+			hasChanges = true
+		} else if len(oldHours) > 0 && oldHours[0].Timezone != requestBody.Timezone {
+			hasChanges = true
+		} else {
+			for i, oldHour := range oldHours {
+				newHour := requestBody.Hours[i]
+				if oldHour.DayOfWeek != newHour.DayOfWeek ||
+					oldHour.StartTime.Format("15:04:05") != newHour.StartTime ||
+					oldHour.EndTime.Format("15:04:05") != newHour.EndTime ||
+					oldHour.Enabled != newHour.Enabled {
+					hasChanges = true
+					break
+				}
+			}
+		}
+	}
+
+	if hasChanges {
+		audit.Log(audit.LogEntry{
+			GuildId:      audit.Uint64Ptr(guildId),
+			UserId:       userId,
+			ActionType:   database.AuditActionSupportHoursSet,
+			ResourceType: database.AuditResourceSupportHours,
+			ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+			OldData: supportHoursAuditData{
+				Hours:    oldHours,
+				Settings: oldSettings,
+			},
+			NewData: requestBody,
+		})
+	}
 	c.JSON(http.StatusOK, utils.SuccessResponse)
 }
 
@@ -373,17 +406,19 @@ func DeleteSupportHours(c *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
-		GuildId:      audit.Uint64Ptr(guildId),
-		UserId:       userId,
-		ActionType:   database.AuditActionSupportHoursDelete,
-		ResourceType: database.AuditResourceSupportHours,
-		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
-		OldData: supportHoursAuditData{
-			Hours:    oldHoursDelete,
-			Settings: oldSettingsDelete,
-		},
-	})
+	if len(oldHoursDelete) > 0 {
+		audit.Log(audit.LogEntry{
+			GuildId:      audit.Uint64Ptr(guildId),
+			UserId:       userId,
+			ActionType:   database.AuditActionSupportHoursDelete,
+			ResourceType: database.AuditResourceSupportHours,
+			ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+			OldData: supportHoursAuditData{
+				Hours:    oldHoursDelete,
+				Settings: oldSettingsDelete,
+			},
+		})
+	}
 	c.JSON(http.StatusOK, utils.SuccessResponse)
 }
 

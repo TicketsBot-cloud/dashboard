@@ -85,13 +85,19 @@
                         >{formatValue(newObj[key])}</span
                     >
                 {:else}
-                    <span class="diff-value removed-value"
-                        >{formatValue(oldObj[key])}</span
-                    >
-                    <span class="diff-arrow">-></span>
-                    <span class="diff-value added-value"
-                        >{formatValue(newObj[key])}</span
-                    >
+                    <div class="diff-comparison-wrapper">
+                        <div class="diff-comparison-column">
+                            <span class="diff-value removed-value"
+                                >{formatValue(oldObj[key])}</span
+                            >
+                        </div>
+                        <span class="diff-arrow">-></span>
+                        <div class="diff-comparison-column">
+                            <span class="diff-value added-value"
+                                >{formatValue(newObj[key])}</span
+                            >
+                        </div>
+                    </div>
                 {/if}
             </div>
         {/each}
@@ -185,6 +191,19 @@
         flex-shrink: 0;
     }
 
+    /* Desktop: hide headers and use inline layout */
+    .diff-comparison-wrapper {
+        display: contents;
+    }
+
+    .diff-comparison-column {
+        display: contents;
+    }
+
+    .diff-comparison-header {
+        display: none;
+    }
+
     .empty {
         color: var(--text-secondary, #6c757d);
         font-style: italic;
@@ -206,5 +225,70 @@
     .toggle-structural:hover {
         color: var(--text-primary);
         border-color: var(--text-primary);
+    }
+
+    @media only screen and (max-width: 768px) {
+        .diff-key {
+            min-width: unset;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .diff-row {
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .diff-row.changed {
+            padding: 8px;
+        }
+
+        /* Hide arrow on mobile */
+        .diff-arrow {
+            display: none;
+        }
+
+        /* Show comparison wrapper as grid on mobile */
+        .diff-comparison-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .diff-comparison-column {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            gap: 4px;
+        }
+
+        /* Show headers on mobile */
+        .diff-comparison-header {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .diff-value {
+            font-size: 12px;
+            word-break: break-word;
+        }
+
+        /* For removed/added rows (not changed), keep simple */
+        .diff-row.removed,
+        .diff-row.added {
+            flex-direction: row;
+            gap: 8px;
+        }
+
+        .diff-row.removed .diff-key,
+        .diff-row.added .diff-key {
+            width: auto;
+            min-width: 80px;
+            margin-bottom: 0;
+        }
     }
 </style>

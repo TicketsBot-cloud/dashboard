@@ -271,6 +271,7 @@
                 </span>
 
                 <div slot="body" class="main-col">
+                    <!-- Desktop Table View -->
                     <table class="nice">
                         <thead>
                             <tr>
@@ -344,6 +345,81 @@
                             {/each}
                         </tbody>
                     </table>
+
+                    <!-- Mobile Card View -->
+                    <div class="mobile-card-list">
+                        {#each entries as entry}
+                            <div
+                                class="mobile-entry-card"
+                                on:click={() => toggleRow(entry.id)}
+                            >
+                                <div class="mobile-card-header">
+                                    <div class="mobile-card-user">
+                                        {entry.username}
+                                    </div>
+                                    <div class="mobile-card-time">
+                                        {formatTimestamp(entry.created_at)}
+                                    </div>
+                                </div>
+                                <div class="mobile-card-details">
+                                    <div class="mobile-card-row">
+                                        <span class="mobile-card-label"
+                                            >Action:</span
+                                        >
+                                        <span class="action-badge">
+                                            {formatActionType(
+                                                entry.action_type,
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div class="mobile-card-row">
+                                        <span class="mobile-card-label"
+                                            >Resource:</span
+                                        >
+                                        <span
+                                            >{formatResourceType(
+                                                entry.resource_type,
+                                            )}</span
+                                        >
+                                    </div>
+                                </div>
+                                <div class="mobile-expand-icon">
+                                    <i
+                                        class="fas"
+                                        class:fa-chevron-down={expandedRow !==
+                                            entry.id}
+                                        class:fa-chevron-up={expandedRow ===
+                                            entry.id}
+                                    ></i>
+                                </div>
+                                {#if expandedRow === entry.id}
+                                    <div
+                                        class="detail-content"
+                                        style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color, #dee2e6);"
+                                    >
+                                        <AuditLogDiff
+                                            oldData={entry.old_data}
+                                            newData={entry.new_data}
+                                        />
+                                        {#if entry.metadata}
+                                            <div class="metadata-section">
+                                                <span class="metadata-label"
+                                                    >Metadata:</span
+                                                >
+                                                <pre class="metadata-value">{JSON.stringify(
+                                                        JSON.parse(
+                                                            entry.metadata,
+                                                        ),
+                                                        null,
+                                                        2,
+                                                    )}</pre>
+                                            </div>
+                                        {/if}
+                                    </div>
+                                {/if}
+                            </div>
+                        {/each}
+                    </div>
 
                     {#if entries.length === 0}
                         <div class="empty-state">
@@ -477,6 +553,11 @@
     table.nice {
         width: 100%;
         border-collapse: collapse;
+    }
+
+    /* Hide mobile cards on desktop */
+    .mobile-card-list {
+        display: none;
     }
 
     table.nice > thead > tr > th {
@@ -673,6 +754,76 @@
 
         :global([ref="filter-card"]) {
             min-height: 252px !important;
+        }
+    }
+
+    @media only screen and (max-width: 768px) {
+        /* Hide the table on mobile, show cards */
+        table.nice {
+            display: none !important;
+        }
+
+        .mobile-card-list {
+            display: flex !important;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mobile-entry-card {
+            background: var(--background-tertiary, rgba(0, 0, 0, 0.05));
+            border: 1px solid var(--border-color, #dee2e6);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+
+        .mobile-entry-card:hover {
+            background: var(--background-hover, rgba(153, 93, 243, 0.05));
+        }
+
+        .mobile-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+
+        .mobile-card-user {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .mobile-card-time {
+            font-size: 12px;
+            color: var(--text-secondary, #6c757d);
+            text-align: right;
+        }
+
+        .mobile-card-details {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .mobile-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .mobile-card-label {
+            font-weight: 500;
+            color: var(--text-secondary, #6c757d);
+        }
+
+        .mobile-expand-icon {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 4px;
+            text-align: center;
         }
     }
 

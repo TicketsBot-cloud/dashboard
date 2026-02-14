@@ -47,8 +47,12 @@ github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704 h1
 github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704/go.mod h1:Mux1bEPpOHwRw1wo6Fa6qJLJH9Erk9qv1yAIfLi1Wmw=
 github.com/TicketsBot-cloud/common v0.0.0-20260210200939-e29bc465e46b h1:sHP4QMStL6Su9fz+QtK/XRDGjWNZzG6W6ZK94RMC5A8=
 github.com/TicketsBot-cloud/common v0.0.0-20260210200939-e29bc465e46b/go.mod h1:tGrTHFz09OM3eDWF+62hIi9ELpT4igCFi868FKSvKBg=
+github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e h1:nFKV7yEm8MWbCP7dtsJ88+agcxDUD0YKIotVHMVvytw=
+github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e/go.mod h1:tGrTHFz09OM3eDWF+62hIi9ELpT4igCFi868FKSvKBg=
 github.com/TicketsBot-cloud/database v0.0.0-20260210192531-2f4d3be7a6a1 h1:0W8p9eaZJ5a2UQ1s2FAesTFrGVrqFiy+29fdFgWeUAQ=
 github.com/TicketsBot-cloud/database v0.0.0-20260210192531-2f4d3be7a6a1/go.mod h1:HQXAgmNSm7/FmBYwcsa6qpZqMrDhbLoEl+AyqFQ+RwY=
+github.com/TicketsBot-cloud/database v0.0.0-20260214180435-acb54713814d h1:wMzN5PDtgbTSWOoy/JN8fNGn4suoSX2vtvrM2egBvNU=
+github.com/TicketsBot-cloud/database v0.0.0-20260214180435-acb54713814d/go.mod h1:HQXAgmNSm7/FmBYwcsa6qpZqMrDhbLoEl+AyqFQ+RwY=
 github.com/TicketsBot-cloud/gdl v0.0.0-20251129162044-695f8e5079eb h1:Efk1PmGyFH3/MmY3r24xCKNP1r5fMxedYTvnYSH3gc8=
 github.com/TicketsBot-cloud/gdl v0.0.0-20251129162044-695f8e5079eb/go.mod h1:CdwBR2egPtxUXjD2CgC9ZwfuB8dz9HPePM8nuG6dt7Y=
 github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc h1:qTLNpCvIqM7UwZ6MdWQ9EztcDsIJfHh+VJdG+ULLEaA=
@@ -272,6 +276,7 @@ github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
+github.com/jackc/chunkreader v1.0.0 h1:4s39bBR8ByfqH+DKm8rQA3E1LHZWB9XWcrz8fqaZbe0=
 github.com/jackc/chunkreader v1.0.0/go.mod h1:RT6O25fNZIuasFJRyZ4R/Y2BbhasbmZXF9QQ7T3kePo=
 github.com/jackc/chunkreader/v2 v2.0.0/go.mod h1:odVSm741yZoC3dpHEUXIqA9tQRhFrgOHwnPIn9lDKlk=
 github.com/jackc/chunkreader/v2 v2.0.1 h1:i+RDz65UE+mmpjTfyz0MoVTnzeYxroil2G82ki7MGG8=
@@ -292,6 +297,7 @@ github.com/jackc/pgmock v0.0.0-20210724152146-4ad1a8207f65 h1:DadwsjnMwFjfWc9y5W
 github.com/jackc/pgmock v0.0.0-20210724152146-4ad1a8207f65/go.mod h1:5R2h2EEX+qri8jOWMbJCtaPWkrrNc7OHwsp2TCqp7ak=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
+github.com/jackc/pgproto3 v1.1.0 h1:FYYE4yRw+AgI8wXIinMlNjBbp/UitDJwfj5LqqewP1A=
 github.com/jackc/pgproto3 v1.1.0/go.mod h1:eR5FA3leWg7p9aeAqi37XOTgTIbkABlvcPB3E5rlc78=
 github.com/jackc/pgproto3/v2 v2.0.0-alpha1.0.20190420180111-c116219b62db/go.mod h1:bhq50y+xrl9n5mRYyCBFKkpRVTLYJVWeCc+mEAI3yXA=
 github.com/jackc/pgproto3/v2 v2.0.0-alpha1.0.20190609003834-432c2951c711/go.mod h1:uH0AWtUmuShn0bcesswc4aBTWGvw0cAxIJp+6OB//Wg=

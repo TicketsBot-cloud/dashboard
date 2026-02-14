@@ -1,8 +1,12 @@
 <script>
-    import { createEventDispatcher, onMount } from "svelte";
-    import BetaAlert from "../BetaAlert.svelte";
+    import { createEventDispatcher, onMount, tick } from "svelte";
     import SearchSelect from "../form/SearchSelect.svelte";
     import timezones from "timezones-list";
+    import Colour from "../form/Colour.svelte";
+    import Dropdown from "../form/Dropdown.svelte";
+    import Textarea from "../form/Textarea.svelte";
+    import Input from "../form/Input.svelte";
+    import { colourToInt, intToColour } from "../../js/util";
 
     const timezoneList = [
         {
@@ -15,6 +19,7 @@
     ];
 
     export let data = [];
+    export let isPremium = false;
 
     const dispatch = createEventDispatcher();
     const daysOfWeek = [
@@ -29,6 +34,10 @@
 
     let timezone = "Europe/London";
     let currentTimeDisplay = "";
+    let outOfHoursBehaviour = "block_creation";
+    let outOfHoursTitle = "";
+    let outOfHoursMessage = "";
+    let tempColour = "#FC3F35";
     let hours = daysOfWeek.map((_, index) => ({
         day_of_week: index,
         enabled: false,
@@ -87,6 +96,22 @@
                 timezone = data.timezone;
             }
 
+            if (data.out_of_hours_behaviour) {
+                outOfHoursBehaviour = data.out_of_hours_behaviour;
+            }
+
+            if (data.out_of_hours_title) {
+                outOfHoursTitle = data.out_of_hours_title;
+            }
+
+            if (data.out_of_hours_message) {
+                outOfHoursMessage = data.out_of_hours_message;
+            }
+
+            if (data.out_of_hours_colour) {
+                tempColour = intToColour(data.out_of_hours_colour);
+            }
+
             const hoursArray = data.hours || data;
             if (
                 hoursArray &&
@@ -126,6 +151,10 @@
             hours[index].start_time = "09:00";
             hours[index].end_time = "17:00";
         }
+        emitChange();
+    }
+
+    function updateColour() {
         emitChange();
     }
 
@@ -201,6 +230,10 @@
         dispatch("change", {
             timezone,
             hours: enabledHours,
+            out_of_hours_behaviour: outOfHoursBehaviour,
+            out_of_hours_title: outOfHoursTitle,
+            out_of_hours_message: outOfHoursMessage,
+            out_of_hours_colour: colourToInt(tempColour),
         });
     }
 
@@ -217,6 +250,10 @@
         return {
             timezone,
             hours: enabledHours,
+            out_of_hours_behaviour: outOfHoursBehaviour,
+            out_of_hours_title: outOfHoursTitle,
+            out_of_hours_message: outOfHoursMessage,
+            out_of_hours_colour: colourToInt(tempColour),
         };
     }
 </script>
@@ -252,7 +289,6 @@
                 </div>
             {/if}
         </div>
-        <BetaAlert style="width: 100%" />
         <div class="days-container">
             {#each daysOfWeek as day, index}
                 <div class="day-row" class:enabled={hours[index].enabled}>
@@ -298,6 +334,66 @@
                 </div>
             {/each}
         </div>
+
+        {#if hours.some((h) => h.enabled)}
+            <div class="settings-section">
+                <div class="setting-group">
+                    <Dropdown
+                        label="Out-of-hours behaviour"
+                        bind:value={outOfHoursBehaviour}
+                    >
+                        <option value="block_creation"
+                            >Block ticket creation</option
+                        >
+                        <option value="allow_with_warning"
+                            >Allow with warning</option
+                        >
+                    </Dropdown>
+                    <span class="setting-description">
+                        {#if outOfHoursBehaviour === "block_creation"}
+                            Users will not be able to open tickets outside of
+                            support hours.
+                        {:else}
+                            Users can still open tickets outside of support
+                            hours, but will see a warning message.
+                        {/if}
+                    </span>
+                </div>
+
+                <div class="setting-group">
+                    <Colour
+                        label={isPremium ? "Embed Colour" : "Embed Colour (Premium)"}
+                        on:change={updateColour}
+                        bind:value={tempColour}
+                        disabled={!isPremium}
+                    />
+                </div>
+
+                <div class="settings-group">
+                    <Input
+                        label="Custom out-of-hours title"
+                        bind:value={outOfHoursTitle}
+                        on:input={emitChange}
+                        placeholder="This panel is currently closed"
+                        maxlength="100"
+                    />
+                </div>
+
+                <div class="setting-group">
+                    <Textarea
+                        label="Custom out-of-hours message"
+                        bind:value={outOfHoursMessage}
+                        on:input={emitChange}
+                        placeholder="Please try again during our support hours"
+                        maxlength="500"
+                        rows="3"
+                    />
+                    <span class="setting-char-count">
+                        {outOfHoursMessage.length}/500
+                    </span>
+                </div>
+            </div>
+        {/if}
 
         <div class="actions">
             <button
@@ -348,7 +444,6 @@
         flex-wrap: wrap;
     }
 
-    .utc-notice,
     .current-time-notice,
     .default-notice,
     .restriction-notice {
@@ -360,10 +455,6 @@
         border-radius: 6px;
         font-size: 13px;
         color: rgba(255, 255, 255, 0.7);
-    }
-
-    .utc-notice i {
-        color: #4fc3f7;
     }
 
     .current-time-notice i {
@@ -497,6 +588,31 @@
         color: #4fc3f7;
     }
 
+    .settings-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 16px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+    }
+
+    .setting-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .setting-description {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .setting-char-count {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.4);
+        text-align: right;
+    }
+
     .actions {
         display: flex;
         gap: 8px;
@@ -550,7 +666,6 @@
             flex-direction: column;
         }
 
-        .utc-notice,
         .default-notice {
             width: 100%;
         }

@@ -162,10 +162,9 @@
                     icon="fa-file-import"
                     href="/manage/{guildId}/import"
                 />
-
                 <ManageSidebarLink
                     {currentRoute}
-                    title="Audit Log"
+                    title="Audit Logs"
                     icon="fa-history"
                     href="/manage/{guildId}/audit-log"
                 />

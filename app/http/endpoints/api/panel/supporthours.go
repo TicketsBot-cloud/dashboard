@@ -22,13 +22,14 @@ type supportHoursResponse struct {
 	Timezone            string                   `json:"timezone"`
 	Hours               []supportHoursHourConfig `json:"hours"`
 	OutOfHoursBehaviour string                   `json:"out_of_hours_behaviour"`
+	OutOfHoursTitle     string                   `json:"out_of_hours_title"`
 	OutOfHoursMessage   string                   `json:"out_of_hours_message"`
 }
 
 // supportHoursAuditData is used for audit log old/new data to include both hours and settings
 type supportHoursAuditData struct {
-	Hours    []database.PanelSupportHours         `json:"hours"`
-	Settings database.PanelSupportHoursSettings   `json:"settings"`
+	Hours    []database.PanelSupportHours       `json:"hours"`
+	Settings database.PanelSupportHoursSettings `json:"settings"`
 }
 
 // supportHoursHourConfig represents individual hour configuration
@@ -93,9 +94,11 @@ func GetSupportHours(c *gin.Context) {
 	}
 
 	outOfHoursBehaviour := string(database.OutOfHoursBehaviourBlockCreation)
+	var outOfHoursTitle string
 	var outOfHoursMessage string
 	if settingsExist {
 		outOfHoursBehaviour = string(settings.OutOfHoursBehaviour)
+		outOfHoursTitle = settings.OutOfHoursTitle
 		outOfHoursMessage = settings.OutOfHoursMessage
 	}
 
@@ -103,6 +106,7 @@ func GetSupportHours(c *gin.Context) {
 		Timezone:            timezone,
 		Hours:               hourConfigs,
 		OutOfHoursBehaviour: outOfHoursBehaviour,
+		OutOfHoursTitle:     outOfHoursTitle,
 		OutOfHoursMessage:   outOfHoursMessage,
 	}
 
@@ -122,6 +126,7 @@ type supportHoursRequestBody struct {
 	Timezone            string                `json:"timezone" binding:"required"`
 	Hours               []supportHoursPayload `json:"hours" binding:"required"`
 	OutOfHoursBehaviour string                `json:"out_of_hours_behaviour"`
+	OutOfHoursTitle     string                `json:"out_of_hours_title"`
 	OutOfHoursMessage   string                `json:"out_of_hours_message"`
 }
 
@@ -277,9 +282,16 @@ func SetSupportHours(c *gin.Context) {
 		return
 	}
 
+	outOfHoursTitle := requestBody.OutOfHoursTitle
+	if len(outOfHoursTitle) > 100 {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Out of hours title must be 100 characters or less"))
+		return
+	}
+
 	if err := dbclient.Client.PanelSupportHoursSettings.Set(c, database.PanelSupportHoursSettings{
 		PanelId:             panelId,
 		OutOfHoursBehaviour: database.OutOfHoursBehaviour(behaviour),
+		OutOfHoursTitle:     outOfHoursTitle,
 		OutOfHoursMessage:   outOfHoursMessage,
 	}); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))

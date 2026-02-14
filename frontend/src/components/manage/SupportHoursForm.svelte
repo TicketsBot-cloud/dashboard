@@ -1,10 +1,11 @@
 <script>
-    import { createEventDispatcher, onMount } from "svelte";
+    import { createEventDispatcher, onMount, tick } from "svelte";
     import BetaAlert from "../BetaAlert.svelte";
     import SearchSelect from "../form/SearchSelect.svelte";
     import timezones from "timezones-list";
     import Dropdown from "../form/Dropdown.svelte";
     import Textarea from "../form/Textarea.svelte";
+    import Input from "../form/Input.svelte";
 
     const timezoneList = [
         {
@@ -32,6 +33,7 @@
     let timezone = "Europe/London";
     let currentTimeDisplay = "";
     let outOfHoursBehaviour = "block_creation";
+    let outOfHoursTitle = "";
     let outOfHoursMessage = "";
     let hours = daysOfWeek.map((_, index) => ({
         day_of_week: index,
@@ -93,6 +95,10 @@
 
             if (data.out_of_hours_behaviour) {
                 outOfHoursBehaviour = data.out_of_hours_behaviour;
+            }
+
+            if (data.out_of_hours_title) {
+                outOfHoursTitle = data.out_of_hours_title;
             }
 
             if (data.out_of_hours_message) {
@@ -214,6 +220,7 @@
             timezone,
             hours: enabledHours,
             out_of_hours_behaviour: outOfHoursBehaviour,
+            out_of_hours_title: outOfHoursTitle,
             out_of_hours_message: outOfHoursMessage,
         });
     }
@@ -232,6 +239,7 @@
             timezone,
             hours: enabledHours,
             out_of_hours_behaviour: outOfHoursBehaviour,
+            out_of_hours_title: outOfHoursTitle,
             out_of_hours_message: outOfHoursMessage,
         };
     }
@@ -321,7 +329,6 @@
                     <Dropdown
                         label="Out-of-hours behaviour"
                         bind:value={outOfHoursBehaviour}
-                        on:change={emitChange}
                     >
                         <option value="block_creation"
                             >Block ticket creation</option
@@ -341,12 +348,22 @@
                     </span>
                 </div>
 
+                <div class="settings-group">
+                    <Input
+                        label="Custom out-of-hours title"
+                        bind:value={outOfHoursTitle}
+                        on:input={emitChange}
+                        placeholder="This panel is currently closed"
+                        maxlength="100"
+                    />
+                </div>
+
                 <div class="setting-group">
                     <Textarea
                         label="Custom out-of-hours message"
                         bind:value={outOfHoursMessage}
                         on:input={emitChange}
-                        placeholder="Leave empty to use the default message"
+                        placeholder="Please try again during our support hours"
                         maxlength="500"
                         rows="3"
                     />

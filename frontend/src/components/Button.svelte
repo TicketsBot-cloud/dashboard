@@ -7,11 +7,6 @@
     export let iconOnly = false;
     export let noShadow = false;
 
-    export let col1 = false;
-    export let col2 = false;
-    export let col3 = false;
-    export let col4 = false;
-
     export let clientWidth;
 </script>
 
@@ -25,10 +20,6 @@
     {disabled}
     {type}
     bind:clientWidth
-    class:col-1={col1}
-    class:col-2={col2}
-    class:col-3={col3}
-    class:col-4={col4}
 >
     {#if icon !== undefined}
         <i class={icon}></i>

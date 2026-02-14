@@ -46,3 +46,9 @@
         on:change={validateMin}
     />
 </div>
+
+<style>
+    input {
+        width: 100%;
+    }
+</style>

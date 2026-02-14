@@ -19,7 +19,12 @@
 
     $: isAdmin = permissionLevel >= 2;
     $: isMod = permissionLevel >= 1;
-    $: isUser = permissionLevel >= 0;
+
+    let isBotStaff = false;
+    try {
+        const userData = JSON.parse(window.localStorage.getItem("user_data"));
+        isBotStaff = userData && userData.admin;
+    } catch {}
 
     let guildId = currentRoute.namedParams.id;
 
@@ -156,6 +161,12 @@
                     title="Import"
                     icon="fa-file-import"
                     href="/manage/{guildId}/import"
+                />
+                <ManageSidebarLink
+                    {currentRoute}
+                    title="Audit Logs"
+                    icon="fa-history"
+                    href="/manage/{guildId}/audit-log"
                 />
             {/if}
 

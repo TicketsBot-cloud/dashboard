@@ -42,26 +42,21 @@ type (
 	ColourMap map[customisation.Colour]utils.HexColour
 )
 
-func GetSettingsHandler(ctx *gin.Context) {
-	guildId := ctx.Keys["guildid"].(uint64)
-
+func loadSettings(ctx context.Context, guildId uint64) (Settings, error) {
 	var settings Settings
 
-	group, _ := errgroup.WithContext(context.Background())
+	group, _ := errgroup.WithContext(ctx)
 
-	// main settings
 	group.Go(func() (err error) {
 		settings.Settings, err = dbclient.Client.Settings.Get(ctx, guildId)
 		return
 	})
 
-	// claim settings
 	group.Go(func() (err error) {
 		settings.ClaimSettings, err = dbclient.Client.ClaimSettings.Get(ctx, guildId)
 		return
 	})
 
-	// auto close settings
 	group.Go(func() error {
 		tmp, err := dbclient.Client.AutoClose.Get(ctx, guildId)
 		if err != nil {
@@ -72,19 +67,16 @@ func GetSettingsHandler(ctx *gin.Context) {
 		return nil
 	})
 
-	// ticket permissions
 	group.Go(func() (err error) {
 		settings.TicketPermissions, err = dbclient.Client.TicketPermissions.Get(ctx, guildId)
 		return
 	})
 
-	// colour map
 	group.Go(func() (err error) {
 		settings.Colours, err = getColourMap(guildId)
 		return
 	})
 
-	// welcome message
 	group.Go(func() (err error) {
 		settings.WelcomeMessage, err = dbclient.Client.WelcomeMessages.Get(ctx, guildId)
 		if err == nil && settings.WelcomeMessage == "" {
@@ -94,7 +86,6 @@ func GetSettingsHandler(ctx *gin.Context) {
 		return
 	})
 
-	// ticket limit
 	group.Go(func() (err error) {
 		settings.TicketLimit, err = dbclient.Client.TicketLimit.Get(ctx, guildId)
 		if err == nil && settings.TicketLimit == 0 {
@@ -104,43 +95,36 @@ func GetSettingsHandler(ctx *gin.Context) {
 		return
 	})
 
-	// category
 	group.Go(func() (err error) {
 		settings.Category, err = dbclient.Client.ChannelCategory.Get(ctx, guildId)
 		return
 	})
 
-	// archive channel
 	group.Go(func() (err error) {
 		settings.ArchiveChannel, err = dbclient.Client.ArchiveChannel.Get(ctx, guildId)
 		return
 	})
 
-	// allow users to close
 	group.Go(func() (err error) {
 		settings.UsersCanClose, err = dbclient.Client.UsersCanClose.Get(ctx, guildId)
 		return
 	})
 
-	// naming scheme
 	group.Go(func() (err error) {
 		settings.NamingScheme, err = dbclient.Client.NamingScheme.Get(ctx, guildId)
 		return
 	})
 
-	// close confirmation
 	group.Go(func() (err error) {
 		settings.CloseConfirmation, err = dbclient.Client.CloseConfirmation.Get(ctx, guildId)
 		return
 	})
 
-	// close confirmation
 	group.Go(func() (err error) {
 		settings.FeedbackEnabled, err = dbclient.Client.FeedbackEnabled.Get(ctx, guildId)
 		return
 	})
 
-	// language
 	group.Go(func() error {
 		locale, err := dbclient.Client.ActiveLanguage.Get(ctx, guildId)
 		if err != nil {
@@ -155,6 +139,17 @@ func GetSettingsHandler(ctx *gin.Context) {
 	})
 
 	if err := group.Wait(); err != nil {
+		return settings, err
+	}
+
+	return settings, nil
+}
+
+func GetSettingsHandler(ctx *gin.Context) {
+	guildId := ctx.Keys["guildid"].(uint64)
+
+	settings, err := loadSettings(ctx, guildId)
+	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 		return
 	}

@@ -1,17 +1,19 @@
 package api
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
@@ -19,6 +21,7 @@ import (
 
 func DeletePanel(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
@@ -118,6 +121,15 @@ func DeletePanel(c *gin.Context) {
 			_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
 		}
 	}
+
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionPanelDelete,
+		ResourceType: dbmodel.AuditResourcePanel,
+		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
+		OldData:      panel,
+	})
 
 	c.JSON(200, utils.SuccessResponse)
 }

@@ -3,8 +3,12 @@ package api
 import (
 	"strconv"
 
+	"fmt"
+
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,5 +43,12 @@ func DeleteIntegrationHandler(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionUserIntegrationDelete,
+		ResourceType: dbmodel.AuditResourceUserIntegration,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("%d", integration.Id)),
+		OldData:      integration,
+	})
 	ctx.Status(204)
 }

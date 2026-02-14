@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -47,7 +48,7 @@ func RemoveMember(ctx *gin.Context) {
 			return
 		}
 
-		removeTeamMember(ctx, parsed, guildId, snowflake, entityType)
+		removeTeamMember(ctx, parsed, guildId, selfId, snowflake, entityType)
 	}
 }
 
@@ -153,10 +154,18 @@ func removeDefaultMember(ctx *gin.Context, guildId, selfId, snowflake uint64, en
 		}
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       selfId,
+		ActionType:   database.AuditActionTeamMemberRemove,
+		ResourceType: database.AuditResourceTeamMember,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("default/%d", snowflake)),
+		OldData:      map[string]interface{}{"snowflake": snowflake, "type": entityType},
+	})
 	ctx.JSON(200, utils.SuccessResponse)
 }
 
-func removeTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, entityType entityType) {
+func removeTeamMember(ctx *gin.Context, teamId int, guildId, selfId, snowflake uint64, entityType entityType) {
 	team, exists, err := dbclient.Client.SupportTeam.GetById(ctx, guildId, teamId)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch team from database: %v", err)))
@@ -231,6 +240,14 @@ func removeTeamMember(ctx *gin.Context, teamId int, guildId, snowflake uint64, e
 		}
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       selfId,
+		ActionType:   database.AuditActionTeamMemberRemove,
+		ResourceType: database.AuditResourceTeamMember,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("%d/%d", teamId, snowflake)),
+		OldData:      map[string]interface{}{"team_id": teamId, "snowflake": snowflake, "type": entityType},
+	})
 	ctx.JSON(200, utils.SuccessResponse)
 }
 

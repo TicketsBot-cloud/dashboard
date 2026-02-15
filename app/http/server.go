@@ -143,6 +143,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.PATCH("/panels/:panelid", api_panels.UpdatePanel)
 		guildAuthApiAdmin.DELETE("/panels/:panelid", api_panels.DeletePanel)
 
+		guildAuthApiAdmin.DELETE("/panels/:panelid/cooldowns", api_panels.ResetPanelCooldowns)
+
 		// Support hours endpoints
 		guildAuthApiSupport.GET("/panels/:panelid/support-hours", api_panels.GetSupportHours)
 		guildAuthApiAdmin.POST("/panels/:panelid/support-hours", api_panels.SetSupportHours)

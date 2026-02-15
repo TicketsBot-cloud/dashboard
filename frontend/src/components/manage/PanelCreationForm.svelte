@@ -6,7 +6,9 @@
     import ChannelDropdown from "../ChannelDropdown.svelte";
 
     import { onMount } from "svelte";
-    import { colourToInt, intToColour } from "../../js/util";
+    import { colourToInt, intToColour, notifySuccess, notifyError } from "../../js/util";
+    import axios from "axios";
+    import { API_URL } from "../../js/constants";
     import CategoryDropdown from "../CategoryDropdown.svelte";
     import EmojiInput from "../form/EmojiInput.svelte";
     import Dropdown from "../form/Dropdown.svelte";
@@ -22,6 +24,7 @@
     import Button from "../Button.svelte";
 
     export let guildId;
+    export let panelId = null;
     export let seedDefault = true;
 
     let tempColour = "#2ECC71";
@@ -329,16 +332,29 @@
                     bind:value={data.cooldown_seconds}
                 />
 
-                <div class="col-4">
-                    <label class="form-label">&nbsp;</label>
-                    <Button
-                        fullWidth
-                        type="button"
-                        on:click={() => {
-                            alert("AAAA");
-                        }}>Reset Cooldowns</Button
-                    >
-                </div>
+                {#if panelId}
+                    <div class="col-4">
+                        <label class="form-label">&nbsp;</label>
+                        <Button
+                            fullWidth
+                            type="button"
+                            on:click={async () => {
+                                try {
+                                    const res = await axios.delete(
+                                        `${API_URL}/api/${guildId}/panels/${panelId}/cooldowns`,
+                                    );
+                                    if (res.status === 200) {
+                                        notifySuccess("Panel cooldowns have been reset");
+                                    } else {
+                                        notifyError(res.data);
+                                    }
+                                } catch (e) {
+                                    notifyError(e.response?.data || "Failed to reset cooldowns");
+                                }
+                            }}>Reset Cooldowns</Button
+                        >
+                    </div>
+                {/if}
             </div>
             <div class="row">
                 <CategoryDropdown

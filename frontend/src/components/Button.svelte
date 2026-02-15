@@ -6,6 +6,7 @@
     export let danger = false;
     export let iconOnly = false;
     export let noShadow = false;
+
     export let clientWidth;
 </script>
 

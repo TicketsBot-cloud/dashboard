@@ -10,7 +10,9 @@
     export let end;
 
     const sliderDiameter = 20;
+    const sliderPadding = 5;
 
+    let line;
     let leftSlider, rightSlider;
     let leftParent, rightParent;
     let leftLabel, rightLabel;
@@ -40,50 +42,38 @@
         }
     }
 
-    let previousTouch;
-
     function onTouchMove(e) {
-        const touch = e.touches[0];
-
-        if (previousTouch && moving) {
+        if (moving) {
             e.preventDefault();
-            e.movementX = touch.pageX - previousTouch.pageX;
-            onMouseMove(e);
+            const touch = e.touches[0];
+            updateSliderPosition(touch.clientX);
         }
-
-        previousTouch = touch;
     }
 
     function onMouseMove(e) {
-        if (moving === rightSlider) {
-            rightOffset += e.movementX;
+        if (moving) {
+            updateSliderPosition(e.clientX);
+        }
+    }
 
-            const ratio =
-                parseOffset(rightParent.style.left) /
-                (width - sliderDiameter / 2);
+    function updateSliderPosition(clientX) {
+        const rect = line.getBoundingClientRect();
+        const maxOffset = width - sliderDiameter / 2;
+        const rawOffset = clientX - rect.left - sliderDiameter / 2;
+
+        if (moving === rightSlider) {
+            rightOffset = Math.max(leftOffset, Math.min(maxOffset, rawOffset));
+            const ratio = rightOffset / maxOffset;
             end = Math.ceil(ratio * (max - min) + min);
         } else if (moving === leftSlider) {
-            leftOffset += e.movementX;
-
-            const ratio =
-                parseOffset(leftParent.style.left) /
-                (width - sliderDiameter / 2);
+            leftOffset = Math.max(0, Math.min(rightOffset, rawOffset));
+            const ratio = leftOffset / maxOffset;
             start = Math.ceil(ratio * (max - min) + min);
         }
     }
 
     function onMouseUp() {
         moving = null;
-        previousTouch = null;
-    }
-
-    // calc(123px) -> 123
-    function parseOffset(offset) {
-        const regex = /calc\((\d+).*\)/;
-        const match = offset.match(regex);
-        if (match) {
-            return parseInt(match[1]);
-        }
     }
 
     onMount(() => {
@@ -99,16 +89,16 @@
 
 <section>
     <span class="form-label">{label}</span>
-    <div class="line" bind:clientWidth={width}>
+    <div class="line" bind:this={line} bind:clientWidth={width}>
         <div
             class="slider"
             bind:this={leftParent}
             on:mousedown={onMouseDown}
             on:touchstart={onMouseDown}
             style="
-            left: min({rightParent?.style?.left ||
+            left: calc(min({rightParent?.style?.left ||
                 `${width}px`}, max(0px, min({width -
-                sliderDiameter / 2}px, {leftOffset}px)));
+                sliderDiameter / 2}px, {leftOffset}px))) - {sliderPadding}px);
             "
         >
             <div
@@ -124,9 +114,9 @@
             on:mousedown={onMouseDown}
             on:touchstart={onMouseDown}
             style="
-            left: max({leftParent?.style?.left ||
+            left: calc(max({leftParent?.style?.left ||
                 `${width}px`}, max(0px, min({width -
-                sliderDiameter / 2}px, {rightOffset}px)));
+                sliderDiameter / 2}px, {rightOffset}px))) - {sliderPadding}px);
             "
         >
             <div
@@ -165,6 +155,8 @@
 
     .slider {
         position: absolute;
+        top: -13px;
+        padding: 5px;
         touch-action: none;
     }
 
@@ -175,11 +167,11 @@
         color: #9a9a9a;
         font-size: 12px;
         user-select: none;
+        pointer-events: none;
     }
 
     .slider > div {
         position: relative;
-        top: -8px;
         left: 0;
         border-radius: 50%;
         background-color: white;

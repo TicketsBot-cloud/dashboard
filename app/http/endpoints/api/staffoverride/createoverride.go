@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,6 +17,7 @@ type createOverrideBody struct {
 
 func CreateOverrideHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	var body createOverrideBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {
@@ -29,5 +32,12 @@ func CreateOverrideHandler(ctx *gin.Context) {
 		return
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionStaffOverrideCreate,
+		ResourceType: dbmodel.AuditResourceStaffOverride,
+		NewData:      map[string]interface{}{"time_period": body.TimePeriod},
+	})
 	ctx.Status(204)
 }

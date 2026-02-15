@@ -12,6 +12,7 @@ import (
 	"github.com/TicketsBot-cloud/common/tokenchange"
 	"github.com/TicketsBot-cloud/common/whitelabeldelete"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
@@ -122,6 +123,12 @@ func WhitelabelPost() func(*gin.Context) {
 			return
 		}
 
+		audit.Log(audit.LogEntry{
+			UserId:       userId,
+			ActionType:   database.AuditActionWhitelabelCreate,
+			ResourceType: database.AuditResourceWhitelabel,
+			ResourceId:   audit.StringPtr(fmt.Sprintf("%d", bot.Id)),
+		})
 		c.JSON(200, gin.H{
 			"success":  true,
 			"bot":      bot,

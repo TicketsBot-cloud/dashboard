@@ -1,10 +1,12 @@
 package forms
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -17,6 +19,7 @@ type createFormBody struct {
 
 func CreateForm(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
+	userId := c.Keys["userid"].(uint64)
 
 	var data createFormBody
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -55,5 +58,13 @@ func CreateForm(c *gin.Context) {
 		CustomId: customId,
 	}
 
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionFormCreate,
+		ResourceType: database.AuditResourceForm,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("%d", form.Id)),
+		NewData:      form,
+	})
 	c.JSON(200, form)
 }

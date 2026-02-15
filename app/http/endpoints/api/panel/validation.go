@@ -403,9 +403,6 @@ func validateCooldownSeconds(ctx PanelValidationContext) validation.ValidationFu
 		if ctx.Data.CooldownSeconds < 0 {
 			return validation.NewInvalidInputError("Cooldown must be 0 or greater")
 		}
-		if ctx.Data.CooldownSeconds > 86400 {
-			return validation.NewInvalidInputError("Cooldown must be 24 hours (86400 seconds) or less")
-		}
 		return nil
 	}
 }

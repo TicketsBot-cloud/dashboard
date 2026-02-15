@@ -1,11 +1,19 @@
 <script>
     import Input from "../form/Input.svelte";
+    import Number from "../form/Number.svelte";
     import Textarea from "../form/Textarea.svelte";
     import Colour from "../form/Colour.svelte";
     import ChannelDropdown from "../ChannelDropdown.svelte";
 
     import { onMount } from "svelte";
-    import { colourToInt, intToColour } from "../../js/util";
+    import {
+        colourToInt,
+        intToColour,
+        notifySuccess,
+        notifyError,
+    } from "../../js/util";
+    import axios from "axios";
+    import { API_URL } from "../../js/constants";
     import CategoryDropdown from "../CategoryDropdown.svelte";
     import EmojiInput from "../form/EmojiInput.svelte";
     import Dropdown from "../form/Dropdown.svelte";
@@ -18,8 +26,10 @@
     import { DOCS_URL } from "../../js/constants";
     import SupportHoursForm from "./SupportHoursForm.svelte";
     import emojiRegex from "emoji-regex";
+    import Button from "../Button.svelte";
 
     export let guildId;
+    export let panelId = null;
     export let seedDefault = true;
 
     let tempColour = "#2ECC71";
@@ -227,6 +237,7 @@
                 pending_category: "null",
                 use_threads: false,
                 ticket_notification_channel: "null",
+                cooldown_seconds: 0,
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -302,24 +313,61 @@
                     bind:value={data.delete_mentions}
                 />
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Checkbox
                     label="Create Tickets as Threads"
-                    col2
+                    col4
                     tool
                     bind:value={data.use_threads}
                 />
                 <ChannelDropdown
                     withNull
                     nullLabel="Use Global Setting"
-                    col2
+                    col4
                     label="Ticket Notification Channel (for Threads)"
                     {channels}
                     disabled={!data.use_threads && !settings.use_threads}
                     bind:value={data.ticket_notification_channel}
                 />
+
+                <Number
+                    col4={panelId}
+                    col2={!panelId}
+                    label="Ticket Open Cooldown (seconds)"
+                    min={0}
+                    bind:value={data.cooldown_seconds}
+                />
+
+                {#if panelId}
+                    <div class="col-4">
+                        <label class="form-label">&nbsp;</label>
+                        <Button
+                            fullWidth
+                            type="button"
+                            on:click={async () => {
+                                try {
+                                    const res = await axios.delete(
+                                        `${API_URL}/api/${guildId}/panels/${panelId}/cooldowns`,
+                                    );
+                                    if (res.status === 200) {
+                                        notifySuccess(
+                                            "Panel cooldowns have been reset",
+                                        );
+                                    } else {
+                                        notifyError(res.data);
+                                    }
+                                } catch (e) {
+                                    notifyError(
+                                        e.response?.data ||
+                                            "Failed to reset cooldowns",
+                                    );
+                                }
+                            }}>Reset Cooldowns</Button
+                        >
+                    </div>
+                {/if}
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <CategoryDropdown
                     label="Ticket Category"
                     col2
@@ -334,7 +382,7 @@
                     {/each}
                 </Dropdown>
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Dropdown
                     col2
                     label="Naming Scheme"
@@ -355,7 +403,7 @@
                     />
                 {/if}
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Dropdown
                     col2
                     label="Exit Survey Form"

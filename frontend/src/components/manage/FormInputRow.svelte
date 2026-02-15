@@ -21,8 +21,8 @@
     export let data = {};
     export let hasValidationErrors = false;
 
-    // Initialize options if not present
-    $: if (data.type === 3 && !data.options) {
+    // Initialize options if not present (for types that need options: 3, 21, 22)
+    $: if ((data.type === 3 || data.type === 21 || data.type === 22) && !data.options) {
         data.options = [];
     }
 
@@ -59,9 +59,9 @@
         data.max_length = undefined;
     }
 
-    // Check for duplicate option values
+    // Check for duplicate option values (for types with options: 3, 21, 22)
     $: duplicateValues = (() => {
-        if (!data.options || data.type !== 3) return [];
+        if (!data.options || (data.type !== 3 && data.type !== 21 && data.type !== 22)) return [];
         const valueMap = new Map();
         const duplicates = [];
 
@@ -83,8 +83,11 @@
     // Flag for duplicate values
     $: hasDuplicateValues = duplicateValues.length > 0;
 
-    // Check for no options in string select
-    $: hasNoOptions = data.type === 3 && (!data.options || data.options.length === 0);
+    // Check for invalid option count in types that require options (3, 21, 22)
+    // Radio Group (21) requires 2-10 options, Checkbox Group (22) requires 1-10, String Select (3) requires 1-25
+    $: minOptionsRequired = data.type === 21 ? 2 : 1;
+    $: maxOptionsAllowed = (data.type === 21 || data.type === 22) ? 10 : 25;
+    $: hasNoOptions = (data.type === 3 || data.type === 21 || data.type === 22) && (!data.options || data.options.length < minOptionsRequired || data.options.length > maxOptionsAllowed);
 
     // Validate label (required, max 45 chars)
     $: hasInvalidLabel = !data.label || data.label.trim().length === 0 || data.label.length > 45;
@@ -124,7 +127,7 @@
         if (!data.options) {
             data.options = [];
         }
-        if (data.options.length < 25) {
+        if (data.options.length < maxOptionsAllowed) {
             data.options = [
                 ...data.options,
                 {
@@ -200,10 +203,15 @@
                             const oldType = data.type;
                             data.type = newType;
 
+                            // Types that use options: 3, 21, 22
+                            const optionTypes = [3, 21, 22];
+                            const oldUsesOptions = optionTypes.includes(oldType);
+                            const newUsesOptions = optionTypes.includes(newType);
+
                             // Clear type-specific fields when switching types
                             if (oldType !== newType) {
-                                // Clear options only when switching away from string select (type 3)
-                                if (oldType === 3 && newType !== 3) {
+                                // Clear options when switching away from option-based types
+                                if (oldUsesOptions && !newUsesOptions) {
                                     data.options = undefined;
                                     data.allow_multiple = undefined;
                                 }
@@ -221,11 +229,8 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (
-                                    newType !== 3 &&
-                                    newType !== 4 &&
-                                    (newType < 5 || newType > 8)
-                                ) {
+                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 21, 22];
+                                if (!typesWithMinMax.includes(newType)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -238,6 +243,8 @@
                         <option value={6}>Role Select</option>
                         <option value={7}>Mentionable Select</option>
                         <option value={8}>Channel Select</option>
+                        <option value={21}>Radio Group</option>
+                        <option value={22}>Checkbox Group</option>
                     </Dropdown>
                 </div>
                 {#if withDeleteButton}
@@ -283,14 +290,22 @@
         </div>
     {/if}
 
-    <!-- String Select Options (type 3 only) -->
-    {#if data.type == 3}
+    <!-- Options for String Select (3), Radio Group (21), Checkbox Group (22) -->
+    {#if data.type == 3 || data.type == 21 || data.type == 22}
         <div class="row settings-row">
             <div class="col-1">
                 <div class="dropdown-items-section">
                     <div class="dropdown-header">
-                        <label class="form-label">String Select Options</label>
-                        {#if !data.options || data.options.length < 25}
+                        <label class="form-label">
+                            {#if data.type == 3}
+                                String Select Options
+                            {:else if data.type == 21}
+                                Radio Group Options
+                            {:else if data.type == 22}
+                                Checkbox Group Options
+                            {/if}
+                        </label>
+                        {#if !data.options || data.options.length < maxOptionsAllowed}
                             <Button
                                 icon="fas fa-plus"
                                 on:click={addDropdownItem}
@@ -368,7 +383,11 @@
                         <div class="validation-error">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span>
-                                No dropdown options added yet. Click "Add Option" to create up to 25 options.
+                                {#if data.options && data.options.length > maxOptionsAllowed}
+                                    Too many options. Maximum is {maxOptionsAllowed} (currently {data.options.length}).
+                                {:else}
+                                    At least {minOptionsRequired} option{minOptionsRequired > 1 ? "s are" : " is"} required. Click "Add Option" to create up to {maxOptionsAllowed} options.
+                                {/if}
                             </span>
                         </div>
                     {/if}
@@ -627,10 +646,15 @@
                             const oldType = data.type;
                             data.type = newType;
 
+                            // Types that use options: 3, 21, 22
+                            const optionTypes = [3, 21, 22];
+                            const oldUsesOptions = optionTypes.includes(oldType);
+                            const newUsesOptions = optionTypes.includes(newType);
+
                             // Clear type-specific fields when switching types
                             if (oldType !== newType) {
-                                // Clear options only when switching away from string select (type 3)
-                                if (oldType === 3 && newType !== 3) {
+                                // Clear options when switching away from option-based types
+                                if (oldUsesOptions && !newUsesOptions) {
                                     data.options = undefined;
                                     data.allow_multiple = undefined;
                                 }
@@ -648,11 +672,8 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                if (
-                                    newType !== 3 &&
-                                    newType !== 4 &&
-                                    (newType < 5 || newType > 8)
-                                ) {
+                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 21, 22];
+                                if (!typesWithMinMax.includes(newType)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
                                 }
@@ -665,6 +686,8 @@
                         <option value={6}>Role Select</option>
                         <option value={7}>Channel Select</option>
                         <option value={8}>Mentionable Select</option>
+                        <option value={21}>Radio Group</option>
+                        <option value={22}>Checkbox Group</option>
                     </Dropdown>
                 </div>
             </div>
@@ -805,6 +828,7 @@
         font-size: 14px;
         color: var(--text-secondary, #666);
         flex-wrap: wrap;
+        padding-top: 15px;
     }
 
     .config-text {

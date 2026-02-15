@@ -19,7 +19,6 @@
     ];
 
     export let data = [];
-    export let isPremium = false;
 
     const dispatch = createEventDispatcher();
     const daysOfWeek = [
@@ -362,10 +361,9 @@
 
                 <div class="setting-group">
                     <Colour
-                        label={isPremium ? "Embed Colour" : "Embed Colour (Premium)"}
+                        label="Embed Colour"
                         on:change={updateColour}
                         bind:value={tempColour}
-                        disabled={!isPremium}
                     />
                 </div>
 

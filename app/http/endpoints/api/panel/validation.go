@@ -76,6 +76,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateAccessControlList,
 		validatePendingCategory,
 		validateTicketNotificationChannel,
+		validateCooldownSeconds,
 	}
 }
 
@@ -395,6 +396,15 @@ func validateEmbed(e *types.CustomEmbed) error {
 	}
 
 	return validation.NewInvalidInputError("Your embed message does not contain any content")
+}
+
+func validateCooldownSeconds(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.CooldownSeconds < 0 {
+			return validation.NewInvalidInputError("Cooldown must be 0 or greater")
+		}
+		return nil
+	}
 }
 
 func validateTicketNotificationChannel(ctx PanelValidationContext) validation.ValidationFunc {

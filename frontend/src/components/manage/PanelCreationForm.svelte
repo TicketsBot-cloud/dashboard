@@ -6,7 +6,12 @@
     import ChannelDropdown from "../ChannelDropdown.svelte";
 
     import { onMount } from "svelte";
-    import { colourToInt, intToColour, notifySuccess, notifyError } from "../../js/util";
+    import {
+        colourToInt,
+        intToColour,
+        notifySuccess,
+        notifyError,
+    } from "../../js/util";
     import axios from "axios";
     import { API_URL } from "../../js/constants";
     import CategoryDropdown from "../CategoryDropdown.svelte";
@@ -326,7 +331,8 @@
                 />
 
                 <Number
-                    col4
+                    col4={panelId}
+                    col2={!panelId}
                     label="Ticket Open Cooldown (seconds)"
                     min={0}
                     bind:value={data.cooldown_seconds}
@@ -344,12 +350,17 @@
                                         `${API_URL}/api/${guildId}/panels/${panelId}/cooldowns`,
                                     );
                                     if (res.status === 200) {
-                                        notifySuccess("Panel cooldowns have been reset");
+                                        notifySuccess(
+                                            "Panel cooldowns have been reset",
+                                        );
                                     } else {
                                         notifyError(res.data);
                                     }
                                 } catch (e) {
-                                    notifyError(e.response?.data || "Failed to reset cooldowns");
+                                    notifyError(
+                                        e.response?.data ||
+                                            "Failed to reset cooldowns",
+                                    );
                                 }
                             }}>Reset Cooldowns</Button
                         >

@@ -243,6 +243,7 @@
                 ticket_limit: 0,
                 ticket_notification_channel: "null",
                 cooldown_seconds: 0,
+                hide_claim_button: false,
                 hide_close_button: false,
                 hide_close_with_reason_button: false,
                 welcome_message: {
@@ -390,7 +391,7 @@
                     tooltipText="Maximum tickets user can have open at once. Set to 0 to use global setting."
                 />
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Checkbox
                     label="Hide Close Button"
                     col4
@@ -402,6 +403,12 @@
                     col4
                     tool
                     bind:value={data.hide_close_with_reason_button}
+                />
+                <Checkbox
+                    label="Hide Claim Button"
+                    col2
+                    tool
+                    bind:value={data.hide_claim_button}
                 />
             </div>
             <div class="incomplete-row">

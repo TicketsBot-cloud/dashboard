@@ -213,6 +213,11 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
+	// If ticket limit is 0, treat it as use global setting
+	if data.TicketLimit == utils.Ptr(uint8(0)) {
+		data.TicketLimit = nil
+	}
+
 	// Store in DB
 	panel := database.Panel{
 		PanelId:                   panelId,

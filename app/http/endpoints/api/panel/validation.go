@@ -458,8 +458,8 @@ func validateTicketLimit(ctx PanelValidationContext) validation.ValidationFunc {
 			return nil
 		}
 
-		if *ctx.Data.TicketLimit < 1 || *ctx.Data.TicketLimit > 10 {
-			return validation.NewInvalidInputError("Ticket limit must be between 1 and 10")
+		if *ctx.Data.TicketLimit > 10 {
+			return validation.NewInvalidInputError("Ticket limit must be at most 11")
 		}
 
 		return nil

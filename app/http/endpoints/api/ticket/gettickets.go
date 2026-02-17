@@ -7,6 +7,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
+	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,23 @@ func GetTickets(c *gin.Context) {
 	userId := c.Keys["userid"].(uint64)
 	guildId := c.Keys["guildid"].(uint64)
 
+	// Check if user is a panel team member only (not admin or guild-wide support)
+	isPanelTeamOnly, err := utils.IsPanelTeamMemberOnly(c, guildId, userId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check user permissions"))
+		return
+	}
+
+	// Get accessible panels for panel team members
+	var panelIds []int
+	if isPanelTeamOnly {
+		panelIds, err = utils.GetAccessiblePanelIds(c, guildId, userId)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to get accessible panels"))
+			return
+		}
+	}
+
 	if c.Request.Method == "POST" {
 		var queryOptions wrappedQueryOptions
 		if bindErr := c.ShouldBindJSON(&queryOptions); bindErr == nil {
@@ -42,6 +60,11 @@ func GetTickets(c *gin.Context) {
 			if optsErr != nil {
 				_ = c.AbortWithError(http.StatusBadRequest, app.NewError(optsErr, "Invalid filter parameters"))
 				return
+			}
+
+			// Apply panel team member filtering if needed
+			if isPanelTeamOnly {
+				opts.FilterByPanelIds = panelIds
 			}
 
 			plainTickets, err := dbclient.Client.Tickets.GetByOptions(c, opts)
@@ -53,6 +76,25 @@ func GetTickets(c *gin.Context) {
 			buildResponseFromPlainTickets(c, plainTickets, guildId, userId)
 			return
 		}
+	}
+
+	// For GET requests, if user is panel team only, convert to use GetByOptions with filter
+	if isPanelTeamOnly {
+		openTrue := true
+		opts := database.TicketQueryOptions{
+			GuildId:          guildId,
+			Open:             &openTrue,
+			FilterByPanelIds: panelIds,
+		}
+
+		plainTickets, err := dbclient.Client.Tickets.GetByOptions(c, opts)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch open tickets for guild from database"))
+			return
+		}
+
+		buildResponseFromPlainTickets(c, plainTickets, guildId, userId)
+		return
 	}
 
 	tickets, err := dbclient.Client.Tickets.GetGuildOpenTicketsWithMetadata(c, guildId)

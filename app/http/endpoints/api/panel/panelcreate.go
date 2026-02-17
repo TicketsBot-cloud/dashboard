@@ -54,6 +54,9 @@ type panelBody struct {
 	TicketNotificationChannel *uint64                           `json:"ticket_notification_channel,string"`
 	CooldownSeconds           int                               `json:"cooldown_seconds"`
 	TicketLimit               *uint8                            `json:"ticket_limit"`
+	HideCloseButton           bool                              `json:"hide_close_button"`
+	HideCloseWithReasonButton bool                              `json:"hide_close_with_reason_button"`
+	HideClaimButton           bool                              `json:"hide_claim_button"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -252,6 +255,9 @@ func CreatePanel(c *gin.Context) {
 		TicketNotificationChannel: data.TicketNotificationChannel,
 		CooldownSeconds:           data.CooldownSeconds,
 		TicketLimit:               data.TicketLimit,
+		HideCloseButton:           data.HideCloseButton,
+		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
+		HideClaimButton:           data.HideClaimButton,
 	}
 
 	createOptions := panelCreateOptions{

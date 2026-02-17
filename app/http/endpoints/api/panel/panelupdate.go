@@ -249,6 +249,9 @@ func UpdatePanel(c *gin.Context) {
 		TicketNotificationChannel: data.TicketNotificationChannel,
 		CooldownSeconds:           data.CooldownSeconds,
 		TicketLimit:               data.TicketLimit,
+		HideCloseButton:           data.HideCloseButton,
+		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
+		HideClaimButton:           data.HideClaimButton,
 	}
 
 	// insert mention data

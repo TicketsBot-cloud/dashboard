@@ -206,6 +206,10 @@
             data.colour = 0x2ecc71;
         }
 
+        if (!data.ticket_limit) {
+            data.ticket_limit = 0;
+        }
+
         tempColour = intToColour(data.colour);
     }
 
@@ -236,6 +240,7 @@
                 exit_survey_form_id: "null",
                 pending_category: "null",
                 use_threads: false,
+                ticket_limit: 0,
                 ticket_notification_channel: "null",
                 cooldown_seconds: 0,
                 welcome_message: {
@@ -375,6 +380,15 @@
                     bind:value={data.category_id}
                 />
 
+                <Number
+                    col2
+                    label="Max Open Tickets Per User"
+                    min={0}
+                    bind:value={data.ticket_limit}
+                    tooltipText="Maximum tickets user can have open at once. Set to 0 to use global setting."
+                />
+            </div>
+            <div class="incomplete-row">
                 <Dropdown col2 label="Form" bind:value={data.form_id}>
                     <option value="null">None</option>
                     {#each forms as form}

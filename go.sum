@@ -47,8 +47,8 @@ github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704 h1
 github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704/go.mod h1:Mux1bEPpOHwRw1wo6Fa6qJLJH9Erk9qv1yAIfLi1Wmw=
 github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e h1:nFKV7yEm8MWbCP7dtsJ88+agcxDUD0YKIotVHMVvytw=
 github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e/go.mod h1:tGrTHFz09OM3eDWF+62hIi9ELpT4igCFi868FKSvKBg=
-github.com/TicketsBot-cloud/database v0.0.0-20260215113825-54c67fb267fc h1:9fQmqYQN7Hc85ds+uklaNU1ab199NAhpT5A3fQ3P8g8=
-github.com/TicketsBot-cloud/database v0.0.0-20260215113825-54c67fb267fc/go.mod h1:HQXAgmNSm7/FmBYwcsa6qpZqMrDhbLoEl+AyqFQ+RwY=
+github.com/TicketsBot-cloud/database v0.0.0-20260217113520-9cc86e3b374b h1:nE8VAv13rUPOSMTnULKsuCDHXlWnbst7DmocviUN6I8=
+github.com/TicketsBot-cloud/database v0.0.0-20260217113520-9cc86e3b374b/go.mod h1:HQXAgmNSm7/FmBYwcsa6qpZqMrDhbLoEl+AyqFQ+RwY=
 github.com/TicketsBot-cloud/gdl v0.0.0-20260213180045-11af01c262ca h1:/HRqcgOPfv6d9NzE6CqHXN4U1QgElyJ9DcxNNT8kV6g=
 github.com/TicketsBot-cloud/gdl v0.0.0-20260213180045-11af01c262ca/go.mod h1:CdwBR2egPtxUXjD2CgC9ZwfuB8dz9HPePM8nuG6dt7Y=
 github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc h1:qTLNpCvIqM7UwZ6MdWQ9EztcDsIJfHh+VJdG+ULLEaA=

@@ -53,6 +53,7 @@ type panelBody struct {
 	UseThreads                bool                              `json:"use_threads"`
 	TicketNotificationChannel *uint64                           `json:"ticket_notification_channel,string"`
 	CooldownSeconds           int                               `json:"cooldown_seconds"`
+	TicketLimit               *uint8                            `json:"ticket_limit"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -216,6 +217,11 @@ func CreatePanel(c *gin.Context) {
 		welcomeMessageEmbed = &id
 	}
 
+	// If ticket limit is 0, treat it as use global setting
+	if data.TicketLimit == utils.Ptr(uint8(0)) {
+		data.TicketLimit = nil
+	}
+
 	// Store in DB
 	panel := database.Panel{
 		MessageId:                 msgId,
@@ -245,6 +251,7 @@ func CreatePanel(c *gin.Context) {
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,
 		CooldownSeconds:           data.CooldownSeconds,
+		TicketLimit:               data.TicketLimit,
 	}
 
 	createOptions := panelCreateOptions{

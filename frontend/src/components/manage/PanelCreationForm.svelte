@@ -243,9 +243,9 @@
                 ticket_limit: 0,
                 ticket_notification_channel: "null",
                 cooldown_seconds: 0,
-                hide_claim_button: false,
                 hide_close_button: false,
                 hide_close_with_reason_button: false,
+                hide_claim_button: false,
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",

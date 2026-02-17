@@ -400,6 +400,14 @@
                                 label="Hide Claim Button"
                                 bind:value={data.hide_claim_button}
                             />
+                            <Checkbox
+                                label="Hide Close Button"
+                                bind:value={data.hide_close_button}
+                            />
+                            <Checkbox
+                                label="Hide Close with Reason Button"
+                                bind:value={data.hide_close_with_reason_button}
+                            />
                         </div>
 
                         <div class="row"></div>

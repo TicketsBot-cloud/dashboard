@@ -16,7 +16,6 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
@@ -135,27 +134,12 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	// check if we need to update the message
-	shouldUpdateMessage := uint32(existing.Colour) != data.Colour ||
-		existing.ChannelId != data.ChannelId ||
-		existing.Content != data.Content ||
-		existing.Title != data.Title ||
-		(existing.EmojiId == nil && emojiId != nil || existing.EmojiId != nil && emojiId == nil || (existing.EmojiId != nil && emojiId != nil && *existing.EmojiId != *emojiId)) ||
-		(existing.EmojiName == nil && emojiName != nil || existing.EmojiName != nil && emojiName == nil || (existing.EmojiName != nil && emojiName != nil && *existing.EmojiName != *emojiName)) ||
-		existing.ImageUrl != data.ImageUrl ||
-		existing.ThumbnailUrl != data.ThumbnailUrl ||
-		component.ButtonStyle(existing.ButtonStyle) != data.ButtonStyle ||
-		existing.ButtonLabel != data.ButtonLabel ||
-		existing.Disabled != data.Disabled
+	messageData := data.IntoPanelMessageData(existing.CustomId, premiumTier > premium.None)
+	var newMessageId uint64
 
-	newMessageId := existing.MessageId
-
-	if shouldUpdateMessage {
-		// delete old message, ignoring error
-		// TODO: Use proper context
+	// Check if channel changed
+	if existing.ChannelId != data.ChannelId {
 		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
-
-		messageData := data.IntoPanelMessageData(existing.CustomId, premiumTier > premium.None)
 		newMessageId, err = messageData.send(botContext)
 		if err != nil {
 			var unwrapped request.RestError
@@ -174,6 +158,33 @@ func UpdatePanel(c *gin.Context) {
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
+		}
+	} else {
+		// Try to edit existing message
+		err = messageData.edit(botContext, existing.MessageId)
+		if err != nil {
+			var unwrapped request.RestError
+			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008) {
+				newMessageId, err = messageData.send(botContext)
+				if err != nil {
+					var unwrapped2 request.RestError
+					if errors.As(err, &unwrapped2) && unwrapped2.StatusCode == 403 {
+						c.JSON(403, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+					} else {
+						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+					}
+
+					return
+				}
+			} else if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
+				c.JSON(403, utils.ErrorStr("I do not have permission to edit messages in the specified channel"))
+				return
+			} else {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+				return
+			}
+		} else {
+			newMessageId = existing.MessageId
 		}
 	}
 
@@ -338,32 +349,52 @@ func UpdatePanel(c *gin.Context) {
 
 		messageData := multiPanelIntoMessageData(multiPanel, premiumTier > premium.None)
 
-		messageId, err := messageData.send(botContext, panels)
+		// Try to edit message first
+		var messageId uint64
+		err = messageData.edit(botContext, multiPanel.MessageId, panels)
 		if err != nil {
 			var unwrapped request.RestError
-			if errors.As(err, &unwrapped) {
-				if unwrapped.StatusCode == http.StatusForbidden {
-					c.JSON(400, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
-				} else {
-					log.Logger.Error("Body", zap.Any("body", messageData))
-					log.Logger.Error("Error sending panel message", zap.Any("errs", unwrapped.ApiError.Errors))
-					c.JSON(400, utils.ErrorStr("Error sending panel message: "+unwrapped.ApiError.Message))
+			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008) {
+				messageId, err = messageData.send(botContext, panels)
+				if err != nil {
+					var unwrapped2 request.RestError
+					if errors.As(err, &unwrapped2) {
+						if unwrapped2.StatusCode == http.StatusForbidden {
+							c.JSON(400, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+						} else {
+							log.Logger.Error("Body", zap.Any("body", messageData))
+							log.Logger.Error("Error sending panel message", zap.Any("errs", unwrapped2.ApiError.Errors))
+							c.JSON(400, utils.ErrorStr("Error sending panel message: "+unwrapped2.ApiError.Message))
+						}
+					} else {
+						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+					}
+
+					return
 				}
+			} else if errors.As(err, &unwrapped) && unwrapped.StatusCode == http.StatusForbidden {
+				c.JSON(400, utils.ErrorStr("I do not have permission to edit messages in the specified channel"))
+				return
 			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+				log.Logger.Error("Body", zap.Any("body", messageData))
+				if errors.As(err, &unwrapped) {
+					log.Logger.Error("Error editing panel message", zap.Any("errs", unwrapped.ApiError.Errors))
+					c.JSON(400, utils.ErrorStr("Error editing panel message: "+unwrapped.ApiError.Message))
+				} else {
+					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+				}
+				return
 			}
-
-			return
+		} else {
+			messageId = multiPanel.MessageId
 		}
 
-		if err := dbclient.Client.MultiPanels.UpdateMessageId(c, multiPanel.Id, messageId); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-			return
+		if messageId != multiPanel.MessageId {
+			if err := dbclient.Client.MultiPanels.UpdateMessageId(c, multiPanel.Id, messageId); err != nil {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+				return
+			}
 		}
-
-		// Delete old panel
-		// TODO: Use proper context
-		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
 	}
 
 	audit.Log(audit.LogEntry{

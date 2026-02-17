@@ -100,3 +100,42 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 
 	return msg.Id, nil
 }
+
+func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) error {
+	e := embed.NewEmbed().
+		SetTitle(p.Title).
+		SetDescription(p.Content).
+		SetColor(p.Colour)
+
+	if p.ImageUrl != nil {
+		e.SetImage(*p.ImageUrl)
+	}
+
+	if p.ThumbnailUrl != nil {
+		e.SetThumbnail(*p.ThumbnailUrl)
+	}
+
+	if !p.IsPremium {
+		e.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
+	}
+
+	data := rest.EditMessageData{
+		Embeds:  []*embed.Embed{e},
+		Components: []component.Component{
+			component.BuildActionRow(component.BuildButton(component.Button{
+				Label:    p.ButtonLabel,
+				CustomId: p.CustomId,
+				Style:    p.ButtonStyle,
+				Emoji:    p.Emoji,
+				Url:      nil,
+				Disabled: p.ButtonDisabled,
+			})),
+		},
+	}
+
+	ctx, cancel := app.DefaultContext()
+	defer cancel()
+
+	_, err := rest.EditMessage(ctx, c.Token, c.RateLimiter, p.ChannelId, messageId, data)
+	return err
+}

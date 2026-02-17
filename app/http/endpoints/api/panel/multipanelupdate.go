@@ -125,19 +125,6 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
-	// delete old message
-	ctx, cancel := app.DefaultContext()
-	defer cancel()
-
-	if err := rest.DeleteMessage(ctx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
-		var unwrapped request.RestError
-		if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-			return
-		}
-	}
-	cancel()
-
 	// get premium status
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
@@ -157,18 +144,61 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
-	// send new message
 	messageData := data.IntoMessageData(premiumTier > premium.None)
-	messageId, err := messageData.send(botContext, panelsWithCustom)
-	if err != nil {
-		var unwrapped request.RestError
-		if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
-			c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-		}
+	var messageId uint64
 
-		return
+	// Check if channel changed
+	if multiPanel.ChannelId != data.ChannelId {
+		ctx, cancel := app.DefaultContext()
+		defer cancel()
+
+		if err := rest.DeleteMessage(ctx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
+			var unwrapped request.RestError
+			if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+				return
+			}
+		}
+		cancel()
+
+		messageId, err = messageData.send(botContext, panelsWithCustom)
+		if err != nil {
+			var unwrapped request.RestError
+			if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+			} else {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+			}
+
+			return
+		}
+	} else {
+		// Try to edit existing message
+		err = messageData.edit(botContext, multiPanel.MessageId, panelsWithCustom)
+		if err != nil {
+			var unwrapped request.RestError
+			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008) {
+				messageId, err = messageData.send(botContext, panelsWithCustom)
+				if err != nil {
+					var unwrapped2 request.RestError
+					if errors.As(err, &unwrapped2) && unwrapped2.StatusCode == 403 {
+						c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+					} else {
+						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+					}
+
+					return
+				}
+			} else if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to edit messages in the provided channel"))
+				return
+			} else {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+				return
+			}
+		} else {
+			messageId = multiPanel.MessageId
+		}
 	}
 
 	// update DB

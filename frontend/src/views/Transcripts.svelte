@@ -12,6 +12,9 @@
     import PanelDropdown from "../components/PanelDropdown.svelte";
     import Dropdown from "../components/form/Dropdown.svelte";
     import ColumnSelector from "../components/ColumnSelector.svelte";
+    import ConfirmationModal from "../components/ConfirmationModal.svelte";
+    import ActionDropdown from "../components/ActionDropdown.svelte";
+    import Textarea from "../components/form/Textarea.svelte";
 
     setDefaultHeaders();
 
@@ -29,6 +32,9 @@
     let jumpToPage = page;          // Bound to page input field
     let totalPages = 1;             // Total number of pages from API
     let totalCount = 0;             // Total number of transcripts
+
+    let editingTranscript = null;
+    let editReason = "";
 
     // Show Columns logic
     let selectedColumns = [
@@ -283,6 +289,20 @@
         loadColumnSettings();
         await Promise.all([loadPanels(), loadData({})]);
     });
+
+    async function saveCloseReason() {
+        const res = await axios.patch(
+            `${API_URL}/api/${guildId}/tickets/${editingTranscript.ticket_id}/close-reason`,
+            { reason: editReason }
+        );
+        if (res.status !== 200) {
+            notifyError(res.data);
+            return;
+        }
+        editingTranscript.close_reason = editReason;
+        transcripts = transcripts;
+        editingTranscript = null;
+    }
 </script>
 
 <div class="content">
@@ -450,21 +470,45 @@
                                         )}
                                         class="transcript-cell"
                                     >
-                                        {#if transcript.has_transcript}
-                                            <div class="button-container">
+                                        <ActionDropdown bind:this={transcript.dropdownRef}>
+                                            {#if transcript.has_transcript}
                                                 <Navigate
                                                     to={`/manage/${guildId}/transcripts/view/${transcript.ticket_id}`}
                                                     styles="link"
                                                 >
-                                                    <Button>View</Button>
+                                                    <button on:click={() => transcript.dropdownRef?.close()}>
+                                                        <i class="fas fa-eye"></i>
+                                                        <span>View</span>
+                                                    </button>
                                                 </Navigate>
-                                            </div>
-                                        {/if}
+                                            {/if}
+                                            <button on:click={() => {
+                                                editingTranscript = transcript;
+                                                editReason = transcript.close_reason || "";
+                                                transcript.dropdownRef?.close();
+                                            }}>
+                                                <i class="fas fa-pencil"></i>
+                                                <span>Edit Reason</span>
+                                            </button>
+                                        </ActionDropdown>
                                     </td>
                                 </tr>
                             {/each}
                         </tbody>
                     </table>
+
+                    {#if editingTranscript}
+                        <ConfirmationModal icon="fas fa-save"
+                            on:cancel={() => editingTranscript = null}
+                            on:confirm={saveCloseReason}
+                        >
+                            <span slot="title">Edit Close Reason</span>
+                            <div slot="body" style="width: 100%">
+                                <Textarea placeholder="No reason specified" bind:value={editReason} />
+                            </div>
+                            <span slot="confirm">Save</span>
+                        </ConfirmationModal>
+                    {/if}
 
                     <div
                         class="pagination-controls"
@@ -601,24 +645,17 @@
     }
 
     :global(table.nice > thead > tr > th:last-child) {
-        width: 120px;
-        text-align: right;
+        width: 60px;
+        text-align: center;
     }
 
     :global(table.nice > tbody > tr > td:last-child) {
-        width: 120px;
-        text-align: right;
+        width: 60px;
+        text-align: center;
     }
 
     .transcript-cell {
-        text-align: right !important;
-        padding-right: 10px !important;
-    }
-
-    .button-container {
-        display: flex;
-        justify-content: flex-end;
-        width: 100%;
+        text-align: center !important;
     }
 
     :global([ref="filter-card"]) {

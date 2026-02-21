@@ -229,7 +229,7 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 21, 22];
+                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 22];
                                 if (!typesWithMinMax.includes(newType)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
@@ -315,6 +315,7 @@
                             </Button>
                         {/if}
                     </div>
+                    {#if data.type != 21}
                     <div class="dropdown-constraints">
                         <div class="constraint-row">
                             <Input
@@ -379,6 +380,7 @@
                             {/if}
                         </div>
                     </div>
+                    {/if}
                     <div class="constraint-row">
                         <Checkbox
                             id={`required-${formId}-${index}`}
@@ -686,7 +688,7 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 21, 22];
+                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 22];
                                 if (!typesWithMinMax.includes(newType)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;

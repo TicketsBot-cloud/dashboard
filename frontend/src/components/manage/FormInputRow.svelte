@@ -379,6 +379,13 @@
                             {/if}
                         </div>
                     </div>
+                    <div class="constraint-row">
+                        <Checkbox
+                            id={`required-${formId}-${index}`}
+                            label="Required"
+                            bind:value={data.required}
+                        />
+                    </div>
                     {#if hasNoOptions}
                         <div class="validation-error">
                             <i class="fas fa-exclamation-triangle"></i>
@@ -525,6 +532,13 @@
                                 placeholder="25"
                                 min={Math.max(data.min_length || 0, 1)}
                                 max={25}
+                            />
+                        </div>
+                        <div class="config-row">
+                            <Checkbox
+                                id={`required-${formId}-${index}`}
+                                label="Required"
+                                bind:value={data.required}
                             />
                         </div>
                         <div class="config-info">

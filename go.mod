@@ -4,13 +4,15 @@ go 1.24.0
 
 toolchain go1.24.2
 
-//replace github.com/TicketsBot-cloud/database => ../database
+replace github.com/TicketsBot-cloud/database => ../database
+
+replace github.com/TicketsBot-cloud/common => ../common
 
 //replace github.com/TicketsBot-cloud/common => ../common
 
 //replace github.com/TicketsBot-cloud/common => ../common
 
-//replace github.com/TicketsBot-cloud/gdl => ../gdl
+replace github.com/TicketsBot-cloud/gdl => ../gdl
 
 //replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
 

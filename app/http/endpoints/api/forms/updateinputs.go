@@ -318,8 +318,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		minLength := input.MinLength
 		maxLength := input.MaxLength
 
-		// Handle select types (3, 5-8, 21, 22)
-		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 21 || input.Type == 22 {
+		// Handle select types (3, 5-8, 22)
+		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 22 {
 			// Enforce min_length constraints (0-25)
 			if minLength < 0 {
 				minLength = 0
@@ -328,8 +328,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			}
 
 			// Handle max_length based on type
-			if input.Type == 3 || input.Type == 21 || input.Type == 22 {
-				// String Select, RadioGroup, CheckboxGroup: use options length as max, can be lower but not higher
+			if input.Type == 3 || input.Type == 22 {
+				// String Select, CheckboxGroup: use options length as max, can be lower but not higher
 				optionsLength := uint16(len(input.Options))
 				if optionsLength > 0 {
 					if maxLength == 0 || maxLength > optionsLength {
@@ -359,6 +359,11 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			}
 		}
 
+		var minLengthPtr, maxLengthPtr *uint16
+		if input.Type != 21 {
+			minLengthPtr = &minLength
+			maxLengthPtr = &maxLength
+		}
 		wrapped := database.FormInput{
 			Id:          input.Id,
 			FormId:      formId,
@@ -370,8 +375,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			Description: input.Description,
 			Placeholder: input.Placeholder,
 			Required:    input.Required,
-			MinLength:   &minLength,
-			MaxLength:   &maxLength,
+			MinLength:   minLengthPtr,
+			MaxLength:   maxLengthPtr,
 		}
 
 		if err := dbclient.Client.FormInput.UpdateTx(ctx, tx, wrapped); err != nil {
@@ -418,8 +423,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		minLength := input.MinLength
 		maxLength := input.MaxLength
 
-		// Handle select types (3, 5-8, 21, 22)
-		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 21 || input.Type == 22 {
+		// Handle select types (3, 5-8, 22)
+		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 22 {
 			// Enforce min_length constraints (0-25)
 			if minLength < 0 {
 				minLength = 0
@@ -428,8 +433,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			}
 
 			// Handle max_length based on type
-			if input.Type == 3 || input.Type == 21 || input.Type == 22 {
-				// String Select, RadioGroup, CheckboxGroup: use options length as max, can be lower but not higher
+			if input.Type == 3 || input.Type == 22 {
+				// String Select, CheckboxGroup: use options length as max, can be lower but not higher
 				optionsLength := uint16(len(input.Options))
 				if optionsLength > 0 {
 					if maxLength == 0 || maxLength > optionsLength {
@@ -459,6 +464,11 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			}
 		}
 
+		var minLengthPtr, maxLengthPtr *uint16
+		if input.Type != 21 {
+			minLengthPtr = &minLength
+			maxLengthPtr = &maxLength
+		}
 		formInputId, err := dbclient.Client.FormInput.CreateTx(ctx,
 			tx,
 			formId,
@@ -470,8 +480,8 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			input.Description,
 			input.Placeholder,
 			input.Required,
-			&minLength,
-			&maxLength,
+			minLengthPtr,
+			maxLengthPtr,
 		)
 
 		if err != nil {

@@ -15,10 +15,11 @@ import (
 
 type (
 	listTicketsResponse struct {
-		Tickets       []ticketData         `json:"tickets"`
-		PanelTitles   map[int]string       `json:"panel_titles"`
-		ResolvedUsers map[uint64]user.User `json:"resolved_users"`
-		SelfId        uint64               `json:"self_id,string"`
+		Tickets       []ticketData              `json:"tickets"`
+		PanelTitles   map[int]string            `json:"panel_titles"`
+		ResolvedUsers map[uint64]user.User      `json:"resolved_users"`
+		Labels        map[int][]ticketLabelData `json:"labels"`
+		SelfId        uint64                    `json:"self_id,string"`
 	}
 
 	ticketData struct {
@@ -130,6 +131,18 @@ func GetTickets(c *gin.Context) {
 		return
 	}
 
+	// Fetch label data
+	ticketIds := make([]int, len(tickets))
+	for i, ticket := range tickets {
+		ticketIds[i] = ticket.Id
+	}
+
+	labelsMap, err := fetchLabelsForTickets(c, guildId, ticketIds)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch label data"))
+		return
+	}
+
 	data := make([]ticketData, len(tickets))
 	for i, ticket := range tickets {
 		data[i] = ticketData{
@@ -147,6 +160,7 @@ func GetTickets(c *gin.Context) {
 		Tickets:       data,
 		PanelTitles:   panelTitles,
 		ResolvedUsers: users,
+		Labels:        labelsMap,
 		SelfId:        userId,
 	})
 }
@@ -157,6 +171,7 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 			Tickets:       []ticketData{},
 			PanelTitles:   make(map[int]string),
 			ResolvedUsers: make(map[uint64]user.User),
+			Labels:        make(map[int][]ticketLabelData),
 			SelfId:        userId,
 		})
 		return
@@ -210,6 +225,18 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		return
 	}
 
+	// Fetch label data
+	ticketIds := make([]int, len(plainTickets))
+	for i, ticket := range plainTickets {
+		ticketIds[i] = ticket.Id
+	}
+
+	labelsMap, err := fetchLabelsForTickets(c, guildId, ticketIds)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch label data"))
+		return
+	}
+
 	// Build ticketData from tickets with metadata
 	data := make([]ticketData, len(tickets))
 	for i, ticket := range tickets {
@@ -228,6 +255,48 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		Tickets:       data,
 		PanelTitles:   panelTitles,
 		ResolvedUsers: users,
+		Labels:        labelsMap,
 		SelfId:        userId,
 	})
+}
+
+func fetchLabelsForTickets(c *gin.Context, guildId uint64, ticketIds []int) (map[int][]ticketLabelData, error) {
+	if len(ticketIds) == 0 {
+		return make(map[int][]ticketLabelData), nil
+	}
+
+	labelAssignments, err := dbclient.Client.TicketLabelAssignments.GetByTickets(c, guildId, ticketIds)
+	if err != nil {
+		return nil, err
+	}
+
+	allLabels, err := dbclient.Client.TicketLabels.GetByGuild(c, guildId)
+	if err != nil {
+		return nil, err
+	}
+
+	labelLookup := make(map[int]ticketLabelData)
+	for _, l := range allLabels {
+		labelLookup[l.LabelId] = ticketLabelData{
+			LabelId: l.LabelId,
+			Name:    l.Name,
+			Colour:  l.Colour,
+		}
+	}
+
+	result := make(map[int][]ticketLabelData)
+	for ticketId, assignedIds := range labelAssignments {
+		var resolved []ticketLabelData
+		for _, lid := range assignedIds {
+			if ld, exists := labelLookup[lid]; exists {
+				resolved = append(resolved, ld)
+			}
+		}
+		if resolved == nil {
+			resolved = []ticketLabelData{}
+		}
+		result[ticketId] = resolved
+	}
+
+	return result, nil
 }

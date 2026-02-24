@@ -206,6 +206,10 @@
             data.colour = 0x2ecc71;
         }
 
+        if (!data.ticket_limit) {
+            data.ticket_limit = 0;
+        }
+
         tempColour = intToColour(data.colour);
     }
 
@@ -236,8 +240,12 @@
                 exit_survey_form_id: "null",
                 pending_category: "null",
                 use_threads: false,
+                ticket_limit: 0,
                 ticket_notification_channel: "null",
                 cooldown_seconds: 0,
+                hide_close_button: false,
+                hide_close_with_reason_button: false,
+                hide_claim_button: false,
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -375,33 +383,41 @@
                     bind:value={data.category_id}
                 />
 
+                <Number
+                    col2
+                    label="Max Open Tickets Per User"
+                    min={0}
+                    bind:value={data.ticket_limit}
+                    tooltipText="Maximum tickets user can have open at once. Set to 0 to use global setting."
+                />
+            </div>
+            <div class="row">
+                <Checkbox
+                    label="Hide Close Button"
+                    col4
+                    tool
+                    bind:value={data.hide_close_button}
+                />
+                <Checkbox
+                    label="Hide Close with Reason Button"
+                    col4
+                    tool
+                    bind:value={data.hide_close_with_reason_button}
+                />
+                <Checkbox
+                    label="Hide Claim Button"
+                    col2
+                    tool
+                    bind:value={data.hide_claim_button}
+                />
+            </div>
+            <div class="incomplete-row">
                 <Dropdown col2 label="Form" bind:value={data.form_id}>
                     <option value="null">None</option>
                     {#each forms as form}
                         <option value={form.form_id}>{form.title}</option>
                     {/each}
                 </Dropdown>
-            </div>
-            <div class="row">
-                <Dropdown
-                    col2
-                    label="Naming Scheme"
-                    bind:value={data.use_server_default_naming_scheme}
-                >
-                    <option value={true}>Use Server Default</option>
-                    <option value={false}>Custom</option>
-                </Dropdown>
-
-                {#if !data.use_server_default_naming_scheme}
-                    <Input
-                        col2
-                        label="Custom Naming Scheme"
-                        bind:value={data.naming_scheme}
-                        placeholder="ticket-%id%"
-                        tooltipText="Click here for the full placeholder list"
-                        tooltipLink={`${DOCS_URL}/dashboard/settings/placeholders#custom-naming-scheme-placeholders`}
-                    />
-                {/if}
             </div>
             <div class="row">
                 <Dropdown
@@ -430,6 +446,27 @@
                         {/if}
                     {/each}
                 </Dropdown>
+            </div>
+            <div class="row">
+                <Dropdown
+                    col2
+                    label="Naming Scheme"
+                    bind:value={data.use_server_default_naming_scheme}
+                >
+                    <option value={true}>Use Server Default</option>
+                    <option value={false}>Custom</option>
+                </Dropdown>
+
+                {#if !data.use_server_default_naming_scheme}
+                    <Input
+                        col2
+                        label="Custom Naming Scheme"
+                        bind:value={data.naming_scheme}
+                        placeholder="ticket-%id%"
+                        tooltipText="Click here for the full placeholder list"
+                        tooltipLink={`${DOCS_URL}/dashboard/settings/placeholders#custom-naming-scheme-placeholders`}
+                    />
+                {/if}
             </div>
         </div>
     </Collapsible>

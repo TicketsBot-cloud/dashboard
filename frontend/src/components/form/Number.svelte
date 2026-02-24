@@ -1,10 +1,14 @@
 <script>
+    import Tooltip from "svelte-tooltip";
     import { labelHash } from "../../js/labelHash";
 
     export let value;
     export let label;
     export let min;
     export let max;
+
+    export let tooltipText = undefined;
+    export let tooltipLink = undefined;
 
     export let col1 = false;
     export let col2 = false;
@@ -34,7 +38,28 @@
     class:col-3={col3}
     class:col-4={col4}
 >
-    <label for={numberId} class="form-label">{label}</label>
+    <div class="label-wrapper" class:no-margin={tooltipText !== undefined}>
+        <label for={numberId} class="form-label" style="margin-bottom: 0"
+            >{label}</label
+        >
+        {#if tooltipText !== undefined}
+            <div>
+                <Tooltip tip={tooltipText} top color="#121212">
+                    {#if tooltipLink !== undefined}
+                        <a href={tooltipLink} target="_blank">
+                            <i
+                                class="fas fa-circle-info form-label tooltip-icon"
+                            ></i>
+                        </a>
+                    {:else}
+                        <i
+                            class="fas fa-circle-info form-label tooltip-icon"
+                        ></i>
+                    {/if}
+                </Tooltip>
+            </div>
+        {/if}
+    </div>
     <input
         id={numberId}
         class="form-input"
@@ -51,4 +76,21 @@
     input {
         width: 100%;
     }
+
+    .label-wrapper {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 5px;
+    }
+
+    .no-margin {
+        margin-bottom: 0 !important;
+    }
+
+    .tooltip-icon {
+        cursor: pointer;
+    }
+
 </style>

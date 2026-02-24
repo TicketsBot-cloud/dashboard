@@ -138,6 +138,7 @@
             max_length: 255,
             is_new: true,
             type: 4, // Text Input
+            _key: Math.random(),
         };
 
         form.inputs = [...form.inputs, input];
@@ -150,7 +151,7 @@
         let idx = form.inputs.findIndex((i) => i === input);
 
         // Clean up validation error for the deleted input
-        delete inputValidationErrors[input.id || idx];
+        delete inputValidationErrors[input.id || input._key || idx];
 
         form.inputs.splice(idx, 1);
         for (let i = idx; i < form.inputs.length; i++) {
@@ -197,6 +198,7 @@
     }
 
     async function saveInputs() {
+        if (hasValidationErrors) return;
         const form = getForm(activeFormId);
 
         const data = {
@@ -374,7 +376,10 @@
                                     withDirectionButtons={true}
                                     index={i}
                                     {formLength}
-                                    bind:hasValidationErrors={inputValidationErrors[input.id || i]}
+                                    on:validationchange={(e) => {
+                                        inputValidationErrors[input.id || input._key || i] = e.detail;
+                                        inputValidationErrors = inputValidationErrors;
+                                    }}
                                     on:delete={() =>
                                         deleteInput(activeFormId, input)}
                                     on:move={(e) =>

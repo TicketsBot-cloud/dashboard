@@ -77,6 +77,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validatePendingCategory,
 		validateTicketNotificationChannel,
 		validateCooldownSeconds,
+		validateTicketLimit,
 	}
 }
 
@@ -445,6 +446,20 @@ func validateTicketNotificationChannel(ctx PanelValidationContext) validation.Va
 			if !channelFound {
 				return validation.NewInvalidInputError("Ticket notification channel not found")
 			}
+		}
+
+		return nil
+	}
+}
+
+func validateTicketLimit(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.TicketLimit == nil {
+			return nil
+		}
+
+		if *ctx.Data.TicketLimit > 10 {
+			return validation.NewInvalidInputError("Ticket limit must be at most 11")
 		}
 
 		return nil

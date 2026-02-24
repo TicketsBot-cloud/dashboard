@@ -224,6 +224,11 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
+	// If ticket limit is 0, treat it as use global setting
+	if data.TicketLimit == utils.Ptr(uint8(0)) {
+		data.TicketLimit = nil
+	}
+
 	// Store in DB
 	panel := database.Panel{
 		PanelId:                   panelId,
@@ -254,6 +259,10 @@ func UpdatePanel(c *gin.Context) {
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,
 		CooldownSeconds:           data.CooldownSeconds,
+		TicketLimit:               data.TicketLimit,
+		HideCloseButton:           data.HideCloseButton,
+		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
+		HideClaimButton:           data.HideClaimButton,
 	}
 
 	// insert mention data

@@ -42,7 +42,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 999;
+        z-index: 1100;
 
         display: flex;
         justify-content: center;
@@ -68,7 +68,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 500;
+        z-index: 1050;
         background-color: #000;
         opacity: .5;
     }

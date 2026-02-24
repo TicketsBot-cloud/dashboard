@@ -19,6 +19,7 @@ type wrappedQueryOptions struct {
 	UserId      uint64 `json:"user_id"`
 	PanelId     int    `json:"panel_id"`
 	ClaimedById uint64 `json:"claimed_by_id"`
+	LabelIds    []int  `json:"label_ids"`
 }
 
 // UnmarshalJSON dynamically handles both string and number types, treating empty strings as 0
@@ -81,6 +82,26 @@ func (o *wrappedQueryOptions) UnmarshalJSON(data []byte) error {
 			case float64:
 				fieldValue.SetUint(uint64(val))
 			}
+		case reflect.Slice:
+			if arr, ok := rawValue.([]interface{}); ok {
+				elemType := fieldValue.Type().Elem()
+				slice := reflect.MakeSlice(fieldValue.Type(), 0, len(arr))
+				for _, item := range arr {
+					if num, ok := item.(float64); ok {
+						elem := reflect.New(elemType).Elem()
+						switch elemType.Kind() {
+						case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+							elem.SetInt(int64(num))
+						case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+							elem.SetUint(uint64(num))
+						case reflect.Float32, reflect.Float64:
+							elem.SetFloat(num)
+						}
+						slice = reflect.Append(slice, elem)
+					}
+				}
+				fieldValue.Set(slice)
+			}
 		}
 	}
 
@@ -113,6 +134,7 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 		Open:        utils.BoolPtr(true), // Only open tickets
 		PanelId:     o.PanelId,
 		ClaimedById: o.ClaimedById,
+		LabelIds:    o.LabelIds,
 		Order:       database.OrderTypeDescending,
 	}
 	return opts, nil

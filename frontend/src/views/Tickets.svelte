@@ -2,6 +2,7 @@
     import Card from "../components/Card.svelte";
     import {
         getRelativeTime,
+        intToColour,
         notifyError,
         withLoadingScreen,
     } from "../js/util";
@@ -16,6 +17,8 @@
     import Input from "../components/form/Input.svelte";
     import PanelDropdown from "../components/PanelDropdown.svelte";
     import { permissionLevelCache } from "../js/stores";
+    import LabelBadge from "../components/manage/LabelBadge.svelte";
+    import LabelEditor from "../components/manage/LabelEditor.svelte";
 
     export let currentRoute;
     let guildId = currentRoute.namedParams.id;
@@ -40,8 +43,7 @@
     let labels = [];
     let selectedLabelIds = [];
     let showLabelManageModal = false;
-    let newLabelName = "";
-    let newLabelColour = "#4A4A4A";
+    let showLabelEditor = false;
     let labelAssignDropdownTicketId = null;
 
     // Permission level
@@ -62,17 +64,11 @@
     let filtered = [];
 
     function textColourForBg(hex) {
-        const r = (hex >> 16) & 0xFF, g = (hex >> 8) & 0xFF, b = hex & 0xFF;
+        const r = (hex >> 16) & 0xff,
+            g = (hex >> 8) & 0xff,
+            b = hex & 0xff;
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         return luminance > 0.5 ? "#1a1a2e" : "#ffffff";
-    }
-
-    function intToHex(val) {
-        return "#" + val.toString(16).padStart(6, "0");
-    }
-
-    function hexToInt(hex) {
-        return parseInt(hex.replace("#", ""), 16);
     }
 
     let handleInputTicketId = () => {
@@ -209,7 +205,7 @@
 
         const res = await axios.post(
             `${API_URL}/api/${guildId}/tickets`,
-            filterParams
+            filterParams,
         );
         if (res.status !== 200) {
             notifyError(res.data);
@@ -238,13 +234,13 @@
     }
 
     // Label management
-    async function createLabel() {
-        if (!newLabelName.trim()) return;
+    async function createLabel(event) {
+        const { name, colour } = event.detail;
 
-        const res = await axios.post(`${API_URL}/api/${guildId}/ticket-labels`, {
-            name: newLabelName.trim(),
-            colour: hexToInt(newLabelColour),
-        });
+        const res = await axios.post(
+            `${API_URL}/api/${guildId}/ticket-labels`,
+            { name, colour },
+        );
 
         if (res.status !== 200) {
             notifyError(res.data);
@@ -252,19 +248,20 @@
         }
 
         labels = [...labels, res.data];
-        newLabelName = "";
-        newLabelColour = "#4A4A4A";
+        showLabelEditor = false;
     }
 
     async function deleteLabel(labelId) {
-        const res = await axios.delete(`${API_URL}/api/${guildId}/ticket-labels/${labelId}`);
+        const res = await axios.delete(
+            `${API_URL}/api/${guildId}/ticket-labels/${labelId}`,
+        );
         if (res.status !== 204) {
             notifyError(res.data);
             return;
         }
 
-        labels = labels.filter(l => l.label_id !== labelId);
-        selectedLabelIds = selectedLabelIds.filter(id => id !== labelId);
+        labels = labels.filter((l) => l.label_id !== labelId);
+        selectedLabelIds = selectedLabelIds.filter((id) => id !== labelId);
     }
 
     // Label assignment
@@ -278,18 +275,21 @@
 
     async function toggleLabelAssignment(ticketId, labelId) {
         const currentLabels = data.labels[ticketId] || [];
-        const currentIds = currentLabels.map(l => l.label_id);
+        const currentIds = currentLabels.map((l) => l.label_id);
         let newIds;
 
         if (currentIds.includes(labelId)) {
-            newIds = currentIds.filter(id => id !== labelId);
+            newIds = currentIds.filter((id) => id !== labelId);
         } else {
             newIds = [...currentIds, labelId];
         }
 
-        const res = await axios.put(`${API_URL}/api/${guildId}/tickets/${ticketId}/labels`, {
-            label_ids: newIds,
-        });
+        const res = await axios.put(
+            `${API_URL}/api/${guildId}/tickets/${ticketId}/labels`,
+            {
+                label_ids: newIds,
+            },
+        );
 
         if (res.status !== 200) {
             notifyError(res.data);
@@ -297,17 +297,25 @@
         }
 
         // Update local state
-        const updatedLabels = newIds.map(id => {
-            const label = labels.find(l => l.label_id === id);
-            return label ? { label_id: label.label_id, name: label.name, colour: label.colour } : null;
-        }).filter(Boolean);
+        const updatedLabels = newIds
+            .map((id) => {
+                const label = labels.find((l) => l.label_id === id);
+                return label
+                    ? {
+                          label_id: label.label_id,
+                          name: label.name,
+                          colour: label.colour,
+                      }
+                    : null;
+            })
+            .filter(Boolean);
 
         data.labels = { ...data.labels, [ticketId]: updatedLabels };
     }
 
     function handleLabelFilterChange(labelId) {
         if (selectedLabelIds.includes(labelId)) {
-            selectedLabelIds = selectedLabelIds.filter(id => id !== labelId);
+            selectedLabelIds = selectedLabelIds.filter((id) => id !== labelId);
         } else {
             selectedLabelIds = [...selectedLabelIds, labelId];
         }
@@ -316,7 +324,7 @@
     // Close label dropdown when clicking outside
     function handleDocumentClick(event) {
         if (labelAssignDropdownTicketId !== null) {
-            const dropdown = event.target.closest('.label-assign-wrapper');
+            const dropdown = event.target.closest(".label-assign-wrapper");
             if (!dropdown) {
                 labelAssignDropdownTicketId = null;
             }
@@ -460,9 +468,18 @@
                                 {#each labels as label}
                                     <button
                                         class="label-pill"
-                                        class:label-pill-active={selectedLabelIds.includes(label.label_id)}
-                                        style="--label-bg: {intToHex(label.colour)}; --label-text: {textColourForBg(label.colour)};"
-                                        on:click={() => handleLabelFilterChange(label.label_id)}
+                                        class:label-pill-active={selectedLabelIds.includes(
+                                            label.label_id,
+                                        )}
+                                        style="--label-bg: {intToColour(
+                                            label.colour,
+                                        )}; --label-text: {textColourForBg(
+                                            label.colour,
+                                        )};"
+                                        on:click={() =>
+                                            handleLabelFilterChange(
+                                                label.label_id,
+                                            )}
                                     >
                                         {label.name}
                                     </button>
@@ -482,7 +499,11 @@
         <span slot="title">
             Open Tickets
             {#if isAdmin}
-                <button class="manage-labels-btn" on:click={() => showLabelManageModal = true} title="Manage Labels">
+                <button
+                    class="manage-labels-btn"
+                    on:click={() => (showLabelManageModal = true)}
+                    title="Manage Labels"
+                >
                     <i class="fas fa-tags"></i> Manage Labels
                 </button>
             {/if}
@@ -534,10 +555,8 @@
                                 "Awaiting Response",
                             )}>Awaiting Response</th
                         >
-                        <th
-                            class:visible={selectedColumns.includes(
-                                "Labels",
-                            )}>Labels</th
+                        <th class:visible={selectedColumns.includes("Labels")}
+                            >Labels</th
                         >
                         <th class="visible"></th>
                     </tr>
@@ -631,34 +650,53 @@
                                 <div class="labels-cell-inner">
                                     {#if ticketLabels.length > 0}
                                         {#each ticketLabels as label}
-                                            <span
-                                                class="label-badge"
-                                                style="background-color: {intToHex(label.colour)}; color: {textColourForBg(label.colour)};"
-                                            >{label.name}</span>
+                                            <LabelBadge
+                                                name={label.name}
+                                                colour={label.colour}
+                                            />
                                         {/each}
                                     {/if}
                                     {#if labels.length > 0}
                                         <div class="label-assign-wrapper">
                                             <button
                                                 class="label-assign-btn"
-                                                on:click|stopPropagation={() => toggleLabelDropdown(ticket.id)}
+                                                on:click|stopPropagation={() =>
+                                                    toggleLabelDropdown(
+                                                        ticket.id,
+                                                    )}
                                                 title="Assign labels"
                                             >
-                                                <i class="fas fa-plus" style="font-size: 10px;"></i>
+                                                <i
+                                                    class="fas fa-plus"
+                                                    style="font-size: 10px;"
+                                                ></i>
                                             </button>
                                             {#if labelAssignDropdownTicketId === ticket.id}
-                                                <div class="label-assign-dropdown" on:click|stopPropagation>
+                                                <div
+                                                    class="label-assign-dropdown"
+                                                    on:click|stopPropagation
+                                                >
                                                     {#each labels as label}
-                                                        <label class="label-assign-option">
+                                                        <label
+                                                            class="label-assign-option"
+                                                        >
                                                             <input
                                                                 type="checkbox"
-                                                                checked={ticketLabels.some(l => l.label_id === label.label_id)}
-                                                                on:change={() => toggleLabelAssignment(ticket.id, label.label_id)}
+                                                                checked={ticketLabels.some(
+                                                                    (l) =>
+                                                                        l.label_id ===
+                                                                        label.label_id,
+                                                                )}
+                                                                on:change={() =>
+                                                                    toggleLabelAssignment(
+                                                                        ticket.id,
+                                                                        label.label_id,
+                                                                    )}
                                                             />
-                                                            <span
-                                                                class="label-badge-sm"
-                                                                style="background-color: {intToHex(label.colour)}; color: {textColourForBg(label.colour)};"
-                                                            >{label.name}</span>
+                                                            <LabelBadge
+                                                                name={label.name}
+                                                                colour={label.colour}
+                                                            />
                                                         </label>
                                                     {/each}
                                                 </div>
@@ -688,11 +726,14 @@
 
 <!-- Label Management Modal -->
 {#if showLabelManageModal}
-    <div class="modal-overlay" on:click={() => showLabelManageModal = false}>
+    <div class="modal-overlay" on:click={() => (showLabelManageModal = false)}>
         <div class="modal-content" on:click|stopPropagation>
             <div class="modal-header">
                 <h3>Manage Labels</h3>
-                <button class="modal-close" on:click={() => showLabelManageModal = false}>
+                <button
+                    class="modal-close"
+                    on:click={() => (showLabelManageModal = false)}
+                >
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -700,11 +741,15 @@
                 <div class="label-list">
                     {#each labels as label}
                         <div class="label-list-item">
-                            <span
-                                class="label-badge"
-                                style="background-color: {intToHex(label.colour)}; color: {textColourForBg(label.colour)};"
-                            >{label.name}</span>
-                            <button class="label-delete-btn" on:click={() => deleteLabel(label.label_id)} title="Delete label">
+                            <LabelBadge
+                                name={label.name}
+                                colour={label.colour}
+                            />
+                            <button
+                                class="label-delete-btn"
+                                on:click={() => deleteLabel(label.label_id)}
+                                title="Delete label"
+                            >
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -714,28 +759,21 @@
                     {/if}
                 </div>
 
-                <div class="label-create-form">
-                    <h4>Create New Label</h4>
-                    <div class="label-create-row">
-                        <input
-                            type="text"
-                            class="label-name-input"
-                            placeholder="Label name"
-                            maxlength="32"
-                            bind:value={newLabelName}
-                            on:keydown={(e) => { if (e.key === 'Enter') createLabel(); }}
-                        />
-                        <input
-                            type="color"
-                            class="label-colour-input"
-                            bind:value={newLabelColour}
-                        />
-                        <Button on:click={createLabel}>Create</Button>
-                    </div>
-                </div>
+                <Button
+                    icon="fas fa-plus"
+                    on:click={() => (showLabelEditor = true)}
+                    >Create Label</Button
+                >
             </div>
         </div>
     </div>
+{/if}
+
+{#if showLabelEditor}
+    <LabelEditor
+        on:confirm={createLabel}
+        on:cancel={() => (showLabelEditor = false)}
+    />
 {/if}
 
 <style>
@@ -818,25 +856,9 @@
     }
 
     /* Label styles */
-    .label-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-        white-space: nowrap;
-    }
-
-    .label-badge-sm {
-        display: inline-block;
-        padding: 1px 6px;
-        border-radius: 10px;
-        font-size: 11px;
-        font-weight: 500;
-        white-space: nowrap;
-    }
-
     .labels-cell {
+        width: 200px;
+        min-width: 200px;
         max-width: 200px;
     }
 
@@ -856,13 +878,15 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 22px;
-        height: 22px;
+        width: 18px;
+        height: 18px;
+        padding: 0;
         border-radius: 50%;
         border: 1px dashed var(--border-color);
         background: transparent;
         color: var(--text-primary);
         cursor: pointer;
+        font-size: 0.65em;
         opacity: 0.6;
         transition: opacity 0.15s;
     }
@@ -890,7 +914,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 4px 6px;
+        padding: 5px 6px;
         cursor: pointer;
         border-radius: 4px;
     }
@@ -927,7 +951,9 @@
         background-color: var(--label-bg);
         color: var(--label-text);
         opacity: 0.5;
-        transition: opacity 0.15s, border-color 0.15s;
+        transition:
+            opacity 0.15s,
+            border-color 0.15s;
     }
 
     .label-pill:hover {
@@ -1048,43 +1074,6 @@
         color: var(--text-primary);
         opacity: 0.5;
         font-size: 14px;
-    }
-
-    .label-create-form h4 {
-        margin: 0 0 10px 0;
-        font-size: 15px;
-    }
-
-    .label-create-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .label-name-input {
-        flex: 1;
-        height: 36px;
-        padding: 6px 10px;
-        background: var(--background-tertiary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--border-radius-sm);
-        color: var(--text-primary);
-        font-size: 14px;
-    }
-
-    .label-name-input:focus {
-        outline: none;
-        border-color: #995df3;
-    }
-
-    .label-colour-input {
-        width: 36px;
-        height: 36px;
-        padding: 2px;
-        border: 1px solid var(--border-color);
-        border-radius: var(--border-radius-sm);
-        background: var(--background-tertiary);
-        cursor: pointer;
     }
 
     @media only screen and (max-width: 950px) {

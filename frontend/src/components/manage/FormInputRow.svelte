@@ -229,7 +229,7 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 21, 22];
+                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 22];
                                 if (!typesWithMinMax.includes(newType)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;
@@ -315,6 +315,7 @@
                             </Button>
                         {/if}
                     </div>
+                    {#if data.type != 21}
                     <div class="dropdown-constraints">
                         <div class="constraint-row">
                             <Input
@@ -378,6 +379,14 @@
                                 </span>
                             {/if}
                         </div>
+                    </div>
+                    {/if}
+                    <div class="constraint-row">
+                        <Checkbox
+                            id={`required-${formId}-${index}`}
+                            label="Required"
+                            bind:value={data.required}
+                        />
                     </div>
                     {#if hasNoOptions}
                         <div class="validation-error">
@@ -527,6 +536,13 @@
                                 max={25}
                             />
                         </div>
+                        <div class="config-row">
+                            <Checkbox
+                                id={`required-${formId}-${index}`}
+                                label="Required"
+                                bind:value={data.required}
+                            />
+                        </div>
                         <div class="config-info">
                             {#if data.min_length || data.max_length}
                                 <span class="config-text">
@@ -672,7 +688,7 @@
                                     data.max_length = 255; // Default max for short style
                                 }
                                 // Clear min/max for types that don't use them
-                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 21, 22];
+                                const typesWithMinMax = [3, 4, 5, 6, 7, 8, 22];
                                 if (!typesWithMinMax.includes(newType)) {
                                     data.min_length = undefined;
                                     data.max_length = undefined;

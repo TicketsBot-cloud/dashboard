@@ -263,3 +263,7 @@ func (c *BotContext) CreateGuildCommand(ctx context.Context, guildId uint64, dat
 func (c *BotContext) DeleteGuildCommand(ctx context.Context, guildId, commandId uint64) error {
 	return rest.DeleteGuildCommand(ctx, c.Token, c.RateLimiter, c.BotId, guildId, commandId)
 }
+
+func (c *BotContext) ModifyChannel(ctx context.Context, channelId uint64, data rest.ModifyChannelData) (channel.Channel, error) {
+	return rest.ModifyChannel(ctx, c.Token, c.RateLimiter, channelId, data)
+}

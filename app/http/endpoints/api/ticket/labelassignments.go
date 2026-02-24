@@ -3,11 +3,14 @@ package api
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
+	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
 )
 
@@ -82,6 +85,46 @@ func SetTicketLabels(ctx *gin.Context) {
 	if err := dbclient.Client.TicketLabelAssignments.Replace(ctx, guildId, ticketId, body.LabelIds); err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to update labels. Please try again."))
 		return
+	}
+
+	ticket, err := dbclient.Client.Tickets.Get(ctx, ticketId, guildId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch ticket. Please try again."))
+		return
+	}
+
+	topicMsg := ""
+	if ticket.PanelId != nil {
+		panel, err := dbclient.Client.Panel.GetById(ctx, *ticket.PanelId)
+		if err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to fetch panel. Please try again."))
+			return
+		}
+		if panel.PanelId != 0 {
+			topicMsg = fmt.Sprintf("%s | ", panel.Title)
+		}
+	}
+
+	labelNamesList, err := dbclient.Client.TicketLabelAssignments.GetLabelNameByTicket(ctx, guildId, ticketId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch label names. Please try again."))
+		return
+	}
+
+	var labelNames []string
+	for _, name := range labelNamesList {
+		labelNames = append(labelNames, name)
+	}
+
+	if !ticket.IsThread {
+		botCtx, err := botcontext.ContextForGuild(guildId)
+		if err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to update channel topic. Please try again."))
+			return
+		}
+		botCtx.ModifyChannel(ctx, *ticket.ChannelId, rest.ModifyChannelData{
+			Topic: fmt.Sprintf("%s%s", topicMsg, strings.Join(labelNames, ", ")),
+		})
 	}
 
 	audit.Log(audit.LogEntry{

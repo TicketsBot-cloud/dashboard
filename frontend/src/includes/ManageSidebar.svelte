@@ -3,7 +3,7 @@
     import axios from "axios";
     import { API_URL, DOCS_URL } from "../js/constants";
     import { notifyError, withLoadingScreen } from "../js/util";
-    import { getIconUrl, getDefaultIcon } from "../js/icons";
+    import { getIconUrl, getDefaultIcon, normalizeIcon } from "../js/icons";
     import ManageSidebarLink from "./ManageSidebarLink.svelte";
     import ManageSidebarButton from "./ManageSidebarButton.svelte";
     import SubNavigation from "./SubNavigation.svelte";
@@ -80,6 +80,7 @@
         await withLoadingScreen(async () => {
             await loadGuild();
 
+            guild.icon = normalizeIcon(guild.icon);
             iconUrl = getIconUrl(guildId, guild.icon);
             checkGuildCache(guildId, guild.icon, guild.name);
         });

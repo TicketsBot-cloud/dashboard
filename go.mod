@@ -1,14 +1,14 @@
 module github.com/TicketsBot-cloud/dashboard
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.2
+replace github.com/TicketsBot-cloud/database => ../database
 
-//replace github.com/TicketsBot-cloud/database => ../database
+replace github.com/TicketsBot-cloud/common => ../common
 
 //replace github.com/TicketsBot-cloud/common => ../common
 
-//replace github.com/TicketsBot-cloud/gdl => ../gdl
+replace github.com/TicketsBot-cloud/gdl => ../gdl
 
 //replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
 
@@ -22,10 +22,10 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e
-	github.com/TicketsBot-cloud/database v0.0.0-20260224195559-d1e01011ada7
+	github.com/TicketsBot-cloud/database v0.0.0-20260226214338-bf6af6ba954e
 	github.com/TicketsBot-cloud/gdl v0.0.0-20260213180045-11af01c262ca
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
-	github.com/TicketsBot-cloud/worker v0.0.0-20251212162840-a9cc9bbf5692
+	github.com/TicketsBot-cloud/worker v0.0.0-20260301212853-f5f9e1ebbfc2
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0
@@ -47,7 +47,7 @@ require (
 	github.com/penglongli/gin-metrics v0.1.10
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.10.0
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.27.1
@@ -137,7 +137,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
+	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.40.0 // indirect

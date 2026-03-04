@@ -126,7 +126,7 @@ func UpdatePanel(c *gin.Context) {
 	{
 		emoji := data.getEmoji()
 		if emoji != nil {
-			emojiName = &emoji.Name
+			emojiName = emoji.Name
 
 			if emoji.Id.Value != 0 {
 				emojiId = &emoji.Id.Value

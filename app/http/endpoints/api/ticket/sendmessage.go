@@ -115,7 +115,7 @@ func SendMessage(ctx *gin.Context) {
 				Username:  guild.Name,
 				AvatarUrl: guild.IconUrl(),
 				AllowedMentions: messagetypes.AllowedMention{
-					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+					Parse: []messagetypes.AllowedMentionType{messagetypes.AllowedMentionTypeRoles, messagetypes.AllowedMentionTypeUsers, messagetypes.AllowedMentionTypeEveryone},
 				},
 			}
 		} else {
@@ -130,7 +130,7 @@ func SendMessage(ctx *gin.Context) {
 				Username:  user.EffectiveName(),
 				AvatarUrl: user.AvatarUrl(256),
 				AllowedMentions: messagetypes.AllowedMention{
-					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+					Parse: []messagetypes.AllowedMentionType{messagetypes.AllowedMentionTypeRoles, messagetypes.AllowedMentionTypeUsers, messagetypes.AllowedMentionTypeEveryone},
 				},
 			}
 		}
@@ -175,7 +175,7 @@ func SendMessage(ctx *gin.Context) {
 	if _, err = rest.CreateMessage(ctx, botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{
 		Content: message,
 		AllowedMentions: messagetypes.AllowedMention{
-			Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+			Parse: []messagetypes.AllowedMentionType{messagetypes.AllowedMentionTypeUsers, messagetypes.AllowedMentionTypeRoles, messagetypes.AllowedMentionTypeEveryone},
 		},
 	}); err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to send message to ticket #%d in channel %d", ticketId, *ticket.ChannelId))

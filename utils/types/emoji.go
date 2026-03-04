@@ -32,16 +32,18 @@ func NewEmoji(emojiName *string, emojiId *uint64) Emoji {
 
 func (e Emoji) IntoGdl() *emoji.Emoji {
 	if e.IsCustomEmoji {
+		name := e.Name
 		return &emoji.Emoji{
 			Id:   objects.NewNullableSnowflake(*e.Id),
-			Name: e.Name,
+			Name: &name,
 		}
 	} else {
 		if e.Name == "" {
 			return nil
 		} else {
+			name := e.Name
 			return &emoji.Emoji{
-				Name: e.Name,
+				Name: &name,
 			}
 		}
 	}

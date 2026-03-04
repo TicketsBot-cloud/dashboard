@@ -59,9 +59,9 @@ func ChannelsHandler(ctx *gin.Context) {
 	filtered := make([]channel.Channel, 0, len(channels))
 	for _, ch := range channels {
 		// Filter out threads
-		if ch.Type == channel.ChannelTypeGuildNewsThread ||
-			ch.Type == channel.ChannelTypeGuildPrivateThread ||
-			ch.Type == channel.ChannelTypeGuildPublicThread {
+		if ch.Type == channel.ChannelTypeAnnouncementThread ||
+			ch.Type == channel.ChannelTypePrivateThread ||
+			ch.Type == channel.ChannelTypePublicThread {
 			continue
 		}
 
@@ -69,7 +69,7 @@ func ChannelsHandler(ctx *gin.Context) {
 	}
 
 	sort.Slice(filtered, func(i, j int) bool {
-		return filtered[i].Position < filtered[j].Position
+		return *filtered[i].Position < *filtered[j].Position
 	})
 
 	ctx.JSON(200, filtered)

@@ -34,8 +34,8 @@ func replacePlaceholders(ctx context.Context, content string, ticket *database.T
 	}
 
 	if member, err := botCtx.GetGuildMember(ctx, ticket.GuildId, ticket.UserId); err == nil {
-		if member.Nick != "" {
-			content = strings.ReplaceAll(content, "%nickname%", member.Nick)
+		if member.Nick != nil {
+			content = strings.ReplaceAll(content, "%nickname%", *member.Nick)
 		}
 	}
 

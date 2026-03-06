@@ -32,12 +32,12 @@ func panelIntoMessageData(panel database.Panel, isPremium bool) panelMessageData
 	if panel.EmojiName != nil { // No emoji = nil
 		if panel.EmojiId == nil { // Unicode emoji
 			emote = &emoji.Emoji{
-				Name: *panel.EmojiName,
+				Name: panel.EmojiName,
 			}
 		} else { // Custom emoji
 			emote = &emoji.Emoji{
 				Id:   objects.NewNullableSnowflake(*panel.EmojiId),
-				Name: *panel.EmojiName,
+				Name: panel.EmojiName,
 			}
 		}
 	}

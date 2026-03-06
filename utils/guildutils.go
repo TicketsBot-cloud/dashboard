@@ -66,7 +66,7 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 			dtos = append(dtos, GuildDto{
 				Id:              guild.Id,
 				Name:            guild.Name,
-				Icon:            guild.Icon,
+				Icon:            guild.IconUrl(),
 				PermissionLevel: permLevel,
 			})
 			mu.Unlock()
@@ -106,7 +106,7 @@ func storeGuildsInDb(ctx context.Context, userId uint64, guilds []guild.Guild) e
 			Name:            guild.Name,
 			Owner:           guild.Owner,
 			UserPermissions: guild.Permissions,
-			Icon:            guild.Icon,
+			Icon:            guild.IconUrl(),
 		})
 	}
 

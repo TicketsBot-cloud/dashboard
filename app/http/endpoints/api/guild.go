@@ -24,6 +24,6 @@ func GuildHandler(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{
 		"id":   guild.Id,
 		"name": guild.Name,
-		"icon": guild.Icon,
+		"icon": guild.IconUrl(),
 	})
 }

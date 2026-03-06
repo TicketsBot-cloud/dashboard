@@ -25,6 +25,9 @@
     let panels = [];
     let selectedPanel;
 
+    // Close reason filter
+    let closeReasonSearch = "";
+
     // Labels
     let labels = [];
     let selectedLabelIds = [];
@@ -273,6 +276,10 @@
             settings.label_ids = selectedLabelIds;
         }
 
+        if (closeReasonSearch) {
+            settings.close_reason = closeReasonSearch;
+        }
+
         return settings;
     }
 
@@ -505,6 +512,13 @@
                             placeholder="Claimed By"
                             on:input={handleInputClaimedById}
                             bind:value={filterSettings.claimedById}
+                        />
+
+                        <Input
+                            col4="true"
+                            label="Close Reason"
+                            placeholder="Search close reasons..."
+                            bind:value={closeReasonSearch}
                         />
                     </div>
 

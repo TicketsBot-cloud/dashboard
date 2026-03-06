@@ -60,14 +60,6 @@ type Config struct {
 		Uri string `env:"URI,required"`
 	} `envPrefix:"CACHE_"`
 	SecureProxyUrl string `env:"SECURE_PROXY_URL"`
-	S3Import       struct {
-		Endpoint         string `env:"ENDPOINT,required"`
-		Secure           bool   `env:"SECURE" envDefault:"true"`
-		AccessKey        string `env:"ACCESS_KEY,required"`
-		SecretKey        string `env:"SECRET_KEY,required"`
-		TranscriptBucket string `env:"TRANSCRIPT_BUCKET,required"`
-		DataBucket       string `env:"DATA_BUCKET,required"`
-	} `envPrefix:"S3_IMPORT_"`
 }
 
 // TODO: Don't use a global variable

@@ -1,11 +1,19 @@
 <script>
     import Input from "../form/Input.svelte";
+    import Number from "../form/Number.svelte";
     import Textarea from "../form/Textarea.svelte";
     import Colour from "../form/Colour.svelte";
     import ChannelDropdown from "../ChannelDropdown.svelte";
 
     import { onMount } from "svelte";
-    import { colourToInt, intToColour } from "../../js/util";
+    import {
+        colourToInt,
+        intToColour,
+        notifySuccess,
+        notifyError,
+    } from "../../js/util";
+    import axios from "axios";
+    import { API_URL } from "../../js/constants";
     import CategoryDropdown from "../CategoryDropdown.svelte";
     import EmojiInput from "../form/EmojiInput.svelte";
     import Dropdown from "../form/Dropdown.svelte";
@@ -18,8 +26,10 @@
     import { DOCS_URL } from "../../js/constants";
     import SupportHoursForm from "./SupportHoursForm.svelte";
     import emojiRegex from "emoji-regex";
+    import Button from "../Button.svelte";
 
     export let guildId;
+    export let panelId = null;
     export let seedDefault = true;
 
     let tempColour = "#2ECC71";
@@ -196,6 +206,10 @@
             data.colour = 0x2ecc71;
         }
 
+        if (!data.ticket_limit) {
+            data.ticket_limit = 0;
+        }
+
         tempColour = intToColour(data.colour);
     }
 
@@ -226,7 +240,12 @@
                 exit_survey_form_id: "null",
                 pending_category: "null",
                 use_threads: false,
+                ticket_limit: 0,
                 ticket_notification_channel: "null",
+                cooldown_seconds: 0,
+                hide_close_button: false,
+                hide_close_with_reason_button: false,
+                hide_claim_button: false,
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -302,24 +321,61 @@
                     bind:value={data.delete_mentions}
                 />
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Checkbox
                     label="Create Tickets as Threads"
-                    col2
+                    col4
                     tool
                     bind:value={data.use_threads}
                 />
                 <ChannelDropdown
                     withNull
                     nullLabel="Use Global Setting"
-                    col2
+                    col4
                     label="Ticket Notification Channel (for Threads)"
                     {channels}
                     disabled={!data.use_threads && !settings.use_threads}
                     bind:value={data.ticket_notification_channel}
                 />
+
+                <Number
+                    col4={panelId}
+                    col2={!panelId}
+                    label="Ticket Open Cooldown (seconds)"
+                    min={0}
+                    bind:value={data.cooldown_seconds}
+                />
+
+                {#if panelId}
+                    <div class="col-4">
+                        <label class="form-label">&nbsp;</label>
+                        <Button
+                            fullWidth
+                            type="button"
+                            on:click={async () => {
+                                try {
+                                    const res = await axios.delete(
+                                        `${API_URL}/api/${guildId}/panels/${panelId}/cooldowns`,
+                                    );
+                                    if (res.status === 200) {
+                                        notifySuccess(
+                                            "Panel cooldowns have been reset",
+                                        );
+                                    } else {
+                                        notifyError(res.data);
+                                    }
+                                } catch (e) {
+                                    notifyError(
+                                        e.response?.data ||
+                                            "Failed to reset cooldowns",
+                                    );
+                                }
+                            }}>Reset Cooldowns</Button
+                        >
+                    </div>
+                {/if}
             </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <CategoryDropdown
                     label="Ticket Category"
                     col2
@@ -327,6 +383,35 @@
                     bind:value={data.category_id}
                 />
 
+                <Number
+                    col2
+                    label="Max Open Tickets Per User"
+                    min={0}
+                    bind:value={data.ticket_limit}
+                    tooltipText="Maximum tickets user can have open at once. Set to 0 to use global setting."
+                />
+            </div>
+            <div class="row">
+                <Checkbox
+                    label="Hide Close Button"
+                    col4
+                    tool
+                    bind:value={data.hide_close_button}
+                />
+                <Checkbox
+                    label="Hide Close with Reason Button"
+                    col4
+                    tool
+                    bind:value={data.hide_close_with_reason_button}
+                />
+                <Checkbox
+                    label="Hide Claim Button"
+                    col2
+                    tool
+                    bind:value={data.hide_claim_button}
+                />
+            </div>
+            <div class="incomplete-row">
                 <Dropdown col2 label="Form" bind:value={data.form_id}>
                     <option value="null">None</option>
                     {#each forms as form}
@@ -334,28 +419,7 @@
                     {/each}
                 </Dropdown>
             </div>
-            <div class="incomplete-row">
-                <Dropdown
-                    col2
-                    label="Naming Scheme"
-                    bind:value={data.use_server_default_naming_scheme}
-                >
-                    <option value={true}>Use Server Default</option>
-                    <option value={false}>Custom</option>
-                </Dropdown>
-
-                {#if !data.use_server_default_naming_scheme}
-                    <Input
-                        col2
-                        label="Custom Naming Scheme"
-                        bind:value={data.naming_scheme}
-                        placeholder="ticket-%id%"
-                        tooltipText="Click here for the full placeholder list"
-                        tooltipLink={`${DOCS_URL}/dashboard/settings/placeholders#custom-naming-scheme-placeholders`}
-                    />
-                {/if}
-            </div>
-            <div class="incomplete-row">
+            <div class="row">
                 <Dropdown
                     col2
                     label="Exit Survey Form"
@@ -382,6 +446,27 @@
                         {/if}
                     {/each}
                 </Dropdown>
+            </div>
+            <div class="row">
+                <Dropdown
+                    col2
+                    label="Naming Scheme"
+                    bind:value={data.use_server_default_naming_scheme}
+                >
+                    <option value={true}>Use Server Default</option>
+                    <option value={false}>Custom</option>
+                </Dropdown>
+
+                {#if !data.use_server_default_naming_scheme}
+                    <Input
+                        col2
+                        label="Custom Naming Scheme"
+                        bind:value={data.naming_scheme}
+                        placeholder="ticket-%id%"
+                        tooltipText="Click here for the full placeholder list"
+                        tooltipLink={`${DOCS_URL}/dashboard/settings/placeholders#custom-naming-scheme-placeholders`}
+                    />
+                {/if}
             </div>
         </div>
     </Collapsible>

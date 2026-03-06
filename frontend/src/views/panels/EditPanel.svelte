@@ -160,6 +160,7 @@
             {#if !$loadingScreen}
                 <PanelCreationForm
                     {guildId}
+                    {panelId}
                     {channels}
                     {roles}
                     {emojis}

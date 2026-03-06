@@ -33,7 +33,7 @@
             {/if}
         </div>
     {/if}
-    <select id={selectId} class="form-input" on:change bind:value {disabled}>
+    <select id={selectId} class="form-input" bind:value on:change {disabled}>
         <slot />
     </select>
 </div>

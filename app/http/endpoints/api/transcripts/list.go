@@ -14,13 +14,20 @@ import (
 
 const pageLimit = 15
 
+type transcriptLabelData struct {
+	LabelId int    `json:"label_id"`
+	Name    string `json:"name"`
+	Colour  int32  `json:"colour"`
+}
+
 type transcriptMetadata struct {
-	TicketId      int     `json:"ticket_id"`
-	Username      string  `json:"username"`
-	CloseReason   *string `json:"close_reason"`
-	ClosedBy      *uint64 `json:"closed_by"`
-	Rating        *uint8  `json:"rating"`
-	HasTranscript bool    `json:"has_transcript"`
+	TicketId      int                   `json:"ticket_id"`
+	Username      string                `json:"username"`
+	CloseReason   *string               `json:"close_reason"`
+	ClosedBy      *uint64               `json:"closed_by"`
+	Rating        *uint8                `json:"rating"`
+	HasTranscript bool                  `json:"has_transcript"`
+	Labels        []transcriptLabelData `json:"labels"`
 }
 
 type paginatedTranscripts struct {
@@ -32,6 +39,7 @@ type paginatedTranscripts struct {
 
 func ListTranscripts(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	var queryOptions wrappedQueryOptions
 	if err := ctx.ShouldBindJSON(&queryOptions); err != nil {
@@ -43,6 +51,24 @@ func ListTranscripts(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
+	}
+
+	// Check if user is a panel team member only (not admin or guild-wide support)
+	isPanelTeamOnly, err := utils.IsPanelTeamMemberOnly(ctx, guildId, userId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to check user permissions"))
+		return
+	}
+
+	// Get accessible panels for panel team members
+	if isPanelTeamOnly {
+		panelIds, err := utils.GetAccessiblePanelIds(ctx, guildId, userId)
+		if err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to get accessible panels"))
+			return
+		}
+
+		opts.FilterByPanelIds = panelIds
 	}
 
 	tickets, err := dbclient.Client.Tickets.GetByOptions(ctx, opts)
@@ -100,6 +126,29 @@ func ListTranscripts(ctx *gin.Context) {
 		return
 	}
 
+	// Get label assignments
+	labelAssignments, err := dbclient.Client.TicketLabelAssignments.GetByTickets(ctx, guildId, ticketIds)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		return
+	}
+
+	// Get all guild labels for name resolution
+	allLabels, err := dbclient.Client.TicketLabels.GetByGuild(ctx, guildId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
+		return
+	}
+
+	labelMap := make(map[int]transcriptLabelData)
+	for _, l := range allLabels {
+		labelMap[l.LabelId] = transcriptLabelData{
+			LabelId: l.LabelId,
+			Name:    l.Name,
+			Colour:  l.Colour,
+		}
+	}
+
 	transcripts := make([]transcriptMetadata, len(tickets))
 	for i, ticket := range tickets {
 		transcript := transcriptMetadata{
@@ -115,6 +164,17 @@ func ListTranscripts(ctx *gin.Context) {
 		if v, ok := closeReasons[ticket.Id]; ok {
 			transcript.CloseReason = v.Reason
 			transcript.ClosedBy = v.ClosedBy
+		}
+
+		if assignedIds, ok := labelAssignments[ticket.Id]; ok {
+			for _, lid := range assignedIds {
+				if ld, exists := labelMap[lid]; exists {
+					transcript.Labels = append(transcript.Labels, ld)
+				}
+			}
+		}
+		if transcript.Labels == nil {
+			transcript.Labels = []transcriptLabelData{}
 		}
 
 		transcripts[i] = transcript

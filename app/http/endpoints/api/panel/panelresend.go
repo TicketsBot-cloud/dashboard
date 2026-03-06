@@ -59,7 +59,7 @@ func ResendPanel(ctx *gin.Context) {
 
 	// delete old message
 	// TODO: Use proper context
-	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, panel.ChannelId, panel.GuildId); err != nil {
+	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, panel.ChannelId, panel.MessageId); err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
 			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))

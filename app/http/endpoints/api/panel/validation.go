@@ -76,12 +76,14 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateAccessControlList,
 		validatePendingCategory,
 		validateTicketNotificationChannel,
+		validateCooldownSeconds,
+		validateTicketLimit,
 	}
 }
 
 func validateTitle(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if len(ctx.Data.Title) > 80 {
+		if utf8.RuneCountInString(ctx.Data.Title) > 80 {
 			return validation.NewInvalidInputError("Panel title must be less than 80 characters")
 		}
 
@@ -91,7 +93,7 @@ func validateTitle(ctx PanelValidationContext) validation.ValidationFunc {
 
 func validateContent(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if len(ctx.Data.Content) > 4096 {
+		if utf8.RuneCountInString(ctx.Data.Content) > 4096 {
 			return validation.NewInvalidInputError("Panel content must be less than 4096 characters")
 		}
 
@@ -200,7 +202,7 @@ func validateButtonStyle(ctx PanelValidationContext) validation.ValidationFunc {
 
 func validateButtonLabel(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if len(ctx.Data.ButtonLabel) > 80 {
+		if utf8.RuneCountInString(ctx.Data.ButtonLabel) > 80 {
 			return validation.NewInvalidInputError("Button label must be less than 80 characters")
 		}
 
@@ -294,7 +296,14 @@ func validateTeams(ctx PanelValidationContext) validation.ValidationFunc {
 	}
 }
 
-var placeholderPattern = regexp.MustCompile(`%(\w+)%`)
+// Match anything that looks like a placeholder
+var placeholderPattern = regexp.MustCompile(`%([^%]+)%`)
+
+// Strict patterns for specific placeholder types
+var simplePlaceholderPattern = regexp.MustCompile(`^[a-z_]+$`)
+var dateWithFormatPattern = regexp.MustCompile(`^date:([ymd\-\/\._ ]+)$`)
+var dateOffsetPattern = regexp.MustCompile(`^date_(days|weeks|months):(-?\d+)(?::([ymd\-\/\._ ]+))?$`)
+var dateTimestampPattern = regexp.MustCompile(`^date_timestamp:(\d+)(?::([ymd\-\/\._ ]+))?$`)
 
 // Discord filters out illegal characters (such as +, $, ") when creating the channel for us
 func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc {
@@ -303,21 +312,44 @@ func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc 
 			return nil
 		}
 
-		if len(*ctx.Data.NamingScheme) > 100 {
+		if utf8.RuneCountInString(*ctx.Data.NamingScheme) > 100 {
 			return validation.NewInvalidInputError("Naming scheme must be less than 100 characters")
 		}
 
 		// Validate placeholders used
-		validPlaceholders := []string{"id", "username", "nickname", "id_padded", "claimed", "claim_indicator", "claimed_by"}
+		validPlaceholders := []string{"id", "username", "nickname", "id_padded", "claimed", "claim_indicator", "claimed_by", "date"}
 		for _, match := range placeholderPattern.FindAllStringSubmatch(*ctx.Data.NamingScheme, -1) {
-			if len(match) < 2 { // Infallible
+			if len(match) < 2 {
 				return errors.New("Infallible: Regex match length was < 2")
 			}
 
-			placeholder := match[1]
-			if !utils.Contains(validPlaceholders, placeholder) {
-				return validation.NewInvalidInputError(fmt.Sprintf("Invalid naming scheme placeholder: %s", placeholder))
+			content := match[1]
+
+			// Check if it's a date_days, date_weeks, or date_months placeholder
+			if dateOffsetPattern.MatchString(content) {
+				continue
 			}
+
+			// Check if it's a date_timestamp placeholder
+			if dateTimestampPattern.MatchString(content) {
+				continue
+			}
+
+			// Check if it's a date with format
+			if dateWithFormatPattern.MatchString(content) {
+				continue
+			}
+
+			// Check if it's a simple placeholder (no parameters)
+			if simplePlaceholderPattern.MatchString(content) {
+				if utils.Contains(validPlaceholders, content) {
+					continue
+				}
+				return validation.NewInvalidInputError(fmt.Sprintf("Invalid naming scheme placeholder: %s", content))
+			}
+
+			// If we get here, it's a malformed placeholder
+			return validation.NewInvalidInputError(fmt.Sprintf("Invalid placeholder format: %s", content))
 		}
 
 		return nil
@@ -397,6 +429,15 @@ func validateEmbed(e *types.CustomEmbed) error {
 	return validation.NewInvalidInputError("Your embed message does not contain any content")
 }
 
+func validateCooldownSeconds(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.CooldownSeconds < 0 {
+			return validation.NewInvalidInputError("Cooldown must be 0 or greater")
+		}
+		return nil
+	}
+}
+
 func validateTicketNotificationChannel(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
 		// If UseThreads is false, clear the TicketNotificationChannel
@@ -435,6 +476,20 @@ func validateTicketNotificationChannel(ctx PanelValidationContext) validation.Va
 			if !channelFound {
 				return validation.NewInvalidInputError("Ticket notification channel not found")
 			}
+		}
+
+		return nil
+	}
+}
+
+func validateTicketLimit(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.TicketLimit == nil {
+			return nil
+		}
+
+		if *ctx.Data.TicketLimit > 10 {
+			return validation.NewInvalidInputError("Ticket limit must be at most 11")
 		}
 
 		return nil

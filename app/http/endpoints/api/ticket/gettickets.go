@@ -7,6 +7,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
+	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/gin-gonic/gin"
@@ -14,10 +15,11 @@ import (
 
 type (
 	listTicketsResponse struct {
-		Tickets       []ticketData         `json:"tickets"`
-		PanelTitles   map[int]string       `json:"panel_titles"`
-		ResolvedUsers map[uint64]user.User `json:"resolved_users"`
-		SelfId        uint64               `json:"self_id,string"`
+		Tickets       []ticketData              `json:"tickets"`
+		PanelTitles   map[int]string            `json:"panel_titles"`
+		ResolvedUsers map[uint64]user.User      `json:"resolved_users"`
+		Labels        map[int][]ticketLabelData `json:"labels"`
+		SelfId        uint64                    `json:"self_id,string"`
 	}
 
 	ticketData struct {
@@ -35,6 +37,23 @@ func GetTickets(c *gin.Context) {
 	userId := c.Keys["userid"].(uint64)
 	guildId := c.Keys["guildid"].(uint64)
 
+	// Check if user is a panel team member only (not admin or guild-wide support)
+	isPanelTeamOnly, err := utils.IsPanelTeamMemberOnly(c, guildId, userId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check user permissions"))
+		return
+	}
+
+	// Get accessible panels for panel team members
+	var panelIds []int
+	if isPanelTeamOnly {
+		panelIds, err = utils.GetAccessiblePanelIds(c, guildId, userId)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to get accessible panels"))
+			return
+		}
+	}
+
 	if c.Request.Method == "POST" {
 		var queryOptions wrappedQueryOptions
 		if bindErr := c.ShouldBindJSON(&queryOptions); bindErr == nil {
@@ -42,6 +61,11 @@ func GetTickets(c *gin.Context) {
 			if optsErr != nil {
 				_ = c.AbortWithError(http.StatusBadRequest, app.NewError(optsErr, "Invalid filter parameters"))
 				return
+			}
+
+			// Apply panel team member filtering if needed
+			if isPanelTeamOnly {
+				opts.FilterByPanelIds = panelIds
 			}
 
 			plainTickets, err := dbclient.Client.Tickets.GetByOptions(c, opts)
@@ -53,6 +77,25 @@ func GetTickets(c *gin.Context) {
 			buildResponseFromPlainTickets(c, plainTickets, guildId, userId)
 			return
 		}
+	}
+
+	// For GET requests, if user is panel team only, convert to use GetByOptions with filter
+	if isPanelTeamOnly {
+		openTrue := true
+		opts := database.TicketQueryOptions{
+			GuildId:          guildId,
+			Open:             &openTrue,
+			FilterByPanelIds: panelIds,
+		}
+
+		plainTickets, err := dbclient.Client.Tickets.GetByOptions(c, opts)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch open tickets for guild from database"))
+			return
+		}
+
+		buildResponseFromPlainTickets(c, plainTickets, guildId, userId)
+		return
 	}
 
 	tickets, err := dbclient.Client.Tickets.GetGuildOpenTicketsWithMetadata(c, guildId)
@@ -88,6 +131,18 @@ func GetTickets(c *gin.Context) {
 		return
 	}
 
+	// Fetch label data
+	ticketIds := make([]int, len(tickets))
+	for i, ticket := range tickets {
+		ticketIds[i] = ticket.Id
+	}
+
+	labelsMap, err := fetchLabelsForTickets(c, guildId, ticketIds)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch label data"))
+		return
+	}
+
 	data := make([]ticketData, len(tickets))
 	for i, ticket := range tickets {
 		data[i] = ticketData{
@@ -105,6 +160,7 @@ func GetTickets(c *gin.Context) {
 		Tickets:       data,
 		PanelTitles:   panelTitles,
 		ResolvedUsers: users,
+		Labels:        labelsMap,
 		SelfId:        userId,
 	})
 }
@@ -115,6 +171,7 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 			Tickets:       []ticketData{},
 			PanelTitles:   make(map[int]string),
 			ResolvedUsers: make(map[uint64]user.User),
+			Labels:        make(map[int][]ticketLabelData),
 			SelfId:        userId,
 		})
 		return
@@ -168,6 +225,18 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		return
 	}
 
+	// Fetch label data
+	ticketIds := make([]int, len(plainTickets))
+	for i, ticket := range plainTickets {
+		ticketIds[i] = ticket.Id
+	}
+
+	labelsMap, err := fetchLabelsForTickets(c, guildId, ticketIds)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch label data"))
+		return
+	}
+
 	// Build ticketData from tickets with metadata
 	data := make([]ticketData, len(tickets))
 	for i, ticket := range tickets {
@@ -186,6 +255,48 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		Tickets:       data,
 		PanelTitles:   panelTitles,
 		ResolvedUsers: users,
+		Labels:        labelsMap,
 		SelfId:        userId,
 	})
+}
+
+func fetchLabelsForTickets(c *gin.Context, guildId uint64, ticketIds []int) (map[int][]ticketLabelData, error) {
+	if len(ticketIds) == 0 {
+		return make(map[int][]ticketLabelData), nil
+	}
+
+	labelAssignments, err := dbclient.Client.TicketLabelAssignments.GetByTickets(c, guildId, ticketIds)
+	if err != nil {
+		return nil, err
+	}
+
+	allLabels, err := dbclient.Client.TicketLabels.GetByGuild(c, guildId)
+	if err != nil {
+		return nil, err
+	}
+
+	labelLookup := make(map[int]ticketLabelData)
+	for _, l := range allLabels {
+		labelLookup[l.LabelId] = ticketLabelData{
+			LabelId: l.LabelId,
+			Name:    l.Name,
+			Colour:  l.Colour,
+		}
+	}
+
+	result := make(map[int][]ticketLabelData)
+	for ticketId, assignedIds := range labelAssignments {
+		var resolved []ticketLabelData
+		for _, lid := range assignedIds {
+			if ld, exists := labelLookup[lid]; exists {
+				resolved = append(resolved, ld)
+			}
+		}
+		if resolved == nil {
+			resolved = []ticketLabelData{}
+		}
+		result[ticketId] = resolved
+	}
+
+	return result, nil
 }

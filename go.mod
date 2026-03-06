@@ -4,7 +4,7 @@ go 1.24.0
 
 toolchain go1.24.2
 
-replace github.com/TicketsBot-cloud/database => ../database
+//replace github.com/TicketsBot-cloud/database => ../database
 
 //replace github.com/TicketsBot-cloud/gdl => ../gdl
 
@@ -20,10 +20,10 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e
-	github.com/TicketsBot-cloud/database v0.0.0-20260224195559-d1e01011ada7
+	github.com/TicketsBot-cloud/database v0.0.0-20260306135200-5fd98283c267
 	github.com/TicketsBot-cloud/gdl v0.0.0-20260213180045-11af01c262ca
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
-	github.com/TicketsBot-cloud/worker v0.0.0-20251212162840-a9cc9bbf5692
+	github.com/TicketsBot-cloud/worker v0.0.0-20260301212853-f5f9e1ebbfc2
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0

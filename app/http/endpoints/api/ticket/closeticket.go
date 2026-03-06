@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/TicketsBot-cloud/common/closerelay"
 	"github.com/TicketsBot-cloud/dashboard/app"
@@ -61,15 +62,30 @@ func CloseTicket(c *gin.Context) {
 		return
 	}
 
+	responseKey := fmt.Sprintf("tickets:close:result:%d:%d:%d", guildId, ticketId, time.Now().UnixNano())
+
 	data := closerelay.TicketClose{
-		GuildId:  guildId,
-		TicketId: ticket.Id,
-		UserId:   userId,
-		Reason:   body.Reason,
+		GuildId:     guildId,
+		TicketId:    ticket.Id,
+		UserId:      userId,
+		Reason:      body.Reason,
+		ResponseKey: responseKey,
 	}
 
 	if err := closerelay.Publish(redis.Client.Client, data); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to publish ticket close event to Redis"))
+		return
+	}
+
+	// Wait for the worker to confirm the close (up to 75 seconds)
+	result, err := closerelay.WaitForResult(redis.Client.Client, responseKey, 75*time.Second)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusGatewayTimeout, app.NewError(err, "Timed out waiting for ticket close confirmation"))
+		return
+	}
+
+	if !result.Success {
+		c.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to close ticket: could not save transcript"))
 		return
 	}
 

@@ -23,6 +23,7 @@ type wrappedQueryOptions struct {
 	ClosedById  uint64 `json:"closed_by_id"`
 	ClaimedById uint64 `json:"claimed_by_id"`
 	LabelIds    []int  `json:"label_ids"`
+	CloseReason string `json:"close_reason"`
 }
 
 // UnmarshalJSON dynamically handles both string and number types, treating empty strings as 0
@@ -140,18 +141,19 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 	}
 
 	opts := database.TicketQueryOptions{
-		Id:          o.Id,
-		GuildId:     guildId,
-		UserIds:     userIds,
-		Open:        utils.BoolPtr(false),
-		PanelId:     o.PanelId,
-		Rating:      o.Rating,
-		ClosedById:  o.ClosedById,
-		ClaimedById: o.ClaimedById,
-		LabelIds:    o.LabelIds,
-		Order:       database.OrderTypeDescending,
-		Limit:       pageLimit,
-		Offset:      offset,
+		Id:                o.Id,
+		GuildId:           guildId,
+		UserIds:           userIds,
+		Open:              utils.BoolPtr(false),
+		PanelId:           o.PanelId,
+		Rating:            o.Rating,
+		ClosedById:        o.ClosedById,
+		ClaimedById:       o.ClaimedById,
+		LabelIds:          o.LabelIds,
+		CloseReasonSearch: o.CloseReason,
+		Order:             database.OrderTypeDescending,
+		Limit:             pageLimit,
+		Offset:            offset,
 	}
 	return opts, nil
 }

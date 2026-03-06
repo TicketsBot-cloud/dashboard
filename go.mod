@@ -2,13 +2,11 @@ module github.com/TicketsBot-cloud/dashboard
 
 go 1.25.0
 
-replace github.com/TicketsBot-cloud/database => ../database
-
-replace github.com/TicketsBot-cloud/common => ../common
+//replace github.com/TicketsBot-cloud/database => ../database
 
 //replace github.com/TicketsBot-cloud/common => ../common
 
-replace github.com/TicketsBot-cloud/gdl => ../gdl
+//replace github.com/TicketsBot-cloud/gdl => ../gdl
 
 //replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
 

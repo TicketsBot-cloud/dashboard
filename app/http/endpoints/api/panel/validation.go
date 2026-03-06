@@ -83,7 +83,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 
 func validateTitle(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if len(ctx.Data.Title) > 80 {
+		if utf8.RuneCountInString(ctx.Data.Title) > 80 {
 			return validation.NewInvalidInputError("Panel title must be less than 80 characters")
 		}
 
@@ -93,7 +93,7 @@ func validateTitle(ctx PanelValidationContext) validation.ValidationFunc {
 
 func validateContent(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if len(ctx.Data.Content) > 4096 {
+		if utf8.RuneCountInString(ctx.Data.Content) > 4096 {
 			return validation.NewInvalidInputError("Panel content must be less than 4096 characters")
 		}
 
@@ -202,7 +202,7 @@ func validateButtonStyle(ctx PanelValidationContext) validation.ValidationFunc {
 
 func validateButtonLabel(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if len(ctx.Data.ButtonLabel) > 80 {
+		if utf8.RuneCountInString(ctx.Data.ButtonLabel) > 80 {
 			return validation.NewInvalidInputError("Button label must be less than 80 characters")
 		}
 
@@ -312,7 +312,7 @@ func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc 
 			return nil
 		}
 
-		if len(*ctx.Data.NamingScheme) > 100 {
+		if utf8.RuneCountInString(*ctx.Data.NamingScheme) > 100 {
 			return validation.NewInvalidInputError("Naming scheme must be less than 100 characters")
 		}
 

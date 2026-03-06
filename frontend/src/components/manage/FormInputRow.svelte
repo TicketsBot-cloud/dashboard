@@ -1,5 +1,5 @@
 <script>
-    import { createEventDispatcher } from "svelte";
+    import { createEventDispatcher, onMount } from "svelte";
     const dispatch = createEventDispatcher();
 
     import Input from "../form/Input.svelte";
@@ -19,7 +19,7 @@
     export let formId;
 
     export let data = {};
-    export let hasValidationErrors = false;
+    let hasValidationErrors = false;
 
     // Initialize options if not present (for types that need options: 3, 21, 22)
     $: if ((data.type === 3 || data.type === 21 || data.type === 22) && !data.options) {
@@ -96,7 +96,15 @@
     $: hasInvalidDescription = data.description && data.description.length > 100;
 
     // Overall validation error flag
-    $: hasValidationErrors = hasDuplicateValues || hasNoOptions || hasInvalidLabel || hasInvalidDescription;
+    $: {
+        hasValidationErrors = hasDuplicateValues || hasNoOptions || hasInvalidLabel || hasInvalidDescription;
+        dispatch('validationchange', hasValidationErrors);
+    }
+
+    // Also dispatch after mount — $: blocks run during init before listeners are guaranteed attached
+    onMount(() => {
+        dispatch('validationchange', hasValidationErrors);
+    });
 
     $: windowWidth = 0;
 

@@ -513,8 +513,7 @@
                             on:input={handleInputClaimedById}
                             bind:value={filterSettings.claimedById}
                         />
-                    </div>
-                    <div class="row">
+
                         <Input
                             col4="true"
                             label="Close Reason"

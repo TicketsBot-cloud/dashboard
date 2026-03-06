@@ -768,7 +768,7 @@
                                                 transcript.dropdownRef?.close();
                                             }}>
                                                 <i class="fas fa-pencil"></i>
-                                                <span>Edit Reason</span>
+                                                <span>Edit Close Reason</span>
                                             </button>
                                         </ActionDropdown>
                                     </td>

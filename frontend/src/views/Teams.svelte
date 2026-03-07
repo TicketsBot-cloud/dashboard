@@ -16,6 +16,7 @@
     import RoleSelect from "../components/form/RoleSelect.svelte";
     import WrappedSelect from "../components/WrappedSelect.svelte";
     import Dropdown from "../components/form/Dropdown.svelte";
+    import Checkbox from "../components/form/Checkbox.svelte";
 
     export let currentRoute;
     let guildId = currentRoute.namedParams.id;
@@ -34,8 +35,36 @@
     let selectedUser;
     let selectedRole;
 
+    let teamPermissions = { add_reactions: true, send_messages: true, send_tts_messages: true, embed_links: true, attach_files: true, mention_everyone: false, use_external_emojis: true, use_application_commands: true, use_external_stickers: true, send_voice_messages: true };
+    let loadingPermissions = false;
+
     function getTeam(id) {
         return teams.find((team) => team.id === id);
+    }
+
+    async function loadTeamPermissions(teamId) {
+        loadingPermissions = true;
+        // Reset to defaults immediately so stale values from a previous team don't show
+        teamPermissions = { add_reactions: true, send_messages: true, send_tts_messages: true, embed_links: true, attach_files: true, mention_everyone: false, use_external_emojis: true, use_application_commands: true, use_external_stickers: true, send_voice_messages: true };
+
+        if (teamId === "default") {
+            loadingPermissions = false;
+            return;
+        }
+
+        const res = await axios.get(`${API_URL}/api/${guildId}/team/${teamId}/permissions`);
+        if (res.status === 200) {
+            teamPermissions = res.data;
+        }
+        loadingPermissions = false;
+    }
+
+    async function savePermissions() {
+        if (activeTeam === "default" || loadingPermissions) return;
+        const res = await axios.patch(`${API_URL}/api/${guildId}/team/${activeTeam}/permissions`, teamPermissions);
+        if (res.status !== 200) {
+            notifyError(res.data);
+        }
     }
 
     async function updateActiveTeam(teamId) {
@@ -50,6 +79,7 @@
         }
 
         members = res.data;
+        await loadTeamPermissions(teamId);
     }
 
     async function addRole() {
@@ -120,9 +150,7 @@
 
         notifySuccess(`Team deleted successfully`);
 
-        activeTeam = defaultTeam.id;
         teams = teams.filter((team) => team.id !== id);
-
         await updateActiveTeam(defaultTeam.id);
     }
 
@@ -268,6 +296,67 @@
                     </div>
                 </div>
             </div>
+
+            {#if activeTeam !== "default"}
+                <div class="section">
+                    <h2 class="section-title">Team Permissions</h2>
+                    <p class="permissions-hint">
+                        Ticket admins and support reps always have full permissions regardless of these settings.
+                    </p>
+                    <div class="permissions-grid">
+                        <Checkbox
+                            label="Add Reactions"
+                            bind:value={teamPermissions.add_reactions}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Send Messages"
+                            bind:value={teamPermissions.send_messages}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Send TTS Messages"
+                            bind:value={teamPermissions.send_tts_messages}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Embed Links"
+                            bind:value={teamPermissions.embed_links}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Attach Files"
+                            bind:value={teamPermissions.attach_files}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Mention Everyone"
+                            bind:value={teamPermissions.mention_everyone}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Use External Emojis"
+                            bind:value={teamPermissions.use_external_emojis}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Use Application Commands"
+                            bind:value={teamPermissions.use_application_commands}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Use External Stickers"
+                            bind:value={teamPermissions.use_external_stickers}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Send Voice Messages"
+                            bind:value={teamPermissions.send_voice_messages}
+                            on:change={savePermissions}
+                        />
+                    </div>
+                </div>
+            {/if}
         </div>
     </Card>
 </div>
@@ -313,6 +402,19 @@
         flex-direction: row;
         width: 100%;
         height: 100%;
+    }
+
+    .permissions-hint {
+        color: #aaa;
+        font-size: 0.875rem;
+        margin-bottom: 12px;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        column-gap: 8px;
+        row-gap: 20px;
     }
 
     .manage {

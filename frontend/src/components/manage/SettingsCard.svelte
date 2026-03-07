@@ -563,6 +563,22 @@
                             label="Add Reactions"
                             bind:value={data.ticket_permissions.add_reactions}
                         />
+                        <Checkbox
+                            label="Send Voice Messages"
+                            bind:value={data.ticket_permissions.send_voice_messages}
+                        />
+                        <Checkbox
+                            label="Send TTS Messages"
+                            bind:value={data.ticket_permissions.send_tts_messages}
+                        />
+                        <Checkbox
+                            label="Use External Emojis"
+                            bind:value={data.ticket_permissions.use_external_emojis}
+                        />
+                        <Checkbox
+                            label="Use External Stickers"
+                            bind:value={data.ticket_permissions.use_external_stickers}
+                        />
                     </div>
                 </Collapsible>
 

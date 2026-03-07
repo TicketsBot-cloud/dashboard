@@ -59,6 +59,18 @@
         return matches !== null && matches.length === 1 && matches[0] === value;
     }
 
+    $: if (data && !data.ticket_permissions) {
+        data.ticket_permissions = {
+            attach_files: data.tp_attach_files || false,
+            embed_links: data.tp_embed_links || false,
+            add_reactions: data.tp_add_reactions || false,
+            send_voice_messages: data.tp_send_voice_messages || false,
+            send_tts_messages: data.tp_send_tts_messages || false,
+            use_external_emojis: data.tp_use_external_emojis || false,
+            use_external_stickers: data.tp_use_external_stickers || false,
+        };
+    }
+
     // Replace spaces with dashes in naming scheme as the user types
     $: if (
         data.naming_scheme !== undefined &&
@@ -210,6 +222,16 @@
             data.ticket_limit = 0;
         }
 
+        data.ticket_permissions = {
+            attach_files: data.tp_attach_files || false,
+            embed_links: data.tp_embed_links || false,
+            add_reactions: data.tp_add_reactions || false,
+            send_voice_messages: data.tp_send_voice_messages || false,
+            send_tts_messages: data.tp_send_tts_messages || false,
+            use_external_emojis: data.tp_use_external_emojis || false,
+            use_external_stickers: data.tp_use_external_stickers || false,
+        };
+
         tempColour = intToColour(data.colour);
     }
 
@@ -246,6 +268,15 @@
                 hide_close_button: false,
                 hide_close_with_reason_button: false,
                 hide_claim_button: false,
+                ticket_permissions: {
+                    attach_files: false,
+                    embed_links: false,
+                    add_reactions: false,
+                    send_voice_messages: false,
+                    send_tts_messages: false,
+                    use_external_emojis: false,
+                    use_external_stickers: false,
+                },
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -614,6 +645,44 @@
         <div slot="content" class="col-1">
             <div class="row">
                 <EmbedForm bind:data={data.welcome_message} />
+            </div>
+        </div>
+    </Collapsible>
+
+    <Collapsible
+        tooltip="Grant additional permissions to ticket openers for tickets opened from this panel"
+    >
+        <span slot="header">Ticket Permissions</span>
+        <div slot="content" class="col-1">
+            <div class="row" style="padding-bottom: 10px;">
+                <Checkbox
+                    label="Attach Files"
+                    bind:value={data.ticket_permissions.attach_files}
+                />
+                <Checkbox
+                    label="Embed Links"
+                    bind:value={data.ticket_permissions.embed_links}
+                />
+                <Checkbox
+                    label="Add Reactions"
+                    bind:value={data.ticket_permissions.add_reactions}
+                />
+                <Checkbox
+                    label="Send Voice Messages"
+                    bind:value={data.ticket_permissions.send_voice_messages}
+                />
+                <Checkbox
+                    label="Send TTS Messages"
+                    bind:value={data.ticket_permissions.send_tts_messages}
+                />
+                <Checkbox
+                    label="Use External Emojis"
+                    bind:value={data.ticket_permissions.use_external_emojis}
+                />
+                <Checkbox
+                    label="Use External Stickers"
+                    bind:value={data.ticket_permissions.use_external_stickers}
+                />
             </div>
         </div>
     </Collapsible>

@@ -57,6 +57,7 @@ type panelBody struct {
 	HideCloseButton           bool                              `json:"hide_close_button"`
 	HideCloseWithReasonButton bool                              `json:"hide_close_with_reason_button"`
 	HideClaimButton           bool                              `json:"hide_claim_button"`
+	TicketPermissions         database.TicketPermissions        `json:"ticket_permissions"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -259,6 +260,14 @@ func CreatePanel(c *gin.Context) {
 		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
 		HideClaimButton:           data.HideClaimButton,
 	}
+
+	panel.TicketPermsAddReactions = data.TicketPermissions.AddReactions
+	panel.TicketPermsSendTTSMessages = data.TicketPermissions.SendTTSMessages
+	panel.TicketPermsEmbedLinks = data.TicketPermissions.EmbedLinks
+	panel.TicketPermsAttachFiles = data.TicketPermissions.AttachFiles
+	panel.TicketPermsUseExternalEmojis = data.TicketPermissions.UseExternalEmojis
+	panel.TicketPermsUseExternalStickers = data.TicketPermissions.UseExternalStickers
+	panel.TicketPermsSendVoiceMessages = data.TicketPermissions.SendVoiceMessages
 
 	createOptions := panelCreateOptions{
 		TeamIds:            data.Teams,             // Already validated

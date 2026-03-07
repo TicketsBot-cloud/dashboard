@@ -265,6 +265,14 @@ func UpdatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 	}
 
+	panel.TicketPermsAddReactions = data.TicketPermissions.AddReactions
+	panel.TicketPermsSendTTSMessages = data.TicketPermissions.SendTTSMessages
+	panel.TicketPermsEmbedLinks = data.TicketPermissions.EmbedLinks
+	panel.TicketPermsAttachFiles = data.TicketPermissions.AttachFiles
+	panel.TicketPermsUseExternalEmojis = data.TicketPermissions.UseExternalEmojis
+	panel.TicketPermsUseExternalStickers = data.TicketPermissions.UseExternalStickers
+	panel.TicketPermsSendVoiceMessages = data.TicketPermissions.SendVoiceMessages
+
 	// insert mention data
 	validRoles := utils.ToSet(utils.Map(roles, utils.RoleToId))
 

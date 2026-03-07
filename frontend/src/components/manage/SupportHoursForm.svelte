@@ -340,6 +340,7 @@
                     <Dropdown
                         label="Out-of-hours behaviour"
                         bind:value={outOfHoursBehaviour}
+                        on:change={emitChange}
                     >
                         <option value="block_creation"
                             >Block ticket creation</option

@@ -61,13 +61,13 @@
 
     $: if (data && !data.ticket_permissions) {
         data.ticket_permissions = {
-            attach_files: data.tp_attach_files || false,
-            embed_links: data.tp_embed_links || false,
             add_reactions: data.tp_add_reactions || false,
-            send_voice_messages: data.tp_send_voice_messages || false,
             send_tts_messages: data.tp_send_tts_messages || false,
+            embed_links: data.tp_embed_links || false,
+            attach_files: data.tp_attach_files || false,
             use_external_emojis: data.tp_use_external_emojis || false,
             use_external_stickers: data.tp_use_external_stickers || false,
+            send_voice_messages: data.tp_send_voice_messages || false,
         };
     }
 
@@ -259,13 +259,13 @@
                 hide_close_with_reason_button: false,
                 hide_claim_button: false,
                 ticket_permissions: {
-                    attach_files: false,
-                    embed_links: false,
                     add_reactions: false,
-                    send_voice_messages: false,
                     send_tts_messages: false,
+                    embed_links: false,
+                    attach_files: false,
                     use_external_emojis: false,
                     use_external_stickers: false,
+                    send_voice_messages: false,
                 },
                 welcome_message: {
                     fields: [],
@@ -646,24 +646,20 @@
         <div slot="content" class="col-1">
             <div class="permissions-grid">
                 <Checkbox
-                    label="Attach Files"
-                    bind:value={data.ticket_permissions.attach_files}
+                    label="Add Reactions"
+                    bind:value={data.ticket_permissions.add_reactions}
+                />
+                <Checkbox
+                    label="Send TTS Messages"
+                    bind:value={data.ticket_permissions.send_tts_messages}
                 />
                 <Checkbox
                     label="Embed Links"
                     bind:value={data.ticket_permissions.embed_links}
                 />
                 <Checkbox
-                    label="Add Reactions"
-                    bind:value={data.ticket_permissions.add_reactions}
-                />
-                <Checkbox
-                    label="Send Voice Messages"
-                    bind:value={data.ticket_permissions.send_voice_messages}
-                />
-                <Checkbox
-                    label="Send TTS Messages"
-                    bind:value={data.ticket_permissions.send_tts_messages}
+                    label="Attach Files"
+                    bind:value={data.ticket_permissions.attach_files}
                 />
                 <Checkbox
                     label="Use External Emojis"
@@ -672,6 +668,10 @@
                 <Checkbox
                     label="Use External Stickers"
                     bind:value={data.ticket_permissions.use_external_stickers}
+                />
+                <Checkbox
+                    label="Send Voice Messages"
+                    bind:value={data.ticket_permissions.send_voice_messages}
                 />
             </div>
         </div>

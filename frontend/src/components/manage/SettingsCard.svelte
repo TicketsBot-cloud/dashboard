@@ -549,24 +549,20 @@
                     <div slot="content" class="col-1">
                         <div class="permissions-grid">
                             <Checkbox
-                                label="Attach Files"
-                                bind:value={data.ticket_permissions.attach_files}
+                                label="Add Reactions"
+                                bind:value={data.ticket_permissions.add_reactions}
+                            />
+                            <Checkbox
+                                label="Send TTS Messages"
+                                bind:value={data.ticket_permissions.send_tts_messages}
                             />
                             <Checkbox
                                 label="Embed Links"
                                 bind:value={data.ticket_permissions.embed_links}
                             />
                             <Checkbox
-                                label="Add Reactions"
-                                bind:value={data.ticket_permissions.add_reactions}
-                            />
-                            <Checkbox
-                                label="Send Voice Messages"
-                                bind:value={data.ticket_permissions.send_voice_messages}
-                            />
-                            <Checkbox
-                                label="Send TTS Messages"
-                                bind:value={data.ticket_permissions.send_tts_messages}
+                                label="Attach Files"
+                                bind:value={data.ticket_permissions.attach_files}
                             />
                             <Checkbox
                                 label="Use External Emojis"
@@ -575,6 +571,10 @@
                             <Checkbox
                                 label="Use External Stickers"
                                 bind:value={data.ticket_permissions.use_external_stickers}
+                            />
+                            <Checkbox
+                                label="Send Voice Messages"
+                                bind:value={data.ticket_permissions.send_voice_messages}
                             />
                         </div>
                     </div>

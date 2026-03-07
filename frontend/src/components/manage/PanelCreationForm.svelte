@@ -222,16 +222,6 @@
             data.ticket_limit = 0;
         }
 
-        data.ticket_permissions = {
-            attach_files: data.tp_attach_files || false,
-            embed_links: data.tp_embed_links || false,
-            add_reactions: data.tp_add_reactions || false,
-            send_voice_messages: data.tp_send_voice_messages || false,
-            send_tts_messages: data.tp_send_tts_messages || false,
-            use_external_emojis: data.tp_use_external_emojis || false,
-            use_external_stickers: data.tp_use_external_stickers || false,
-        };
-
         tempColour = intToColour(data.colour);
     }
 

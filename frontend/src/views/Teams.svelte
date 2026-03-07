@@ -35,7 +35,7 @@
     let selectedUser;
     let selectedRole;
 
-    let teamPermissions = { send_messages: true, embed_links: true, attach_files: true, add_reactions: true, send_voice_messages: true, send_tts_messages: true, use_application_commands: true, mention_everyone: false };
+    let teamPermissions = { send_messages: true, embed_links: true, attach_files: true, add_reactions: true, send_voice_messages: true, send_tts_messages: true, use_application_commands: true, mention_everyone: false, use_external_emojis: true, use_external_stickers: true };
     let loadingPermissions = false;
 
     function getTeam(id) {
@@ -45,7 +45,7 @@
     async function loadTeamPermissions(teamId) {
         loadingPermissions = true;
         // Reset to defaults immediately so stale values from a previous team don't show
-        teamPermissions = { send_messages: true, embed_links: true, attach_files: true, add_reactions: true, send_voice_messages: true, send_tts_messages: true, use_application_commands: true, mention_everyone: false };
+        teamPermissions = { send_messages: true, embed_links: true, attach_files: true, add_reactions: true, send_voice_messages: true, send_tts_messages: true, use_application_commands: true, mention_everyone: false, use_external_emojis: true, use_external_stickers: true };
 
         if (teamId === "default") {
             loadingPermissions = false;
@@ -342,6 +342,16 @@
                         <Checkbox
                             label="Mention Everyone"
                             bind:value={teamPermissions.mention_everyone}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Use External Emojis"
+                            bind:value={teamPermissions.use_external_emojis}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Use External Stickers"
+                            bind:value={teamPermissions.use_external_stickers}
                             on:change={savePermissions}
                         />
                     </div>

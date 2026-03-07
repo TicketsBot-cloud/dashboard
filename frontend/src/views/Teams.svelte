@@ -35,7 +35,7 @@
     let selectedUser;
     let selectedRole;
 
-    let teamPermissions = { send_messages: true, embed_links: true, attach_files: true, add_reactions: true, send_voice_messages: true, send_tts_messages: true, use_application_commands: true, mention_everyone: false, use_external_emojis: true, use_external_stickers: true };
+    let teamPermissions = { add_reactions: true, send_messages: true, send_tts_messages: true, embed_links: true, attach_files: true, mention_everyone: false, use_external_emojis: true, use_application_commands: true, use_external_stickers: true, send_voice_messages: true };
     let loadingPermissions = false;
 
     function getTeam(id) {
@@ -45,7 +45,7 @@
     async function loadTeamPermissions(teamId) {
         loadingPermissions = true;
         // Reset to defaults immediately so stale values from a previous team don't show
-        teamPermissions = { send_messages: true, embed_links: true, attach_files: true, add_reactions: true, send_voice_messages: true, send_tts_messages: true, use_application_commands: true, mention_everyone: false, use_external_emojis: true, use_external_stickers: true };
+        teamPermissions = { add_reactions: true, send_messages: true, send_tts_messages: true, embed_links: true, attach_files: true, mention_everyone: false, use_external_emojis: true, use_application_commands: true, use_external_stickers: true, send_voice_messages: true };
 
         if (teamId === "default") {
             loadingPermissions = false;
@@ -305,8 +305,18 @@
                     </p>
                     <div class="permissions-grid">
                         <Checkbox
+                            label="Add Reactions"
+                            bind:value={teamPermissions.add_reactions}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
                             label="Send Messages"
                             bind:value={teamPermissions.send_messages}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Send TTS Messages"
+                            bind:value={teamPermissions.send_tts_messages}
                             on:change={savePermissions}
                         />
                         <Checkbox
@@ -320,26 +330,6 @@
                             on:change={savePermissions}
                         />
                         <Checkbox
-                            label="Add Reactions"
-                            bind:value={teamPermissions.add_reactions}
-                            on:change={savePermissions}
-                        />
-                        <Checkbox
-                            label="Send Voice Messages"
-                            bind:value={teamPermissions.send_voice_messages}
-                            on:change={savePermissions}
-                        />
-                        <Checkbox
-                            label="Send TTS Messages"
-                            bind:value={teamPermissions.send_tts_messages}
-                            on:change={savePermissions}
-                        />
-                        <Checkbox
-                            label="Use Application Commands"
-                            bind:value={teamPermissions.use_application_commands}
-                            on:change={savePermissions}
-                        />
-                        <Checkbox
                             label="Mention Everyone"
                             bind:value={teamPermissions.mention_everyone}
                             on:change={savePermissions}
@@ -350,8 +340,18 @@
                             on:change={savePermissions}
                         />
                         <Checkbox
+                            label="Use Application Commands"
+                            bind:value={teamPermissions.use_application_commands}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
                             label="Use External Stickers"
                             bind:value={teamPermissions.use_external_stickers}
+                            on:change={savePermissions}
+                        />
+                        <Checkbox
+                            label="Send Voice Messages"
+                            bind:value={teamPermissions.send_voice_messages}
                             on:change={savePermissions}
                         />
                     </div>

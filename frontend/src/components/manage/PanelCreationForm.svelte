@@ -644,7 +644,7 @@
     >
         <span slot="header">Ticket Permissions</span>
         <div slot="content" class="col-1">
-            <div class="row" style="padding-bottom: 10px;">
+            <div class="permissions-grid">
                 <Checkbox
                     label="Attach Files"
                     bind:value={data.ticket_permissions.attach_files}
@@ -742,6 +742,14 @@
         justify-content: space-between;
         width: 100%;
         margin-bottom: 10px;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        column-gap: 8px;
+        row-gap: 20px;
+        width: 100%;
     }
 
     .incomplete-row {

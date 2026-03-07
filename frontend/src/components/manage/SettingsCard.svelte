@@ -546,39 +546,37 @@
                     tooltip="Define which permissions are given to users in ticket channels"
                 >
                     <span slot="header">Ticket Permissions</span>
-                    <div
-                        slot="content"
-                        class="row"
-                        style="padding-bottom: 10px;"
-                    >
-                        <Checkbox
-                            label="Attach Files"
-                            bind:value={data.ticket_permissions.attach_files}
-                        />
-                        <Checkbox
-                            label="Embed Links"
-                            bind:value={data.ticket_permissions.embed_links}
-                        />
-                        <Checkbox
-                            label="Add Reactions"
-                            bind:value={data.ticket_permissions.add_reactions}
-                        />
-                        <Checkbox
-                            label="Send Voice Messages"
-                            bind:value={data.ticket_permissions.send_voice_messages}
-                        />
-                        <Checkbox
-                            label="Send TTS Messages"
-                            bind:value={data.ticket_permissions.send_tts_messages}
-                        />
-                        <Checkbox
-                            label="Use External Emojis"
-                            bind:value={data.ticket_permissions.use_external_emojis}
-                        />
-                        <Checkbox
-                            label="Use External Stickers"
-                            bind:value={data.ticket_permissions.use_external_stickers}
-                        />
+                    <div slot="content" class="col-1">
+                        <div class="permissions-grid">
+                            <Checkbox
+                                label="Attach Files"
+                                bind:value={data.ticket_permissions.attach_files}
+                            />
+                            <Checkbox
+                                label="Embed Links"
+                                bind:value={data.ticket_permissions.embed_links}
+                            />
+                            <Checkbox
+                                label="Add Reactions"
+                                bind:value={data.ticket_permissions.add_reactions}
+                            />
+                            <Checkbox
+                                label="Send Voice Messages"
+                                bind:value={data.ticket_permissions.send_voice_messages}
+                            />
+                            <Checkbox
+                                label="Send TTS Messages"
+                                bind:value={data.ticket_permissions.send_tts_messages}
+                            />
+                            <Checkbox
+                                label="Use External Emojis"
+                                bind:value={data.ticket_permissions.use_external_emojis}
+                            />
+                            <Checkbox
+                                label="Use External Stickers"
+                                bind:value={data.ticket_permissions.use_external_stickers}
+                            />
+                        </div>
                     </div>
                 </Collapsible>
 
@@ -630,6 +628,14 @@
         display: flex;
         width: 100%;
         height: 100%;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        column-gap: 8px;
+        row-gap: 20px;
+        width: 100%;
     }
 
     .row {

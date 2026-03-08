@@ -1,5 +1,7 @@
 <div class:col-1={col1} class:col-2={col2} class:col-3={col3} class:col-4={col4} class:col-3-4={col3_4} style="--min-height: {minHeight}">
-  <label for={textareaId} class="form-label">{label}</label>
+  {#if label !== undefined}
+    <label for={textareaId} class="form-label">{label}</label>
+  {/if}
   <textarea id={textareaId} class="form-input" placeholder="{placeholder}" bind:value on:change on:input></textarea>
 </div>
 

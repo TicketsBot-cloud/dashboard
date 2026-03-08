@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -29,8 +30,8 @@ func UpdateForm(c *gin.Context) {
 		return
 	}
 
-	if len(data.Title) > 45 {
-		c.JSON(400, utils.ErrorStr("Form title must be 45 characters or less (current: %d characters)", len(data.Title)))
+	if utf8.RuneCountInString(data.Title) > 45 {
+		c.JSON(400, utils.ErrorStr("Form title must be 45 characters or less (current: %d characters)", utf8.RuneCountInString(data.Title)))
 		return
 	}
 

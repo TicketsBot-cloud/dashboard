@@ -25,6 +25,7 @@ func ListPanels(c *gin.Context) {
 		AccessControlList            []database.PanelAccessControlRule `json:"access_control_list"`
 		HasSupportHours              bool                              `json:"has_support_hours"`
 		IsCurrentlyActive            bool                              `json:"is_currently_active"`
+		TicketPermissions            database.TicketPermissions        `json:"ticket_permissions"`
 	}
 
 	guildId := c.Keys["guildid"].(uint64)
@@ -111,6 +112,11 @@ func ListPanels(c *gin.Context) {
 				accessControlList = make([]database.PanelAccessControlRule, 0)
 			}
 
+			ticketPerms, err := dbclient.Client.PanelTicketPermissions.Get(c, p.PanelId)
+			if err != nil {
+				return err
+			}
+
 			// Check if panel has support hours configured
 			supportHours, err := dbclient.Client.PanelSupportHours.GetByPanelId(c, p.PanelId)
 			if err != nil {
@@ -138,6 +144,7 @@ func ListPanels(c *gin.Context) {
 				AccessControlList:            accessControlList,
 				HasSupportHours:              hasSupportHours,
 				IsCurrentlyActive:            isCurrentlyActive,
+				TicketPermissions:            ticketPerms,
 			}
 
 			return nil

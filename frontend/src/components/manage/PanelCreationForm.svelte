@@ -61,13 +61,13 @@
 
     $: if (data && !data.ticket_permissions) {
         data.ticket_permissions = {
-            add_reactions: data.tp_add_reactions || false,
-            send_tts_messages: data.tp_send_tts_messages || false,
-            embed_links: data.tp_embed_links || false,
-            attach_files: data.tp_attach_files || false,
-            use_external_emojis: data.tp_use_external_emojis || false,
-            use_external_stickers: data.tp_use_external_stickers || false,
-            send_voice_messages: data.tp_send_voice_messages || false,
+            add_reactions: false,
+            send_tts_messages: false,
+            embed_links: false,
+            attach_files: false,
+            use_external_emojis: false,
+            use_external_stickers: false,
+            send_voice_messages: false,
         };
     }
 

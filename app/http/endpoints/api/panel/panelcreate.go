@@ -261,13 +261,6 @@ func CreatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 	}
 
-	panel.TicketPermsAddReactions = data.TicketPermissions.AddReactions
-	panel.TicketPermsSendTTSMessages = data.TicketPermissions.SendTTSMessages
-	panel.TicketPermsEmbedLinks = data.TicketPermissions.EmbedLinks
-	panel.TicketPermsAttachFiles = data.TicketPermissions.AttachFiles
-	panel.TicketPermsUseExternalEmojis = data.TicketPermissions.UseExternalEmojis
-	panel.TicketPermsUseExternalStickers = data.TicketPermissions.UseExternalStickers
-	panel.TicketPermsSendVoiceMessages = data.TicketPermissions.SendVoiceMessages
 
 	createOptions := panelCreateOptions{
 		TeamIds:            data.Teams,             // Already validated
@@ -300,6 +293,11 @@ func CreatePanel(c *gin.Context) {
 	panelId, err := storePanel(c, panel, createOptions)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel to database"))
+		return
+	}
+
+	if err := dbclient.Client.PanelTicketPermissions.Set(c, panelId, data.TicketPermissions); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))
 		return
 	}
 

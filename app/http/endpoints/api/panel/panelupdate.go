@@ -265,13 +265,6 @@ func UpdatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 	}
 
-	panel.TicketPermsAddReactions = data.TicketPermissions.AddReactions
-	panel.TicketPermsSendTTSMessages = data.TicketPermissions.SendTTSMessages
-	panel.TicketPermsEmbedLinks = data.TicketPermissions.EmbedLinks
-	panel.TicketPermsAttachFiles = data.TicketPermissions.AttachFiles
-	panel.TicketPermsUseExternalEmojis = data.TicketPermissions.UseExternalEmojis
-	panel.TicketPermsUseExternalStickers = data.TicketPermissions.UseExternalStickers
-	panel.TicketPermsSendVoiceMessages = data.TicketPermissions.SendVoiceMessages
 
 	// insert mention data
 	validRoles := utils.ToSet(utils.Map(roles, utils.RoleToId))
@@ -329,6 +322,11 @@ func UpdatePanel(c *gin.Context) {
 
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
+	}
+
+	if err := dbclient.Client.PanelTicketPermissions.Set(c, panel.PanelId, data.TicketPermissions); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))
 		return
 	}
 

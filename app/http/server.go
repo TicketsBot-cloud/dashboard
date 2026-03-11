@@ -7,6 +7,11 @@ import (
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/botstaff"
+	admin_entitlements "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/entitlements"
+	admin_globalblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/globalblacklist"
+	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
+	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
+	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
 	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
@@ -138,6 +143,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 		// Must be readable to load transcripts page
 		guildAuthApiSupport.GET("/panels", api_panels.ListPanels)
+		guildAuthApiSupport.GET("/panels/:panelid", api_panels.GetPanel)
 		guildAuthApiAdmin.POST("/panels", api_panels.CreatePanel)
 		guildAuthApiAdmin.POST("/panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.ResendPanel)
 		guildAuthApiAdmin.PATCH("/panels/:panelid", api_panels.UpdatePanel)
@@ -253,6 +259,16 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		adminGroup.GET("/bot-staff", botstaff.ListBotStaffHandler)
 		adminGroup.POST("/bot-staff/:userid", botstaff.AddBotStaffHandler)
 		adminGroup.DELETE("/bot-staff/:userid", botstaff.RemoveBotStaffHandler)
+		adminGroup.GET("/entitlements", admin_entitlements.ListEntitlementsHandler)
+		adminGroup.GET("/premium-keys", admin_premiumkeys.ListPremiumKeysHandler)
+		adminGroup.GET("/global-blacklist", admin_globalblacklist.ListHandler)
+		adminGroup.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)
+		adminGroup.DELETE("/global-blacklist/:userid", admin_globalblacklist.RemoveHandler)
+		adminGroup.GET("/server-blacklist", admin_serverblacklist.ListHandler)
+		adminGroup.POST("/server-blacklist/:guildid", admin_serverblacklist.AddHandler)
+		adminGroup.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
+		adminGroup.GET("/skus", admin_skus.ListHandler)
+		adminGroup.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
 	}
 
 	srv := &nethttp.Server{

@@ -1,4 +1,4 @@
-package botstaff
+package globalblacklist
 
 import (
 	"context"
@@ -18,18 +18,17 @@ type userData struct {
 	AvatarUrl string `json:"avatar_url,omitempty"`
 }
 
-func ListBotStaffHandler(ctx *gin.Context) {
-	staff, err := database.Client.BotStaff.GetAll(ctx)
+func ListHandler(ctx *gin.Context) {
+	userIds, err := database.Client.GlobalBlacklist.ListAll(ctx)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to fetch records. Please try again."))
 		return
 	}
 
-	// Get usernames
 	group, _ := errgroup.WithContext(context.Background())
 
-	users := make([]userData, len(staff))
-	for i, userId := range staff {
+	users := make([]userData, len(userIds))
+	for i, userId := range userIds {
 		i := i
 		userId := userId
 

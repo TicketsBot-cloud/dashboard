@@ -34,8 +34,8 @@ type (
 		Position    int                      `json:"position" validate:"required,min=1,max=5"`
 		Style       component.TextStyleTypes `json:"style" validate:"omitempty,required,min=1,max=2"`
 		Required    bool                     `json:"required"`
-		MinLength   uint16                   `json:"min_length" validate:"min=0,max=1024"` // validator interprets 0 as not set
-		MaxLength   uint16                   `json:"max_length" validate:"min=0,max=1024"`
+		MinLength   uint16                   `json:"min_length" validate:"min=0,max=4000"`
+		MaxLength   uint16                   `json:"max_length" validate:"min=1,max=4000"`
 		Options     []inputOption            `json:"options,omitempty" validate:"omitempty,dive,required,min=1,max=25"`
 	}
 

@@ -10,7 +10,7 @@ import (
 
 func Cors(config config.Config) func(*gin.Context) {
 	methods := []string{http.MethodOptions, http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete}
-	headers := []string{"x-tickets", "Content-Type", "Authorization"}
+	headers := []string{"x-tickets", "Content-Type", "Authorization", "X-CSRF-Token"}
 
 	return func(ctx *gin.Context) {
 		ctx.Header("Access-Control-Allow-Origin", config.Server.BaseUrl)

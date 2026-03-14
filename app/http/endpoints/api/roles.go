@@ -6,6 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const defaultRoleColor = 10070709
+
 func RolesHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 
@@ -19,6 +21,12 @@ func RolesHandler(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Unable to load roles from Discord. Please try again."))
 		return
+	}
+
+	for i := range roles {
+		if roles[i].Color == 0 {
+			roles[i].Color = defaultRoleColor
+		}
 	}
 
 	ctx.JSON(200, gin.H{

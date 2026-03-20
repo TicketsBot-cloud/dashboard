@@ -209,15 +209,13 @@ func removeTeamMember(ctx *gin.Context, teamId int, guildId, selfId, snowflake u
 					_ = botContext.RemoveGuildMemberRole(context.Background(), guildId, snowflake, *team.OnCallRole)
 				}
 			} else {
-				var err request.RestError
-				if !errors.As(err, &err) || err.StatusCode != 404 {
+				var restErr request.RestError
+				if !errors.As(err, &restErr) || restErr.StatusCode != 404 {
 					ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
 					return
 				}
 			}
 
-			// TODO: Use proper context
-			_ = botContext.RemoveGuildMemberRole(context.Background(), guildId, snowflake, *team.OnCallRole)
 		} else if entityType == entityTypeRole {
 			// Recreate role
 			if err := dbclient.Client.SupportTeam.SetOnCallRole(ctx, teamId, nil); err != nil {

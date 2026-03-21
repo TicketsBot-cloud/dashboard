@@ -158,6 +158,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/panels/:panelid/is-active", api_panels.IsPanelActive)
 
 		guildAuthApiAdmin.GET("/multipanels", api_panels.MultiPanelList)
+		guildAuthApiAdmin.GET("/multipanels/:panelid", api_panels.MultiPanelGet)
 		guildAuthApiAdmin.POST("/multipanels", api_panels.MultiPanelCreate)
 		guildAuthApiAdmin.POST("/multipanels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.MultiPanelResend)
 		guildAuthApiAdmin.PATCH("/multipanels/:panelid", api_panels.MultiPanelUpdate)

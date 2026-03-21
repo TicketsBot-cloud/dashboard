@@ -15,6 +15,7 @@ func ListPanels(c *gin.Context) {
 		Title          string  `json:"title"`
 		Colour         int32   `json:"colour"`
 		ButtonLabel    string  `json:"button_label"`
+		ButtonStyle    int     `json:"button_style,string"`
 		EmojiName      *string `json:"emoji_name,omitempty"`
 		EmojiId        *uint64 `json:"emoji_id,omitempty,string"`
 		UseCustomEmoji bool    `json:"use_custom_emoji"`
@@ -37,6 +38,7 @@ func ListPanels(c *gin.Context) {
 			Title:          p.Title,
 			Colour:         p.Colour,
 			ButtonLabel:    p.ButtonLabel,
+			ButtonStyle:    p.ButtonStyle,
 			EmojiName:      p.EmojiName,
 			EmojiId:        p.EmojiId,
 			UseCustomEmoji: p.EmojiId != nil,

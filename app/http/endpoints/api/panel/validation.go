@@ -404,7 +404,11 @@ func validateAccessControlList(ctx PanelValidationContext) validation.Validation
 }
 
 func validateEmbed(e *types.CustomEmbed) error {
-	if e == nil || e.Title != nil || e.Description != nil || len(e.Fields) > 0 || e.ImageUrl != nil || e.ThumbnailUrl != nil {
+	if e == nil {
+		return nil
+	}
+
+	if e.Title != nil || e.Description != nil || len(e.Fields) > 0 || e.ImageUrl != nil || e.ThumbnailUrl != nil {
 		if e.ImageUrl != nil && (len(*e.ImageUrl) > 255 || !urlRegex.MatchString(*e.ImageUrl)) {
 			if *e.ImageUrl == "%avatar_url%" {
 				// Ignore validation as it is a placeholder

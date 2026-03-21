@@ -149,7 +149,7 @@ func CreatePanel(c *gin.Context) {
 	if err := ValidatePanelBody(validationContext); err != nil {
 		var validationError *validation.InvalidInputError
 		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr(validationError.Error()))
+			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
 		} else {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Panel validation failed unexpectedly"))
 		}
@@ -166,7 +166,7 @@ func CreatePanel(c *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		c.JSON(400, utils.ErrorStr(formatted))
+		c.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 

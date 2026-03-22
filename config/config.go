@@ -59,6 +59,11 @@ type Config struct {
 	Cache struct {
 		Uri string `env:"URI,required"`
 	} `envPrefix:"CACHE_"`
+	Polar struct {
+		ApiKey             string `env:"API_KEY"`
+		IsSandbox          bool   `env:"IS_SANDBOX"`
+		CheckoutSuccessUrl string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
+	} `envPrefix:"POLAR_"`
 	SecureProxyUrl string `env:"SECURE_PROXY_URL"`
 	S3Import       struct {
 		Endpoint         string `env:"ENDPOINT,required"`

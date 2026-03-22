@@ -11,6 +11,7 @@ import (
 	admin_globalblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/globalblacklist"
 	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
+	admin_polarproducts "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/polarproducts"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
@@ -18,6 +19,7 @@ import (
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
 	api_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/integrations"
 	api_panels "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/panel"
+	api_polar "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/polar"
 	api_premium "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/premium"
 	api_settings "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/settings"
 	api_override "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/staffoverride"
@@ -103,10 +105,33 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			apiGroup.POST("/integrations", api_integrations.CreateIntegrationHandler)
 		}
 
+		apiGroup.GET("/premium/products", api_polar.GetProducts)
+
 		{
 			premiumGroup := apiGroup.Group("/premium/@me")
 			premiumGroup.GET("/entitlements", api_premium.GetEntitlements)
 			premiumGroup.PUT("/active-guilds", api_premium.SetActiveGuilds)
+
+			{
+				polarGroup := premiumGroup.Group("/polar")
+				polarGroup.POST("/checkout",
+					rl(middleware.RateLimitTypeUser, 5, time.Minute),
+					api_polar.CreateCheckout,
+				)
+				polarGroup.GET("/subscriptions", api_polar.GetSubscriptions)
+				polarGroup.POST("/subscriptions/:subid/cancel",
+					rl(middleware.RateLimitTypeUser, 3, time.Minute),
+					api_polar.CancelSubscription,
+				)
+				polarGroup.POST("/subscriptions/:subid/uncancel",
+					rl(middleware.RateLimitTypeUser, 3, time.Minute),
+					api_polar.UncancelSubscription,
+				)
+				polarGroup.POST("/subscriptions/:subid/change",
+					rl(middleware.RateLimitTypeUser, 3, time.Minute),
+					api_polar.ChangeSubscription,
+				)
+			}
 		}
 	}
 
@@ -269,6 +294,13 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		adminGroup.POST("/server-blacklist/:guildid", admin_serverblacklist.AddHandler)
 		adminGroup.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
 		adminGroup.GET("/skus", admin_skus.ListHandler)
+		adminGroup.POST("/skus", admin_skus.CreateHandler)
+		adminGroup.PUT("/skus/:skuid", admin_skus.UpdateHandler)
+		adminGroup.DELETE("/skus/:skuid", admin_skus.DeleteHandler)
+		adminGroup.GET("/polar-products", admin_polarproducts.ListHandler)
+		adminGroup.POST("/polar-products", admin_polarproducts.CreateHandler)
+		adminGroup.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
+		adminGroup.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
 		adminGroup.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
 	}
 

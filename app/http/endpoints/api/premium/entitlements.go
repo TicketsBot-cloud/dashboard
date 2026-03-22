@@ -7,6 +7,7 @@ import (
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
+	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
 )
@@ -26,9 +27,25 @@ func GetEntitlements(ctx *gin.Context) {
 		return
 	}
 
+	// Fetch Polar subscriptions
+	var polarSubs []database.PolarEntitlementWithDetails
+	if err := dbclient.Client.WithTx(ctx, func(tx pgx.Tx) error {
+		var err error
+		polarSubs, err = dbclient.Client.PolarEntitlements.ListByUser(ctx, tx, userId)
+		return err
+	}); err != nil {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
+		return
+	}
+
+	if polarSubs == nil {
+		polarSubs = make([]database.PolarEntitlementWithDetails, 0)
+	}
+
 	res := gin.H{
-		"entitlements":       entitlements,
-		"legacy_entitlement": legacyEntitlement,
+		"entitlements":        entitlements,
+		"legacy_entitlement":  legacyEntitlement,
+		"polar_subscriptions": polarSubs,
 	}
 
 	if legacyEntitlement == nil || legacyEntitlement.IsLegacy {

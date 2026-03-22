@@ -42,9 +42,10 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/penglongli/gin-metrics v0.1.10
 	github.com/pkg/errors v0.9.1
+	github.com/polarsource/polar-go v0.15.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/sirupsen/logrus v1.9.4
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/sync v0.19.0
@@ -123,6 +124,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.18.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
+	github.com/spyzhov/ajson v0.8.0 // indirect
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
 	github.com/tinylib/msgp v1.4.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

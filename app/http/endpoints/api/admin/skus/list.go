@@ -1,36 +1,25 @@
 package skus
 
 import (
+	"net/http"
+
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
-type skuResponse struct {
-	Id       string `json:"id"`
-	Label    string `json:"label"`
-	Tier     string `json:"tier"`
-	Priority int32  `json:"priority"`
-	IsGlobal bool   `json:"is_global"`
-}
-
+// ListHandler returns all SKUs with their subscription and multi-server details.
 func ListHandler(ctx *gin.Context) {
-	skus, err := database.Client.SubscriptionSkus.Search(ctx, "", 100)
+	skus, err := database.Client.Skus.ListAll(ctx)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch SKUs. Please try again."))
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to fetch SKUs. Please try again."))
 		return
 	}
 
-	response := make([]skuResponse, len(skus))
-	for i, sku := range skus {
-		response[i] = skuResponse{
-			Id:       sku.Id.String(),
-			Label:    sku.Label,
-			Tier:     string(sku.Tier),
-			Priority: sku.Priority,
-			IsGlobal: sku.IsGlobal,
-		}
+	if skus == nil {
+		skus = make([]dbmodel.SkuWithDetails, 0)
 	}
 
-	ctx.JSON(200, response)
+	ctx.JSON(http.StatusOK, skus)
 }

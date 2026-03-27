@@ -103,6 +103,11 @@ func SetActiveGuilds(ctx *gin.Context) {
 				return
 			}
 
+			if err := dbclient.Client.PatreonEntitlements.Delete(ctx, tx, existingEntitlement.EntitlementId); err != nil {
+				ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
+				return
+			}
+
 			if err := dbclient.Client.Entitlements.DeleteById(ctx, tx, existingEntitlement.EntitlementId); err != nil {
 				ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
 				return
@@ -146,6 +151,11 @@ func SetActiveGuilds(ctx *gin.Context) {
 			} else {
 				// If we need to switch the SKU, then delete and recreate the entitlement
 				if err := dbclient.Client.LegacyPremiumEntitlementGuilds.DeleteByEntitlement(ctx, tx, existingEntitlement.EntitlementId); err != nil {
+					ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
+					return
+				}
+
+				if err := dbclient.Client.PatreonEntitlements.Delete(ctx, tx, existingEntitlement.EntitlementId); err != nil {
 					ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to delete database record. Please try again."))
 					return
 				}

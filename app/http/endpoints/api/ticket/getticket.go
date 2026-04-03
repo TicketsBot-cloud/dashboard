@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel"
@@ -21,7 +21,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var MentionRegex, _ = regexp.Compile("<@(\\d+)>")
+type ticketUser struct {
+	Id       uint64 `json:"id,string"`
+	Username string `json:"username"`
+}
+
+type ticketViewData struct {
+	Id        int         `json:"id"`
+	PanelId   *int        `json:"panel_id"`
+	OpenedAt  time.Time   `json:"opened_at"`
+	Opener    ticketUser  `json:"opener"`
+	Claimer   *ticketUser `json:"claimer"`
+}
 
 func GetTicket(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
@@ -78,10 +89,47 @@ func GetTicket(c *gin.Context) {
 		return
 	}
 
+	var panelTitle *string
+	if ticket.PanelId != nil {
+		panel, err := dbclient.Client.Panel.GetById(c, *ticket.PanelId)
+		if err == nil {
+			panelTitle = &panel.Title
+		}
+	}
+
+	claimedById, _ := dbclient.Client.TicketClaims.Get(c, guildId, ticketId)
+
+	userIds := []uint64{ticket.UserId}
+	if claimedById != 0 {
+		userIds = append(userIds, claimedById)
+	}
+	resolvedUsers, err := cache.Instance.GetUsers(c, userIds)
+	if err != nil {
+		resolvedUsers = map[uint64]user.User{}
+	}
+
+	openerUser := resolvedUsers[ticket.UserId]
+	opener := ticketUser{Id: ticket.UserId, Username: openerUser.Username}
+
+	var claimer *ticketUser
+	if claimedById != 0 {
+		claimerUser := resolvedUsers[claimedById]
+		claimer = &ticketUser{Id: claimedById, Username: claimerUser.Username}
+	}
+
+	ticketData := ticketViewData{
+		Id:       ticket.Id,
+		PanelId:  ticket.PanelId,
+		OpenedAt: ticket.OpenTime,
+		Opener:   opener,
+		Claimer:  claimer,
+	}
+
 	c.JSON(200, gin.H{
-		"success":  true,
-		"ticket":   ticket,
-		"messages": messages,
+		"success":     true,
+		"ticket":      ticketData,
+		"panel_title": panelTitle,
+		"messages":    messages,
 	})
 }
 

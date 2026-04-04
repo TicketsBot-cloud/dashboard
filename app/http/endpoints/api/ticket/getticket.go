@@ -140,6 +140,7 @@ type StrippedMessage struct {
 	Attachments []channel.Attachment  `json:"attachments"`
 	Embeds      []embed.Embed         `json:"embeds"`
 	Components  []component.Component `json:"components"`
+	Mentions    []user.User           `json:"mentions"`
 }
 
 func fetchMessages(botContext *botcontext.BotContext, ticket database.Ticket) ([]StrippedMessage, error) {
@@ -152,6 +153,10 @@ func fetchMessages(botContext *botcontext.BotContext, ticket database.Ticket) ([
 	// Format messages, exclude unneeded data
 	stripped := make([]StrippedMessage, len(messages))
 	for i, message := range utils.Reverse(messages) {
+		mentions := make([]user.User, len(message.Mentions))
+		for j, m := range message.Mentions {
+			mentions[j] = m.User
+		}
 		stripped[i] = StrippedMessage{
 			Author:      message.Author,
 			Content:     message.Content,
@@ -159,6 +164,7 @@ func fetchMessages(botContext *botcontext.BotContext, ticket database.Ticket) ([
 			Attachments: message.Attachments,
 			Embeds:      message.Embeds,
 			Components:  message.Components,
+			Mentions:    mentions,
 		}
 	}
 

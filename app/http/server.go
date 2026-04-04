@@ -9,9 +9,9 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/botstaff"
 	admin_entitlements "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/entitlements"
 	admin_globalblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/globalblacklist"
+	admin_polarproducts "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/polarproducts"
 	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
-	admin_polarproducts "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/polarproducts"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
@@ -130,6 +130,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 				polarGroup.POST("/subscriptions/:subid/change",
 					rl(middleware.RateLimitTypeUser, 3, time.Minute),
 					api_polar.ChangeSubscription,
+				)
+				polarGroup.GET("/orders", api_polar.GetOrders)
+				polarGroup.GET("/orders/:orderid/invoice",
+					rl(middleware.RateLimitTypeUser, 10, time.Minute),
+					api_polar.GetOrderInvoice,
 				)
 			}
 		}

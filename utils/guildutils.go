@@ -3,6 +3,7 @@ package utils
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"sync"
@@ -10,12 +11,16 @@ import (
 
 	"github.com/TicketsBot-cloud/common/collections"
 	"github.com/TicketsBot-cloud/common/permission"
+	"github.com/TicketsBot-cloud/common/premium"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/database"
+	gdlcache "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/TicketsBot-cloud/gdl/objects/guild"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgtype"
 	errgroup "golang.org/x/sync/errgroup"
 )
@@ -25,6 +30,7 @@ type GuildDto struct {
 	Name            string                     `json:"name"`
 	Icon            string                     `json:"icon"`
 	PermissionLevel permission.PermissionLevel `json:"permission_level"`
+	Premium         bool                       `json:"premium"`
 }
 
 func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]GuildDto, error) {
@@ -44,7 +50,7 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 		return nil, err
 	}
 
-	userGuilds, err := getGuildIntersection(ctx, userId, guilds)
+	userGuilds, err := getGuildIntersection(ctx, guilds)
 	if err != nil {
 		return nil, err
 	}
@@ -62,12 +68,18 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 				return err
 			}
 
+			isPremium, err := getGuildPremium(ctx, guild, userId)
+			if err != nil {
+				return err
+			}
+
 			mu.Lock()
 			dtos = append(dtos, GuildDto{
 				Id:              guild.Id,
 				Name:            guild.Name,
 				Icon:            guild.Icon,
 				PermissionLevel: permLevel,
+				Premium:         isPremium,
 			})
 			mu.Unlock()
 
@@ -113,7 +125,7 @@ func storeGuildsInDb(ctx context.Context, userId uint64, guilds []guild.Guild) e
 	return dbclient.Client.UserGuilds.Set(ctx, userId, wrappedGuilds)
 }
 
-func getGuildIntersection(ctx context.Context, userId uint64, userGuilds []guild.Guild) ([]guild.Guild, error) {
+func getGuildIntersection(ctx context.Context, userGuilds []guild.Guild) ([]guild.Guild, error) {
 	guildIds := make([]uint64, len(userGuilds))
 	for i, guild := range userGuilds {
 		guildIds[i] = guild.Id
@@ -167,4 +179,46 @@ func getExistingGuilds(ctx context.Context, userGuilds []uint64) ([]uint64, erro
 	}
 
 	return existingGuilds, nil
+}
+
+// getGuildPremium checks whether a guild has an active premium entitlement.
+// It checks the Redis cache first; if no cached value exists it falls back to
+// a direct DB lookup using ListGuildSubscriptions.
+func getGuildPremium(ctx context.Context, g guild.Guild, userId uint64) (bool, error) {
+	cached, err := rpc.PremiumClient.GetCachedTier(ctx, g.Id)
+	if err != nil && err != redis.Nil {
+		return false, err
+	}
+	if err == nil {
+		return premium.PremiumTier(cached.Tier) >= premium.Premium, nil
+	}
+
+	// No Redis cache — fall back to DB. We need the guild owner ID so that
+	// user-level global subscriptions (e.g. Patreon) are included. For guilds
+	// the current user owns we have it directly; for others we try the bot cache.
+	ownerId := uint64(0)
+	if g.Owner {
+		ownerId = userId
+	} else {
+		cached, err := cache.Instance.GetGuild(ctx, g.Id)
+		if err != nil && !errors.Is(err, gdlcache.ErrNotFound) {
+			return false, err
+		}
+		if err == nil {
+			ownerId = cached.OwnerId
+		}
+	}
+
+	subscriptions, err := dbclient.Client.Entitlements.ListGuildSubscriptions(ctx, g.Id, ownerId, premium.GracePeriod)
+	if err != nil {
+		return false, err
+	}
+
+	for _, sub := range subscriptions {
+		if premium.TierFromEntitlement(sub.Tier) >= premium.Premium {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

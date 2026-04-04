@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
 )
+
+var embedMentionRegex = regexp.MustCompile(`<@!?(\d+)>`)
 
 type ticketUser struct {
 	Id       uint64 `json:"id,string"`
@@ -83,7 +86,7 @@ func GetTicket(c *gin.Context) {
 		return
 	}
 
-	messages, err := fetchMessages(botContext, ticket)
+	messages, err := fetchMessages(c.Request.Context(), botContext, ticket)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, fmt.Sprintf("Failed to fetch messages for ticket #%d from Discord", ticketId)))
 		return
@@ -143,9 +146,8 @@ type StrippedMessage struct {
 	Mentions    []user.User           `json:"mentions"`
 }
 
-func fetchMessages(botContext *botcontext.BotContext, ticket database.Ticket) ([]StrippedMessage, error) {
-	// Get messages
-	messages, err := rest.GetChannelMessages(context.Background(), botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.GetChannelMessagesData{Limit: 100})
+func fetchMessages(ctx context.Context, botContext *botcontext.BotContext, ticket database.Ticket) ([]StrippedMessage, error) {
+	messages, err := rest.GetChannelMessages(ctx, botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.GetChannelMessagesData{Limit: 100})
 	if err != nil {
 		return nil, err
 	}
@@ -168,5 +170,60 @@ func fetchMessages(botContext *botcontext.BotContext, ticket database.Ticket) ([
 		}
 	}
 
+	// Collect user IDs mentioned in embed text that weren't in the content mentions.
+	// One pass: build per-message ID lists and the global set simultaneously.
+	perMessageEmbedIds := make([][]uint64, len(stripped))
+	allEmbedIds := make(map[uint64]bool)
+	for i, msg := range stripped {
+		ids := collectEmbedMentionIdsForMessage(msg)
+		perMessageEmbedIds[i] = ids
+		for _, id := range ids {
+			allEmbedIds[id] = true
+		}
+	}
+
+	if len(allEmbedIds) > 0 {
+		idSlice := make([]uint64, 0, len(allEmbedIds))
+		for id := range allEmbedIds {
+			idSlice = append(idSlice, id)
+		}
+		embedUsers, err := cache.Instance.GetUsers(ctx, idSlice)
+		if err == nil {
+			for i := range stripped {
+				known := make(map[uint64]bool, len(stripped[i].Mentions))
+				for _, u := range stripped[i].Mentions {
+					known[u.Id] = true
+				}
+				for _, embedId := range perMessageEmbedIds[i] {
+					if !known[embedId] {
+						if u, ok := embedUsers[embedId]; ok {
+							stripped[i].Mentions = append(stripped[i].Mentions, u)
+							known[embedId] = true
+						}
+					}
+				}
+			}
+		}
+	}
+
 	return stripped, nil
+}
+
+func collectEmbedMentionIdsForMessage(msg StrippedMessage) []uint64 {
+	var ids []uint64
+	for _, e := range msg.Embeds {
+		for _, sub := range embedMentionRegex.FindAllStringSubmatch(e.Description, -1) {
+			if id, err := strconv.ParseUint(sub[1], 10, 64); err == nil {
+				ids = append(ids, id)
+			}
+		}
+		for _, field := range e.Fields {
+			for _, sub := range embedMentionRegex.FindAllStringSubmatch(field.Value, -1) {
+				if id, err := strconv.ParseUint(sub[1], 10, 64); err == nil {
+					ids = append(ids, id)
+				}
+			}
+		}
+	}
+	return ids
 }

@@ -16,6 +16,7 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 
 require (
 	github.com/BurntSushi/toml v1.2.1
+	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e
 	github.com/TicketsBot-cloud/database v0.0.0-20260308193919-30a698fefa8b
@@ -54,7 +55,6 @@ require (
 require (
 	github.com/ClickHouse/ch-go v0.66.0 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.36.0 // indirect
-	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c // indirect
 	github.com/TicketsBot/common v0.0.0-20241117150316-ff54c97b45c1 // indirect
 	github.com/TicketsBot/ttlcache v1.6.1-0.20200405150101-acc18e37b261 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect

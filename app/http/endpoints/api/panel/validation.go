@@ -478,9 +478,8 @@ func validateTicketNotificationChannel(ctx PanelValidationContext) validation.Va
 			}
 		}
 
-		// If UseThreads is false, clear the TicketNotificationChannel after validation
+		// If UseThreads is false, notification channel is not applicable
 		if !ctx.Data.UseThreads {
-			ctx.Data.TicketNotificationChannel = nil
 			return nil
 		}
 

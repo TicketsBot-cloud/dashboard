@@ -157,6 +157,10 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
+	if !data.UseThreads {
+		data.TicketNotificationChannel = nil
+	}
+
 	// Do tag validation
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors

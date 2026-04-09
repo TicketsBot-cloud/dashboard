@@ -2,8 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
@@ -13,9 +11,6 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	dbmodel "github.com/TicketsBot-cloud/database"
-	messagetypes "github.com/TicketsBot-cloud/gdl/objects/channel/message"
-	"github.com/TicketsBot-cloud/gdl/rest"
-	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,7 +31,6 @@ func SendMessage(ctx *gin.Context) {
 		return
 	}
 
-	// Get ticket ID
 	ticketId, err := strconv.Atoi(ctx.Param("ticketId"))
 	if err != nil {
 		ctx.JSON(400, utils.ErrorStr("Invalid ticket ID provided: %s", ctx.Param("ticketId")))
@@ -54,7 +48,6 @@ func SendMessage(ctx *gin.Context) {
 		return
 	}
 
-	// Verify guild is premium
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to verify premium status for guild %d", guildId))
@@ -66,33 +59,25 @@ func SendMessage(ctx *gin.Context) {
 		return
 	}
 
-	// Get ticket
 	ticket, err := database.Client.Tickets.Get(ctx, ticketId, guildId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Unable to load ticket. Please try again."))
+		return
+	}
 
-	// Verify the ticket exists
 	if ticket.UserId == 0 {
 		ctx.JSON(404, utils.ErrorStr("Ticket #%d not found", ticketId))
 		return
 	}
 
-	// Verify the user has permission to send to this guild
 	if ticket.GuildId != guildId {
 		ctx.JSON(403, utils.ErrorStr("Ticket #%d does not belong to guild %d", ticketId, guildId))
 		return
 	}
 
-	if len(body.Message.Content) > 2000 {
-		body.Message.Content = body.Message.Content[0:1999]
-	}
-
-	// Process placeholders in message content
-	processedContent := replacePlaceholders(ctx, body.Message.Content, &ticket, botContext)
-
-	// Preferably send via a webhook
-	webhook, err := database.Client.Webhooks.Get(ctx, guildId, ticketId)
-	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch webhook for ticket #%d in guild %d", ticketId, guildId))
-		return
+	content := body.Message.Content
+	if len(content) > 2000 {
+		content = content[0:1999]
 	}
 
 	settings, err := database.Client.Settings.Get(ctx, guildId)
@@ -101,84 +86,27 @@ func SendMessage(ctx *gin.Context) {
 		return
 	}
 
-	if webhook.Id != 0 {
-		var webhookData rest.WebhookBody
-		if settings.AnonymiseDashboardResponses {
-			guild, err := botContext.GetGuild(context.Background(), guildId)
-			if err != nil {
-				ctx.JSON(500, utils.ErrorStr("Failed to fetch guild information for guild %d", guildId))
-				return
-			}
+	processedContent := replacePlaceholders(ctx, content, &ticket, botContext)
 
-			webhookData = rest.WebhookBody{
-				Content:   processedContent,
-				Username:  guild.Name,
-				AvatarUrl: guild.IconUrl(),
-				AllowedMentions: messagetypes.AllowedMention{
-					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
-				},
-			}
-		} else {
-			user, err := botContext.GetUser(context.Background(), userId)
-			if err != nil {
-				ctx.JSON(500, utils.ErrorStr("Failed to fetch user information for user %d", userId))
-				return
-			}
-
-			webhookData = rest.WebhookBody{
-				Content:   processedContent,
-				Username:  user.EffectiveName(),
-				AvatarUrl: user.AvatarUrl(256),
-				AllowedMentions: messagetypes.AllowedMention{
-					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
-				},
-			}
-		}
-
-		// TODO: Ratelimit
-		_, err = rest.ExecuteWebhook(ctx, webhook.Token, nil, webhook.Id, true, webhookData)
-
+	var sender SenderIdentity
+	if settings.AnonymiseDashboardResponses {
+		guild, err := botContext.GetGuild(context.Background(), guildId)
 		if err != nil {
-			// We can delete the webhook in this case
-			var unwrapped request.RestError
-			if errors.As(err, &unwrapped); unwrapped.StatusCode == 403 || unwrapped.StatusCode == 404 {
-				go database.Client.Webhooks.Delete(ctx, guildId, ticketId)
-			}
-		} else {
-			ctx.JSON(200, gin.H{
-				"success": true,
-			})
+			ctx.JSON(500, utils.ErrorStr("Failed to fetch guild information for guild %d", guildId))
 			return
 		}
-	}
-
-	message := processedContent
-	if !settings.AnonymiseDashboardResponses {
+		sender = SenderIdentity{Name: guild.Name, AvatarUrl: guild.IconUrl()}
+	} else {
 		user, err := botContext.GetUser(context.Background(), userId)
 		if err != nil {
 			ctx.JSON(500, utils.ErrorStr("Failed to fetch user information for user %d", userId))
 			return
 		}
-
-		message = fmt.Sprintf("**%s**: %s", user.EffectiveName(), message)
+		sender = SenderIdentity{Name: user.EffectiveName(), AvatarUrl: user.AvatarUrl(256)}
 	}
 
-	if len(message) > 2000 {
-		message = message[0:1999]
-	}
-
-	if ticket.ChannelId == nil {
-		ctx.JSON(404, utils.ErrorStr("Ticket #%d has no associated Discord channel", ticketId))
-		return
-	}
-
-	if _, err = rest.CreateMessage(ctx, botContext.Token, botContext.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{
-		Content: message,
-		AllowedMentions: messagetypes.AllowedMention{
-			Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
-		},
-	}); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to send message to ticket #%d in channel %d", ticketId, *ticket.ChannelId))
+	if errStr := SendMessageToTicket(ctx, botContext, ticket, processedContent, settings.AnonymiseDashboardResponses, sender); errStr != "" {
+		ctx.JSON(500, utils.ErrorStr(errStr))
 		return
 	}
 
@@ -189,7 +117,5 @@ func SendMessage(ctx *gin.Context) {
 		ResourceType: dbmodel.AuditResourceTicket,
 		ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
 	})
-	ctx.JSON(200, gin.H{
-		"success": true,
-	})
+	ctx.JSON(200, gin.H{"success": true})
 }

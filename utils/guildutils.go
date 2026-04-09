@@ -20,6 +20,7 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/guild"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
+	"github.com/TicketsBot-cloud/worker/i18n"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgtype"
 	errgroup "golang.org/x/sync/errgroup"
@@ -221,4 +222,24 @@ func getGuildPremium(ctx context.Context, g guild.Guild, userId uint64) (bool, e
 	}
 
 	return false, nil
+}
+
+// ResolveGuildLocale resolves the i18n locale for a guild
+// 1. Explicit language set via the dashboard (ActiveLanguage DB table)
+// 2. Guild's Discord preferred_locale (from the bot cache)
+// 3. English fallback
+func ResolveGuildLocale(ctx context.Context, guildId uint64) *i18n.Locale {
+	if langCode, err := dbclient.Client.ActiveLanguage.Get(ctx, guildId); err == nil && langCode != "" {
+		if locale, ok := i18n.MappedByIsoShortCode[langCode]; ok {
+			return locale
+		}
+	}
+
+	if g, err := cache.Instance.GetGuild(ctx, guildId); err == nil && g.PreferredLocale != "" {
+		if locale, ok := i18n.DiscordLocales[g.PreferredLocale]; ok {
+			return locale
+		}
+	}
+
+	return i18n.LocaleEnglish
 }

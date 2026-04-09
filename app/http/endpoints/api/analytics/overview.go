@@ -2,13 +2,15 @@ package api_analytics
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"strconv"
 	"time"
 
 	analytics "github.com/TicketsBot-cloud/analytics-client"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/log"
-	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -70,7 +72,7 @@ func parseDays(ctx *gin.Context) int {
 
 func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	if dbclient.AnalyticsClient == nil {
-		ctx.JSON(503, utils.ErrorStr("Analytics not configured"))
+		_ = ctx.AbortWithError(http.StatusServiceUnavailable, app.NewError(errors.New("analytics client not initialised"), "Analytics are not configured"))
 		return
 	}
 
@@ -135,7 +137,7 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 
 	if err := group.Wait(); err != nil {
 		log.Logger.Error("Failed to retrieve analytics data", zap.Uint64("guild_id", guildId), zap.Error(err))
-		ctx.JSON(500, utils.ErrorStr("Failed to retrieve analytics data. Please try again later."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to retrieve analytics data. Please try again later."))
 		return
 	}
 

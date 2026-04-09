@@ -26,6 +26,7 @@ type tag struct {
 	Content         *string            `json:"content" validate:"omitempty,min=1,max=2000"`
 	UseEmbed        bool               `json:"use_embed"`
 	Embed           *types.CustomEmbed `json:"embed" validate:"omitempty,dive"`
+	KBArticleId     *int               `json:"kb_article_id"`
 }
 
 var (
@@ -100,6 +101,15 @@ func CreateTag(ctx *gin.Context) {
 		}
 	}
 
+	// Validate KB article link if provided
+	if data.KBArticleId != nil {
+		article, ok, err := dbclient.Client.KBArticles.Get(ctx, *data.KBArticleId)
+		if err != nil || !ok || article.GuildId != guildId {
+			ctx.JSON(400, utils.ErrorStr("Invalid knowledge base article"))
+			return
+		}
+	}
+
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
@@ -151,6 +161,7 @@ func CreateTag(ctx *gin.Context) {
 		Content:              data.Content,
 		Embed:                embed,
 		ApplicationCommandId: applicationCommandId,
+		KBArticleId:          data.KBArticleId,
 	}
 
 	if err := dbclient.Client.Tag.Set(ctx, wrapped); err != nil {
@@ -182,6 +193,10 @@ func (t *tag) verifyId() bool {
 }
 
 func (t *tag) verifyContent() bool {
+	if t.KBArticleId != nil {
+		return true // Content sourced from KB article
+	}
+
 	if t.Content != nil { // validator ensures that if this is not nil, > 0 length
 		return true
 	}

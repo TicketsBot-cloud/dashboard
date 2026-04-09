@@ -20,6 +20,7 @@ type Config struct {
 		MetricHost string `env:"METRIC_SERVER_ADDR"`
 		BaseUrl    string `env:"BASE_URL,required"`
 		MainSite   string `env:"MAIN_SITE,required"`
+		KBBaseUrl  string `env:"KB_BASE_URL"`
 		Ratelimit  struct {
 			Window int `env:"WINDOW,required"`
 			Max    int `env:"MAX,required"`

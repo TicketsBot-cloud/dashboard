@@ -75,6 +75,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateWelcomeMessage,
 		validateAccessControlList,
 		validatePendingCategory,
+		validateTranscriptChannelId,
 		validateTicketNotificationChannel,
 		validateCooldownSeconds,
 		validateTicketLimit,

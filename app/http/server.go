@@ -19,6 +19,7 @@ import (
 	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
 	api_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/integrations"
+	api_kb "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/kb"
 	api_panels "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/panel"
 	api_polar "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/polar"
 	api_premium "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/premium"
@@ -91,6 +92,19 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 	router.POST("/callback", middleware.VerifyXTicketsHeader, root.CallbackHandler)
 	router.POST("/logout", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, root.LogoutHandler)
+
+	// Public KB routes — no authentication required
+	kbPublic := router.Group("/api/kb/public/:guildId",
+		rl(middleware.RateLimitTypeIp, 30, time.Minute),
+		rl(middleware.RateLimitTypeIp, 10, time.Second*10),
+	)
+	{
+		kbPublic.GET("/info", api_kb.PublicGuildInfoHandler)
+		kbPublic.GET("/articles", api_kb.PublicListArticlesHandler)
+		kbPublic.GET("/articles/:slug", api_kb.PublicGetArticleBySlugHandler)
+		kbPublic.GET("/categories", api_kb.PublicListCategoriesHandler)
+		kbPublic.GET("/search", api_kb.PublicSearchHandler)
+	}
 
 	apiGroup := router.Group("/api", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.SentryUser, middleware.UpdateLastSeen)
 	{
@@ -276,6 +290,39 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		)
 		guildAuthApiAdmin.PATCH("/integrations/:integrationid", api_integrations.UpdateIntegrationSecretsHandler)
 		guildAuthApiAdmin.DELETE("/integrations/:integrationid", api_integrations.RemoveIntegrationHandler)
+
+		// KB articles
+		guildAuthApiSupport.GET("/kb/articles", api_kb.ListArticlesHandler)
+		guildAuthApiSupport.GET("/kb/articles/:articleId", api_kb.GetArticleHandler)
+		guildAuthApiAdmin.POST("/kb/articles",
+			rl(middleware.RateLimitTypeUser, 10, time.Minute),
+			rl(middleware.RateLimitTypeGuild, 15, time.Minute),
+			api_kb.CreateArticleHandler,
+		)
+		guildAuthApiAdmin.PATCH("/kb/articles/:articleId",
+			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
+			api_kb.UpdateArticleHandler,
+		)
+		guildAuthApiAdmin.DELETE("/kb/articles/:articleId",
+			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
+			api_kb.DeleteArticleHandler,
+		)
+
+		// KB categories
+		guildAuthApiSupport.GET("/kb/categories", api_kb.ListCategoriesHandler)
+		guildAuthApiAdmin.POST("/kb/categories",
+			rl(middleware.RateLimitTypeUser, 10, time.Minute),
+			rl(middleware.RateLimitTypeGuild, 15, time.Minute),
+			api_kb.CreateCategoryHandler,
+		)
+		guildAuthApiAdmin.PATCH("/kb/categories/:catId",
+			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
+			api_kb.UpdateCategoryHandler,
+		)
+		guildAuthApiAdmin.DELETE("/kb/categories/:catId",
+			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
+			api_kb.DeleteCategoryHandler,
+		)
 	}
 
 	userGroup := router.Group("/user", middleware.AuthenticateToken, middleware.UpdateLastSeen)

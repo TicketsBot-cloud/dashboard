@@ -13,7 +13,14 @@ func Cors(config config.Config) func(*gin.Context) {
 	headers := []string{"x-tickets", "Content-Type", "Authorization", "X-CSRF-Token"}
 
 	return func(ctx *gin.Context) {
-		ctx.Header("Access-Control-Allow-Origin", config.Server.BaseUrl)
+		origin := ctx.GetHeader("Origin")
+		allowedOrigin := config.Server.BaseUrl
+
+		if config.Server.KBBaseUrl != "" && origin == config.Server.KBBaseUrl {
+			allowedOrigin = config.Server.KBBaseUrl
+		}
+
+		ctx.Header("Access-Control-Allow-Origin", allowedOrigin)
 		ctx.Header("Access-Control-Allow-Methods", strings.Join(methods, ", "))
 		ctx.Header("Access-Control-Allow-Headers", strings.Join(headers, ", "))
 		ctx.Header("Access-Control-Allow-Credentials", "true")

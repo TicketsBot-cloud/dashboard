@@ -30,6 +30,7 @@ func TagsListHandler(ctx *gin.Context) {
 			Content:         data.Content,
 			UseEmbed:        data.Embed != nil,
 			Embed:           embed,
+			KBArticleId:     data.KBArticleId,
 		}
 	}
 

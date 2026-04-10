@@ -13,6 +13,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type kbCustomisationResponse struct {
+	PrimaryBg    *string `json:"primary_bg,omitempty"`
+	CardBg       *string `json:"card_bg,omitempty"`
+	TextColour   *string `json:"text_colour,omitempty"`
+	AccentColour *string `json:"accent_colour,omitempty"`
+	LogoUrl      *string `json:"logo_url,omitempty"`
+	HideBranding bool    `json:"hide_branding"`
+}
+
+func colourToHex(v *int) *string {
+	if v == nil {
+		return nil
+	}
+	s := fmt.Sprintf("#%06X", *v)
+	return &s
+}
+
 // parsePublicGuildId extracts and validates the guild ID from the URL parameter.
 // Returns the parsed ID and true on success, or writes a 400 response and returns false.
 func parsePublicGuildId(ctx *gin.Context) (uint64, bool) {
@@ -26,9 +43,10 @@ func parsePublicGuildId(ctx *gin.Context) (uint64, bool) {
 }
 
 type publicGuildInfoResponse struct {
-	GuildId string `json:"guild_id"`
-	Name    string `json:"name"`
-	IconUrl string `json:"icon_url"`
+	GuildId       string                   `json:"guild_id"`
+	Name          string                   `json:"name"`
+	IconUrl       string                   `json:"icon_url"`
+	Customisation *kbCustomisationResponse `json:"customisation,omitempty"`
 }
 
 // PublicGuildInfoHandler returns basic guild information for the public knowledge base.
@@ -54,11 +72,25 @@ func PublicGuildInfoHandler(ctx *gin.Context) {
 		iconUrl = fmt.Sprintf("https://cdn.discordapp.com/icons/%d/%s.png", guildId, g.Icon)
 	}
 
-	ctx.JSON(200, publicGuildInfoResponse{
+	response := publicGuildInfoResponse{
 		GuildId: strconv.FormatUint(guildId, 10),
 		Name:    g.Name,
 		IconUrl: iconUrl,
-	})
+	}
+
+	kbSettings, found, err := dbclient.Client.KBSettings.Get(ctx, guildId)
+	if err == nil && found {
+		response.Customisation = &kbCustomisationResponse{
+			PrimaryBg:    colourToHex(kbSettings.PrimaryBg),
+			CardBg:       colourToHex(kbSettings.CardBg),
+			TextColour:   colourToHex(kbSettings.TextColour),
+			AccentColour: colourToHex(kbSettings.AccentColour),
+			LogoUrl:      kbSettings.LogoUrl,
+			HideBranding: kbSettings.HideBranding,
+		}
+	}
+
+	ctx.JSON(200, response)
 }
 
 // PublicListArticlesHandler returns all published articles for a guild.

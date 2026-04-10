@@ -313,6 +313,17 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			api_kb.DeleteArticleHandler,
 		)
 
+		// KB settings
+		guildAuthApiAdmin.GET("/kb/settings", api_kb.GetKBSettingsHandler)
+		guildAuthApiAdmin.PATCH("/kb/settings",
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_kb.UpdateKBSettingsHandler,
+		)
+		guildAuthApiAdmin.POST("/kb/settings/verify-domain",
+			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
+			api_kb.VerifyDomainHandler,
+		)
+
 		// KB categories
 		guildAuthApiSupport.GET("/kb/categories", api_kb.ListCategoriesHandler)
 		guildAuthApiAdmin.POST("/kb/categories",

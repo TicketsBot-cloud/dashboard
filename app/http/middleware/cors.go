@@ -43,22 +43,29 @@ func Cors(config config.Config) func(*gin.Context) {
 	return func(ctx *gin.Context) {
 		origin := ctx.GetHeader("Origin")
 		allowedOrigin := config.Server.BaseUrl
+		allowCredentials := true
 
-		// Check static KB base URL
 		if config.Server.KBBaseUrl != "" && origin == config.Server.KBBaseUrl {
+			// Static KB base URL — trusted, allow credentials
 			allowedOrigin = config.Server.KBBaseUrl
-		} else if origin != "" && origin != allowedOrigin {
-			// Check verified custom KB domains from in-memory cache
-			hostname := strings.TrimPrefix(strings.TrimPrefix(origin, "https://"), "http://")
+		} else if origin != "" && origin != allowedOrigin && strings.HasPrefix(origin, "https://") {
+			// Only accept HTTPS origins for custom domains
+			hostname := strings.TrimPrefix(origin, "https://")
 			if hostname != "" && isVerifiedDomain(hostname) {
-				allowedOrigin = origin
+				// Custom domain — only allow for public KB paths, no credentials
+				if strings.HasPrefix(ctx.Request.URL.Path, "/api/kb/public/") {
+					allowedOrigin = origin
+					allowCredentials = false
+				}
 			}
 		}
 
 		ctx.Header("Access-Control-Allow-Origin", allowedOrigin)
 		ctx.Header("Access-Control-Allow-Methods", strings.Join(methods, ", "))
 		ctx.Header("Access-Control-Allow-Headers", strings.Join(headers, ", "))
-		ctx.Header("Access-Control-Allow-Credentials", "true")
+		if allowCredentials {
+			ctx.Header("Access-Control-Allow-Credentials", "true")
+		}
 		ctx.Header("Access-Control-Max-Age", "600")
 
 		if ctx.Request.Method == http.MethodOptions {

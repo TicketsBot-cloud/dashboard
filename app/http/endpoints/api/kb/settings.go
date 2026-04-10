@@ -151,6 +151,17 @@ func UpdateKBSettingsHandler(ctx *gin.Context) {
 			ctx.JSON(400, utils.ErrorStr("Invalid custom domain format. Please provide a valid hostname without a protocol."))
 			return
 		}
+
+		// Check domain uniqueness — no other guild should have this domain
+		existingGuildId, claimed, err := dbclient.Client.KBSettings.GetGuildByDomain(ctx, domain)
+		if err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to check domain availability"))
+			return
+		}
+		if claimed && existingGuildId != guildId {
+			ctx.JSON(409, utils.ErrorStr("This domain is already in use by another server"))
+			return
+		}
 	}
 
 	// Fetch existing settings (or defaults)

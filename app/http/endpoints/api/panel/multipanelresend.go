@@ -83,7 +83,7 @@ func MultiPanelResend(ctx *gin.Context) {
 	if err != nil {
 		var unwrapped request.RestError
 		if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
-			ctx.JSON(500, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+			ctx.JSON(403, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
 		} else {
 			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
 		}

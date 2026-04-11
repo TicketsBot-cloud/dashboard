@@ -189,6 +189,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		// Must be readable to load transcripts page
 		guildAuthApiSupport.GET("/panels", api_panels.ListPanels)
 		guildAuthApiSupport.GET("/panels/:panelid", api_panels.GetPanel)
+		guildAuthApiAdmin.GET("/panels/permcheck", api_panels.PermCheckHandler)
 		guildAuthApiAdmin.POST("/panels", api_panels.CreatePanel)
 		guildAuthApiAdmin.POST("/panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.ResendPanel)
 		guildAuthApiAdmin.PATCH("/panels/:panelid", api_panels.UpdatePanel)

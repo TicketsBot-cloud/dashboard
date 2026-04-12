@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/botpermissions"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -14,53 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 )
-
-// Required permissions for channel mode, checked against the ticket category
-var channelModeRequired = []permission.Permission{
-	permission.ManageChannels,
-	permission.AddReactions,
-	permission.ViewChannel,
-	permission.SendMessages,
-	permission.SendTTSMessages,
-	permission.EmbedLinks,
-	permission.AttachFiles,
-	permission.MentionEveryone,
-	permission.UseExternalEmojis,
-	permission.ReadMessageHistory,
-	permission.UseApplicationCommands,
-	permission.UseExternalStickers,
-	permission.SendVoiceMessages,
-}
-
-// Required permissions for thread mode, checked against the panel channel
-var threadModeRequired = []permission.Permission{
-	permission.ViewChannel,
-	permission.ReadMessageHistory,
-	permission.EmbedLinks,
-	permission.AttachFiles,
-	permission.UseExternalEmojis,
-	permission.CreatePrivateThreads,
-	permission.SendMessagesInThreads,
-	permission.ManageThreads,
-}
-
-// Required permissions on the notification channel (thread mode only)
-var notifChannelRequired = []permission.Permission{
-	permission.ViewChannel,
-	permission.SendMessages,
-	permission.ReadMessageHistory,
-	permission.UseApplicationCommands,
-	permission.EmbedLinks,
-	permission.AttachFiles,
-}
-
-// Required permissions on the transcript channel (any mode)
-var transcriptChannelRequired = []permission.Permission{
-	permission.ViewChannel,
-	permission.SendMessages,
-	permission.ReadMessageHistory,
-	permission.UseApplicationCommands,
-}
 
 type channelCheckResult struct {
 	ChannelId   string   `json:"channel_id"`
@@ -191,7 +145,7 @@ func PermCheckHandler(c *gin.Context) {
 			if panel.ChannelId != 0 {
 				pr.Channels = append(pr.Channels, checkChannel(
 					botCtx.BotId, guildId, panel.ChannelId, "panel_channel",
-					threadModeRequired, channelMap, roleMap, botRoles,
+					botpermissions.ThreadModeRequired, channelMap, roleMap, botRoles,
 				))
 			}
 		} else {
@@ -203,7 +157,7 @@ func PermCheckHandler(c *gin.Context) {
 			if categoryId != 0 {
 				pr.Channels = append(pr.Channels, checkChannel(
 					botCtx.BotId, guildId, categoryId, "ticket_category",
-					channelModeRequired, channelMap, roleMap, botRoles,
+					botpermissions.ChannelModeRequired, channelMap, roleMap, botRoles,
 				))
 			}
 		}
@@ -217,7 +171,7 @@ func PermCheckHandler(c *gin.Context) {
 			if notifId != nil {
 				pr.Channels = append(pr.Channels, checkChannel(
 					botCtx.BotId, guildId, *notifId, "notification_channel",
-					notifChannelRequired, channelMap, roleMap, botRoles,
+					botpermissions.NotifChannelRequired, channelMap, roleMap, botRoles,
 				))
 			}
 		}
@@ -226,7 +180,7 @@ func PermCheckHandler(c *gin.Context) {
 		if panel.TranscriptChannelId != nil {
 			pr.Channels = append(pr.Channels, checkChannel(
 				botCtx.BotId, guildId, *panel.TranscriptChannelId, "transcript_channel",
-				transcriptChannelRequired, channelMap, roleMap, botRoles,
+				botpermissions.TranscriptChannelRequired, channelMap, roleMap, botRoles,
 			))
 		}
 
@@ -265,81 +219,13 @@ func checkChannel(
 
 	result.ChannelName = ch.Name
 
-	effective := effectivePermissions(guildId, botId, botRoles, ch.PermissionOverwrites, roleMap)
-
-	for _, p := range required {
-		if !permission.HasPermissionRaw(effective, p) {
-			result.Missing = append(result.Missing, p.String())
-		}
+	missing := botpermissions.MissingPermissions(guildId, botId, botRoles, ch.PermissionOverwrites, roleMap, required)
+	for _, p := range missing {
+		result.Missing = append(result.Missing, p.String())
 	}
 
 	result.Ok = len(result.Missing) == 0
 	return result
-}
-
-// effectivePermissions computes the bot's effective permission bitfield in a channel
-// following the standard Discord permission resolution algorithm:
-// https://docs.discord.com/developers/topics/permissions#permission-overwrites
-func effectivePermissions(
-	guildId, botId uint64,
-	botRoles []uint64,
-	overwrites []channel.PermissionOverwrite,
-	roleMap map[uint64]guild.Role,
-) uint64 {
-	// Step 1: base permissions = @everyone permissions OR'd with all bot role permissions.
-	// (@everyone role has the same ID as the guild.)
-	var base uint64
-	if everyoneRole, ok := roleMap[guildId]; ok {
-		base = everyoneRole.Permissions
-	}
-	for _, roleId := range botRoles {
-		if r, ok := roleMap[roleId]; ok {
-			base |= r.Permissions
-		}
-	}
-
-	// Step 2: Administrator at guild level grants everything.
-	if permission.HasPermissionRaw(base, permission.Administrator) {
-		return ^uint64(0)
-	}
-
-	// Step 3: Build an overwrite lookup map.
-	owMap := make(map[uint64]channel.PermissionOverwrite, len(overwrites))
-	for _, ow := range overwrites {
-		owMap[ow.Id] = ow
-	}
-
-	channelPerms := base
-
-	// Step 4: Apply @everyone channel overwrite.
-	if ow, ok := owMap[guildId]; ok {
-		channelPerms &^= ow.Deny
-		channelPerms |= ow.Allow
-	}
-
-	// Step 5: Collect and apply all role overwrites for the bot's roles.
-	var allowBits, denyBits uint64
-	for _, roleId := range botRoles {
-		if ow, ok := owMap[roleId]; ok {
-			denyBits |= ow.Deny
-			allowBits |= ow.Allow
-		}
-	}
-	channelPerms &^= denyBits
-	channelPerms |= allowBits
-
-	// Step 6: Apply member overwrite for the bot itself.
-	if ow, ok := owMap[botId]; ok {
-		channelPerms &^= ow.Deny
-		channelPerms |= ow.Allow
-	}
-
-	// Step 7: Administrator via overwrites also grants everything.
-	if permission.HasPermissionRaw(channelPerms, permission.Administrator) {
-		return ^uint64(0)
-	}
-
-	return channelPerms
 }
 
 func permissionNames(perms []permission.Permission) []string {

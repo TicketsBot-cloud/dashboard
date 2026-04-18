@@ -13,11 +13,14 @@ import (
 	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
+	admin_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/gallery"
+	admin_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/integrations"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
 	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
+	api_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/gallery"
 	api_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/integrations"
 	api_kb "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/kb"
 	api_panels "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/panel"
@@ -119,6 +122,10 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			integrationGroup.DELETE("/:integrationid", api_integrations.DeleteIntegrationHandler)
 			apiGroup.POST("/integrations", api_integrations.CreateIntegrationHandler)
 		}
+
+		// Public gallery routes (authenticated but no guild context)
+		apiGroup.GET("/gallery", api_gallery.BrowseHandler)
+		apiGroup.GET("/gallery/:id", api_gallery.GetHandler)
 
 		apiGroup.GET("/premium/products", api_polar.GetProducts)
 
@@ -325,6 +332,19 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			api_kb.VerifyDomainHandler,
 		)
 
+		// Gallery submissions (guild-scoped)
+		guildAuthApiAdmin.POST("/gallery/submit/:panelid",
+			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
+			api_gallery.SubmitHandler,
+		)
+		guildAuthApiAdmin.GET("/gallery/submissions", api_gallery.SubmissionsHandler)
+		guildAuthApiAdmin.PUT("/gallery/submissions/:listingId", api_gallery.ResubmitHandler)
+		guildAuthApiAdmin.DELETE("/gallery/submissions/:listingId", api_gallery.WithdrawHandler)
+		guildAuthApiAdmin.POST("/gallery/import/:listingId",
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_gallery.ImportHandler,
+		)
+
 		// KB categories
 		guildAuthApiSupport.GET("/kb/categories", api_kb.ListCategoriesHandler)
 		guildAuthApiAdmin.POST("/kb/categories",
@@ -384,6 +404,19 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		adminGroup.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
 		adminGroup.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
 		adminGroup.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
+
+		// Gallery moderation
+		adminGroup.GET("/gallery", admin_gallery.ListHandler)
+		adminGroup.POST("/gallery/:id/approve", admin_gallery.ApproveHandler)
+		adminGroup.POST("/gallery/:id/reject", admin_gallery.RejectHandler)
+		adminGroup.PUT("/gallery/:id", admin_gallery.UpdateHandler)
+		adminGroup.DELETE("/gallery/:id", admin_gallery.RemoveHandler)
+
+		// Custom integration moderation
+		adminGroup.GET("/integrations", admin_integrations.ListIntegrationsHandler)
+		adminGroup.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
+		adminGroup.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
+		adminGroup.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
 	}
 
 	srv := &nethttp.Server{

@@ -59,6 +59,18 @@
         return matches !== null && matches.length === 1 && matches[0] === value;
     }
 
+    $: if (data && !data.ticket_permissions) {
+        data.ticket_permissions = {
+            add_reactions: false,
+            send_tts_messages: false,
+            embed_links: false,
+            attach_files: false,
+            use_external_emojis: false,
+            use_external_stickers: false,
+            send_voice_messages: false,
+        };
+    }
+
     // Replace spaces with dashes in naming scheme as the user types
     $: if (
         data.naming_scheme !== undefined &&
@@ -246,6 +258,15 @@
                 hide_close_button: false,
                 hide_close_with_reason_button: false,
                 hide_claim_button: false,
+                ticket_permissions: {
+                    add_reactions: false,
+                    send_tts_messages: false,
+                    embed_links: false,
+                    attach_files: false,
+                    use_external_emojis: false,
+                    use_external_stickers: false,
+                    send_voice_messages: false,
+                },
                 welcome_message: {
                     fields: [],
                     colour: "#2ECC71",
@@ -618,6 +639,44 @@
         </div>
     </Collapsible>
 
+    <Collapsible
+        tooltip="Grant additional permissions to ticket openers for tickets opened from this panel"
+    >
+        <span slot="header">Ticket Permissions</span>
+        <div slot="content" class="col-1">
+            <div class="permissions-grid">
+                <Checkbox
+                    label="Add Reactions"
+                    bind:value={data.ticket_permissions.add_reactions}
+                />
+                <Checkbox
+                    label="Send TTS Messages"
+                    bind:value={data.ticket_permissions.send_tts_messages}
+                />
+                <Checkbox
+                    label="Embed Links"
+                    bind:value={data.ticket_permissions.embed_links}
+                />
+                <Checkbox
+                    label="Attach Files"
+                    bind:value={data.ticket_permissions.attach_files}
+                />
+                <Checkbox
+                    label="Use External Emojis"
+                    bind:value={data.ticket_permissions.use_external_emojis}
+                />
+                <Checkbox
+                    label="Use External Stickers"
+                    bind:value={data.ticket_permissions.use_external_stickers}
+                />
+                <Checkbox
+                    label="Send Voice Messages"
+                    bind:value={data.ticket_permissions.send_voice_messages}
+                />
+            </div>
+        </div>
+    </Collapsible>
+
     <Collapsible>
         <span slot="header">Access Control</span>
         <div slot="content" class="col-1">
@@ -683,6 +742,14 @@
         justify-content: space-between;
         width: 100%;
         margin-bottom: 10px;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        column-gap: 8px;
+        row-gap: 20px;
+        width: 100%;
     }
 
     .incomplete-row {

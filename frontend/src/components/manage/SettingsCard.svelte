@@ -494,6 +494,18 @@
                                 on:change={validateType}
                             />
                         </div>
+                        <div class="row">
+                             <Dropdown
+                                col1
+                                label="Panel Switch Behavior"
+                                bind:value={data.claim_settings.switch_panel_claim_behavior}
+                            >
+                                <option value={0}>Auto Unclaim - Automatically unclaim if claimer has no access to new panel</option>
+                                <option value={1}>Block Switch - Prevent switching if claimer has no access to new panel</option>
+                                <option value={2}>Remove On Unclaim - Allow switch, remove claimer's access when they unclaim</option>
+                                <option value={3}>Keep Access - Allow switch and keep claimer's access even after unclaiming</option>
+                            </Dropdown>
+                        </div>
                     </div>
                 </Collapsible>
 
@@ -546,23 +558,37 @@
                     tooltip="Define which permissions are given to users in ticket channels"
                 >
                     <span slot="header">Ticket Permissions</span>
-                    <div
-                        slot="content"
-                        class="row"
-                        style="padding-bottom: 10px;"
-                    >
-                        <Checkbox
-                            label="Attach Files"
-                            bind:value={data.ticket_permissions.attach_files}
-                        />
-                        <Checkbox
-                            label="Embed Links"
-                            bind:value={data.ticket_permissions.embed_links}
-                        />
-                        <Checkbox
-                            label="Add Reactions"
-                            bind:value={data.ticket_permissions.add_reactions}
-                        />
+                    <div slot="content" class="col-1">
+                        <div class="permissions-grid">
+                            <Checkbox
+                                label="Add Reactions"
+                                bind:value={data.ticket_permissions.add_reactions}
+                            />
+                            <Checkbox
+                                label="Send TTS Messages"
+                                bind:value={data.ticket_permissions.send_tts_messages}
+                            />
+                            <Checkbox
+                                label="Embed Links"
+                                bind:value={data.ticket_permissions.embed_links}
+                            />
+                            <Checkbox
+                                label="Attach Files"
+                                bind:value={data.ticket_permissions.attach_files}
+                            />
+                            <Checkbox
+                                label="Use External Emojis"
+                                bind:value={data.ticket_permissions.use_external_emojis}
+                            />
+                            <Checkbox
+                                label="Use External Stickers"
+                                bind:value={data.ticket_permissions.use_external_stickers}
+                            />
+                            <Checkbox
+                                label="Send Voice Messages"
+                                bind:value={data.ticket_permissions.send_voice_messages}
+                            />
+                        </div>
                     </div>
                 </Collapsible>
 
@@ -614,6 +640,14 @@
         display: flex;
         width: 100%;
         height: 100%;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        column-gap: 8px;
+        row-gap: 20px;
+        width: 100%;
     }
 
     .row {

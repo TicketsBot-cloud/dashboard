@@ -4,6 +4,8 @@ go 1.25.0
 
 replace github.com/TicketsBot-cloud/database => ../database
 
+//replace github.com/TicketsBot-cloud/common => ../common
+
 //replace github.com/TicketsBot-cloud/gdl => ../gdl
 
 //replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
@@ -18,7 +20,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
-	github.com/TicketsBot-cloud/common v0.0.0-20260210203202-54154661338e
+	github.com/TicketsBot-cloud/common v0.0.0-20260412182419-83b9a6ea08e7
 	github.com/TicketsBot-cloud/database v0.0.0-20260308193919-30a698fefa8b
 	github.com/TicketsBot-cloud/gdl v0.0.0-20260306134952-cccb0116fef6
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc

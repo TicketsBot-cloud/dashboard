@@ -267,6 +267,7 @@ func UpdatePanel(c *gin.Context) {
 		HideCloseButton:           data.HideCloseButton,
 		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
 		HideClaimButton:           data.HideClaimButton,
+		ShowInOpenCommand:         data.ShowInOpenCommand,
 	}
 
 

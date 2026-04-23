@@ -57,6 +57,7 @@ type panelBody struct {
 	HideCloseButton           bool                              `json:"hide_close_button"`
 	HideCloseWithReasonButton bool                              `json:"hide_close_with_reason_button"`
 	HideClaimButton           bool                              `json:"hide_claim_button"`
+	ShowInOpenCommand         bool                              `json:"show_in_open_command"`
 	TicketPermissions         database.TicketPermissions        `json:"ticket_permissions"`
 }
 
@@ -263,6 +264,7 @@ func CreatePanel(c *gin.Context) {
 		HideCloseButton:           data.HideCloseButton,
 		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
 		HideClaimButton:           data.HideClaimButton,
+		ShowInOpenCommand:         data.ShowInOpenCommand,
 	}
 
 

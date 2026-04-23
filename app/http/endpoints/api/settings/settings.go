@@ -16,20 +16,14 @@ import (
 type (
 	Settings struct {
 		database.Settings
-		ClaimSettings     database.ClaimSettings     `json:"claim_settings"`
-		AutoCloseSettings AutoCloseData              `json:"auto_close"`
-		TicketPermissions database.TicketPermissions `json:"ticket_permissions"`
-		Colours           ColourMap                  `json:"colours"`
+		ClaimSettings     database.ClaimSettings `json:"claim_settings"`
+		AutoCloseSettings AutoCloseData          `json:"auto_close"`
+		Colours           ColourMap              `json:"colours"`
 
-		WelcomeMessage    string                `json:"welcome_message"`
-		TicketLimit       uint8                 `json:"ticket_limit"`
-		Category          uint64                `json:"category,string"`
-		ArchiveChannel    *uint64               `json:"archive_channel,string"`
-		NamingScheme      database.NamingScheme `json:"naming_scheme"`
-		UsersCanClose     bool                  `json:"users_can_close"`
-		CloseConfirmation bool                  `json:"close_confirmation"`
-		FeedbackEnabled   bool                  `json:"feedback_enabled"`
-		Language          *string               `json:"language"`
+		UsersCanClose     bool    `json:"users_can_close"`
+		CloseConfirmation bool    `json:"close_confirmation"`
+		FeedbackEnabled   bool    `json:"feedback_enabled"`
+		Language          *string `json:"language"`
 	}
 
 	AutoCloseData struct {
@@ -68,50 +62,12 @@ func loadSettings(ctx context.Context, guildId uint64) (Settings, error) {
 	})
 
 	group.Go(func() (err error) {
-		settings.TicketPermissions, err = dbclient.Client.TicketPermissions.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
 		settings.Colours, err = getColourMap(guildId)
 		return
 	})
 
 	group.Go(func() (err error) {
-		settings.WelcomeMessage, err = dbclient.Client.WelcomeMessages.Get(ctx, guildId)
-		if err == nil && settings.WelcomeMessage == "" {
-			settings.WelcomeMessage = "Thank you for contacting support.\nPlease describe your issue and await a response."
-		}
-
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.TicketLimit, err = dbclient.Client.TicketLimit.Get(ctx, guildId)
-		if err == nil && settings.TicketLimit == 0 {
-			settings.TicketLimit = 5 // Set default
-		}
-
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.Category, err = dbclient.Client.ChannelCategory.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.ArchiveChannel, err = dbclient.Client.ArchiveChannel.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
 		settings.UsersCanClose, err = dbclient.Client.UsersCanClose.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.NamingScheme, err = dbclient.Client.NamingScheme.Get(ctx, guildId)
 		return
 	})
 

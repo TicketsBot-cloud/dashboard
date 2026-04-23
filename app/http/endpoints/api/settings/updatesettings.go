@@ -38,13 +38,6 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 		return
 	}
 
-	// TODO: Use proper context
-	channels, err := botContext.GetGuildChannels(context.Background(), guildId)
-	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to fetch your server's channels. Please try again."))
-		return
-	}
-
 	// Includes voting
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
@@ -74,7 +67,6 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 		return settings.updateClaimSettings(ctx, guildId)
 	})
 
-	addToWaitGroup(group, guildId, settings.updateTicketPermissions)
 	addToWaitGroup(group, guildId, settings.updateLanguage)
 	addToWaitGroup(group, guildId, settings.updateAutoClose)
 
@@ -87,11 +79,6 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 		return
 	}
 
-	validWelcomeMessage := settings.updateWelcomeMessage(guildId)
-	validTicketLimit := settings.updateTicketLimit(guildId)
-	validArchiveChannel := settings.updateArchiveChannel(channels, guildId)
-	validCategory := settings.updateCategory(channels, guildId)
-	validNamingScheme := settings.updateNamingScheme(guildId)
 	settings.updateUsersCanClose(guildId)
 	settings.updateCloseConfirmation(guildId)
 	settings.updateFeedbackEnabled(guildId)
@@ -106,11 +93,6 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	})
 
 	ctx.JSON(200, gin.H{
-		"welcome_message": validWelcomeMessage,
-		"ticket_limit":    validTicketLimit,
-		"archive_channel": validArchiveChannel,
-		"category":        validCategory,
-		"naming_scheme":   validNamingScheme,
 	})
 }
 
@@ -131,40 +113,6 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 	// Sync checks
 	if s.ClaimSettings.SupportCanType && !s.ClaimSettings.SupportCanView {
 		return errors.New("Must be able to view channel to type")
-	}
-
-	if s.Settings.UseThreads && s.TicketNotificationChannel == nil {
-		return errors.New("You must select a ticket notification channel")
-	}
-
-	// Check if any panels depend on global thread mode before disabling it
-	if !s.Settings.UseThreads {
-		panels, err := dbclient.Client.Panel.GetByGuild(ctx, guildId)
-		if err != nil {
-			return fmt.Errorf("Failed to check panel dependencies: %w", err)
-		}
-
-		for _, panel := range panels {
-			if panel.UseThreads && panel.TicketNotificationChannel == nil {
-				return errors.New("Cannot disable global thread mode: panel \"" + panel.Title + "\" is using the global notification channel setting. Please configure a notification channel for this panel first, or disable thread mode on the panel.")
-			}
-		}
-
-		s.TicketNotificationChannel = nil
-	}
-
-	// Check if any panels depend on global notification channel before removing it
-	if s.TicketNotificationChannel == nil && s.Settings.UseThreads {
-		panels, err := dbclient.Client.Panel.GetByGuild(ctx, guildId)
-		if err != nil {
-			return fmt.Errorf("Failed to check panel dependencies: %w", err)
-		}
-
-		for _, panel := range panels {
-			if panel.UseThreads && panel.TicketNotificationChannel == nil {
-				return errors.New("Cannot remove global notification channel: panel \"" + panel.Title + "\" is using it. Please configure a notification channel for this panel first, or disable thread mode on the panel.")
-			}
-		}
 	}
 
 	if s.Language != nil {
@@ -274,28 +222,6 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 		return nil
 	})
 
-	group.Go(func() error {
-		if s.Settings.TicketNotificationChannel != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-			defer cancel()
-
-			ch, err := cache.Instance.GetChannel(ctx, *s.Settings.TicketNotificationChannel)
-			if err != nil {
-				return fmt.Errorf("Invalid ticket notification channel")
-			}
-
-			if ch.GuildId != guildId {
-				return fmt.Errorf("Ticket notification channel guild ID does not match")
-			}
-
-			if ch.Type != channel.ChannelTypeGuildText {
-				return fmt.Errorf("Ticket notification channel is not a text channel")
-			}
-		}
-
-		return nil
-	})
-
 	return group.Wait()
 }
 
@@ -303,82 +229,6 @@ func addToWaitGroup(group *errgroup.Group, guildId uint64, f func(uint64) error)
 	group.Go(func() error {
 		return f(guildId)
 	})
-}
-
-func (s *Settings) updateWelcomeMessage(guildId uint64) bool {
-	if s.WelcomeMessage == "" || len(s.WelcomeMessage) > 4096 {
-		return false
-	}
-
-	go dbclient.Client.WelcomeMessages.Set(context.Background(), guildId, s.WelcomeMessage)
-	return true
-}
-
-func (s *Settings) updateTicketLimit(guildId uint64) bool {
-	if s.TicketLimit > 10 || s.TicketLimit < 1 {
-		return false
-	}
-
-	go dbclient.Client.TicketLimit.Set(context.Background(), guildId, s.TicketLimit)
-	return true
-}
-
-func (s *Settings) updateCategory(channels []channel.Channel, guildId uint64) bool {
-	var valid bool
-	for _, ch := range channels {
-		if ch.Id == s.Category && ch.Type == channel.ChannelTypeGuildCategory {
-			valid = true
-			break
-		}
-	}
-
-	if !valid {
-		return false
-	}
-
-	go dbclient.Client.ChannelCategory.Set(context.Background(), guildId, s.Category)
-	return true
-}
-
-func (s *Settings) updateArchiveChannel(channels []channel.Channel, guildId uint64) bool {
-	if s.ArchiveChannel == nil {
-		go dbclient.Client.ArchiveChannel.Set(context.Background(), guildId, nil)
-		return true
-	}
-
-	var valid bool
-	for _, ch := range channels {
-		if ch.Id == *s.ArchiveChannel && ch.Type == channel.ChannelTypeGuildText {
-			valid = true
-			break
-		}
-	}
-
-	if !valid {
-		return false
-	}
-
-	go dbclient.Client.ArchiveChannel.Set(context.Background(), guildId, s.ArchiveChannel)
-	return true
-}
-
-var validScheme = []database.NamingScheme{database.Id, database.Username}
-
-func (s *Settings) updateNamingScheme(guildId uint64) bool {
-	var valid bool
-	for _, scheme := range validScheme {
-		if scheme == s.NamingScheme {
-			valid = true
-			break
-		}
-	}
-
-	if !valid {
-		return false
-	}
-
-	go dbclient.Client.NamingScheme.Set(context.Background(), guildId, s.NamingScheme)
-	return true
 }
 
 func (s *Settings) updateUsersCanClose(guildId uint64) {
@@ -399,10 +249,6 @@ func (s *Settings) updateLanguage(guildId uint64) error {
 	} else {
 		return dbclient.Client.ActiveLanguage.Set(context.Background(), guildId, string(*s.Language))
 	}
-}
-
-func (s *Settings) updateTicketPermissions(guildId uint64) error {
-	return dbclient.Client.TicketPermissions.Set(context.Background(), guildId, s.TicketPermissions) // No validation required
 }
 
 func (s *Settings) updateColours(guildId uint64) error {

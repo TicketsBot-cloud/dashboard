@@ -464,7 +464,7 @@ func validateTranscriptChannelId(ctx PanelValidationContext) validation.Validati
 
 func validateTicketNotificationChannel(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		// Always validate the channel if provided, regardless of UseThreads
+		// Always validate the channel if provided
 		if ctx.Data.TicketNotificationChannel != nil {
 			channelFound := false
 			for _, ch := range ctx.Channels {
@@ -482,24 +482,9 @@ func validateTicketNotificationChannel(ctx PanelValidationContext) validation.Va
 			}
 		}
 
-		// If UseThreads is false, notification channel is not applicable
-		if !ctx.Data.UseThreads {
-			return nil
-		}
-
-		// If UseThreads is true and no panel-specific channel, check global setting exists
-		if ctx.Data.TicketNotificationChannel == nil {
-			globalCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-			defer cancel()
-
-			settings, err := dbclient.Client.Settings.Get(globalCtx, ctx.GuildId)
-			if err != nil {
-				return fmt.Errorf("Failed to fetch global settings: %w", err)
-			}
-
-			if settings.TicketNotificationChannel == nil {
-				return validation.NewInvalidInputError("You must select a ticket notification channel for this panel, or configure a global ticket notification channel in settings")
-			}
+		// Thread mode requires a per-panel notification channel
+		if ctx.Data.UseThreads && ctx.Data.TicketNotificationChannel == nil {
+			return validation.NewInvalidInputError("You must select a ticket notification channel for this panel when thread mode is enabled")
 		}
 
 		return nil

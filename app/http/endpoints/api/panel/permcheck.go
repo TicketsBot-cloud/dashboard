@@ -45,7 +45,6 @@ func PermCheckHandler(c *gin.Context) {
 
 	// --- Phase 1: load DB data in parallel ---
 	var panels []database.Panel
-	var settings database.Settings
 	var defaultCategoryId uint64
 
 	g1, ctx1 := errgroup.WithContext(c)
@@ -53,12 +52,6 @@ func PermCheckHandler(c *gin.Context) {
 	g1.Go(func() error {
 		var err error
 		panels, err = dbclient.Client.Panel.GetByGuild(ctx1, guildId)
-		return err
-	})
-
-	g1.Go(func() error {
-		var err error
-		settings, err = dbclient.Client.Settings.Get(ctx1, guildId)
 		return err
 	})
 
@@ -130,7 +123,7 @@ func PermCheckHandler(c *gin.Context) {
 	}
 
 	for _, panel := range panels {
-		useThreads := settings.UseThreads || panel.UseThreads
+		useThreads := panel.UseThreads
 
 		pr := panelPermResult{
 			PanelId:    panel.PanelId,
@@ -163,17 +156,11 @@ func PermCheckHandler(c *gin.Context) {
 		}
 
 		// 2. Notification channel (thread mode only)
-		if useThreads {
-			notifId := settings.TicketNotificationChannel
-			if panel.TicketNotificationChannel != nil {
-				notifId = panel.TicketNotificationChannel
-			}
-			if notifId != nil {
-				pr.Channels = append(pr.Channels, checkChannel(
-					botCtx.BotId, guildId, *notifId, "notification_channel",
-					botpermissions.NotifChannelRequired, channelMap, roleMap, botRoles,
-				))
-			}
+		if useThreads && panel.TicketNotificationChannel != nil {
+			pr.Channels = append(pr.Channels, checkChannel(
+				botCtx.BotId, guildId, *panel.TicketNotificationChannel, "notification_channel",
+				botpermissions.NotifChannelRequired, channelMap, roleMap, botRoles,
+			))
 		}
 
 		// 3. Transcript channel (any mode)

@@ -18,7 +18,6 @@ import (
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
-	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
 	api_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/gallery"
 	api_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/integrations"
@@ -182,11 +181,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		// Must be readable to load transcripts page
 		guildAuthApiSupport.GET("/settings", api_settings.GetSettingsHandler)
 		guildAuthApiAdmin.POST("/settings", api_settings.UpdateSettingsHandler)
-
-		guildAuthApiAdmin.POST("/import", api_import.ImportHandler)
-		guildAuthApiAdmin.GET("/import/runs", api_import.GetRuns)
-		guildAuthApiAdmin.GET("/import/presign", api_import.PresignURL)
-		guildAuthApiAdmin.GET("/import/queue", api_import.CurrentQueue)
 
 		guildAuthApiSupport.GET("/blacklist", api_blacklist.GetBlacklistHandler)
 		guildAuthApiSupport.POST("/blacklist", api_blacklist.AddBlacklistHandler)

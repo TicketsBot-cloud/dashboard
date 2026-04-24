@@ -7,6 +7,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 	"github.com/TicketsBot-cloud/common/observability"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/common/secureproxy"
+	"github.com/TicketsBot-cloud/common/workflowbus"
+	api_automations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/automations"
 	app "github.com/TicketsBot-cloud/dashboard/app/http"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
@@ -122,6 +125,33 @@ func main() {
 	} else {
 		c := premium.NewMockLookupClient(premium.Whitelabel, model.EntitlementSourcePatreon)
 		rpc.PremiumClient = &c
+	}
+
+	// Workflow webhook producer — used by the public /api/webhook/automation/...
+	// endpoint to emit signed trigger envelopes to Kafka. Optional; if Kafka isn't
+	// configured the webhook endpoint returns 503.
+	{
+		kafkaBrokersEnv := os.Getenv("KAFKA_BROKERS")
+		var kafkaBrokers []string
+		if kafkaBrokersEnv != "" {
+			for _, b := range strings.Split(kafkaBrokersEnv, ",") {
+				if t := strings.TrimSpace(b); t != "" {
+					kafkaBrokers = append(kafkaBrokers, t)
+				}
+			}
+		}
+		if len(kafkaBrokers) > 0 {
+			wfSigner := workflowbus.NewSigner([]byte(os.Getenv(workflowbus.SecretEnvVar)))
+			wfProducer, err := workflowbus.NewProducer(kafkaBrokers, logger.With(zap.String("service", "workflowbus")), wfSigner)
+			if err != nil {
+				logger.Error("Failed to create webhook producer — webhooks will return 503", zap.Error(err))
+			} else {
+				workflowbus.SetGlobal(wfProducer)
+				api_automations.SetWebhookProducer(wfProducer)
+				defer wfProducer.Close()
+				logger.Info("Workflow webhook producer ready")
+			}
+		}
 	}
 
 	// Load verified KB custom domains into CORS cache

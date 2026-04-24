@@ -4,7 +4,7 @@ go 1.25.0
 
 replace github.com/TicketsBot-cloud/database => ../database
 
-//replace github.com/TicketsBot-cloud/common => ../common
+replace github.com/TicketsBot-cloud/common => ../common
 
 //replace github.com/TicketsBot-cloud/gdl => ../gdl
 
@@ -47,6 +47,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/polarsource/polar-go v0.15.0
 	github.com/prometheus/client_golang v1.22.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/weppos/publicsuffix-go v0.20.0
@@ -130,6 +131,8 @@ require (
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
 	github.com/tinylib/msgp v1.4.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/twmb/franz-go v1.19.0 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.11.2 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.opentelemetry.io/otel v1.36.0 // indirect
 	go.opentelemetry.io/otel/trace v1.36.0 // indirect

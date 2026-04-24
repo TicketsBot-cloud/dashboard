@@ -17,6 +17,7 @@ import (
 	admin_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/integrations"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
+	api_automations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/automations"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
 	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
@@ -95,6 +96,14 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 	router.POST("/callback", middleware.VerifyXTicketsHeader, root.CallbackHandler)
 	router.POST("/logout", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, root.LogoutHandler)
+
+	// Public webhook endpoint for automation triggers — no dashboard auth, validated
+	// by per-automation secret in the URL path. Rate-limited by IP.
+	router.POST("/api/webhook/automation/:guildId/:secret",
+		rl(middleware.RateLimitTypeIp, 30, time.Minute),
+		rl(middleware.RateLimitTypeIp, 5, time.Second*10),
+		api_automations.HandleWebhook,
+	)
 
 	// Public KB routes — no authentication required
 	kbPublic := router.Group("/api/kb/public/:guildId",
@@ -222,6 +231,23 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.PATCH("/forms/:form_id", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.UpdateForm)
 		guildAuthApiAdmin.DELETE("/forms/:form_id", api_forms.DeleteForm)
 		guildAuthApiAdmin.PATCH("/forms/:form_id/inputs", api_forms.UpdateInputs)
+
+		// Automations — admin-only CRUD + publish/enable lifecycle.
+		guildAuthApiAdmin.GET("/automations", api_automations.ListAutomations)
+		guildAuthApiAdmin.GET("/automations/:automationId", api_automations.GetAutomation)
+		guildAuthApiAdmin.POST("/automations", rl(middleware.RateLimitTypeGuild, 20, time.Hour), api_automations.CreateAutomation)
+		guildAuthApiAdmin.PATCH("/automations/:automationId", rl(middleware.RateLimitTypeGuild, 120, time.Hour), api_automations.UpdateAutomation)
+		guildAuthApiAdmin.DELETE("/automations/:automationId", api_automations.DeleteAutomation)
+		guildAuthApiAdmin.POST("/automations/:automationId/publish", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_automations.PublishAutomation)
+		guildAuthApiAdmin.POST("/automations/:automationId/revert", api_automations.RevertAutomation)
+		guildAuthApiAdmin.POST("/automations/:automationId/enable", api_automations.EnableAutomation)
+		guildAuthApiAdmin.POST("/automations/:automationId/disable", api_automations.DisableAutomation)
+		guildAuthApiAdmin.GET("/automations/:automationId/runs", api_automations.ListRuns)
+		guildAuthApiAdmin.GET("/automations/:automationId/stats", api_automations.GetStats)
+		guildAuthApiAdmin.GET("/automations/:automationId/export", api_automations.ExportAutomation)
+		guildAuthApiAdmin.POST("/automations/import", rl(middleware.RateLimitTypeGuild, 10, time.Hour), api_automations.ImportAutomation)
+		guildAuthApiAdmin.GET("/automation-templates", api_automations.ListTemplates)
+		guildAuthApiAdmin.POST("/automation-templates/:templateId/clone", rl(middleware.RateLimitTypeGuild, 20, time.Hour), api_automations.CloneTemplate)
 
 		// Should be a GET, but easier to take a body for development purposes
 		guildAuthApiSupport.POST("/transcripts",

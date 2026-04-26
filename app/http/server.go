@@ -37,6 +37,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
+	"github.com/TicketsBot-cloud/dashboard/internal/admin"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/penglongli/gin-metrics/ginmetrics"
@@ -392,41 +393,52 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		}
 	}
 
-	adminGroup := apiGroup.Group("/admin", middleware.AdminOnly)
+	adminBase := apiGroup.Group("/admin", middleware.RequireAdminTier(admin.AdminTierHelper))
 	{
-		adminGroup.GET("/bot-staff", botstaff.ListBotStaffHandler)
-		adminGroup.POST("/bot-staff/:userid", botstaff.AddBotStaffHandler)
-		adminGroup.DELETE("/bot-staff/:userid", botstaff.RemoveBotStaffHandler)
-		adminGroup.GET("/entitlements", admin_entitlements.ListEntitlementsHandler)
-		adminGroup.GET("/premium-keys", admin_premiumkeys.ListPremiumKeysHandler)
-		adminGroup.GET("/global-blacklist", admin_globalblacklist.ListHandler)
-		adminGroup.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)
-		adminGroup.DELETE("/global-blacklist/:userid", admin_globalblacklist.RemoveHandler)
-		adminGroup.GET("/server-blacklist", admin_serverblacklist.ListHandler)
-		adminGroup.POST("/server-blacklist/:guildid", admin_serverblacklist.AddHandler)
-		adminGroup.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
-		adminGroup.GET("/skus", admin_skus.ListHandler)
-		adminGroup.POST("/skus", admin_skus.CreateHandler)
-		adminGroup.PUT("/skus/:skuid", admin_skus.UpdateHandler)
-		adminGroup.DELETE("/skus/:skuid", admin_skus.DeleteHandler)
-		adminGroup.GET("/polar-products", admin_polarproducts.ListHandler)
-		adminGroup.POST("/polar-products", admin_polarproducts.CreateHandler)
-		adminGroup.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
-		adminGroup.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
-		adminGroup.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
+		// Helper-accessible (read-only)
+		adminBase.GET("/server-blacklist", admin_serverblacklist.ListHandler)
+		adminBase.GET("/gallery", admin_gallery.ListHandler)
 
-		// Gallery moderation
-		adminGroup.GET("/gallery", admin_gallery.ListHandler)
-		adminGroup.POST("/gallery/:id/approve", admin_gallery.ApproveHandler)
-		adminGroup.POST("/gallery/:id/reject", admin_gallery.RejectHandler)
-		adminGroup.PUT("/gallery/:id", admin_gallery.UpdateHandler)
-		adminGroup.DELETE("/gallery/:id", admin_gallery.RemoveHandler)
+		// Admin-tier routes
+		adminTier := adminBase.Group("", middleware.RequireAdminTier(admin.AdminTierAdmin))
+		{
+			adminTier.GET("/bot-staff", botstaff.ListBotStaffHandler)
+			adminTier.POST("/bot-staff/:userid", botstaff.AddBotStaffHandler)
+			adminTier.PUT("/bot-staff/:userid", botstaff.UpdateBotStaffHandler)
+			adminTier.DELETE("/bot-staff/:userid", botstaff.RemoveBotStaffHandler)
+			adminTier.GET("/premium-keys", admin_premiumkeys.ListPremiumKeysHandler)
+			adminTier.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
 
-		// Custom integration moderation
-		adminGroup.GET("/integrations", admin_integrations.ListIntegrationsHandler)
-		adminGroup.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
-		adminGroup.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
-		adminGroup.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
+			adminTier.POST("/gallery/:id/approve", admin_gallery.ApproveHandler)
+			adminTier.POST("/gallery/:id/reject", admin_gallery.RejectHandler)
+			adminTier.PUT("/gallery/:id", admin_gallery.UpdateHandler)
+			adminTier.DELETE("/gallery/:id", admin_gallery.RemoveHandler)
+
+			adminTier.POST("/server-blacklist/:guildid", admin_serverblacklist.AddHandler)
+			adminTier.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
+
+			adminTier.GET("/integrations", admin_integrations.ListIntegrationsHandler)
+			adminTier.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
+			adminTier.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
+			adminTier.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
+		}
+
+		// Owner-only routes
+		ownerTier := adminBase.Group("", middleware.RequireAdminTier(admin.AdminTierOwner))
+		{
+			ownerTier.GET("/entitlements", admin_entitlements.ListEntitlementsHandler)
+			ownerTier.GET("/global-blacklist", admin_globalblacklist.ListHandler)
+			ownerTier.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)
+			ownerTier.DELETE("/global-blacklist/:userid", admin_globalblacklist.RemoveHandler)
+			ownerTier.GET("/skus", admin_skus.ListHandler)
+			ownerTier.POST("/skus", admin_skus.CreateHandler)
+			ownerTier.PUT("/skus/:skuid", admin_skus.UpdateHandler)
+			ownerTier.DELETE("/skus/:skuid", admin_skus.DeleteHandler)
+			ownerTier.GET("/polar-products", admin_polarproducts.ListHandler)
+			ownerTier.POST("/polar-products", admin_polarproducts.CreateHandler)
+			ownerTier.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
+			ownerTier.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
+		}
 	}
 
 	srv := &nethttp.Server{

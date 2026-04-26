@@ -12,11 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type addBotStaffBody struct {
+type updateBotStaffBody struct {
 	Tier dbmodel.BotStaffTier `json:"tier"`
 }
 
-func AddBotStaffHandler(ctx *gin.Context) {
+func UpdateBotStaffHandler(ctx *gin.Context) {
 	authUserId := ctx.Keys["userid"].(uint64)
 	requesterTier := admin.AdminTier(ctx.Keys["admin_tier"].(string))
 
@@ -26,7 +26,7 @@ func AddBotStaffHandler(ctx *gin.Context) {
 		return
 	}
 
-	var body addBotStaffBody
+	var body updateBotStaffBody
 	if err := ctx.BindJSON(&body); err != nil {
 		ctx.JSON(400, utils.ErrorStr("Invalid request body."))
 		return
@@ -38,22 +38,41 @@ func AddBotStaffHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Admins can only assign helper tier; only owner can assign admin tier
+	// Fetch the target's current tier for validation and audit log
+	oldTier, err := database.Client.BotStaff.GetTier(ctx, userId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+		return
+	}
+
+	if oldTier == "" {
+		ctx.JSON(404, utils.ErrorStr("User is not a staff member."))
+		return
+	}
+
+	// Admins can only set helper tier; only owner can promote to admin
 	if body.Tier == dbmodel.BotStaffTierAdmin && requesterTier != admin.AdminTierOwner {
 		ctx.JSON(403, utils.ErrorStr("Only the owner can assign the admin tier."))
 		return
 	}
 
-	if err := database.Client.BotStaff.Add(ctx, userId, body.Tier); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
+	// Only owner can demote an admin
+	if oldTier == dbmodel.BotStaffTierAdmin && requesterTier != admin.AdminTierOwner {
+		ctx.JSON(403, utils.ErrorStr("Only the owner can change an admin's tier."))
+		return
+	}
+
+	if err := database.Client.BotStaff.UpdateTier(ctx, userId, body.Tier); err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to update record. Please try again."))
 		return
 	}
 
 	audit.Log(audit.LogEntry{
 		UserId:       authUserId,
-		ActionType:   dbmodel.AuditActionBotStaffAdd,
+		ActionType:   dbmodel.AuditActionBotStaffTierUpdate,
 		ResourceType: dbmodel.AuditResourceBotStaff,
 		ResourceId:   audit.StringPtr(fmt.Sprintf("%d", userId)),
+		OldData:      map[string]any{"target_user_id": userId, "tier": oldTier},
 		NewData:      map[string]any{"target_user_id": userId, "tier": body.Tier},
 	})
 	ctx.Status(204)

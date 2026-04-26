@@ -12,6 +12,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
+	"github.com/TicketsBot-cloud/dashboard/internal/admin"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
@@ -97,7 +98,7 @@ func CallbackHandler(c *gin.Context) {
 			"id":       strconv.FormatUint(currentUser.Id, 10),
 			"username": currentUser.Username,
 			"avatar":   currentUser.Avatar,
-			"admin":    utils.Contains(config.Conf.Admins, currentUser.Id),
+			"admin_tier": admin.GetAdminTier(c.Request.Context(), currentUser.Id),
 		},
 		"guilds": guilds,
 	}

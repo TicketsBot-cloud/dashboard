@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	Admins          []uint64      `env:"ADMINS"`
+	Owner           uint64        `env:"OWNER"`
 	ForceWhitelabel []uint64      `env:"FORCED_WHITELABEL"`
 	Debug           bool          `env:"DEBUG"`
 	SentryDsn       *string       `env:"SENTRY_DSN"`

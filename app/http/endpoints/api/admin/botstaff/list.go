@@ -7,15 +7,17 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 )
 
 type userData struct {
-	Id        uint64 `json:"id,string"`
-	Username  string `json:"username"`
-	AvatarUrl string `json:"avatar_url,omitempty"`
+	Id        uint64              `json:"id,string"`
+	Username  string              `json:"username"`
+	AvatarUrl string              `json:"avatar_url,omitempty"`
+	Tier      dbmodel.BotStaffTier `json:"tier"`
 }
 
 func ListBotStaffHandler(ctx *gin.Context) {
@@ -29,16 +31,17 @@ func ListBotStaffHandler(ctx *gin.Context) {
 	group, _ := errgroup.WithContext(context.Background())
 
 	users := make([]userData, len(staff))
-	for i, userId := range staff {
+	for i, entry := range staff {
 		i := i
-		userId := userId
+		entry := entry
 
 		group.Go(func() error {
 			data := userData{
-				Id: userId,
+				Id:   entry.UserId,
+				Tier: entry.Tier,
 			}
 
-			user, err := cache.Instance.GetUser(ctx, userId)
+			user, err := cache.Instance.GetUser(ctx, entry.UserId)
 			if err == nil {
 				data.Username = user.Username
 				data.AvatarUrl = user.AvatarUrl(256)

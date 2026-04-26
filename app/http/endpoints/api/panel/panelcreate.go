@@ -57,6 +57,7 @@ type panelBody struct {
 	HideCloseButton           bool                              `json:"hide_close_button"`
 	HideCloseWithReasonButton bool                              `json:"hide_close_with_reason_button"`
 	HideClaimButton           bool                              `json:"hide_claim_button"`
+	TicketPermissions         database.TicketPermissions        `json:"ticket_permissions"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -154,6 +155,10 @@ func CreatePanel(c *gin.Context) {
 		}
 
 		return
+	}
+
+	if !data.UseThreads {
+		data.TicketNotificationChannel = nil
 	}
 
 	// Do tag validation
@@ -260,6 +265,7 @@ func CreatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 	}
 
+
 	createOptions := panelCreateOptions{
 		TeamIds:            data.Teams,             // Already validated
 		AccessControlRules: data.AccessControlList, // Already validated
@@ -291,6 +297,11 @@ func CreatePanel(c *gin.Context) {
 	panelId, err := storePanel(c, panel, createOptions)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel to database"))
+		return
+	}
+
+	if err := dbclient.Client.PanelTicketPermissions.Set(c, panelId, data.TicketPermissions); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))
 		return
 	}
 

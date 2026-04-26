@@ -9,7 +9,6 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/botstaff"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
-	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
 	api_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/integrations"
 	api_panels "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/panel"
@@ -126,11 +125,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/settings", api_settings.GetSettingsHandler)
 		guildAuthApiAdmin.POST("/settings", api_settings.UpdateSettingsHandler)
 
-		guildAuthApiAdmin.POST("/import", api_import.ImportHandler)
-		guildAuthApiAdmin.GET("/import/runs", api_import.GetRuns)
-		guildAuthApiAdmin.GET("/import/presign", api_import.PresignURL)
-		guildAuthApiAdmin.GET("/import/queue", api_import.CurrentQueue)
-
 		guildAuthApiSupport.GET("/blacklist", api_blacklist.GetBlacklistHandler)
 		guildAuthApiSupport.POST("/blacklist", api_blacklist.AddBlacklistHandler)
 		guildAuthApiSupport.DELETE("/blacklist/user/:user", api_blacklist.RemoveUserBlacklistHandler)
@@ -191,6 +185,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.POST("/tickets/:ticketId", rl(middleware.RateLimitTypeGuild, 5, time.Second*5), api_ticket.SendMessage)
 		guildAuthApiSupport.POST("/tickets/:ticketId/tag", rl(middleware.RateLimitTypeGuild, 5, time.Second*5), api_ticket.SendTag)
 		guildAuthApiSupport.DELETE("/tickets/:ticketId", api_ticket.CloseTicket)
+		guildAuthApiSupport.PATCH("/tickets/:ticketId/close-reason", api_ticket.UpdateCloseReason)
 
 		// Websockets do not support headers: so we must implement authentication over the WS connection
 		router.GET("/api/:id/tickets/:ticketId/live-chat", livechat.GetLiveChatHandler(sm))
@@ -205,6 +200,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.PUT("/team/:teamid/:snowflake", rl(middleware.RateLimitTypeGuild, 5, time.Second*10), api_team.AddMember)
 		guildAuthApiAdmin.DELETE("/team/:teamid", api_team.DeleteTeam)
 		guildAuthApiAdmin.DELETE("/team/:teamid/:snowflake", rl(middleware.RateLimitTypeGuild, 30, time.Minute), api_team.RemoveMember)
+		guildAuthApiAdmin.GET("/team/:teamid/permissions", api_team.GetTeamPermissions)
+		guildAuthApiAdmin.PATCH("/team/:teamid/permissions", rl(middleware.RateLimitTypeGuild, 5, time.Second*10), api_team.UpdateTeamPermissions)
 
 		guildAuthApiAdmin.GET("/staff-override", api_override.GetOverrideHandler)
 		guildAuthApiAdmin.POST("/staff-override", api_override.CreateOverrideHandler)

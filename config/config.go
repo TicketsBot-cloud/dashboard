@@ -65,13 +65,6 @@ type Config struct {
 		IsSandbox          bool   `env:"IS_SANDBOX"`
 		CheckoutSuccessUrl string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
 	} `envPrefix:"POLAR_"`
-	Clickhouse struct {
-		Address  string `env:"ADDR"`
-		Threads  int    `env:"THREADS" envDefault:"2"`
-		Database string `env:"DATABASE" envDefault:"analytics"`
-		Username string `env:"USERNAME"`
-		Password string `env:"PASSWORD"`
-	} `envPrefix:"CLICKHOUSE_"`
 	SecureProxyUrl string `env:"SECURE_PROXY_URL"`
 }
 

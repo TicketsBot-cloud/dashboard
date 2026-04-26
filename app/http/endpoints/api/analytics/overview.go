@@ -2,12 +2,10 @@ package api_analytics
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
-	analytics "github.com/TicketsBot-cloud/analytics-client"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/log"
@@ -19,14 +17,14 @@ import (
 
 type (
 	overviewResponse struct {
-		TotalTickets      uint64                  `json:"total_tickets"`
-		OpenTickets       uint64                  `json:"open_tickets"`
-		FirstResponseTime tripleWindowSeconds     `json:"first_response_time"`
-		ResolutionTime    tripleWindowSeconds     `json:"resolution_time"`
-		AverageRating     float64                 `json:"average_rating"`
-		FeedbackCount     uint64                  `json:"feedback_count"`
-		TicketsPerDay     []analytics.CountOnDate `json:"tickets_per_day"`
-		TopCloseReasons   []string                `json:"top_close_reasons"`
+		TotalTickets      uint64                 `json:"total_tickets"`
+		OpenTickets       uint64                 `json:"open_tickets"`
+		FirstResponseTime tripleWindowSeconds    `json:"first_response_time"`
+		ResolutionTime    tripleWindowSeconds    `json:"resolution_time"`
+		AverageRating     float64                `json:"average_rating"`
+		FeedbackCount     uint64                 `json:"feedback_count"`
+		TicketsPerDay     []database.CountOnDate `json:"tickets_per_day"`
+		TopCloseReasons   []string               `json:"top_close_reasons"`
 	}
 
 	tripleWindowSeconds struct {
@@ -45,7 +43,7 @@ func durationToSeconds(d *time.Duration) *float64 {
 	return &secs
 }
 
-func convertTripleWindow(tw analytics.TripleWindow) tripleWindowSeconds {
+func convertTripleWindow(tw database.TripleWindow) tripleWindowSeconds {
 	return tripleWindowSeconds{
 		AllTime: durationToSeconds(tw.AllTime),
 		Monthly: durationToSeconds(tw.Monthly),
@@ -71,25 +69,23 @@ func parseDays(ctx *gin.Context) int {
 }
 
 func GetAnalyticsOverviewHandler(ctx *gin.Context) {
-	if dbclient.AnalyticsClient == nil {
-		_ = ctx.AbortWithError(http.StatusServiceUnavailable, app.NewError(errors.New("analytics client not initialised"), "Analytics are not configured"))
-		return
-	}
-
 	guildId := ctx.Keys["guildid"].(uint64)
-	client := dbclient.AnalyticsClient
 	days := parseDays(ctx)
 
 	var resp overviewResponse
-	var firstResponseTime, resolutionTime analytics.TripleWindow
+	var firstResponseTime, resolutionTime database.TripleWindow
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	group, groupCtx := errgroup.WithContext(timeoutCtx)
 
-	group.Go(func() (err error) {
-		resp.TotalTickets, err = client.GetTotalTicketCount(groupCtx, guildId)
-		return
+	group.Go(func() error {
+		count, err := dbclient.Client.Tickets.GetTotalTicketCount(groupCtx, guildId)
+		if err != nil {
+			return err
+		}
+		resp.TotalTickets = uint64(count)
+		return nil
 	})
 
 	group.Go(func() error {
@@ -106,32 +102,40 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	})
 
 	group.Go(func() (err error) {
-		firstResponseTime, err = client.GetFirstResponseTimeStats(groupCtx, guildId)
+		firstResponseTime, err = dbclient.Client.FirstResponseTime.GetAverageTripleWindow(groupCtx, guildId)
 		return
 	})
 
 	group.Go(func() (err error) {
-		resolutionTime, err = client.GetTicketDurationStats(groupCtx, guildId)
+		resolutionTime, err = dbclient.Client.Tickets.GetTicketDurationTripleWindow(groupCtx, guildId)
+		return
+	})
+
+	group.Go(func() error {
+		avg, err := dbclient.Client.ServiceRatings.GetAverage(groupCtx, guildId)
+		if err != nil {
+			return err
+		}
+		resp.AverageRating = float64(avg)
+		return nil
+	})
+
+	group.Go(func() error {
+		count, err := dbclient.Client.ServiceRatings.GetCount(groupCtx, guildId)
+		if err != nil {
+			return err
+		}
+		resp.FeedbackCount = uint64(count)
+		return nil
+	})
+
+	group.Go(func() (err error) {
+		resp.TicketsPerDay, err = dbclient.Client.Tickets.GetTicketsPerDay(groupCtx, guildId, days)
 		return
 	})
 
 	group.Go(func() (err error) {
-		resp.AverageRating, err = client.GetAverageFeedbackRatingGuild(groupCtx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		resp.FeedbackCount, err = client.GetFeedbackCountGuild(groupCtx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		resp.TicketsPerDay, err = client.GetLastNTicketsPerDayGuild(groupCtx, guildId, days)
-		return
-	})
-
-	group.Go(func() (err error) {
-		resp.TopCloseReasons, err = client.GetTopCloseReasons(groupCtx, guildId, nil)
+		resp.TopCloseReasons, err = dbclient.Client.CloseReason.GetTopCloseReasons(groupCtx, guildId, nil, 10)
 		return
 	})
 
@@ -144,9 +148,8 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	resp.FirstResponseTime = convertTripleWindow(firstResponseTime)
 	resp.ResolutionTime = convertTripleWindow(resolutionTime)
 
-	// Ensure slices are non-nil for clean JSON output
 	if resp.TicketsPerDay == nil {
-		resp.TicketsPerDay = make([]analytics.CountOnDate, 0)
+		resp.TicketsPerDay = make([]database.CountOnDate, 0)
 	}
 	if resp.TopCloseReasons == nil {
 		resp.TopCloseReasons = make([]string, 0)

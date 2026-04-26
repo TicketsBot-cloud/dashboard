@@ -85,9 +85,6 @@ func main() {
 	logger.Info("Connecting to database")
 	database.ConnectToDatabase()
 
-	logger.Info("Connecting to analytics")
-	database.ConnectAnalytics()
-
 	logger.Info("Connecting to cache")
 	cache.Instance = cache.NewCache()
 

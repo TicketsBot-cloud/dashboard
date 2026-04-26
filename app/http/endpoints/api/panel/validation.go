@@ -447,7 +447,7 @@ func validateTranscriptChannelId(ctx PanelValidationContext) validation.Validati
 
 		for _, ch := range ctx.Channels {
 			if ch.Id == *ctx.Data.TranscriptChannelId {
-				if ch.Type != channel.ChannelTypeGuildText && ch.Type != channel.ChannelTypeGuildNews {
+				if ch.Type != channel.ChannelTypeGuildText && ch.Type != channel.ChannelTypeGuildAnnouncement {
 					return validation.NewInvalidInputError("Transcript channel must be a text channel")
 				}
 				return nil

@@ -11,6 +11,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/sync/errgroup"
 )
 
 // ResubmitHandler handles PUT /api/:id/gallery/submissions/:listingId
@@ -77,78 +78,191 @@ func ResubmitHandler(ctx *gin.Context) {
 		}
 	}
 
-	// Re-snapshot the source panel
-	panelIdStr := ctx.Query("panelId")
-	if panelIdStr == "" {
-		// If no panel ID provided, just update the metadata (name, description, category, tags)
+	// Re-snapshot the source resource based on listing type
+	listingType := listing.ListingType
+	if listingType == "" {
+		listingType = database.GalleryListingTypePanel
+	}
+
+	sourceIdStr := ctx.Query("panelId")
+	if sourceIdStr == "" {
+		sourceIdStr = ctx.Query("tagId")
+	}
+	if sourceIdStr == "" {
+		sourceIdStr = ctx.Query("formId")
+	}
+
+	if sourceIdStr == "" {
 		if err := dbclient.Client.GalleryListings.UpdateMetadata(ctx, listingId, body.Name, body.Description, body.Category); err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update gallery listing"))
 			return
 		}
 	} else {
-		panelId, err := strconv.Atoi(panelIdStr)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
-			return
-		}
+		var updated database.GalleryListing
+		updated.Id = listingId
+		updated.Name = body.Name
+		updated.Description = body.Description
+		updated.Category = body.Category
+		updated.Status = database.GalleryListingStatusPending
 
-		panelWithWm, err := dbclient.Client.Panel.GetByIdWithWelcomeMessage(ctx, guildId, panelId)
-		if err != nil {
-			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panel"))
-			return
-		}
-
-		if panelWithWm == nil {
-			ctx.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found"))
-			return
-		}
-
-		panel := panelWithWm.Panel
-
-		if panel.GuildId != guildId {
-			ctx.JSON(http.StatusForbidden, utils.ErrorStr("Panel does not belong to this guild"))
-			return
-		}
-
-		// Validate emoji
-		if panel.EmojiId != nil {
-			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels with custom Discord emojis cannot be submitted to the gallery. Please use a standard Unicode emoji instead."))
-			return
-		}
-
-		if panel.EmojiName != nil && !isUnicodeEmoji(*panel.EmojiName) {
-			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels with custom Discord emojis cannot be submitted to the gallery. Please use a standard Unicode emoji instead."))
-			return
-		}
-
-		var welcomeMessageJSON []byte
-		if panelWithWm.WelcomeMessage != nil {
-			raw, err := stdjson.Marshal(panelWithWm.WelcomeMessage)
+		switch listingType {
+		case database.GalleryListingTypePanel:
+			panelId, err := strconv.Atoi(sourceIdStr)
 			if err != nil {
-				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to serialise welcome message"))
+				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID"))
 				return
 			}
-			welcomeMessageJSON = raw
-		}
 
-		// Update the listing with new panel snapshot + metadata, reset to pending
-		updated := database.GalleryListing{
-			Id:                        listingId,
-			SubmitterUserId:           userId,
-			SourceGuildId:             guildId,
-			Name:                      body.Name,
-			Description:               body.Description,
-			Category:                  body.Category,
-			Status:                    database.GalleryListingStatusPending,
-			Title:                     panel.Title,
-			Content:                   panel.Content,
-			Colour:                    panel.Colour,
-			ImageUrl:                  panel.ImageUrl,
-			ThumbnailUrl:              panel.ThumbnailUrl,
-			ButtonStyle:               intToInt16Ptr(panel.ButtonStyle),
-			ButtonLabel:               panel.ButtonLabel,
-			EmojiName:                 panel.EmojiName,
-			WelcomeMessage:            welcomeMessageJSON,
+			panelWithWm, err := dbclient.Client.Panel.GetByIdWithWelcomeMessage(ctx, guildId, panelId)
+			if err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panel"))
+				return
+			}
+
+			if panelWithWm == nil {
+				ctx.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found"))
+				return
+			}
+
+			panel := panelWithWm.Panel
+
+			if panel.GuildId != guildId {
+				ctx.JSON(http.StatusForbidden, utils.ErrorStr("Panel does not belong to this guild"))
+				return
+			}
+
+			if panel.EmojiId != nil {
+				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels with custom Discord emojis cannot be submitted to the gallery. Please use a standard Unicode emoji instead."))
+				return
+			}
+
+			if panel.EmojiName != nil && !isUnicodeEmoji(*panel.EmojiName) {
+				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels with custom Discord emojis cannot be submitted to the gallery. Please use a standard Unicode emoji instead."))
+				return
+			}
+
+			var welcomeMessageJSON []byte
+			if panelWithWm.WelcomeMessage != nil {
+				raw, err := stdjson.Marshal(panelWithWm.WelcomeMessage)
+				if err != nil {
+					_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to serialise welcome message"))
+					return
+				}
+				welcomeMessageJSON = raw
+			}
+
+			updated.Title = panel.Title
+			updated.Content = panel.Content
+			updated.Colour = panel.Colour
+			updated.ImageUrl = panel.ImageUrl
+			updated.ThumbnailUrl = panel.ThumbnailUrl
+			updated.ButtonStyle = intToInt16Ptr(panel.ButtonStyle)
+			updated.ButtonLabel = panel.ButtonLabel
+			updated.EmojiName = panel.EmojiName
+			updated.WelcomeMessage = welcomeMessageJSON
+
+		case database.GalleryListingTypeTag:
+			tag, ok, err := dbclient.Client.Tag.Get(ctx, guildId, sourceIdStr)
+			if err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch tag"))
+				return
+			}
+			if !ok {
+				ctx.JSON(http.StatusNotFound, utils.ErrorStr("Tag not found"))
+				return
+			}
+			if tag.Content == nil && tag.Embed == nil {
+				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Tag has no content to share"))
+				return
+			}
+
+			snapshot := database.GalleryTagSnapshot{Content: tag.Content}
+			if tag.Embed != nil {
+				embed := *tag.Embed
+				if embed.CustomEmbed != nil {
+					embedCopy := *embed.CustomEmbed
+					embedCopy.GuildId = 0
+					embedCopy.Id = 0
+					embed.CustomEmbed = &embedCopy
+				}
+				snapshot.Embed = &embed
+			}
+
+			snapshotJSON, err := stdjson.Marshal(snapshot)
+			if err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to serialise tag snapshot"))
+				return
+			}
+			updated.SnapshotData = snapshotJSON
+
+		case database.GalleryListingTypeForm:
+			formId, err := strconv.Atoi(sourceIdStr)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid form ID"))
+				return
+			}
+
+			form, ok, err := dbclient.Client.Forms.Get(ctx, formId)
+			if err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch form"))
+				return
+			}
+			if !ok {
+				ctx.JSON(http.StatusNotFound, utils.ErrorStr("Form not found"))
+				return
+			}
+			if form.GuildId != guildId {
+				ctx.JSON(http.StatusForbidden, utils.ErrorStr("Form does not belong to this guild"))
+				return
+			}
+
+			var inputs []database.FormInput
+			var optionsByInput map[int][]database.FormInputOption
+
+			g, gCtx := errgroup.WithContext(ctx)
+			g.Go(func() error {
+				var err error
+				inputs, err = dbclient.Client.FormInput.GetInputs(gCtx, formId)
+				return err
+			})
+			g.Go(func() error {
+				var err error
+				optionsByInput, err = dbclient.Client.FormInputOption.GetOptionsByForm(gCtx, formId)
+				return err
+			})
+			if err := g.Wait(); err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch form inputs"))
+				return
+			}
+
+			snapshotInputs := make([]database.GalleryFormInputSnapshot, len(inputs))
+			for i, input := range inputs {
+				snapshotInputs[i] = database.GalleryFormInputSnapshot{
+					Type: input.Type, Position: input.Position, Style: input.Style,
+					Label: input.Label, Description: input.Description, Placeholder: input.Placeholder,
+					Required: input.Required, MinLength: input.MinLength, MaxLength: input.MaxLength,
+				}
+				if opts, exists := optionsByInput[input.Id]; exists {
+					snapshotOpts := make([]database.GalleryFormInputOptionSnapshot, len(opts))
+					for j, opt := range opts {
+						snapshotOpts[j] = database.GalleryFormInputOptionSnapshot{
+							Position: opt.Position, Label: opt.Label, Description: opt.Description, Value: opt.Value,
+						}
+					}
+					snapshotInputs[i].Options = snapshotOpts
+				}
+			}
+
+			snapshotJSON, err := stdjson.Marshal(database.GalleryFormSnapshot{Title: form.Title, Inputs: snapshotInputs})
+			if err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to serialise form snapshot"))
+				return
+			}
+			updated.SnapshotData = snapshotJSON
+
+		default:
+			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Unsupported listing type"))
+			return
 		}
 
 		if err := dbclient.Client.GalleryListings.Resubmit(ctx, updated); err != nil {

@@ -75,6 +75,26 @@ func ListHandler(ctx *gin.Context) {
 		listings = make([]database.GalleryListing, 0)
 	}
 
+	// Filter by listing type if provided
+	listingType := ctx.Query("type")
+	if listingType != "" {
+		if listingType != "panel" && listingType != "tag" && listingType != "form" {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid listing type filter. Must be one of: panel, tag, form"))
+			return
+		}
+		filtered := make([]database.GalleryListing, 0, len(listings))
+		for _, l := range listings {
+			lt := l.ListingType
+			if lt == "" {
+				lt = database.GalleryListingTypePanel
+			}
+			if lt == listingType {
+				filtered = append(filtered, l)
+			}
+		}
+		listings = filtered
+	}
+
 	// Resolve submitter user data from cache
 	userIdSet := make(map[uint64]struct{})
 	for _, l := range listings {

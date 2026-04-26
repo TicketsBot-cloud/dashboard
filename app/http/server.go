@@ -60,12 +60,12 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	// Sessions
 	session.Store = session.NewRedisStore()
 
+	router.Use(middleware.Cors(config.Conf))
+
 	router.Use(rl(middleware.RateLimitTypeIp, 60, time.Minute))
 	router.Use(rl(middleware.RateLimitTypeIp, 20, time.Second*10))
 	router.Use(rl(middleware.RateLimitTypeUser, 60, time.Minute))
 	router.Use(rl(middleware.RateLimitTypeGuild, 600, time.Minute*5))
-
-	router.Use(middleware.Cors(config.Conf))
 
 	// Metrics
 	if len(config.Conf.Server.MetricHost) > 0 {
@@ -337,6 +337,22 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.POST("/gallery/import/:listingId",
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_gallery.ImportHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/submit-tag/:tagid",
+			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
+			api_gallery.SubmitTagHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/submit-form/:formid",
+			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
+			api_gallery.SubmitFormHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/import-tag/:listingId",
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_gallery.ImportTagHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/import-form/:listingId",
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_gallery.ImportFormHandler,
 		)
 
 		// KB categories

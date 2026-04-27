@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -42,7 +42,7 @@ func Render(payload Payload) ([]byte, error) {
 		return nil, fmt.Errorf("render service returned status code %d", res.StatusCode)
 	}
 
-	bytes, err := ioutil.ReadAll(res.Body)
+	bytes, err := io.ReadAll(res.Body)
 	defer res.Body.Close()
 	if err != nil {
 		return nil, err

@@ -17,14 +17,21 @@ import (
 
 type (
 	overviewResponse struct {
-		TotalTickets      uint64                 `json:"total_tickets"`
-		OpenTickets       uint64                 `json:"open_tickets"`
-		FirstResponseTime tripleWindowSeconds    `json:"first_response_time"`
-		ResolutionTime    tripleWindowSeconds    `json:"resolution_time"`
-		AverageRating     float64                `json:"average_rating"`
-		FeedbackCount     uint64                 `json:"feedback_count"`
-		TicketsPerDay     []database.CountOnDate `json:"tickets_per_day"`
-		TopCloseReasons   []string               `json:"top_close_reasons"`
+		TotalTickets         uint64                        `json:"total_tickets"`
+		OpenTickets          uint64                        `json:"open_tickets"`
+		FirstResponseTime    tripleWindowSeconds           `json:"first_response_time"`
+		ResolutionTime       tripleWindowSeconds           `json:"resolution_time"`
+		AverageRating        float64                       `json:"average_rating"`
+		FeedbackCount        uint64                        `json:"feedback_count"`
+		TicketsPerDay        []database.CountOnDate        `json:"tickets_per_day"`
+		TopCloseReasons      []string                      `json:"top_close_reasons"`
+		TicketsByPanel       []database.PanelTicketCount   `json:"tickets_by_panel"`
+		TicketsByLabel       []database.LabelTicketCount   `json:"tickets_by_label"`
+		FeedbackDistribution [5]int                        `json:"feedback_distribution"`
+		FeedbackResponseRate database.FeedbackResponseRate `json:"feedback_response_rate"`
+		AutoCloseStats       database.AutoCloseStats       `json:"auto_close_stats"`
+		ThreadChannelSplit   database.ThreadChannelSplit   `json:"thread_channel_split"`
+		BacklogTrend         []database.CountOnDate        `json:"backlog_trend"`
 	}
 
 	tripleWindowSeconds struct {
@@ -139,6 +146,48 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 		return
 	})
 
+	// Tickets by panel
+	group.Go(func() (err error) {
+		resp.TicketsByPanel, err = dbclient.Client.Tickets.GetTicketCountByPanel(groupCtx, guildId, days)
+		return
+	})
+
+	// Tickets by label
+	group.Go(func() (err error) {
+		resp.TicketsByLabel, err = dbclient.Client.TicketLabelAssignments.GetTicketCountByLabel(groupCtx, guildId, days)
+		return
+	})
+
+	// Feedback distribution
+	group.Go(func() (err error) {
+		resp.FeedbackDistribution, err = dbclient.Client.ServiceRatings.GetDistribution(groupCtx, guildId)
+		return
+	})
+
+	// Feedback response rate
+	group.Go(func() (err error) {
+		resp.FeedbackResponseRate, err = dbclient.Client.ServiceRatings.GetResponseRate(groupCtx, guildId, days)
+		return
+	})
+
+	// Auto-close stats
+	group.Go(func() (err error) {
+		resp.AutoCloseStats, err = dbclient.Client.CloseReason.GetAutoCloseVsManualClose(groupCtx, guildId, days)
+		return
+	})
+
+	// Thread vs channel split
+	group.Go(func() (err error) {
+		resp.ThreadChannelSplit, err = dbclient.Client.Tickets.GetThreadChannelSplit(groupCtx, guildId, days)
+		return
+	})
+
+	// Backlog trend
+	group.Go(func() (err error) {
+		resp.BacklogTrend, err = dbclient.Client.Tickets.GetBacklogTrend(groupCtx, guildId, days)
+		return
+	})
+
 	if err := group.Wait(); err != nil {
 		log.Logger.Error("Failed to retrieve analytics data", zap.Uint64("guild_id", guildId), zap.Error(err))
 		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to retrieve analytics data. Please try again later."))
@@ -153,6 +202,15 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	}
 	if resp.TopCloseReasons == nil {
 		resp.TopCloseReasons = make([]string, 0)
+	}
+	if resp.TicketsByPanel == nil {
+		resp.TicketsByPanel = make([]database.PanelTicketCount, 0)
+	}
+	if resp.TicketsByLabel == nil {
+		resp.TicketsByLabel = make([]database.LabelTicketCount, 0)
+	}
+	if resp.BacklogTrend == nil {
+		resp.BacklogTrend = make([]database.CountOnDate, 0)
 	}
 
 	ctx.JSON(200, resp)

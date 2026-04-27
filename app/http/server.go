@@ -284,6 +284,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_analytics.GetAnalyticsStaffHandler,
 		)
+		guildAuthApiAdmin.GET("/analytics/staff/:userid",
+			rl(middleware.RateLimitTypeUser, 5, time.Second*30),
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_analytics.GetAnalyticsStaffDetailHandler,
+		)
 
 		guildAuthApiAdmin.POST("/audit-logs", api_audit.GetAuditLogs)
 

@@ -120,7 +120,7 @@ func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) erro
 	}
 
 	data := rest.EditMessageData{
-		Embeds:  []*embed.Embed{e},
+		Embeds: []*embed.Embed{e},
 		Components: []component.Component{
 			component.BuildActionRow(component.BuildButton(component.Button{
 				Label:    p.ButtonLabel,

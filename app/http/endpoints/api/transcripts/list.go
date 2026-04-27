@@ -32,9 +32,9 @@ type transcriptMetadata struct {
 
 type paginatedTranscripts struct {
 	Transcripts []transcriptMetadata `json:"transcripts"`
-	TotalCount  int                   `json:"total_count"`
-	TotalPages  int                   `json:"total_pages"`
-	CurrentPage int                   `json:"current_page"`
+	TotalCount  int                  `json:"total_count"`
+	TotalPages  int                  `json:"total_pages"`
+	CurrentPage int                  `json:"current_page"`
 }
 
 func ListTranscripts(ctx *gin.Context) {

@@ -270,7 +270,6 @@ func UpdatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 	}
 
-
 	// insert mention data
 	validRoles := utils.ToSet(utils.Map(roles, utils.RoleToId))
 

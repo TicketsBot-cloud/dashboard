@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"slices"
 	"fmt"
+	"slices"
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/config"

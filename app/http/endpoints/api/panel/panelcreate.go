@@ -265,7 +265,6 @@ func CreatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 	}
 
-
 	createOptions := panelCreateOptions{
 		TeamIds:            data.Teams,             // Already validated
 		AccessControlRules: data.AccessControlList, // Already validated

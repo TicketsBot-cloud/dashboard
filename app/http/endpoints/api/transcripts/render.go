@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"errors"
 	"strconv"
 
@@ -19,7 +18,7 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 	// format ticket ID
 	ticketId, err := strconv.Atoi(ctx.Param("ticketId"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid ticket ID provided: %s", ctx.Param("ticketId"))))
+		ctx.JSON(400, utils.ErrorStr("Invalid ticket ID provided: %s", ctx.Param("ticketId")))
 		return
 	}
 
@@ -65,11 +64,6 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 
 	// Render
 	payload := chatreplica.FromTranscript(transcript, ticketId)
-	// html, err := chatreplica.Render(payload)
-	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
-		return
-	}
 
 	ctx.JSON(200, payload)
 }

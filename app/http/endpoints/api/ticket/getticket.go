@@ -21,7 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var MentionRegex, _ = regexp.Compile("<@(\\d+)>")
+var MentionRegex, _ = regexp.Compile(`<@(\d+)>`)
 
 func GetTicket(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)

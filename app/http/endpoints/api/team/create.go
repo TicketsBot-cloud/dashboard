@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -32,7 +31,7 @@ func CreateTeam(ctx *gin.Context) {
 
 	_, exists, err := dbclient.Client.SupportTeam.GetByName(ctx, guildId, data.Name)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch team from database: %v", err)))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch team from database: %v", err))
 		return
 	}
 

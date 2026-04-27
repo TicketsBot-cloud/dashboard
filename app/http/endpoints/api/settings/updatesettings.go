@@ -262,7 +262,7 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 				return fmt.Errorf("Invalid overflow category")
 			}
 
-			if ch.GuildId != guildId {
+			if *ch.GuildId != guildId {
 				return fmt.Errorf("Overflow category guild ID does not match")
 			}
 
@@ -284,7 +284,7 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 				return fmt.Errorf("Invalid ticket notification channel")
 			}
 
-			if ch.GuildId != guildId {
+			if *ch.GuildId != guildId {
 				return fmt.Errorf("Ticket notification channel guild ID does not match")
 			}
 

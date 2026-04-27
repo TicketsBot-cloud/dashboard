@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -29,7 +28,7 @@ func DeleteTeam(ctx *gin.Context) {
 	}
 
 	if !exists {
-		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Team not found: %d", teamId)))
+		ctx.JSON(400, utils.ErrorStr("Team not found: %d", teamId))
 		return
 	}
 

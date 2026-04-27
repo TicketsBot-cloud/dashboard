@@ -14,5 +14,8 @@ func (c *RedisClient) PublishPanelCreate(settings database.Panel) {
 		return
 	}
 
-	c.Publish(DefaultContext(), "tickets:panel:create", string(encoded))
+	ctx, cancel := DefaultContext()
+	defer cancel()
+
+	c.Publish(ctx, "tickets:panel:create", string(encoded))
 }

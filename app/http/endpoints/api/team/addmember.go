@@ -7,7 +7,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
-	dbmodel "github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -50,7 +50,7 @@ func AddMember(ctx *gin.Context) {
 	} else {
 		parsed, err := strconv.Atoi(teamId)
 		if err != nil {
-			ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid team ID provided: %s", ctx.Param("id"))))
+			ctx.JSON(400, utils.ErrorStr("Invalid team ID provided: %s", ctx.Param("id")))
 			return
 		}
 
@@ -75,8 +75,8 @@ func addDefaultMember(ctx *gin.Context, guildId, userId, snowflake uint64, entit
 	audit.Log(audit.LogEntry{
 		GuildId:      audit.Uint64Ptr(guildId),
 		UserId:       userId,
-		ActionType:   dbmodel.AuditActionTeamMemberAdd,
-		ResourceType: dbmodel.AuditResourceTeamMember,
+		ActionType:   database.AuditActionTeamMemberAdd,
+		ResourceType: database.AuditResourceTeamMember,
 		ResourceId:   audit.StringPtr(fmt.Sprintf("default/%d", snowflake)),
 		NewData:      map[string]interface{}{"snowflake": snowflake, "type": typeParsed},
 	})
@@ -110,8 +110,8 @@ func addTeamMember(ctx *gin.Context, teamId int, guildId, userId, snowflake uint
 	audit.Log(audit.LogEntry{
 		GuildId:      audit.Uint64Ptr(guildId),
 		UserId:       userId,
-		ActionType:   dbmodel.AuditActionTeamMemberAdd,
-		ResourceType: dbmodel.AuditResourceTeamMember,
+		ActionType:   database.AuditActionTeamMemberAdd,
+		ResourceType: database.AuditResourceTeamMember,
 		ResourceId:   audit.StringPtr(fmt.Sprintf("%d/%d", teamId, snowflake)),
 		NewData:      map[string]interface{}{"team_id": teamId, "snowflake": snowflake, "type": typeParsed},
 	})

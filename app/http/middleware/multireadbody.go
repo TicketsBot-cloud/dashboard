@@ -3,10 +3,10 @@ package middleware
 import (
 	"bytes"
 	"github.com/gin-gonic/gin"
-	"io/ioutil"
+	"io"
 )
 
 func MultiReadBody(ctx *gin.Context) {
-	body, _ := ioutil.ReadAll(ctx.Request.Body)
-	ctx.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	body, _ := io.ReadAll(ctx.Request.Body)
+	ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 }

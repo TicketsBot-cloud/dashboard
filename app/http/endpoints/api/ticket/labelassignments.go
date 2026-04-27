@@ -76,7 +76,7 @@ func SetTicketLabels(ctx *gin.Context) {
 
 		for _, id := range body.LabelIds {
 			if !validIds[id] {
-				ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Label ID %d does not exist.", id)))
+				ctx.JSON(400, utils.ErrorStr("Label ID %d does not exist.", id))
 				return
 			}
 		}

@@ -6,19 +6,19 @@ import (
 
 	"github.com/TicketsBot-cloud/common/restcache"
 	"github.com/TicketsBot-cloud/dashboard/config"
-	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/gdl/rest/ratelimit"
 )
 
 func ContextForGuild(guildId uint64) (*BotContext, error) {
-	whitelabelBotId, isWhitelabel, err := dbclient.Client.WhitelabelGuilds.GetBotByGuild(context.Background(), guildId)
+	whitelabelBotId, isWhitelabel, err := database.Client.WhitelabelGuilds.GetBotByGuild(context.Background(), guildId)
 	if err != nil {
 		return nil, err
 	}
 
 	if isWhitelabel {
-		res, err := dbclient.Client.Whitelabel.GetByBotId(context.Background(), whitelabelBotId)
+		res, err := database.Client.Whitelabel.GetByBotId(context.Background(), whitelabelBotId)
 		if err != nil {
 			return nil, err
 		}

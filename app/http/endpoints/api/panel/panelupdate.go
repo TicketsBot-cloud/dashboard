@@ -100,7 +100,7 @@ func UpdatePanel(c *gin.Context) {
 	if err := ValidatePanelBody(validationContext); err != nil {
 		var validationError *validation.InvalidInputError
 		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr(validationError.Error()))
+			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
 		} else {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 		}
@@ -121,7 +121,7 @@ func UpdatePanel(c *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		c.JSON(400, utils.ErrorStr(formatted))
+		c.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 
@@ -130,7 +130,7 @@ func UpdatePanel(c *gin.Context) {
 	{
 		emoji := data.getEmoji()
 		if emoji != nil {
-			emojiName = &emoji.Name
+			emojiName = emoji.Name
 
 			if emoji.Id.Value != 0 {
 				emojiId = &emoji.Id.Value
@@ -148,13 +148,14 @@ func UpdatePanel(c *gin.Context) {
 		if err != nil {
 			var unwrapped request.RestError
 			if errors.As(err, &unwrapped) {
-				if unwrapped.StatusCode == 403 {
+				switch unwrapped.StatusCode {
+				case 403:
 					c.JSON(403, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
 					return
-				} else if unwrapped.StatusCode == 404 {
+				case 404:
 					// Swallow error
 					// TODO: Make channel_id column nullable, and set to null
-				} else {
+				default:
 					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 					return
 				}
@@ -269,7 +270,6 @@ func UpdatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 	}
 
-
 	// insert mention data
 	validRoles := utils.ToSet(utils.Map(roles, utils.RoleToId))
 
@@ -278,11 +278,12 @@ func UpdatePanel(c *gin.Context) {
 	var shouldMentionHere bool
 	var roleMentions []uint64
 	for _, mention := range data.Mentions {
-		if mention == "user" {
+		switch mention {
+		case "user":
 			shouldMentionUser = true
-		} else if mention == "here" {
+		case "here":
 			shouldMentionHere = true
-		} else {
+		default:
 			roleId, err := strconv.ParseUint(mention, 10, 64)
 			if err != nil {
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
@@ -374,7 +375,7 @@ func UpdatePanel(c *gin.Context) {
 						} else {
 							log.Logger.Error("Body", zap.Any("body", messageData))
 							log.Logger.Error("Error sending panel message", zap.Any("errs", unwrapped2.ApiError.Errors))
-							c.JSON(400, utils.ErrorStr("Error sending panel message: "+unwrapped2.ApiError.Message))
+							c.JSON(400, utils.ErrorStr("Error sending panel message: %s", unwrapped2.ApiError.Message))
 						}
 					} else {
 						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
@@ -389,7 +390,7 @@ func UpdatePanel(c *gin.Context) {
 				log.Logger.Error("Body", zap.Any("body", messageData))
 				if errors.As(err, &unwrapped) {
 					log.Logger.Error("Error editing panel message", zap.Any("errs", unwrapped.ApiError.Errors))
-					c.JSON(400, utils.ErrorStr("Error editing panel message: "+unwrapped.ApiError.Message))
+					c.JSON(400, utils.ErrorStr("Error editing panel message: %s", unwrapped.ApiError.Message))
 				} else {
 					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				}

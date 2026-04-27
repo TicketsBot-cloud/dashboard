@@ -1,13 +1,12 @@
 package api
 
 import (
-	"fmt"
 	"context"
 	"errors"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/archiverclient"
-	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -19,12 +18,12 @@ func GetTranscriptHandler(ctx *gin.Context) {
 	// format ticket ID
 	ticketId, err := strconv.Atoi(ctx.Param("ticketId"))
 	if err != nil {
-		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid ticket ID provided: %s", ctx.Param("ticketId"))))
+		ctx.JSON(400, utils.ErrorStr("Invalid ticket ID provided: %s", ctx.Param("ticketId")))
 		return
 	}
 
 	// get ticket object
-	ticket, err := dbclient.Client.Tickets.Get(ctx, ticketId, guildId)
+	ticket, err := database.Client.Tickets.Get(ctx, ticketId, guildId)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Unable to load ticket. Please try again."))
 		return

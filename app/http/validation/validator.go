@@ -12,7 +12,6 @@ func Validate[T any](ctx context.Context, validationContext T, validators ...Val
 	group, _ := errgroup.WithContext(ctx)
 
 	for _, validator := range validators {
-		validator := validator
 		group.Go(validator(validationContext))
 	}
 

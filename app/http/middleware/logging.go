@@ -33,7 +33,7 @@ func Logging(logger *zap.Logger) gin.HandlerFunc {
 			zap.String("query", raw),
 			zap.Int("status", c.Writer.Status()),
 			zap.String("timestamp", start.String()),
-			zap.Duration("latency", time.Now().Sub(start)),
+			zap.Duration("latency", time.Since(start)),
 			zap.String("client_ip", c.ClientIP()),
 		}
 

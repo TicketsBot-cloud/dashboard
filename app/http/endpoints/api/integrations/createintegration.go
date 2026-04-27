@@ -70,7 +70,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		ctx.JSON(400, utils.ErrorStr(formatted))
+		ctx.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 
@@ -159,5 +159,5 @@ func isSameValidationUrlHost(webhookUrl, validationUrl string) (bool, error) {
 		return false, errors.New("invalid webhook or validation URL")
 	}
 
-	return strings.ToLower(utils.SecondLevelDomain(webhookStripped)) == strings.ToLower(utils.SecondLevelDomain(validationStripped)), nil
+	return strings.EqualFold(utils.SecondLevelDomain(webhookStripped), utils.SecondLevelDomain(validationStripped)), nil
 }

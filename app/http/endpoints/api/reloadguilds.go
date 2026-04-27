@@ -21,14 +21,17 @@ func ReloadGuildsHandler(c *gin.Context) {
 	userId := c.Keys["userid"].(uint64)
 
 	key := fmt.Sprintf("tickets:dashboard:guildreload:%d", userId)
-	res, err := redis.Client.SetNX(wrapper.DefaultContext(), key, 1, time.Second*10).Result()
+	ctx, cancel := wrapper.DefaultContext()
+	defer cancel()
+
+	res, err := redis.Client.SetNX(ctx, key, 1, time.Second*10).Result()
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check rate limit"))
 		return
 	}
 
 	if !res {
-		ttl, err := redis.Client.TTL(wrapper.DefaultContext(), key).Result()
+		ttl, err := redis.Client.TTL(ctx, key).Result()
 		if err != nil {
 			c.JSON(500, utils.ErrorStr("Failed to process request. Please try again."))
 			return

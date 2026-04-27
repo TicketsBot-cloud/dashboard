@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -42,7 +41,7 @@ func DeletePanel(c *gin.Context) {
 	}
 
 	if panel.PanelId == 0 {
-		c.JSON(404, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
+		c.JSON(404, utils.ErrorStr("Panel not found: %d", panelId))
 		return
 	}
 

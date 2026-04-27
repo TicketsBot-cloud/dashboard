@@ -34,9 +34,9 @@ func DefaultApplicators(data *panelBody) []defaults.DefaultApplicator {
 	return []defaults.DefaultApplicator{
 		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.Title, "Open a ticket!"),
 		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.Content, "By clicking the button, a ticket will be opened for you."),
-		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ImageUrl, nil),
-		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ThumbnailUrl, nil),
-		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.NamingScheme, nil),
+		defaults.NewDefaultApplicator(defaults.NilOrEmptyStringCheck, &data.ImageUrl, nil),
+		defaults.NewDefaultApplicator(defaults.NilOrEmptyStringCheck, &data.ThumbnailUrl, nil),
+		defaults.NewDefaultApplicator(defaults.NilOrEmptyStringCheck, &data.NamingScheme, nil),
 	}
 }
 
@@ -105,7 +105,7 @@ func validateContent(ctx PanelValidationContext) validation.ValidationFunc {
 func validateChannelId(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
 		for _, ch := range ctx.Channels {
-			if ch.Id == ctx.Data.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews) {
+			if ch.Id == ctx.Data.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildAnnouncement) {
 				return nil
 			}
 		}
@@ -152,7 +152,7 @@ func validateEmoji(c PanelValidationContext) validation.ValidationFunc {
 				return validation.NewInvalidInputError("Emoji not found")
 			}
 
-			if resolvedEmoji.Name != emoji.Name {
+			if resolvedEmoji.Name == nil || *resolvedEmoji.Name != emoji.Name {
 				return validation.NewInvalidInputError("Emoji name mismatch")
 			}
 		} else {
@@ -447,7 +447,7 @@ func validateTranscriptChannelId(ctx PanelValidationContext) validation.Validati
 
 		for _, ch := range ctx.Channels {
 			if ch.Id == *ctx.Data.TranscriptChannelId {
-				if ch.Type != channel.ChannelTypeGuildText && ch.Type != channel.ChannelTypeGuildNews {
+				if ch.Type != channel.ChannelTypeGuildText && ch.Type != channel.ChannelTypeGuildAnnouncement {
 					return validation.NewInvalidInputError("Transcript channel must be a text channel")
 				}
 				return nil

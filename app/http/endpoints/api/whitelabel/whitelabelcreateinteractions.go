@@ -65,16 +65,18 @@ var ErrInteractionCreateCooldown = errors.New("Interaction creation on cooldown"
 func createInteractions(cm *manager.CommandManager, botId uint64, token string) error {
 	// Cooldown
 	key := fmt.Sprintf("tickets:interaction-create-cooldown:%d", botId)
+	ctx, cancel := redis.DefaultContext()
+	defer cancel()
 
 	// try to set first, prevent race condition
-	wasSet, err := redis.Client.SetNX(redis.DefaultContext(), key, 1, time.Minute).Result()
+	wasSet, err := redis.Client.SetNX(ctx, key, 1, time.Minute).Result()
 	if err != nil {
 		return err
 	}
 
 	// on cooldown, tell user how long left
 	if !wasSet {
-		expiration, err := redis.Client.TTL(redis.DefaultContext(), key).Result()
+		expiration, err := redis.Client.TTL(ctx, key).Result()
 		if err != nil {
 			return err
 		}

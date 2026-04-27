@@ -77,7 +77,7 @@ func UpdateInputs(c *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		c.JSON(400, utils.ErrorStr(formatted))
+		c.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 
@@ -270,21 +270,22 @@ func validateInputOptions(input inputCreateBody, optionTypes map[int]string) err
 	}
 
 	// Radio Group (type 21) requires 2-10 options, Checkbox Group (type 22) requires 1-10 options
-	if input.Type == 21 {
+	switch input.Type {
+	case 21:
 		if len(input.Options) < 2 {
 			return fmt.Errorf("Radio group inputs must have at least 2 options")
 		}
 		if len(input.Options) > 10 {
 			return fmt.Errorf("Radio group inputs must have at most 10 options")
 		}
-	} else if input.Type == 22 {
+	case 22:
 		if len(input.Options) == 0 {
 			return fmt.Errorf("%s inputs must have at least one option", typeName)
 		}
 		if len(input.Options) > 10 {
 			return fmt.Errorf("Checkbox group inputs must have at most 10 options")
 		}
-	} else {
+	default:
 		if len(input.Options) == 0 {
 			return fmt.Errorf("%s inputs must have at least one option", typeName)
 		}
@@ -321,9 +322,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		// Handle select types (3, 5-8, 22)
 		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 22 {
 			// Enforce min_length constraints (0-25)
-			if minLength < 0 {
-				minLength = 0
-			} else if minLength > 25 {
+			if minLength > 25 {
 				minLength = 25
 			}
 
@@ -426,9 +425,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 		// Handle select types (3, 5-8, 22)
 		if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 22 {
 			// Enforce min_length constraints (0-25)
-			if minLength < 0 {
-				minLength = 0
-			} else if minLength > 25 {
+			if minLength > 25 {
 				minLength = 25
 			}
 

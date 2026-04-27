@@ -1,8 +1,6 @@
 package api
 
 import (
-	"fmt"
-
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/database"
@@ -34,12 +32,12 @@ func DeleteTag(ctx *gin.Context) {
 	// Fetch tag to see if we need to delete a guild command
 	tag, exists, err := database.Client.Tag.Get(ctx, guildId, body.TagId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch tag from database: %v", err))
 		return
 	}
 
 	if !exists {
-		ctx.JSON(404, utils.ErrorStr(fmt.Sprintf("Tag not found: %s", body.TagId)))
+		ctx.JSON(404, utils.ErrorStr("Tag not found: %s", body.TagId))
 		return
 	}
 

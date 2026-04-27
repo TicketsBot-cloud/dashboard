@@ -142,7 +142,7 @@ func SendTag(ctx *gin.Context) {
 				Username:  guild.Name,
 				AvatarUrl: guild.IconUrl(),
 				AllowedMentions: messagetypes.AllowedMention{
-					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+					Parse: []messagetypes.AllowedMentionType{messagetypes.AllowedMentionTypeUsers, messagetypes.AllowedMentionTypeRoles, messagetypes.AllowedMentionTypeEveryone},
 				},
 			}
 		} else {
@@ -158,7 +158,7 @@ func SendTag(ctx *gin.Context) {
 				Username:  user.EffectiveName(),
 				AvatarUrl: user.AvatarUrl(256),
 				AllowedMentions: messagetypes.AllowedMention{
-					Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+					Parse: []messagetypes.AllowedMentionType{messagetypes.AllowedMentionTypeUsers, messagetypes.AllowedMentionTypeRoles, messagetypes.AllowedMentionTypeEveryone},
 				},
 			}
 		}
@@ -204,7 +204,7 @@ func SendTag(ctx *gin.Context) {
 		Content: message,
 		Embeds:  embeds,
 		AllowedMentions: messagetypes.AllowedMention{
-			Parse: []messagetypes.AllowedMentionType{messagetypes.USERS, messagetypes.ROLES, messagetypes.EVERYONE},
+			Parse: []messagetypes.AllowedMentionType{messagetypes.AllowedMentionTypeUsers, messagetypes.AllowedMentionTypeRoles, messagetypes.AllowedMentionTypeEveryone},
 		},
 	}); err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to send tag '%s' to ticket #%d in channel %d", body.TagId, ticketId, *ticket.ChannelId))

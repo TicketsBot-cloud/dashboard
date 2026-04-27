@@ -74,7 +74,7 @@ func MultiPanelCreate(c *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		c.JSON(400, utils.ErrorStr(formatted))
+		c.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 
@@ -99,7 +99,7 @@ func MultiPanelCreate(c *gin.Context) {
 			effectiveLabel := getEffectiveLabelForValidation(panel.ButtonLabel, panelConfig.CustomLabel)
 
 			if effectiveLabel == "" {
-				c.JSON(400, utils.ErrorStr(fmt.Sprintf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)))
+				c.JSON(400, utils.ErrorStr("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title))
 				return
 			}
 		}
@@ -232,7 +232,7 @@ func (d *multiPanelCreateData) validateChannel(guildId uint64) func() error {
 
 		var valid bool
 		for _, ch := range channels {
-			if ch.Id == d.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews) {
+			if ch.Id == d.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildAnnouncement) {
 				valid = true
 				break
 			}

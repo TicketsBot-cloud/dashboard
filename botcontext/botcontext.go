@@ -11,7 +11,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	cacheclient "github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/database"
-	cache "github.com/TicketsBot-cloud/gdl/cache"
+	"github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/TicketsBot-cloud/gdl/objects/channel"
 	"github.com/TicketsBot-cloud/gdl/objects/guild"
 	"github.com/TicketsBot-cloud/gdl/objects/guild/emoji"

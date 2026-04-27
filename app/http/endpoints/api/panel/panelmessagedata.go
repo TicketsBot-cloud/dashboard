@@ -32,12 +32,12 @@ func panelIntoMessageData(panel database.Panel, isPremium bool) panelMessageData
 	if panel.EmojiName != nil { // No emoji = nil
 		if panel.EmojiId == nil { // Unicode emoji
 			emote = &emoji.Emoji{
-				Name: *panel.EmojiName,
+				Name: panel.EmojiName,
 			}
 		} else { // Custom emoji
 			emote = &emoji.Emoji{
 				Id:   objects.NewNullableSnowflake(*panel.EmojiId),
-				Name: *panel.EmojiName,
+				Name: panel.EmojiName,
 			}
 		}
 	}
@@ -120,7 +120,7 @@ func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) erro
 	}
 
 	data := rest.EditMessageData{
-		Embeds:  []*embed.Embed{e},
+		Embeds: []*embed.Embed{e},
 		Components: []component.Component{
 			component.BuildActionRow(component.BuildButton(component.Button{
 				Label:    p.ButtonLabel,

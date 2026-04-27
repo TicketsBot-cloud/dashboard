@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -67,7 +66,7 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		c.JSON(400, utils.ErrorStr(formatted))
+		c.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 
@@ -97,7 +96,7 @@ func MultiPanelUpdate(c *gin.Context) {
 			}
 
 			if effectiveLabel == "" {
-				c.JSON(400, utils.ErrorStr(fmt.Sprintf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)))
+				c.JSON(400, utils.ErrorStr("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title))
 				return
 			}
 		}

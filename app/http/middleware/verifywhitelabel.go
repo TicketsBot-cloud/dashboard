@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/config"
@@ -22,11 +23,8 @@ func VerifyWhitelabel(isApi bool) func(ctx *gin.Context) {
 
 		if tier < premium.Whitelabel {
 			var isForced bool
-			for _, id := range config.Conf.ForceWhitelabel {
-				if id == userId {
-					isForced = true
-					break
-				}
+			if slices.Contains(config.Conf.ForceWhitelabel, userId) {
+				isForced = true
 			}
 
 			if !isForced {

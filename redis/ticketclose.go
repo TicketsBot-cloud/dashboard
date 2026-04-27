@@ -26,5 +26,8 @@ func (c *RedisClient) PublishTicketClose(guildId uint64, ticketId int, userId ui
 		return
 	}
 
-	c.Publish(DefaultContext(), "tickets:close", string(encoded))
+	ctx, cancel := DefaultContext()
+	defer cancel()
+
+	c.Publish(ctx, "tickets:close", string(encoded))
 }

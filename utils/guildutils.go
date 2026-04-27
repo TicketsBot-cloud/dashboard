@@ -44,7 +44,7 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 		return nil, err
 	}
 
-	userGuilds, err := getGuildIntersection(ctx, userId, guilds)
+	userGuilds, err := getGuildIntersection(ctx, guilds)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +54,6 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 	var mu sync.Mutex
 	dtos := make([]GuildDto, 0, len(userGuilds))
 	for _, guild := range userGuilds {
-		guild := guild
-
 		group.Go(func() error {
 			permLevel, err := GetPermissionLevel(ctx, guild.Id, userId)
 			if err != nil {
@@ -66,7 +64,7 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 			dtos = append(dtos, GuildDto{
 				Id:              guild.Id,
 				Name:            guild.Name,
-				Icon:            guild.Icon,
+				Icon:            guild.IconUrl(),
 				PermissionLevel: permLevel,
 			})
 			mu.Unlock()
@@ -106,14 +104,14 @@ func storeGuildsInDb(ctx context.Context, userId uint64, guilds []guild.Guild) e
 			Name:            guild.Name,
 			Owner:           guild.Owner,
 			UserPermissions: guild.Permissions,
-			Icon:            guild.Icon,
+			Icon:            guild.IconUrl(),
 		})
 	}
 
 	return dbclient.Client.UserGuilds.Set(ctx, userId, wrappedGuilds)
 }
 
-func getGuildIntersection(ctx context.Context, userId uint64, userGuilds []guild.Guild) ([]guild.Guild, error) {
+func getGuildIntersection(ctx context.Context, userGuilds []guild.Guild) ([]guild.Guild, error) {
 	guildIds := make([]uint64, len(userGuilds))
 	for i, guild := range userGuilds {
 		guildIds[i] = guild.Id

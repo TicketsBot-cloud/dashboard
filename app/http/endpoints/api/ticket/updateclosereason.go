@@ -88,7 +88,10 @@ func UpdateCloseReason(c *gin.Context) {
 
 	// Notify worker to update the archive channel message
 	if payload, err := json.Marshal(closeReasonUpdatePayload{GuildId: guildId, TicketId: ticketId}); err == nil {
-		redis.Client.Publish(redis.DefaultContext(), "tickets:close_reason_update", payload)
+		ctx, cancel := redis.DefaultContext()
+		defer cancel()
+
+		redis.Client.Publish(ctx, "tickets:close_reason_update", payload)
 	}
 
 	audit.Log(audit.LogEntry{

@@ -149,7 +149,7 @@ func CreatePanel(c *gin.Context) {
 	if err := ValidatePanelBody(validationContext); err != nil {
 		var validationError *validation.InvalidInputError
 		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr(validationError.Error()))
+			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
 		} else {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Panel validation failed unexpectedly"))
 		}
@@ -170,7 +170,7 @@ func CreatePanel(c *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		c.JSON(400, utils.ErrorStr(formatted))
+		c.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 
@@ -275,13 +275,13 @@ func CreatePanel(c *gin.Context) {
 	// string is role ID or "user" to mention the ticket opener or "here" to mention @here
 	validRoles := utils.ToSet(utils.Map(roles, utils.RoleToId))
 
-	var roleMentions []uint64
 	for _, mention := range data.Mentions {
-		if mention == "user" {
+		switch mention {
+		case "user":
 			createOptions.ShouldMentionUser = true
-		} else if mention == "here" {
+		case "here":
 			createOptions.ShouldMentionHere = true
-		} else {
+		default:
 			roleId, err := strconv.ParseUint(mention, 10, 64)
 			if err != nil {
 				c.JSON(400, utils.ErrorStr("Invalid role ID in mentions: %s", mention))
@@ -289,7 +289,7 @@ func CreatePanel(c *gin.Context) {
 			}
 
 			if validRoles.Contains(roleId) {
-				createOptions.RoleMentions = append(roleMentions, roleId)
+				createOptions.RoleMentions = append(createOptions.RoleMentions, roleId)
 			}
 		}
 	}

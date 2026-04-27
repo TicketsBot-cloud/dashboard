@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -72,7 +71,7 @@ func CreateTicketLabel(ctx *gin.Context) {
 	}
 
 	if count >= maxLabelsPerGuild {
-		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("You can only have up to %d labels per server.", maxLabelsPerGuild)))
+		ctx.JSON(400, utils.ErrorStr("You can only have up to %d labels per server.", maxLabelsPerGuild))
 		return
 	}
 

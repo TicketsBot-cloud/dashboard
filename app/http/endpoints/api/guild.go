@@ -17,7 +17,7 @@ func GuildHandler(ctx *gin.Context) {
 
 	guild, err := botContext.GetGuild(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch guild information from Discord for guild %d. Please try again."))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch guild information from Discord for guild %d. Please try again.", guildId))
 		return
 	}
 

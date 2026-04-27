@@ -25,7 +25,7 @@ func ChannelsHandler(ctx *gin.Context) {
 	if ctx.Query("refresh") == "true" {
 		hasToken, err := redis.Client.TakeChannelRefreshToken(ctx, guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to take channel refresh token for guild %d. Please try again."))
+			ctx.JSON(500, utils.ErrorStr("Failed to take channel refresh token for guild %d. Please try again.", guildId))
 			return
 		}
 
@@ -37,7 +37,7 @@ func ChannelsHandler(ctx *gin.Context) {
 			}
 
 			if err := cache.Instance.StoreChannels(ctx, channels); err != nil {
-				ctx.JSON(500, utils.ErrorStr("Failed to store channels in cache for guild %d. Please try again."))
+				ctx.JSON(500, utils.ErrorStr("Failed to store channels in cache for guild %d. Please try again.", guildId))
 				return
 			}
 		} else {

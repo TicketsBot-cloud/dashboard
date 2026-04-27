@@ -27,7 +27,6 @@ func NewRedisClient() *RedisClient {
 	}
 }
 
-func DefaultContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
-	return ctx
+func DefaultContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), time.Second*3)
 }

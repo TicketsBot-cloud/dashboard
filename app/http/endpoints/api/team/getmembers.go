@@ -24,7 +24,7 @@ func GetMembers(ctx *gin.Context) {
 	} else {
 		parsed, err := strconv.Atoi(teamId)
 		if err != nil {
-			ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid team ID provided: %s", ctx.Param("id"))))
+			ctx.JSON(400, utils.ErrorStr("Invalid team ID provided: %s", ctx.Param("id")))
 			return
 		}
 

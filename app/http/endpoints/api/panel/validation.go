@@ -34,9 +34,9 @@ func DefaultApplicators(data *panelBody) []defaults.DefaultApplicator {
 	return []defaults.DefaultApplicator{
 		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.Title, "Open a ticket!"),
 		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.Content, "By clicking the button, a ticket will be opened for you."),
-		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ImageUrl, nil),
-		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ThumbnailUrl, nil),
-		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.NamingScheme, nil),
+		defaults.NewDefaultApplicator(defaults.NilOrEmptyStringCheck, &data.ImageUrl, nil),
+		defaults.NewDefaultApplicator(defaults.NilOrEmptyStringCheck, &data.ThumbnailUrl, nil),
+		defaults.NewDefaultApplicator(defaults.NilOrEmptyStringCheck, &data.NamingScheme, nil),
 	}
 }
 

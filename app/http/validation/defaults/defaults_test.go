@@ -9,6 +9,6 @@ import (
 
 func TestNil(t *testing.T) {
 	var myString *string
-	ApplyDefaults(NewDefaultApplicator[*string](NilCheck[string], &myString, utils.Ptr("hello")))
+	ApplyDefaults(NewDefaultApplicator(NilCheck[string], &myString, utils.Ptr("hello")))
 	assert.Equal(t, "hello", *myString)
 }

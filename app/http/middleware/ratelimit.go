@@ -36,7 +36,10 @@ func CreateRateLimiter(rlType RateLimitType, max int, period time.Duration) gin.
 			return
 		}
 
-		res, err := limiter.Allow(redis.DefaultContext(), name, limit)
+		redisCtx, cancel := redis.DefaultContext()
+		defer cancel()
+
+		res, err := limiter.Allow(redisCtx, name, limit)
 		if err != nil {
 			ctx.AbortWithStatusJSON(500, utils.ErrorStr("Failed to check rate limit: %v", err))
 			return

@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/premium"
@@ -42,7 +41,7 @@ func ResendPanel(ctx *gin.Context) {
 	}
 
 	if panel.PanelId == 0 {
-		ctx.JSON(404, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
+		ctx.JSON(404, utils.ErrorStr("Panel not found: %d", panelId))
 		return
 	}
 

@@ -106,10 +106,5 @@ func ListIntegrationsHandler(ctx *gin.Context) {
 		}
 	}
 
-	// Don't serve null
-	if integrations == nil {
-		integrations = make([]integrationWithMetadata, 0)
-	}
-
 	ctx.JSON(200, integrations)
 }

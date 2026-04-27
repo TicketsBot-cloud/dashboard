@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -23,7 +22,7 @@ func UpdateTeamPermissions(ctx *gin.Context) {
 
 	teamId, err := strconv.Atoi(teamIdParam)
 	if err != nil {
-		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Invalid team ID provided: %s", teamIdParam)))
+		ctx.JSON(400, utils.ErrorStr("Invalid team ID provided: %s", teamIdParam))
 		return
 	}
 

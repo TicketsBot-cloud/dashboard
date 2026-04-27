@@ -40,7 +40,7 @@ func CreateTag(ctx *gin.Context) {
 	// Max of 200 tags
 	count, err := dbclient.Client.Tag.GetTagCount(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch tag from database: %v", err))
 		return
 	}
 
@@ -75,7 +75,7 @@ func CreateTag(ctx *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		ctx.JSON(400, utils.ErrorStr(formatted))
+		ctx.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 
@@ -93,7 +93,7 @@ func CreateTag(ctx *gin.Context) {
 	if data.Embed != nil {
 		totalChars := data.Embed.TotalCharacterCount()
 		if totalChars > 6000 {
-			ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Total embed characters (%d) exceeds Discord's 6000 character limit", totalChars)))
+			ctx.JSON(400, utils.ErrorStr("Total embed characters (%d) exceeds Discord's 6000 character limit", totalChars))
 			return
 		}
 	}

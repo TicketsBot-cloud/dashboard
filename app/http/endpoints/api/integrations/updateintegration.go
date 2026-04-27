@@ -70,7 +70,7 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		formatted = strings.TrimSuffix(formatted, "\n")
-		ctx.JSON(400, utils.ErrorStr(formatted))
+		ctx.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 

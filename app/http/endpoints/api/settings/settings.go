@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"time"
 
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -16,21 +15,9 @@ import (
 type (
 	Settings struct {
 		database.Settings
-		ClaimSettings     database.ClaimSettings `json:"claim_settings"`
-		AutoCloseSettings AutoCloseData          `json:"auto_close"`
-		Colours           ColourMap              `json:"colours"`
-
-		UsersCanClose     bool    `json:"users_can_close"`
-		CloseConfirmation bool    `json:"close_confirmation"`
-		FeedbackEnabled   bool    `json:"feedback_enabled"`
-		Language          *string `json:"language"`
-	}
-
-	AutoCloseData struct {
-		Enabled                 bool  `json:"enabled"`
-		SinceOpenWithNoResponse int64 `json:"since_open_with_no_response"`
-		SinceLastMessage        int64 `json:"since_last_message"`
-		OnUserLeave             bool  `json:"on_user_leave"`
+		ClaimSettings database.ClaimSettings `json:"claim_settings"`
+		Colours       ColourMap              `json:"colours"`
+		Language      *string                `json:"language"`
 	}
 
 	ColourMap map[customisation.Colour]utils.HexColour
@@ -51,33 +38,8 @@ func loadSettings(ctx context.Context, guildId uint64) (Settings, error) {
 		return
 	})
 
-	group.Go(func() error {
-		tmp, err := dbclient.Client.AutoClose.Get(ctx, guildId)
-		if err != nil {
-			return err
-		}
-
-		settings.AutoCloseSettings = convertToAutoCloseData(tmp)
-		return nil
-	})
-
 	group.Go(func() (err error) {
 		settings.Colours, err = getColourMap(guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.UsersCanClose, err = dbclient.Client.UsersCanClose.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.CloseConfirmation, err = dbclient.Client.CloseConfirmation.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.FeedbackEnabled, err = dbclient.Client.FeedbackEnabled.Get(ctx, guildId)
 		return
 	})
 
@@ -155,22 +117,4 @@ func getColourMap(guildId uint64) (ColourMap, error) {
 	}
 
 	return colours, nil
-}
-
-func convertToAutoCloseData(settings database.AutoCloseSettings) (body AutoCloseData) {
-	body.Enabled = settings.Enabled
-
-	if settings.SinceOpenWithNoResponse != nil {
-		body.SinceOpenWithNoResponse = int64(*settings.SinceOpenWithNoResponse / time.Second)
-	}
-
-	if settings.SinceLastMessage != nil {
-		body.SinceLastMessage = int64(*settings.SinceLastMessage / time.Second)
-	}
-
-	if settings.OnUserLeave != nil {
-		body.OnUserLeave = *settings.OnUserLeave
-	}
-
-	return
 }

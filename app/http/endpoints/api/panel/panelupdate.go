@@ -268,6 +268,15 @@ func UpdatePanel(c *gin.Context) {
 		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
 		HideClaimButton:           data.HideClaimButton,
 		ShowInOpenCommand:         data.ShowInOpenCommand,
+		StoreTranscripts:          data.StoreTranscripts,
+		ThreadArchiveDuration:     data.ThreadArchiveDuration,
+		OverflowEnabled:           data.OverflowEnabled,
+		OverflowCategoryId:        data.OverflowCategoryId,
+		UsersCanClose:             data.UsersCanClose,
+		CloseConfirmation:         data.CloseConfirmation,
+		FeedbackEnabled:           data.FeedbackEnabled,
+		SupportCanView:            data.SupportCanView,
+		SupportCanType:            data.SupportCanType,
 	}
 
 
@@ -332,6 +341,11 @@ func UpdatePanel(c *gin.Context) {
 
 	if err := dbclient.Client.PanelTicketPermissions.Set(c, panel.PanelId, data.TicketPermissions); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))
+		return
+	}
+
+	if err := dbclient.Client.PanelAutoClose.Set(c, panel.PanelId, data.AutoClose.toDatabase()); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel auto-close settings"))
 		return
 	}
 

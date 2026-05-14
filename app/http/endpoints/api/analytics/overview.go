@@ -68,6 +68,8 @@ func parseDays(ctx *gin.Context) int {
 	}
 
 	switch days {
+	case 0:
+		return 3650
 	case 7, 30, 90, 365:
 		return days
 	default:

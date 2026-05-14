@@ -8,13 +8,13 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/botstaff"
 	admin_entitlements "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/entitlements"
+	admin_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/gallery"
 	admin_globalblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/globalblacklist"
+	admin_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/integrations"
 	admin_polarproducts "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/polarproducts"
 	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
-	admin_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/gallery"
-	admin_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/integrations"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
@@ -28,6 +28,7 @@ import (
 	api_settings "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/settings"
 	api_override "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/staffoverride"
 	api_tags "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/tags"
+	api_onboarding "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/onboarding"
 	api_team "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/team"
 	api_ticket "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
@@ -332,6 +333,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			api_kb.VerifyDomainHandler,
 		)
 
+		// Onboarding
+		guildAuthApiAdmin.GET("/onboarding", api_onboarding.GetOnboardingHandler)
+		guildAuthApiAdmin.POST("/onboarding", api_onboarding.UpdateOnboardingHandler)
+		guildAuthApiAdmin.GET("/gallery/featured", api_gallery.FeaturedHandler)
+
 		// Gallery submissions (guild-scoped)
 		guildAuthApiAdmin.POST("/gallery/submit/:panelid",
 			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
@@ -426,6 +432,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
 			adminTier.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
 			adminTier.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
+
+			adminTier.GET("/skus", admin_skus.ListHandler)
 		}
 
 		// Owner-only routes
@@ -435,7 +443,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.GET("/global-blacklist", admin_globalblacklist.ListHandler)
 			ownerTier.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)
 			ownerTier.DELETE("/global-blacklist/:userid", admin_globalblacklist.RemoveHandler)
-			ownerTier.GET("/skus", admin_skus.ListHandler)
 			ownerTier.POST("/skus", admin_skus.CreateHandler)
 			ownerTier.PUT("/skus/:skuid", admin_skus.UpdateHandler)
 			ownerTier.DELETE("/skus/:skuid", admin_skus.DeleteHandler)

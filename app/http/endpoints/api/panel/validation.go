@@ -22,8 +22,6 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 )
 
-var validAutoArchive = []int{60, 1440, 4320, 10080}
-
 func ApplyPanelDefaults(data *panelBody) {
 	for _, applicator := range DefaultApplicators(data) {
 		if applicator.ShouldApply() {
@@ -81,7 +79,6 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateTicketNotificationChannel,
 		validateCooldownSeconds,
 		validateTicketLimit,
-		validateThreadArchiveDuration,
 		validateOverflowCategoryId,
 		validateSupportCanType,
 		validateAutoClose,
@@ -508,22 +505,6 @@ func validateTicketLimit(ctx PanelValidationContext) validation.ValidationFunc {
 		}
 
 		return nil
-	}
-}
-
-func validateThreadArchiveDuration(ctx PanelValidationContext) validation.ValidationFunc {
-	return func() error {
-		if !ctx.Data.UseThreads {
-			return nil
-		}
-
-		for _, d := range validAutoArchive {
-			if d == ctx.Data.ThreadArchiveDuration {
-				return nil
-			}
-		}
-
-		return validation.NewInvalidInputError("Invalid thread auto archive duration")
 	}
 }
 

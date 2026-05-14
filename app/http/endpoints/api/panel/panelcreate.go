@@ -68,7 +68,6 @@ type panelBody struct {
 	ShowInOpenCommand         bool                              `json:"show_in_open_command"`
 	TicketPermissions         database.TicketPermissions        `json:"ticket_permissions"`
 	StoreTranscripts          bool                              `json:"store_transcripts"`
-	ThreadArchiveDuration     int                               `json:"thread_archive_duration"`
 	OverflowEnabled           bool                              `json:"overflow_enabled"`
 	OverflowCategoryId        *uint64                           `json:"overflow_category_id,string"`
 	UsersCanClose             bool                              `json:"users_can_close"`
@@ -284,7 +283,6 @@ func CreatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 		ShowInOpenCommand:         data.ShowInOpenCommand,
 		StoreTranscripts:          data.StoreTranscripts,
-		ThreadArchiveDuration:     data.ThreadArchiveDuration,
 		OverflowEnabled:           data.OverflowEnabled,
 		OverflowCategoryId:        data.OverflowCategoryId,
 		UsersCanClose:             data.UsersCanClose,

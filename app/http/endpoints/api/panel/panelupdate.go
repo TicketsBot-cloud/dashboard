@@ -269,7 +269,6 @@ func UpdatePanel(c *gin.Context) {
 		HideClaimButton:           data.HideClaimButton,
 		ShowInOpenCommand:         data.ShowInOpenCommand,
 		StoreTranscripts:          data.StoreTranscripts,
-		ThreadArchiveDuration:     data.ThreadArchiveDuration,
 		OverflowEnabled:           data.OverflowEnabled,
 		OverflowCategoryId:        data.OverflowCategoryId,
 		UsersCanClose:             data.UsersCanClose,

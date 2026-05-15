@@ -56,7 +56,7 @@ type panelBody struct {
 	ExitSurveyFormId          *int                              `json:"exit_survey_form_id"`
 	AccessControlList         []database.PanelAccessControlRule `json:"access_control_list"`
 	PendingCategory           *uint64                           `json:"pending_category,string"`
-	DeleteMentions            bool                              `json:"delete_mentions"`
+	MentionBehaviour          string                            `json:"mention_behaviour"`
 	TranscriptChannelId       *uint64                           `json:"transcript_channel_id,string"`
 	UseThreads                bool                              `json:"use_threads"`
 	TicketNotificationChannel *uint64                           `json:"ticket_notification_channel,string"`
@@ -272,7 +272,7 @@ func CreatePanel(c *gin.Context) {
 		Disabled:                  data.Disabled,
 		ExitSurveyFormId:          data.ExitSurveyFormId,
 		PendingCategory:           data.PendingCategory,
-		DeleteMentions:            data.DeleteMentions,
+		MentionBehaviour:          data.MentionBehaviour,
 		TranscriptChannelId:       data.TranscriptChannelId,
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,

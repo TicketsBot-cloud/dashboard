@@ -26,6 +26,7 @@ func GetPanel(c *gin.Context) {
 		IsCurrentlyActive            bool                              `json:"is_currently_active"`
 		TicketPermissions            database.TicketPermissions        `json:"ticket_permissions"`
 		AutoClose                    PanelAutoCloseResponse            `json:"auto_close"`
+		MentionBehaviour             string                            `json:"mention_behaviour"`
 	}
 
 	guildId := c.Keys["guildid"].(uint64)
@@ -151,6 +152,11 @@ func GetPanel(c *gin.Context) {
 		return
 	}
 
+	mentionBehaviour := panel.MentionBehaviour
+	if mentionBehaviour == "" {
+		mentionBehaviour = "none"
+	}
+
 	c.JSON(200, panelResponse{
 		Panel:                        panel.Panel,
 		WelcomeMessage:               welcomeMessage,
@@ -164,6 +170,7 @@ func GetPanel(c *gin.Context) {
 		IsCurrentlyActive:            isCurrentlyActive,
 		TicketPermissions:            ticketPerms,
 		AutoClose:                    panelAutoCloseToResponse(autoCloseSettings),
+		MentionBehaviour:             mentionBehaviour,
 	})
 }
 

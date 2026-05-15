@@ -258,7 +258,7 @@ func UpdatePanel(c *gin.Context) {
 		Disabled:                  data.Disabled,
 		ExitSurveyFormId:          data.ExitSurveyFormId,
 		PendingCategory:           data.PendingCategory,
-		DeleteMentions:            data.DeleteMentions,
+		MentionBehaviour:          data.MentionBehaviour,
 		TranscriptChannelId:       data.TranscriptChannelId,
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,

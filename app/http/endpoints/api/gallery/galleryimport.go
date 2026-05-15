@@ -125,7 +125,7 @@ func ImportHandler(ctx *gin.Context) {
 		Disabled:                  false,
 		CooldownSeconds:           0,
 		TicketLimit:               nil,
-		DeleteMentions:            false,
+		MentionBehaviour:          "none",
 		UseThreads:                false,
 		HideCloseButton:           false,
 		HideCloseWithReasonButton: false,

@@ -161,7 +161,7 @@ func GetPanel(c *gin.Context) {
 		Panel:                        panel.Panel,
 		WelcomeMessage:               welcomeMessage,
 		UseCustomEmoji:               panel.EmojiId != nil,
-		Emoji:                        types.NewEmoji(panel.EmojiName, panel.EmojiId),
+		Emoji:                        types.NewEmoji(panel.EmojiName, panel.EmojiId, panel.EmojiAnimated),
 		Mentions:                     mentions,
 		Teams:                        teamIds,
 		UseServerDefaultNamingScheme: panel.NamingScheme == nil,

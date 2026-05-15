@@ -217,6 +217,7 @@ func CreatePanel(c *gin.Context) {
 
 	var emojiId *uint64
 	var emojiName *string
+	var emojiAnimated bool
 	{
 		emoji := data.getEmoji()
 		if emoji != nil {
@@ -224,6 +225,7 @@ func CreatePanel(c *gin.Context) {
 
 			if emoji.Id.Value != 0 {
 				emojiId = &emoji.Id.Value
+				emojiAnimated = emoji.Animated
 			}
 		}
 	}
@@ -259,6 +261,7 @@ func CreatePanel(c *gin.Context) {
 		TargetCategory:            data.CategoryId,
 		EmojiId:                   emojiId,
 		EmojiName:                 emojiName,
+		EmojiAnimated:             emojiAnimated,
 		WelcomeMessageEmbed:       welcomeMessageEmbed,
 		WithDefaultTeam:           data.WithDefaultTeam,
 		CustomId:                  customId,

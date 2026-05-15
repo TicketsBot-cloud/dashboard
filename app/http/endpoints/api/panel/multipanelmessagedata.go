@@ -68,6 +68,14 @@ func getEffectiveEmojiId(panel database.Panel, customEmojiName *string, customEm
 	return panel.EmojiId
 }
 
+func getEffectiveEmojiAnimated(panel database.Panel, customEmojiName *string, customEmojiId *uint64) bool {
+	// Custom emoji overrides don't store the animated flag; only panel-native emoji does
+	if customEmojiName != nil && *customEmojiName != "" {
+		return false
+	}
+	return panel.EmojiAnimated
+}
+
 func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
 	if !d.IsPremium {
 		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
@@ -79,7 +87,8 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 		for i, pwc := range panels {
 			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
 			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId).IntoGdl()
+			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
 
 			options[i] = component.SelectOption{
 				Label:       getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
@@ -114,7 +123,8 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 		for i, pwc := range panels {
 			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
 			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId).IntoGdl()
+			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
 
 			buttons[i] = component.BuildButton(component.Button{
 				Label:    getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
@@ -170,7 +180,8 @@ func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint6
 		for i, pwc := range panels {
 			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
 			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId).IntoGdl()
+			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
 
 			options[i] = component.SelectOption{
 				Label:       getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
@@ -205,7 +216,8 @@ func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint6
 		for i, pwc := range panels {
 			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
 			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId).IntoGdl()
+			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
 
 			buttons[i] = component.BuildButton(component.Button{
 				Label:    getEffectiveLabel(pwc.Panel, pwc.CustomLabel),

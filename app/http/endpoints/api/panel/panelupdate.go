@@ -127,6 +127,7 @@ func UpdatePanel(c *gin.Context) {
 
 	var emojiId *uint64
 	var emojiName *string
+	var emojiAnimated bool
 	{
 		emoji := data.getEmoji()
 		if emoji != nil {
@@ -134,6 +135,7 @@ func UpdatePanel(c *gin.Context) {
 
 			if emoji.Id.Value != 0 {
 				emojiId = &emoji.Id.Value
+				emojiAnimated = emoji.Animated
 			}
 		}
 	}
@@ -245,6 +247,7 @@ func UpdatePanel(c *gin.Context) {
 		TargetCategory:            data.CategoryId,
 		EmojiName:                 emojiName,
 		EmojiId:                   emojiId,
+		EmojiAnimated:             emojiAnimated,
 		WelcomeMessageEmbed:       welcomeMessageEmbed,
 		WithDefaultTeam:           data.WithDefaultTeam,
 		CustomId:                  existing.CustomId,

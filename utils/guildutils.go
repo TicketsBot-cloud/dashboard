@@ -194,7 +194,7 @@ func getGuildPremium(ctx context.Context, g guild.Guild, userId uint64) (bool, e
 		return premium.PremiumTier(cached.Tier) >= premium.Premium, nil
 	}
 
-	// No Redis cache — fall back to DB. We need the guild owner ID so that
+	// No Redis cache - fall back to DB. We need the guild owner ID so that
 	// user-level global subscriptions (e.g. Patreon) are included. For guilds
 	// the current user owns we have it directly; for others we try the bot cache.
 	ownerId := uint64(0)

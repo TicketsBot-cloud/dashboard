@@ -15,6 +15,8 @@ import (
 	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
+	admin_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/affiliate"
+	api_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/affiliate"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
@@ -33,6 +35,7 @@ import (
 	api_ticket "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
 	api_transcripts "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/transcripts"
+	api_user "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/user"
 	api_whitelabel "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/whitelabel"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/root"
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
@@ -97,7 +100,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	router.POST("/callback", middleware.VerifyXTicketsHeader, root.CallbackHandler)
 	router.POST("/logout", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, root.LogoutHandler)
 
-	// Public KB routes — no authentication required
+	// Public KB routes - no authentication required
 	kbPublic := router.Group("/api/kb/public/:guildId",
 		rl(middleware.RateLimitTypeIp, 30, time.Minute),
 		rl(middleware.RateLimitTypeIp, 10, time.Second*10),
@@ -160,6 +163,16 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 					api_polar.GetOrderInvoice,
 				)
 			}
+		}
+
+		{
+			affiliateGroup := apiGroup.Group("/affiliate/@me")
+			affiliateGroup.GET("", api_affiliate.GetStatus)
+			affiliateGroup.POST("/apply", rl(middleware.RateLimitTypeUser, 3, time.Minute), api_affiliate.Apply)
+			affiliateGroup.GET("/referrals", api_affiliate.ListReferrals)
+			affiliateGroup.POST("/redeem", rl(middleware.RateLimitTypeUser, 3, time.Minute), api_affiliate.Redeem)
+			affiliateGroup.POST("/verify-email", rl(middleware.RateLimitTypeUser, 5, time.Minute), api_affiliate.VerifyEmail)
+			affiliateGroup.POST("/resend-verification", rl(middleware.RateLimitTypeUser, 3, 5*time.Minute), api_affiliate.ResendVerification)
 		}
 	}
 
@@ -384,10 +397,25 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		)
 	}
 
-	userGroup := router.Group("/user", middleware.AuthenticateToken, middleware.UpdateLastSeen)
+	userGroup := router.Group("/user", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.UpdateLastSeen)
 	{
 		userGroup.POST("/guilds/reload", api.ReloadGuildsHandler)
 		userGroup.GET("/permissionlevel", api.GetPermissionLevel)
+
+		// User settings
+		userGroup.GET("/settings", api_user.GetSettings)
+		userGroup.PUT("/settings/email", api_user.UpdateEmail)
+		userGroup.DELETE("/settings/email", api_user.DeleteEmail)
+		userGroup.GET("/settings/notifications", api_user.GetNotificationPreferences)
+		userGroup.PUT("/settings/notifications", api_user.UpdateNotificationPreferences)
+		userGroup.POST("/settings/verify-email", rl(middleware.RateLimitTypeUser, 5, time.Minute), api_user.VerifyEmail)
+		userGroup.POST("/settings/resend-verification", rl(middleware.RateLimitTypeUser, 3, 5*time.Minute), api_user.ResendVerification)
+
+		// Notifications
+		userGroup.GET("/notifications", api_user.ListNotifications)
+		userGroup.GET("/notifications/unread-count", rl(middleware.RateLimitTypeUser, 10, 30*time.Second), api_user.UnreadCount)
+		userGroup.POST("/notifications/:id/read", api_user.MarkNotificationRead)
+		userGroup.POST("/notifications/read-all", api_user.MarkAllNotificationsRead)
 
 		{
 			whitelabelGroup := userGroup.Group("/whitelabel", middleware.VerifyWhitelabel(true))
@@ -434,6 +462,9 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
 
 			adminTier.GET("/skus", admin_skus.ListHandler)
+
+			adminTier.GET("/affiliate", admin_affiliate.ListHandler)
+			adminTier.GET("/affiliate/flagged", admin_affiliate.FlaggedHandler)
 		}
 
 		// Owner-only routes
@@ -450,6 +481,12 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.POST("/polar-products", admin_polarproducts.CreateHandler)
 			ownerTier.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
 			ownerTier.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
+
+			ownerTier.POST("/affiliate", admin_affiliate.CreateHandler)
+			ownerTier.POST("/affiliate/:id/approve", admin_affiliate.ApproveHandler)
+			ownerTier.POST("/affiliate/:id/revoke", admin_affiliate.RevokeHandler)
+			ownerTier.PUT("/affiliate/:id/rates", admin_affiliate.UpdateRatesHandler)
+			ownerTier.POST("/affiliate/referrals/:id/void", admin_affiliate.VoidHandler)
 		}
 	}
 

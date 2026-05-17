@@ -61,11 +61,24 @@ type Config struct {
 		Uri string `env:"URI,required"`
 	} `envPrefix:"CACHE_"`
 	Polar struct {
-		ApiKey             string `env:"API_KEY"`
-		IsSandbox          bool   `env:"IS_SANDBOX"`
-		CheckoutSuccessUrl string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
+		ApiKey                     string `env:"API_KEY"`
+		IsSandbox                  bool   `env:"IS_SANDBOX"`
+		CheckoutSuccessUrl         string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
+		DefaultDiscountBasisPoints      int `env:"DEFAULT_DISCOUNT_BASIS_POINTS" envDefault:"500"`
+		DefaultCreditPercentage        int `env:"DEFAULT_CREDIT_PERCENTAGE" envDefault:"10"`
+		DefaultNonPremiumCreditPercent int `env:"DEFAULT_NON_PREMIUM_CREDIT_PERCENTAGE" envDefault:"5"`
 	} `envPrefix:"POLAR_"`
+	Mailgun struct {
+		Domain    string `env:"DOMAIN"`
+		ApiKey    string `env:"API_KEY"`
+		FromEmail string `env:"FROM_EMAIL" envDefault:"noreply@tickets.bot"`
+		FromName  string `env:"FROM_NAME" envDefault:"Tickets Bot"`
+		UseEU     bool   `env:"USE_EU" envDefault:"false"`
+	} `envPrefix:"MAILGUN_"`
 	SecureProxyUrl string `env:"SECURE_PROXY_URL"`
+	Security       struct {
+		VerificationHmacSecret string `env:"VERIFICATION_HMAC_SECRET" envDefault:"default-dev-secret-change-in-production"`
+	} `envPrefix:"SECURITY_"`
 }
 
 // TODO: Don't use a global variable

@@ -198,7 +198,7 @@ func checkChannel(
 	}
 
 	if !exists {
-		// Channel not found in the guild's channel list — it has been deleted.
+		// Channel not found in the guild's channel list - it has been deleted.
 		result.Deleted = true
 		result.Ok = false
 		return result

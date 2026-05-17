@@ -41,7 +41,7 @@ func ListHandler(ctx *gin.Context) {
 		}
 		listings, err = dbclient.Client.GalleryListings.GetByStatus(ctx, validStatus)
 	} else {
-		// Fetch all by getting each status — or we can add a GetAll method.
+		// Fetch all by getting each status - or we can add a GetAll method.
 		// For now, get pending first as that's the most common admin use case.
 		pending, pendingErr := dbclient.Client.GalleryListings.GetByStatus(ctx, database.GalleryListingStatusPending)
 		if pendingErr != nil {

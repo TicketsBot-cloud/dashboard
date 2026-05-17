@@ -21,6 +21,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/email"
 	"github.com/TicketsBot-cloud/dashboard/log"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -93,6 +94,8 @@ func main() {
 	utils.SecureProxyClient = secureproxy.NewSecureProxy(config.Conf.SecureProxyUrl)
 
 	i18n.Init()
+
+	email.Init(config.Conf.Mailgun.Domain, config.Conf.Mailgun.ApiKey, config.Conf.Mailgun.FromEmail, config.Conf.Mailgun.FromName, config.Conf.Mailgun.UseEU)
 
 	if config.Conf.Bot.ProxyUrl != "" {
 		request.RegisterHook(utils.ProxyHook)

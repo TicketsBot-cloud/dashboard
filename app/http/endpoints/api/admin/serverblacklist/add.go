@@ -24,7 +24,7 @@ func AddHandler(ctx *gin.Context) {
 	}
 
 	var body addBody
-	// Body is optional — reason may be nil
+	// Body is optional - reason may be nil
 	_ = ctx.BindJSON(&body)
 
 	if err := database.Client.ServerBlacklist.Add(ctx, guildId, body.Reason, nil, nil); err != nil {

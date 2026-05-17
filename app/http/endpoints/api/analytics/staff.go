@@ -8,8 +8,8 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/log"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
-	"github.com/jackc/pgtype"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgtype"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -38,7 +38,7 @@ func GetAnalyticsStaffHandler(ctx *gin.Context) {
 	defer cancel()
 
 	// Step 1: Resolve actual staff user IDs from the permission system.
-	// This mirrors how /stats user checks permissions — direct assignments,
+	// This mirrors how /stats user checks permissions - direct assignments,
 	// support team membership, and role-based permissions.
 	var directStaff []uint64
 	var teamMembers []uint64

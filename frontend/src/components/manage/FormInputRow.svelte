@@ -101,7 +101,7 @@
         dispatch('validationchange', hasValidationErrors);
     }
 
-    // Also dispatch after mount — $: blocks run during init before listeners are guaranteed attached
+    // Also dispatch after mount - $: blocks run during init before listeners are guaranteed attached
     onMount(() => {
         dispatch('validationchange', hasValidationErrors);
     });

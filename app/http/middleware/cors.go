@@ -46,13 +46,13 @@ func Cors(config config.Config) func(*gin.Context) {
 		allowCredentials := true
 
 		if config.Server.KBBaseUrl != "" && origin == config.Server.KBBaseUrl {
-			// Static KB base URL — trusted, allow credentials
+			// Static KB base URL - trusted, allow credentials
 			allowedOrigin = config.Server.KBBaseUrl
 		} else if origin != "" && origin != allowedOrigin && strings.HasPrefix(origin, "https://") {
 			// Only accept HTTPS origins for custom domains
 			hostname := strings.TrimPrefix(origin, "https://")
 			if hostname != "" && isVerifiedDomain(hostname) {
-				// Custom domain — only allow for public KB paths, no credentials
+				// Custom domain - only allow for public KB paths, no credentials
 				if strings.HasPrefix(ctx.Request.URL.Path, "/api/kb/public/") {
 					allowedOrigin = origin
 					allowCredentials = false

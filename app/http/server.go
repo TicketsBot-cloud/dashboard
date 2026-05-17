@@ -467,6 +467,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.GET("/skus", admin_skus.ListHandler)
 
 			adminTier.GET("/affiliate", admin_affiliate.ListHandler)
+			adminTier.GET("/affiliate/:id/referrals", admin_affiliate.ReferralsHandler)
 			adminTier.GET("/affiliate/flagged", admin_affiliate.FlaggedHandler)
 		}
 

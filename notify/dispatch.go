@@ -84,6 +84,16 @@ func SendToAdmins(ctx context.Context, category, title, body, link string) {
 	}
 }
 
+// SendToOwner dispatches a notification to the bot owner only.
+func SendToOwner(ctx context.Context, category, title, body, link string) {
+	ownerId := config.Conf.Owner
+	if ownerId == 0 {
+		return
+	}
+
+	Send(ctx, ownerId, category, title, body, link)
+}
+
 func sendDiscordDM(ctx context.Context, userId uint64, title, body string) {
 	token := config.Conf.Bot.Token
 	if token == "" {

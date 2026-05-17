@@ -14,6 +14,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/notify"
+	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -138,11 +139,16 @@ func Apply(ctx *gin.Context) {
 		},
 	})
 
-	go notify.SendToAdmins(
+	username := "Unknown User"
+	if user, err := cache.Instance.GetUser(ctx, userId); err == nil {
+		username = user.Username
+	}
+
+	go notify.SendToOwner(
 		context.Background(),
 		notify.CategoryAdminAffiliates,
 		"New Affiliate Application",
-		fmt.Sprintf("A new affiliate application has been submitted with code **`%s`**.", code),
+		fmt.Sprintf("**%s** has submitted an affiliate application with code **`%s`**.", username, code),
 		"/admin/affiliate",
 	)
 

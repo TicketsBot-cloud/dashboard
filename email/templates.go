@@ -5,10 +5,28 @@ import (
 	"html"
 )
 
-// wrap provides the shared outer HTML structure for all email templates.
-// It uses table-based layout for maximum email client compatibility
-// (Gmail, Outlook, Apple Mail, Yahoo, etc.).
 func wrap(content string) string {
+	return wrapEmail(content,
+		`You are receiving this email because you added an email address to your Tickets Bot account.`,
+		`<a href="https://tickets.bot" style="color: #9ca3af; text-decoration: underline;">tickets.bot</a>
+&nbsp;&middot;&nbsp;
+<a href="https://discord.gg/ticketsbot" style="color: #9ca3af; text-decoration: underline;">Support</a>`,
+	)
+}
+
+func wrapNotification(content, unsubscribeURL string) string {
+	escapedURL := html.EscapeString(unsubscribeURL)
+	return wrapEmail(content,
+		`You are receiving this email because you enabled email notifications on your Tickets Bot account.`,
+		fmt.Sprintf(`<a href="https://tickets.bot" style="color: #9ca3af; text-decoration: underline;">tickets.bot</a>
+&nbsp;&middot;&nbsp;
+<a href="https://discord.gg/ticketsbot" style="color: #9ca3af; text-decoration: underline;">Support</a>
+&nbsp;&middot;&nbsp;
+<a href="%s" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>`, escapedURL),
+	)
+}
+
+func wrapEmail(content, footerNote, footerLinks string) string {
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -73,14 +91,12 @@ Tickets Bot
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%">
 <tr>
 <td align="center" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #6b7280;">
-You are receiving this email because you added an email address to your Tickets Bot account.
+%s
 </td>
 </tr>
 <tr>
 <td align="center" style="padding-top: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 12px; line-height: 1.6; color: #6b7280;">
-<a href="https://tickets.bot" style="color: #9ca3af; text-decoration: underline;">tickets.bot</a>
-&nbsp;&middot;&nbsp;
-<a href="https://discord.gg/ticketsbot" style="color: #9ca3af; text-decoration: underline;">Support</a>
+%s
 </td>
 </tr>
 <tr>
@@ -98,7 +114,7 @@ The Grange, Grange Road, Great Malvern, WR14 3HA
 </tr>
 </table>
 </body>
-</html>`, content)
+</html>`, content, footerNote, footerLinks)
 }
 
 // EmailVerification generates the email body for verifying a user's email address.
@@ -194,10 +210,10 @@ If you did not request this, you can safely ignore this email.
 }
 
 // AffiliateApproved generates the email body sent when an affiliate code is approved.
-func AffiliateApproved(code string) string {
+func AffiliateApproved(code, unsubscribeURL string) string {
 	escapedCode := html.EscapeString(code)
 
-	return wrap(fmt.Sprintf(`<!-- Heading -->
+	return wrapNotification(fmt.Sprintf(`<!-- Heading -->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%">
 <tr>
 <td style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 22px; font-weight: 600; color: #ffffff; padding-bottom: 8px;">
@@ -264,15 +280,15 @@ Go to Affiliate Dashboard
 </table>
 </td>
 </tr>
-</table>`, escapedCode))
+</table>`, escapedCode), unsubscribeURL)
 }
 
 // NotificationEmail generates a generic notification email body.
-func NotificationEmail(title, body string) string {
+func NotificationEmail(title, body, unsubscribeURL string) string {
 	escapedTitle := html.EscapeString(title)
 	escapedBody := html.EscapeString(body)
 
-	return wrap(fmt.Sprintf(`<!-- Heading -->
+	return wrapNotification(fmt.Sprintf(`<!-- Heading -->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%">
 <tr>
 <td style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 22px; font-weight: 600; color: #ffffff; padding-bottom: 8px;">
@@ -300,14 +316,14 @@ Go to Dashboard
 </table>
 </td>
 </tr>
-</table>`, escapedTitle, escapedBody))
+</table>`, escapedTitle, escapedBody), unsubscribeURL)
 }
 
 // AffiliateRevoked generates the email body sent when an affiliate code is revoked.
-func AffiliateRevoked(code string) string {
+func AffiliateRevoked(code, unsubscribeURL string) string {
 	escapedCode := html.EscapeString(code)
 
-	return wrap(fmt.Sprintf(`<!-- Heading -->
+	return wrapNotification(fmt.Sprintf(`<!-- Heading -->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%">
 <tr>
 <td style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 22px; font-weight: 600; color: #ffffff; padding-bottom: 8px;">
@@ -374,5 +390,5 @@ Contact Support
 </table>
 </td>
 </tr>
-</table>`, escapedCode))
+</table>`, escapedCode), unsubscribeURL)
 }

@@ -100,6 +100,9 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	router.POST("/callback", middleware.VerifyXTicketsHeader, root.CallbackHandler)
 	router.POST("/logout", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, root.LogoutHandler)
 
+	router.GET("/unsubscribe", root.UnsubscribeHandler)
+	router.POST("/unsubscribe", root.UnsubscribeHandler)
+
 	// Public KB routes - no authentication required
 	kbPublic := router.Group("/api/kb/public/:guildId",
 		rl(middleware.RateLimitTypeIp, 30, time.Minute),

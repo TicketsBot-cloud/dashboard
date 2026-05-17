@@ -9,6 +9,7 @@ import (
 
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+
 	"github.com/TicketsBot-cloud/dashboard/email"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
@@ -66,7 +67,7 @@ func Send(ctx context.Context, userId uint64, category, title, body, link string
 	}
 
 	if sendEmail {
-		sendEmailNotification(ctx, userId, title, body)
+		sendEmailNotification(ctx, userId, category, title, body)
 	}
 }
 
@@ -124,7 +125,7 @@ func sendDiscordDM(ctx context.Context, userId uint64, title, body string) {
 	}
 }
 
-func sendEmailNotification(ctx context.Context, userId uint64, title, body string) {
+func sendEmailNotification(ctx context.Context, userId uint64, category, title, body string) {
 	if email.DefaultClient == nil {
 		return
 	}
@@ -139,7 +140,9 @@ func sendEmailNotification(ctx context.Context, userId uint64, title, body strin
 		return
 	}
 
-	if err := email.DefaultClient.Send(ctx, userEmail.Email, title, email.NotificationEmail(title, body)); err != nil {
+	unsubURL := email.UnsubscribeURL(config.Conf.Server.BaseUrl, config.Conf.Security.VerificationHmacSecret, userId, category)
+	htmlBody := email.NotificationEmail(title, body, unsubURL)
+	if err := email.DefaultClient.SendNotification(ctx, userEmail.Email, title, htmlBody, unsubURL); err != nil {
 		log.Printf("Failed to send notification email to user %d: %v", userId, err)
 	}
 }

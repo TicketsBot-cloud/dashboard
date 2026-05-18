@@ -17,6 +17,7 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v4"
 )
 
 type (
@@ -37,12 +38,27 @@ type (
 		MinLength   uint16                   `json:"min_length" validate:"min=0,max=4000"`
 		MaxLength   uint16                   `json:"max_length" validate:"min=1,max=4000"`
 		Options     []inputOption            `json:"options,omitempty" validate:"omitempty,dive,required,min=1,max=25"`
+		ApiConfig   *inputApiConfigBody      `json:"api_config,omitempty" validate:"omitempty,dive"`
 	}
 
 	inputOption struct {
 		Label       string  `json:"label" validate:"required,min=1,max=100"`
 		Description *string `json:"description,omitempty" validate:"omitempty,max=100"`
 		Value       string  `json:"value" validate:"required,min=1,max=100"`
+	}
+
+	inputApiConfigBody struct {
+		EndpointUrl          string               `json:"endpoint_url" validate:"required,min=1,max=500"`
+		Method               string               `json:"method" validate:"required,oneof=GET POST PUT PATCH DELETE"`
+		CacheDurationSeconds *int                 `json:"cache_duration_seconds,omitempty" validate:"omitempty,min=0"`
+		NoOptionsMessage     *string              `json:"no_options_message,omitempty" validate:"omitempty,max=100"`
+		Headers              []inputApiHeaderBody `json:"headers,omitempty" validate:"omitempty,max=20,dive"`
+	}
+
+	inputApiHeaderBody struct {
+		HeaderName  string `json:"header_name" validate:"required,min=1,max=255"`
+		HeaderValue string `json:"header_value" validate:"required,min=1,max=8192"`
+		IsSecret    bool   `json:"is_secret"`
 	}
 
 	inputUpdateBody struct {
@@ -269,22 +285,31 @@ func validateInputOptions(input inputCreateBody, optionTypes map[int]string) err
 		return nil
 	}
 
-	// Radio Group (type 21) requires 2-10 options, Checkbox Group (type 22) requires 1-10 options
+	// For String Select (type 3), allow API config as alternative to options
+	if input.Type == 3 && input.ApiConfig != nil {
+		if len(input.Options) > 0 {
+			return fmt.Errorf("String select inputs cannot have both options and an API configuration")
+		}
+		if !strings.HasPrefix(input.ApiConfig.EndpointUrl, "https://") && !strings.HasPrefix(input.ApiConfig.EndpointUrl, "http://") {
+			return fmt.Errorf("API endpoint URL must start with https:// or http://")
+		}
+		return nil
+	}
+
 	switch input.Type {
-		case 21:
-			if len(input.Options) < 2 {
-				return fmt.Errorf("Radio group inputs must have at least 2 options")
-			}
-			if len(input.Options) > 10 {
-				return fmt.Errorf("Radio group inputs must have at most 10 options")
-			}
-		case 22:
-			if len(input.Options) == 0 {
-				return fmt.Errorf("%s inputs must have at least one option", typeName)
-			}
-			if len(input.Options) > 10 {
+	case 21:
+		if len(input.Options) < 2 {
+			return fmt.Errorf("Radio group inputs must have at least 2 options")
+		}
+		if len(input.Options) > 10 {
+			return fmt.Errorf("Radio group inputs must have at most 10 options")
+		}
+	case 22:
+		if len(input.Options) == 0 {
+			return fmt.Errorf("%s inputs must have at least one option", typeName)
+		}
+		if len(input.Options) > 10 {
 			return fmt.Errorf("Checkbox group inputs must have at most 10 options")
-			
 		}
 	default:
 		if len(input.Options) == 0 {
@@ -411,6 +436,10 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 				}
 			}
 		}
+
+		if err := saveApiConfig(ctx, tx,wrapped.Id, input.inputCreateBody); err != nil {
+			return err
+		}
 	}
 
 	for _, input := range data.Create {
@@ -501,7 +530,58 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 				}
 			}
 		}
+
+		if err := saveApiConfig(ctx, tx,formInputId, input); err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit(context.Background())
+}
+
+func saveApiConfig(ctx context.Context, tx pgx.Tx, formInputId int, input inputCreateBody) error {
+	if input.Type != 3 {
+		return nil
+	}
+
+	existingConfig, hasExisting, err := dbclient.Client.FormInputApiConfig.Get(ctx, formInputId)
+	if err != nil {
+		return err
+	}
+
+	if input.ApiConfig == nil {
+		if hasExisting {
+			if err := dbclient.Client.FormInputApiConfig.DeleteTx(ctx, tx, existingConfig.Id); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	var configId int
+	if hasExisting {
+		if err := dbclient.Client.FormInputApiConfig.UpdateTx(ctx, tx, existingConfig.Id, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds, input.ApiConfig.NoOptionsMessage); err != nil {
+			return err
+		}
+		configId = existingConfig.Id
+	} else {
+		configId, err = dbclient.Client.FormInputApiConfig.CreateTx(ctx, tx, formInputId, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds, input.ApiConfig.NoOptionsMessage)
+		if err != nil {
+			return err
+		}
+	}
+
+	if hasExisting {
+		if err := dbclient.Client.FormInputApiHeaders.DeleteByApiConfigTx(ctx, tx, configId); err != nil {
+			return err
+		}
+	}
+
+	for _, header := range input.ApiConfig.Headers {
+		if _, err := dbclient.Client.FormInputApiHeaders.CreateTx(ctx, tx, configId, header.HeaderName, header.HeaderValue, header.IsSecret); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

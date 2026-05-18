@@ -12,6 +12,7 @@ import (
 
 	"github.com/TicketsBot-cloud/archiverclient"
 	"github.com/TicketsBot-cloud/common/chatrelay"
+	"github.com/TicketsBot-cloud/common/experiments"
 	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/observability"
 	"github.com/TicketsBot-cloud/common/premium"
@@ -103,6 +104,9 @@ func main() {
 
 	logger.Info("Connecting to Redis")
 	redis.Client = redis.NewRedisClient()
+
+	expManager := experiments.NewManager(redis.Client.Client, database.Client)
+	experiments.SetGlobalManager(expManager)
 
 	socketManager := livechat.NewSocketManager()
 	go socketManager.Run()

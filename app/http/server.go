@@ -16,6 +16,7 @@ import (
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
 	admin_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/affiliate"
+	admin_analytics_api "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/analytics"
 	api_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/affiliate"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
@@ -469,6 +470,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.GET("/affiliate", admin_affiliate.ListHandler)
 			adminTier.GET("/affiliate/:id/referrals", admin_affiliate.ReferralsHandler)
 			adminTier.GET("/affiliate/flagged", admin_affiliate.FlaggedHandler)
+
+			adminTier.GET("/analytics/usage", admin_analytics_api.GetUsageHandler)
+			adminTier.GET("/analytics/adoption", admin_analytics_api.GetAdoptionHandler)
+			adminTier.GET("/analytics/retention", admin_analytics_api.GetRetentionHandler)
+			adminTier.GET("/analytics/config-patterns", admin_analytics_api.GetConfigPatternsHandler)
 		}
 
 		// Owner-only routes

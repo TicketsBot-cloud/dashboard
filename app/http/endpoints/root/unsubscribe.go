@@ -12,15 +12,25 @@ import (
 )
 
 func UnsubscribeHandler(ctx *gin.Context) {
+	wantsJSON := ctx.GetHeader("Accept") == "application/json"
+
 	token := ctx.Query("token")
 	if token == "" {
-		ctx.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		if wantsJSON {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Missing token"})
+		} else {
+			ctx.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		}
 		return
 	}
 
 	userId, category, err := email.VerifyUnsubscribeToken(config.Conf.Security.VerificationHmacSecret, token)
 	if err != nil {
-		ctx.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		if wantsJSON {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired unsubscribe link"})
+		} else {
+			ctx.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		}
 		return
 	}
 
@@ -32,14 +42,22 @@ func UnsubscribeHandler(ctx *gin.Context) {
 		}
 	}
 	if label == "" {
-		ctx.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		if wantsJSON {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknown notification category"})
+		} else {
+			ctx.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		}
 		return
 	}
 
 	pref, err := dbclient.Client.NotificationPreferences.GetByUserIdAndCategory(ctx, userId, category)
 	if err != nil {
 		log.Printf("Failed to look up notification preferences for user %d: %v", userId, err)
-		ctx.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		if wantsJSON {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process unsubscribe request"})
+		} else {
+			ctx.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		}
 		return
 	}
 
@@ -52,11 +70,19 @@ func UnsubscribeHandler(ctx *gin.Context) {
 
 	if err := dbclient.Client.NotificationPreferences.Upsert(ctx, userId, category, discordDm, false, inApp); err != nil {
 		log.Printf("Failed to update notification preferences for user %d: %v", userId, err)
-		ctx.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		if wantsJSON {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process unsubscribe request"})
+		} else {
+			ctx.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte(unsubscribeErrorPage()))
+		}
 		return
 	}
 
-	ctx.Data(http.StatusOK, "text/html; charset=utf-8", []byte(unsubscribeSuccessPage(label)))
+	if wantsJSON {
+		ctx.JSON(http.StatusOK, gin.H{"success": true, "category": label})
+	} else {
+		ctx.Data(http.StatusOK, "text/html; charset=utf-8", []byte(unsubscribeSuccessPage(label)))
+	}
 }
 
 func unsubscribeSuccessPage(categoryLabel string) string {

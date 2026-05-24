@@ -3,10 +3,12 @@ FROM golang:alpine AS builder
 
 RUN apk update && apk upgrade && apk add git zlib-dev gcc musl-dev
 
-COPY . /go/src/github.com/TicketsBot-cloud/dashboard
-WORKDIR /go/src/github.com/TicketsBot-cloud/dashboard
+# Copy local modules that replace directives point to
+COPY database/ /go/src/github.com/TicketsBot-cloud/database/
+COPY worker/ /go/src/github.com/TicketsBot-cloud/worker/
 
-RUN git submodule update --init --recursive --remote
+COPY dashboard/ /go/src/github.com/TicketsBot-cloud/dashboard/
+WORKDIR /go/src/github.com/TicketsBot-cloud/dashboard
 
 RUN set -Eeux && \
     go mod download && \

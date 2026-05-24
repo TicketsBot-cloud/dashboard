@@ -461,6 +461,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
 
 			adminTier.GET("/integrations", admin_integrations.ListIntegrationsHandler)
+			adminTier.GET("/integrations/:integrationid", admin_integrations.GetIntegrationDetailHandler)
 			adminTier.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
 			adminTier.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
 			adminTier.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
@@ -496,6 +497,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.POST("/affiliate/:id/approve", admin_affiliate.ApproveHandler)
 			ownerTier.POST("/affiliate/:id/revoke", admin_affiliate.RevokeHandler)
 			ownerTier.PUT("/affiliate/:id/rates", admin_affiliate.UpdateRatesHandler)
+			ownerTier.PUT("/affiliate/:id/code", admin_affiliate.UpdateCodeHandler)
 			ownerTier.POST("/affiliate/referrals/:id/void", admin_affiliate.VoidHandler)
 		}
 	}

@@ -22,7 +22,6 @@
     let availableIntegrations = [];
 
     const pageLimit = 20;
-    const builtInIntegrationCount = 1;
     let page = 1;
 
     function previousPage() {
@@ -39,13 +38,7 @@
         }
     }
 
-    let hasNextPage = true;
-    $: if (page === 1) {
-        hasNextPage =
-            availableIntegrations.length + builtInIntegrationCount >= pageLimit;
-    } else {
-        hasNextPage = availableIntegrations.length >= pageLimit;
-    }
+    $: hasNextPage = availableIntegrations.length >= pageLimit;
 
     function generateProxyUrl(integration) {
         if (
@@ -149,28 +142,6 @@
             <div>
                 <h4 class="title">Available Integrations</h4>
                 <div class="integrations">
-                    <!-- Built in -->
-                    {#if page === 1}
-                        <div class="integration">
-                            <Integration
-                                builtIn
-                                name="Bloxlink"
-                                imageUrl="https://dbl-static.b-cdn.net/9bbd1f9504ddefc89606b19b290e9a0f.png"
-                                viewLink={`${DOCS_URL}/dashboard/settings/placeholders#bloxlink`}
-                            >
-                                <span slot="description">
-                                    Our Bloxlink integration inserts the Roblox
-                                    usernames, profile URLs and more of your
-                                    users into ticket welcome messages
-                                    automatically! This integration is
-                                    automatically enabled in all servers, press
-                                    the View button below to check out the full
-                                    list of placeholders you can use!
-                                </span>
-                            </Integration>
-                        </div>
-                    {/if}
-
                     {#each availableIntegrations as integration}
                         <div class="integration">
                             <Integration

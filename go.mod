@@ -19,7 +19,7 @@ require (
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260412182419-83b9a6ea08e7
 	github.com/TicketsBot-cloud/database v0.0.0-20260423165031-495c2e8a5bc7
-	github.com/TicketsBot-cloud/gdl v0.0.0-20260306134952-cccb0116fef6
+	github.com/TicketsBot-cloud/gdl v0.0.0-20260426095953-999472e6e538
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
 	github.com/TicketsBot-cloud/worker v0.0.0-20260423165809-3a23e8fb9fc3
 	github.com/apex/log v1.1.2

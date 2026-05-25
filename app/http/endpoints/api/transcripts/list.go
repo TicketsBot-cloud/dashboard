@@ -32,9 +32,9 @@ type transcriptMetadata struct {
 
 type paginatedTranscripts struct {
 	Transcripts []transcriptMetadata `json:"transcripts"`
-	TotalCount  int                   `json:"total_count"`
-	TotalPages  int                   `json:"total_pages"`
-	CurrentPage int                   `json:"current_page"`
+	TotalCount  int                  `json:"total_count"`
+	TotalPages  int                  `json:"total_pages"`
+	CurrentPage int                  `json:"current_page"`
 }
 
 func ListTranscripts(ctx *gin.Context) {
@@ -49,7 +49,23 @@ func ListTranscripts(ctx *gin.Context) {
 
 	opts, err := queryOptions.toQueryOptions(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+		if errors.Is(err, errUsernameNotFound) {
+			currentPage := queryOptions.Page
+			if currentPage == 0 {
+				currentPage = 1
+			}
+
+			ctx.JSON(200, paginatedTranscripts{
+				Transcripts: []transcriptMetadata{},
+				TotalCount:  0,
+				TotalPages:  1,
+				CurrentPage: currentPage,
+			})
+		} else if errors.Is(err, errUsernameTooLong) {
+			ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+		} else {
+			ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		}
 		return
 	}
 

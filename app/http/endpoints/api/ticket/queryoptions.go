@@ -4,14 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/member"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/TicketsBot-cloud/gdl/utils"
 )
+
+var (
+	errUsernameNotFound = errors.New("username not found")
+	errUsernameTooLong  = errors.New("username too long")
+)
+
+var searchMembersByUsername = func(ctx context.Context, guildId uint64, username string) ([]member.Member, error) {
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		return nil, err
+	}
+
+	return botContext.SearchMembers(ctx, guildId, username)
+}
 
 type wrappedQueryOptions struct {
 	Id          int    `json:"id"`
@@ -117,9 +134,8 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 			return database.TicketQueryOptions{}, err
 		}
 
-		// TODO: Do this better
 		if len(userIds) == 0 {
-			return database.TicketQueryOptions{}, errors.New("user not found")
+			return database.TicketQueryOptions{}, errUsernameNotFound
 		}
 	}
 
@@ -142,16 +158,16 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 
 func usernameToIds(guildId uint64, username string) ([]uint64, error) {
 	if len(username) > 32 {
-		return nil, errors.New("username too long")
+		return nil, errUsernameTooLong
 	}
 
-	botContext, err := botcontext.ContextForGuild(guildId)
+	members, err := searchMembersByUsername(context.Background(), guildId, username)
 	if err != nil {
-		return nil, err
-	}
+		var restErr request.RestError
+		if errors.As(err, &restErr) && restErr.StatusCode == http.StatusBadRequest {
+			return []uint64{}, nil
+		}
 
-	members, err := botContext.SearchMembers(context.Background(), guildId, username)
-	if err != nil {
 		return nil, err
 	}
 

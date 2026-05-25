@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -59,7 +60,13 @@ func GetTickets(c *gin.Context) {
 		if bindErr := c.ShouldBindJSON(&queryOptions); bindErr == nil {
 			opts, optsErr := queryOptions.toQueryOptions(guildId)
 			if optsErr != nil {
-				_ = c.AbortWithError(http.StatusBadRequest, app.NewError(optsErr, "Invalid filter parameters"))
+				if errors.Is(optsErr, errUsernameNotFound) {
+					buildResponseFromPlainTickets(c, nil, guildId, userId)
+				} else if errors.Is(optsErr, errUsernameTooLong) {
+					_ = c.AbortWithError(http.StatusBadRequest, app.NewError(optsErr, "Invalid filter parameters"))
+				} else {
+					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(optsErr, "Failed to resolve username filter"))
+				}
 				return
 			}
 

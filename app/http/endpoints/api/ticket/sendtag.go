@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
@@ -100,6 +101,26 @@ func SendTag(ctx *gin.Context) {
 		return
 	}
 
+	markPending := func() bool {
+		if ticket.Status == model.TicketStatusPending {
+			return true
+		}
+
+		if err := dbclient.Client.Tickets.SetStatus(ctx, guildId, ticketId, model.TicketStatusPending); err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to update ticket status."))
+			return false
+		}
+
+		if !ticket.IsThread {
+			if err := dbclient.Client.CategoryUpdateQueue.Add(ctx, guildId, ticketId, model.TicketStatusPending); err != nil {
+				ctx.JSON(500, utils.ErrorStr("Failed to queue ticket category update."))
+				return false
+			}
+		}
+
+		return true
+	}
+
 	// Process placeholders in tag content
 	processedContent := tag.Content
 	if processedContent != nil {
@@ -173,6 +194,9 @@ func SendTag(ctx *gin.Context) {
 				go dbclient.Client.Webhooks.Delete(ctx, guildId, ticketId)
 			}
 		} else {
+			if !markPending() {
+				return
+			}
 			ctx.JSON(200, gin.H{
 				"success": true,
 			})
@@ -208,6 +232,10 @@ func SendTag(ctx *gin.Context) {
 		},
 	}); err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to send tag '%s' to ticket #%d in channel %d", body.TagId, ticketId, *ticket.ChannelId))
+		return
+	}
+
+	if !markPending() {
 		return
 	}
 

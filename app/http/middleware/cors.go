@@ -38,7 +38,7 @@ func isVerifiedDomain(hostname string) bool {
 
 func Cors(config config.Config) func(*gin.Context) {
 	methods := []string{http.MethodOptions, http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete}
-	headers := []string{"x-tickets", "Content-Type", "Authorization", "X-CSRF-Token"}
+	headers := []string{"x-tickets", "Content-Type", "Authorization"}
 
 	return func(ctx *gin.Context) {
 		origin := ctx.GetHeader("Origin")

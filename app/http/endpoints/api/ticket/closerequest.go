@@ -103,6 +103,13 @@ func CloseRequest(c *gin.Context) {
 		return
 	}
 
+	if !ticket.IsThread {
+		if err := database.Client.CategoryUpdateQueue.Add(c, guildId, ticketId, model.TicketStatusPending); err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to queue category update"))
+			return
+		}
+	}
+
 	if ticket.ChannelId != nil {
 		locale := utils.ResolveGuildLocale(context.Background(), guildId)
 		msgEmbed, components := buildCloseRequestMessage(locale, userId, body.Reason)

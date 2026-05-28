@@ -73,6 +73,8 @@ func CreateCheckout(ctx *gin.Context) {
 		}
 
 		metadata["affiliate_code"] = components.CreateCheckoutCreateMetadataStr(affiliateCode.Code)
+		metadata["affiliate_code_id"] = components.CreateCheckoutCreateMetadataStr(affiliateCode.Id.String())
+		metadata["affiliate_user_id"] = components.CreateCheckoutCreateMetadataStr(strconv.FormatUint(affiliateCode.UserId, 10))
 	}
 
 	userIdStr := strconv.FormatUint(userId, 10)

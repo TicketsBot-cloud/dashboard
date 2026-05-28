@@ -108,6 +108,13 @@ func BulkCloseRequest(c *gin.Context) {
 			return false
 		}
 
+		if !ticket.IsThread {
+			if err := database.Client.CategoryUpdateQueue.Add(opCtx, guildId, ticketId, model.TicketStatusPending); err != nil {
+				_ = app.NewError(err, fmt.Sprintf("Failed to queue category update for ticket #%d", ticketId))
+				return false
+			}
+		}
+
 		if ticket.ChannelId != nil {
 			_, _ = rest.CreateMessage(opCtx, botCtx.Token, botCtx.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{
 				Content: fmt.Sprintf("<@%d>", ticket.UserId),

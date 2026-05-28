@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -66,6 +68,11 @@ func (c *Client) handleAuthEvent(data AuthData) error {
 	userId, err := strconv.ParseUint(userIdStr, 10, 64)
 	if err != nil {
 		return api.NewErrorWithMessage(http.StatusUnauthorized, err, "Invalid token data")
+	}
+
+	store, err := session.Store.Get(userId)
+	if err != nil || store.Expiry <= time.Now().Unix() {
+		return api.NewErrorWithMessage(http.StatusUnauthorized, errors.New("session expired"), "Session has expired")
 	}
 
 	// Get the ticket

@@ -42,13 +42,13 @@ func MultiPanelGet(ctx *gin.Context) {
 	}
 
 	type multiPanelResponse struct {
-		Id                    int            `json:"id"`
-		MessageId             uint64         `json:"message_id,string"`
-		ChannelId             uint64         `json:"channel_id,string"`
-		GuildId               uint64         `json:"guild_id,string"`
-		SelectMenu            bool           `json:"select_menu"`
-		SelectMenuPlaceholder *string        `json:"select_menu_placeholder"`
-		Embed                 *embedResponse `json:"embed"`
+		Id                    int                  `json:"id"`
+		MessageId             uint64               `json:"message_id,string"`
+		ChannelId             uint64               `json:"channel_id,string"`
+		GuildId               uint64               `json:"guild_id,string"`
+		SelectMenu            bool                 `json:"select_menu"`
+		SelectMenuPlaceholder *string              `json:"select_menu_placeholder"`
+		Embed                 *embedResponse       `json:"embed"`
 		Panels                []panelConfiguration `json:"panels"`
 	}
 
@@ -88,6 +88,12 @@ func MultiPanelGet(ctx *gin.Context) {
 			ImageUrl:     e.ImageUrl,
 			ThumbnailUrl: e.ThumbnailUrl,
 			Footer:       embedFooter{Text: e.FooterText, IconUrl: e.FooterIconUrl},
+		}
+	} else {
+		transformedEmbed = &embedResponse{
+			Colour: 0x5865f2,
+			Author: embedAuthor{},
+			Footer: embedFooter{},
 		}
 	}
 

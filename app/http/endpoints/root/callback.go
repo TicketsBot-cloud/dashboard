@@ -78,6 +78,7 @@ func CallbackHandler(c *gin.Context) {
 		"userid": strconv.FormatUint(currentUser.Id, 10),
 		"sub":    strconv.FormatUint(currentUser.Id, 10),
 		"iat":    time.Now().Unix(),
+		"exp":    store.Expiry,
 	})
 
 	str, err := token.SignedString([]byte(config.Conf.Server.Secret))
@@ -95,9 +96,9 @@ func CallbackHandler(c *gin.Context) {
 		"success": true,
 		"token":   str,
 		"user_data": gin.H{
-			"id":       strconv.FormatUint(currentUser.Id, 10),
-			"username": currentUser.Username,
-			"avatar":   currentUser.Avatar,
+			"id":         strconv.FormatUint(currentUser.Id, 10),
+			"username":   currentUser.Username,
+			"avatar":     currentUser.Avatar,
 			"admin_tier": admin.GetAdminTier(c.Request.Context(), currentUser.Id),
 		},
 		"guilds": guilds,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
@@ -108,6 +109,20 @@ func SendMessage(ctx *gin.Context) {
 	if errStr := SendMessageToTicket(ctx, botContext, ticket, processedContent, settings.AnonymiseDashboardResponses, sender); errStr != "" {
 		ctx.JSON(500, utils.ErrorStr(errStr))
 		return
+	}
+
+	if ticket.Status != model.TicketStatusPending {
+		if err := database.Client.Tickets.SetStatus(ctx, guildId, ticketId, model.TicketStatusPending); err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to update ticket status."))
+			return
+		}
+
+		if !ticket.IsThread {
+			if err := database.Client.CategoryUpdateQueue.Add(ctx, guildId, ticketId, model.TicketStatusPending); err != nil {
+				ctx.JSON(500, utils.ErrorStr("Failed to queue ticket category update."))
+				return
+			}
+		}
 	}
 
 	audit.Log(audit.LogEntry{

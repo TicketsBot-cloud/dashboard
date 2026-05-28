@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/caarlos0/env/v11"
@@ -61,12 +63,12 @@ type Config struct {
 		Uri string `env:"URI,required"`
 	} `envPrefix:"CACHE_"`
 	Polar struct {
-		ApiKey                     string `env:"API_KEY"`
-		IsSandbox                  bool   `env:"IS_SANDBOX"`
-		CheckoutSuccessUrl         string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
-		DefaultDiscountBasisPoints      int `env:"DEFAULT_DISCOUNT_BASIS_POINTS" envDefault:"500"`
-		DefaultCreditPercentage        int `env:"DEFAULT_CREDIT_PERCENTAGE" envDefault:"10"`
-		DefaultNonPremiumCreditPercent int `env:"DEFAULT_NON_PREMIUM_CREDIT_PERCENTAGE" envDefault:"5"`
+		ApiKey                         string `env:"API_KEY"`
+		IsSandbox                      bool   `env:"IS_SANDBOX"`
+		CheckoutSuccessUrl             string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
+		DefaultDiscountBasisPoints     int    `env:"DEFAULT_DISCOUNT_BASIS_POINTS" envDefault:"500"`
+		DefaultCreditPercentage        int    `env:"DEFAULT_CREDIT_PERCENTAGE" envDefault:"10"`
+		DefaultNonPremiumCreditPercent int    `env:"DEFAULT_NON_PREMIUM_CREDIT_PERCENTAGE" envDefault:"5"`
 	} `envPrefix:"POLAR_"`
 	Mailgun struct {
 		Domain    string `env:"DOMAIN"`
@@ -85,16 +87,42 @@ type Config struct {
 var Conf Config
 
 func LoadConfig() (Config, error) {
-	if _, err := os.Stat("config.toml"); err == nil {
-		return fromToml()
+	var config Config
+	var err error
+
+	if _, statErr := os.Stat("config.toml"); statErr == nil {
+		config, err = fromToml()
 	} else {
-		return fromEnvvar()
+		config, err = fromEnvvar()
 	}
+
+	if err != nil {
+		return Config{}, err
+	}
+
+	if err := config.Validate(); err != nil {
+		return Config{}, err
+	}
+
+	return config, nil
+}
+
+func (c Config) ExpectedOauthRedirectUri() string {
+	return strings.TrimRight(c.Server.BaseUrl, "/") + "/oauth2/callback"
+}
+
+func (c Config) Validate() error {
+	expectedRedirectUri := c.ExpectedOauthRedirectUri()
+	if c.Oauth.RedirectUri != expectedRedirectUri {
+		return fmt.Errorf("OAUTH_REDIRECT_URI must be %q for the dashboard OAuth flow, got %q", expectedRedirectUri, c.Oauth.RedirectUri)
+	}
+
+	return nil
 }
 
 func fromToml() (Config, error) {
 	var config Config
-	if _, err := toml.DecodeFile("config.toml", &Conf); err != nil {
+	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
 		return Config{}, err
 	}
 

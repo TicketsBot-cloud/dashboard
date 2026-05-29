@@ -35,9 +35,9 @@ func UpdateForm(c *gin.Context) {
 		return
 	}
 
-	formId, err := strconv.Atoi(c.Param("form_id"))
+	formId, err := strconv.Atoi(c.Param("form-id"))
 	if err != nil {
-		c.JSON(400, utils.ErrorStr("Invalid form ID provided: %s", c.Param("form_id")))
+		c.JSON(400, utils.ErrorStr("Invalid form ID provided: %s", c.Param("form-id")))
 		return
 	}
 

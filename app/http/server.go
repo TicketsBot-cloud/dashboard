@@ -209,7 +209,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		// Must be readable to load transcripts page
 		guildAuthApiSupport.GET("/panels", api_panels.ListPanels)
 		guildAuthApiSupport.GET("/panels/:panelid", api_panels.GetPanel)
-		guildAuthApiAdmin.GET("/panels/permcheck", api_panels.PermCheckHandler)
+		guildAuthApiAdmin.GET("/panels/perm-check", api_panels.PermCheckHandler)
 		guildAuthApiAdmin.POST("/panels", api_panels.CreatePanel)
 		guildAuthApiAdmin.POST("/panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.ResendPanel)
 		guildAuthApiAdmin.PATCH("/panels/:panelid", api_panels.UpdatePanel)
@@ -223,18 +223,18 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.DELETE("/panels/:panelid/support-hours", api_panels.DeleteSupportHours)
 		guildAuthApiSupport.GET("/panels/:panelid/is-active", api_panels.IsPanelActive)
 
-		guildAuthApiAdmin.GET("/multipanels", api_panels.MultiPanelList)
-		guildAuthApiAdmin.GET("/multipanels/:panelid", api_panels.MultiPanelGet)
-		guildAuthApiAdmin.POST("/multipanels", api_panels.MultiPanelCreate)
-		guildAuthApiAdmin.POST("/multipanels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.MultiPanelResend)
-		guildAuthApiAdmin.PATCH("/multipanels/:panelid", api_panels.MultiPanelUpdate)
-		guildAuthApiAdmin.DELETE("/multipanels/:panelid", api_panels.MultiPanelDelete)
+		guildAuthApiAdmin.GET("/multi-panels", api_panels.MultiPanelList)
+		guildAuthApiAdmin.GET("/multi-panels/:panelid", api_panels.MultiPanelGet)
+		guildAuthApiAdmin.POST("/multi-panels", api_panels.MultiPanelCreate)
+		guildAuthApiAdmin.POST("/multi-panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.MultiPanelResend)
+		guildAuthApiAdmin.PATCH("/multi-panels/:panelid", api_panels.MultiPanelUpdate)
+		guildAuthApiAdmin.DELETE("/multi-panels/:panelid", api_panels.MultiPanelDelete)
 
 		guildAuthApiSupport.GET("/forms", api_forms.GetForms)
 		guildAuthApiAdmin.POST("/forms", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.CreateForm)
-		guildAuthApiAdmin.PATCH("/forms/:form_id", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.UpdateForm)
-		guildAuthApiAdmin.DELETE("/forms/:form_id", api_forms.DeleteForm)
-		guildAuthApiAdmin.PATCH("/forms/:form_id/inputs", api_forms.UpdateInputs)
+		guildAuthApiAdmin.PATCH("/forms/:form-id", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.UpdateForm)
+		guildAuthApiAdmin.DELETE("/forms/:form-id", api_forms.DeleteForm)
+		guildAuthApiAdmin.PATCH("/forms/:form-id/inputs", api_forms.UpdateInputs)
 
 		// Should be a GET, but easier to take a body for development purposes
 		guildAuthApiSupport.POST("/transcripts",
@@ -404,7 +404,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	userGroup := router.Group("/user", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.UpdateLastSeen)
 	{
 		userGroup.POST("/guilds/reload", api.ReloadGuildsHandler)
-		userGroup.GET("/permissionlevel", api.GetPermissionLevel)
+		userGroup.GET("/permission-level", api.GetPermissionLevel)
 
 		// User settings
 		userGroup.GET("/settings", api_user.GetSettings)

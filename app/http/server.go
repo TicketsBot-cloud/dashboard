@@ -68,10 +68,10 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 	router.Use(middleware.Cors(config.Conf))
 
-	router.Use(rl(middleware.RateLimitTypeIp, 60, time.Minute))
-	router.Use(rl(middleware.RateLimitTypeIp, 20, time.Second*10))
-	router.Use(rl(middleware.RateLimitTypeUser, 60, time.Minute))
-	router.Use(rl(middleware.RateLimitTypeGuild, 600, time.Minute*5))
+	router.Use(rl(middleware.RateLimitTypeIp, 90, time.Minute))
+	router.Use(rl(middleware.RateLimitTypeIp, 40, time.Second*10))
+	router.Use(rl(middleware.RateLimitTypeUser, 120, time.Minute))
+	router.Use(rl(middleware.RateLimitTypeGuild, 900, time.Minute*5))
 
 	// Metrics
 	if len(config.Conf.Server.MetricHost) > 0 {
@@ -189,7 +189,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/premium", api.PremiumHandler)
 		guildAuthApiSupport.GET("/user/:user", api.UserHandler)
 		guildAuthApiSupport.GET("/roles", api.RolesHandler)
-		guildAuthApiSupport.GET("/emojis", rl(middleware.RateLimitTypeGuild, 5, time.Second*30), api.EmojisHandler)
+		guildAuthApiSupport.GET("/emojis", rl(middleware.RateLimitTypeGuild, 10, time.Second*30), api.EmojisHandler)
 		guildAuthApiSupport.GET("/members/search",
 			rl(middleware.RateLimitTypeGuild, 5, time.Second),
 			rl(middleware.RateLimitTypeGuild, 10, time.Second*30),
@@ -286,7 +286,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.DELETE("/team/:teamid", api_team.DeleteTeam)
 		guildAuthApiAdmin.DELETE("/team/:teamid/:snowflake", rl(middleware.RateLimitTypeGuild, 30, time.Minute), api_team.RemoveMember)
 		guildAuthApiAdmin.GET("/team/:teamid/permissions", api_team.GetTeamPermissions)
-		guildAuthApiAdmin.PATCH("/team/:teamid/permissions", rl(middleware.RateLimitTypeGuild, 5, time.Second*10), api_team.UpdateTeamPermissions)
+		guildAuthApiAdmin.PATCH("/team/:teamid/permissions", rl(middleware.RateLimitTypeGuild, 20, time.Minute), api_team.UpdateTeamPermissions)
 
 		guildAuthApiAdmin.GET("/staff-override", api_override.GetOverrideHandler)
 		guildAuthApiAdmin.POST("/staff-override", api_override.CreateOverrideHandler)

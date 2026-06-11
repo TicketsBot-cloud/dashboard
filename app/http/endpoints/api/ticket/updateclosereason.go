@@ -76,6 +76,10 @@ func UpdateCloseReason(c *gin.Context) {
 	}
 
 	reason := body.Reason
+	oldReason := ""
+	if existing.Reason != nil {
+		oldReason = *existing.Reason
+	}
 	updated := dbmodel.CloseMetadata{
 		Reason:   &reason,
 		ClosedBy: existing.ClosedBy,
@@ -97,7 +101,8 @@ func UpdateCloseReason(c *gin.Context) {
 		ActionType:   dbmodel.AuditActionTicketCloseReasonUpdate,
 		ResourceType: dbmodel.AuditResourceTicket,
 		ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-		Metadata:     map[string]interface{}{"reason": reason},
+		OldData:      map[string]interface{}{"reason": oldReason},
+		NewData:      map[string]interface{}{"reason": reason},
 	})
 
 	c.JSON(http.StatusOK, utils.SuccessResponse)

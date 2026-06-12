@@ -50,6 +50,44 @@ func GetPermissionLevel(ctx context.Context, guildId, userId uint64) (permission
 	return permission.GetPermissionLevel(ctx, botContext, member, guildId)
 }
 
+func GetPermissionLevelWithSource(ctx context.Context, guildId, userId uint64) (permission.PermissionLevel, permission.PermissionSource, error) {
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		return permission.Everyone, permission.SourceNone, err
+	}
+
+	// do this check here before trying to get the member
+	if botContext.IsBotAdmin(ctx, userId) {
+		return permission.Admin, permission.SourceBotAdmin, nil
+	}
+
+	// Check staff override
+	staffOverride, err := dbclient.Client.StaffOverride.HasActiveOverride(ctx, guildId)
+	if err != nil {
+		return permission.Everyone, permission.SourceNone, err
+	}
+
+	// If staff override enabled and the user is bot staff, grant admin permissions
+	if staffOverride {
+		isBotStaff, err := dbclient.Client.BotStaff.IsStaff(ctx, userId)
+		if err != nil {
+			return permission.Everyone, permission.SourceNone, err
+		}
+
+		if isBotStaff {
+			return permission.Admin, permission.SourceBotStaff, nil
+		}
+	}
+
+	// get member
+	member, err := botContext.GetGuildMember(ctx, guildId, userId)
+	if err != nil {
+		return permission.Everyone, permission.SourceNone, err
+	}
+
+	return permission.GetPermissionLevelWithSource(ctx, botContext, member, guildId)
+}
+
 func HasPermissionToViewTicket(ctx context.Context, guildId, userId uint64, ticket database.Ticket) (bool, *api.RequestError) {
 	// If user opened the ticket, they will always have permission
 	if ticket.UserId == userId && ticket.GuildId == guildId {

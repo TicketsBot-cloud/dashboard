@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/caarlos0/env/v11"
@@ -9,7 +11,7 @@ import (
 )
 
 type Config struct {
-	Admins          []uint64      `env:"ADMINS"`
+	Owner           uint64        `env:"OWNER"`
 	ForceWhitelabel []uint64      `env:"FORCED_WHITELABEL"`
 	Debug           bool          `env:"DEBUG"`
 	SentryDsn       *string       `env:"SENTRY_DSN"`
@@ -61,42 +63,66 @@ type Config struct {
 		Uri string `env:"URI,required"`
 	} `envPrefix:"CACHE_"`
 	Polar struct {
-		ApiKey             string `env:"API_KEY"`
-		IsSandbox          bool   `env:"IS_SANDBOX"`
-		CheckoutSuccessUrl string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
+		ApiKey                         string `env:"API_KEY"`
+		IsSandbox                      bool   `env:"IS_SANDBOX"`
+		CheckoutSuccessUrl             string `env:"CHECKOUT_SUCCESS_URL" envDefault:"http://localhost:5173/premium"`
+		DefaultDiscountBasisPoints     int    `env:"DEFAULT_DISCOUNT_BASIS_POINTS" envDefault:"500"`
+		DefaultCreditPercentage        int    `env:"DEFAULT_CREDIT_PERCENTAGE" envDefault:"10"`
+		DefaultNonPremiumCreditPercent int    `env:"DEFAULT_NON_PREMIUM_CREDIT_PERCENTAGE" envDefault:"5"`
 	} `envPrefix:"POLAR_"`
-	Clickhouse struct {
-		Address  string `env:"ADDR"`
-		Threads  int    `env:"THREADS" envDefault:"2"`
-		Database string `env:"DATABASE" envDefault:"analytics"`
-		Username string `env:"USERNAME"`
-		Password string `env:"PASSWORD"`
-	} `envPrefix:"CLICKHOUSE_"`
+	Mailgun struct {
+		Domain    string `env:"DOMAIN"`
+		ApiKey    string `env:"API_KEY"`
+		FromEmail string `env:"FROM_EMAIL" envDefault:"noreply@tickets.bot"`
+		FromName  string `env:"FROM_NAME" envDefault:"Tickets Bot"`
+		UseEU     bool   `env:"USE_EU" envDefault:"false"`
+	} `envPrefix:"MAILGUN_"`
 	SecureProxyUrl string `env:"SECURE_PROXY_URL"`
-	S3Import       struct {
-		Endpoint         string `env:"ENDPOINT,required"`
-		Secure           bool   `env:"SECURE" envDefault:"true"`
-		AccessKey        string `env:"ACCESS_KEY,required"`
-		SecretKey        string `env:"SECRET_KEY,required"`
-		TranscriptBucket string `env:"TRANSCRIPT_BUCKET,required"`
-		DataBucket       string `env:"DATA_BUCKET,required"`
-	} `envPrefix:"S3_IMPORT_"`
+	Security       struct {
+		VerificationHmacSecret string `env:"VERIFICATION_HMAC_SECRET" envDefault:"default-dev-secret-change-in-production"`
+	} `envPrefix:"SECURITY_"`
 }
 
 // TODO: Don't use a global variable
 var Conf Config
 
 func LoadConfig() (Config, error) {
-	if _, err := os.Stat("config.toml"); err == nil {
-		return fromToml()
+	var config Config
+	var err error
+
+	if _, statErr := os.Stat("config.toml"); statErr == nil {
+		config, err = fromToml()
 	} else {
-		return fromEnvvar()
+		config, err = fromEnvvar()
 	}
+
+	if err != nil {
+		return Config{}, err
+	}
+
+	if err := config.Validate(); err != nil {
+		return Config{}, err
+	}
+
+	return config, nil
+}
+
+func (c Config) ExpectedOauthRedirectUri() string {
+	return strings.TrimRight(c.Server.BaseUrl, "/") + "/oauth2/callback"
+}
+
+func (c Config) Validate() error {
+	expectedRedirectUri := c.ExpectedOauthRedirectUri()
+	if c.Oauth.RedirectUri != expectedRedirectUri {
+		return fmt.Errorf("OAUTH_REDIRECT_URI must be %q for the dashboard OAuth flow, got %q", expectedRedirectUri, c.Oauth.RedirectUri)
+	}
+
+	return nil
 }
 
 func fromToml() (Config, error) {
 	var config Config
-	if _, err := toml.DecodeFile("config.toml", &Conf); err != nil {
+	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
 		return Config{}, err
 	}
 

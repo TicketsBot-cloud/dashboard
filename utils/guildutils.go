@@ -27,11 +27,12 @@ import (
 )
 
 type GuildDto struct {
-	Id              uint64                     `json:"id,string"`
-	Name            string                     `json:"name"`
-	Icon            string                     `json:"icon"`
-	PermissionLevel permission.PermissionLevel `json:"permission_level"`
-	Premium         bool                       `json:"premium"`
+	Id               uint64                      `json:"id,string"`
+	Name             string                      `json:"name"`
+	Icon             string                      `json:"icon"`
+	PermissionLevel  permission.PermissionLevel  `json:"permission_level"`
+	PermissionSource permission.PermissionSource `json:"permission_source"`
+	Premium          bool                        `json:"premium"`
 }
 
 func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]GuildDto, error) {
@@ -64,7 +65,7 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 		guild := guild
 
 		group.Go(func() error {
-			permLevel, err := GetPermissionLevel(ctx, guild.Id, userId)
+			permLevel, permSource, err := GetPermissionLevelWithSource(ctx, guild.Id, userId)
 			if err != nil {
 				return err
 			}
@@ -76,11 +77,12 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 
 			mu.Lock()
 			dtos = append(dtos, GuildDto{
-				Id:              guild.Id,
-				Name:            guild.Name,
-				Icon:            guild.Icon,
-				PermissionLevel: permLevel,
-				Premium:         isPremium,
+				Id:               guild.Id,
+				Name:             guild.Name,
+				Icon:             guild.Icon,
+				PermissionLevel:  permLevel,
+				PermissionSource: permSource,
+				Premium:          isPremium,
 			})
 			mu.Unlock()
 
@@ -194,7 +196,7 @@ func getGuildPremium(ctx context.Context, g guild.Guild, userId uint64) (bool, e
 		return premium.PremiumTier(cached.Tier) >= premium.Premium, nil
 	}
 
-	// No Redis cache — fall back to DB. We need the guild owner ID so that
+	// No Redis cache - fall back to DB. We need the guild owner ID so that
 	// user-level global subscriptions (e.g. Patreon) are included. For guilds
 	// the current user owns we have it directly; for others we try the bot cache.
 	ownerId := uint64(0)

@@ -14,7 +14,8 @@ import (
 )
 
 type createCheckoutBody struct {
-	ProductId string `json:"product_id" binding:"required"`
+	ProductId     string  `json:"product_id" binding:"required"`
+	AffiliateCode *string `json:"affiliate_code,omitempty"`
 }
 
 func CreateCheckout(ctx *gin.Context) {
@@ -50,6 +51,32 @@ func CreateCheckout(ctx *gin.Context) {
 		}
 	}
 
+	var discountId *string
+	metadata := map[string]components.CheckoutCreateMetadata{
+		"discord_user_id": components.CreateCheckoutCreateMetadataStr(strconv.FormatUint(userId, 10)),
+	}
+
+	if body.AffiliateCode != nil && *body.AffiliateCode != "" {
+		affiliateCode, err := dbclient.Client.AffiliateCodes.GetByCode(ctx, *body.AffiliateCode)
+		if err != nil || affiliateCode == nil || affiliateCode.Status != "active" {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid or inactive affiliate code."))
+			return
+		}
+
+		if affiliateCode.UserId == userId {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("You cannot use your own affiliate code."))
+			return
+		}
+
+		if affiliateCode.PolarDiscountId != nil {
+			discountId = affiliateCode.PolarDiscountId
+		}
+
+		metadata["affiliate_code"] = components.CreateCheckoutCreateMetadataStr(affiliateCode.Code)
+		metadata["affiliate_code_id"] = components.CreateCheckoutCreateMetadataStr(affiliateCode.Id.String())
+		metadata["affiliate_user_id"] = components.CreateCheckoutCreateMetadataStr(strconv.FormatUint(affiliateCode.UserId, 10))
+	}
+
 	userIdStr := strconv.FormatUint(userId, 10)
 	successUrl := config.Conf.Polar.CheckoutSuccessUrl
 	gbp := components.PresentmentCurrencyGbp
@@ -59,9 +86,8 @@ func CreateCheckout(ctx *gin.Context) {
 		ExternalCustomerID: &userIdStr,
 		SuccessURL:         &successUrl,
 		Currency:           &gbp,
-		Metadata: map[string]components.CheckoutCreateMetadata{
-			"discord_user_id": components.CreateCheckoutCreateMetadataStr(userIdStr),
-		},
+		DiscountID:         discountId,
+		Metadata:           metadata,
 	})
 	if err != nil {
 		ctx.JSON(http.StatusBadGateway, utils.ErrorStr("Failed to create checkout session with payment provider."))

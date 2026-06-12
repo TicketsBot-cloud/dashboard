@@ -13,6 +13,7 @@ import (
 
 	"github.com/TicketsBot-cloud/archiverclient"
 	"github.com/TicketsBot-cloud/common/chatrelay"
+	"github.com/TicketsBot-cloud/common/experiments"
 	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/observability"
 	"github.com/TicketsBot-cloud/common/premium"
@@ -24,11 +25,11 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/email"
 	"github.com/TicketsBot-cloud/dashboard/log"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
-	"github.com/TicketsBot-cloud/dashboard/s3"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/TicketsBot-cloud/worker/i18n"
@@ -89,14 +90,8 @@ func main() {
 	logger.Info("Connecting to database")
 	database.ConnectToDatabase()
 
-	logger.Info("Connecting to analytics")
-	database.ConnectAnalytics()
-
 	logger.Info("Connecting to cache")
 	cache.Instance = cache.NewCache()
-
-	logger.Info("Connecting to import S3")
-	s3.ConnectS3(config.Conf.S3Import.Endpoint, config.Conf.S3Import.AccessKey, config.Conf.S3Import.SecretKey, config.Conf.S3Import.Secure)
 
 	logger.Info("Initialising microservice clients")
 	utils.ArchiverClient = archiverclient.NewArchiverClient(archiverclient.NewProxyRetriever(config.Conf.Bot.ObjectStore), []byte(config.Conf.Bot.AesKey))
@@ -104,12 +99,17 @@ func main() {
 
 	i18n.Init()
 
+	email.Init(config.Conf.Mailgun.Domain, config.Conf.Mailgun.ApiKey, config.Conf.Mailgun.FromEmail, config.Conf.Mailgun.FromName, config.Conf.Mailgun.UseEU)
+
 	if config.Conf.Bot.ProxyUrl != "" {
 		request.RegisterHook(utils.ProxyHook)
 	}
 
 	logger.Info("Connecting to Redis")
 	redis.Client = redis.NewRedisClient()
+
+	expManager := experiments.NewManager(redis.Client.Client, database.Client)
+	experiments.SetGlobalManager(expManager)
 
 	socketManager := livechat.NewSocketManager()
 	go socketManager.Run()

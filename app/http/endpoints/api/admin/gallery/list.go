@@ -41,7 +41,7 @@ func ListHandler(ctx *gin.Context) {
 		}
 		listings, err = dbclient.Client.GalleryListings.GetByStatus(ctx, validStatus)
 	} else {
-		// Fetch all by getting each status — or we can add a GetAll method.
+		// Fetch all by getting each status - or we can add a GetAll method.
 		// For now, get pending first as that's the most common admin use case.
 		pending, pendingErr := dbclient.Client.GalleryListings.GetByStatus(ctx, database.GalleryListingStatusPending)
 		if pendingErr != nil {
@@ -73,6 +73,26 @@ func ListHandler(ctx *gin.Context) {
 
 	if listings == nil {
 		listings = make([]database.GalleryListing, 0)
+	}
+
+	// Filter by listing type if provided
+	listingType := ctx.Query("type")
+	if listingType != "" {
+		if listingType != "panel" && listingType != "tag" && listingType != "form" {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid listing type filter. Must be one of: panel, tag, form"))
+			return
+		}
+		filtered := make([]database.GalleryListing, 0, len(listings))
+		for _, l := range listings {
+			lt := l.ListingType
+			if lt == "" {
+				lt = database.GalleryListingTypePanel
+			}
+			if lt == listingType {
+				filtered = append(filtered, l)
+			}
+		}
+		listings = filtered
 	}
 
 	// Resolve submitter user data from cache

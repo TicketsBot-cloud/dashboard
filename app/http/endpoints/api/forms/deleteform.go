@@ -16,9 +16,9 @@ func DeleteForm(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
 	userId := c.Keys["userid"].(uint64)
 
-	formId, err := strconv.Atoi(c.Param("form_id"))
+	formId, err := strconv.Atoi(c.Param("form-id"))
 	if err != nil {
-		c.JSON(400, utils.ErrorStr("Invalid form ID provided: %s", c.Param("form_id")))
+		c.JSON(400, utils.ErrorStr("Invalid form ID provided: %s", c.Param("form-id")))
 		return
 	}
 

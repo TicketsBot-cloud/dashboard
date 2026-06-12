@@ -152,7 +152,7 @@ func UpdateKBSettingsHandler(ctx *gin.Context) {
 			return
 		}
 
-		// Check domain uniqueness — no other guild should have this domain
+		// Check domain uniqueness - no other guild should have this domain
 		existingGuildId, claimed, err := dbclient.Client.KBSettings.GetGuildByDomain(ctx, domain)
 		if err != nil {
 			ctx.JSON(500, utils.ErrorStr("Failed to check domain availability"))
@@ -177,7 +177,7 @@ func UpdateKBSettingsHandler(ctx *gin.Context) {
 
 	oldSettings := existing
 
-	// Overwrite all fields from the request — null means "clear/reset to default"
+	// Overwrite all fields from the request - null means "clear/reset to default"
 	existing.PrimaryBg = body.PrimaryBg
 	existing.CardBg = body.CardBg
 	existing.TextColour = body.TextColour
@@ -298,7 +298,7 @@ func VerifyDomainHandler(ctx *gin.Context) {
 func refreshVerifiedDomainCache(ctx *gin.Context) {
 	domains, err := dbclient.Client.KBSettings.GetAllVerifiedDomains(ctx)
 	if err != nil {
-		return // Non-fatal — cache will be stale until next restart
+		return // Non-fatal - cache will be stale until next restart
 	}
 	middleware.RefreshVerifiedDomains(domains)
 }

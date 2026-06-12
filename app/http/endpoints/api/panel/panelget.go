@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -24,6 +25,8 @@ func GetPanel(c *gin.Context) {
 		HasSupportHours              bool                              `json:"has_support_hours"`
 		IsCurrentlyActive            bool                              `json:"is_currently_active"`
 		TicketPermissions            database.TicketPermissions        `json:"ticket_permissions"`
+		AutoClose                    PanelAutoCloseResponse            `json:"auto_close"`
+		MentionBehaviour             string                            `json:"mention_behaviour"`
 	}
 
 	guildId := c.Keys["guildid"].(uint64)
@@ -143,11 +146,22 @@ func GetPanel(c *gin.Context) {
 		}
 	}
 
+	autoCloseSettings, err := dbclient.Client.PanelAutoClose.Get(c, panel.PanelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panel"))
+		return
+	}
+
+	mentionBehaviour := panel.MentionBehaviour
+	if mentionBehaviour == "" {
+		mentionBehaviour = "none"
+	}
+
 	c.JSON(200, panelResponse{
 		Panel:                        panel.Panel,
 		WelcomeMessage:               welcomeMessage,
 		UseCustomEmoji:               panel.EmojiId != nil,
-		Emoji:                        types.NewEmoji(panel.EmojiName, panel.EmojiId),
+		Emoji:                        types.NewEmoji(panel.EmojiName, panel.EmojiId, panel.EmojiAnimated),
 		Mentions:                     mentions,
 		Teams:                        teamIds,
 		UseServerDefaultNamingScheme: panel.NamingScheme == nil,
@@ -155,5 +169,32 @@ func GetPanel(c *gin.Context) {
 		HasSupportHours:              hasSupportHours,
 		IsCurrentlyActive:            isCurrentlyActive,
 		TicketPermissions:            ticketPerms,
+		AutoClose:                    panelAutoCloseToResponse(autoCloseSettings),
+		MentionBehaviour:             mentionBehaviour,
 	})
+}
+
+type PanelAutoCloseResponse struct {
+	Enabled                 bool  `json:"enabled"`
+	SinceOpenWithNoResponse int64 `json:"since_open_with_no_response"`
+	SinceLastMessage        int64 `json:"since_last_message"`
+	OnUserLeave             bool  `json:"on_user_leave"`
+}
+
+func panelAutoCloseToResponse(s database.PanelAutoCloseSettings) PanelAutoCloseResponse {
+	r := PanelAutoCloseResponse{Enabled: s.Enabled}
+
+	if s.SinceOpenWithNoResponse != nil {
+		r.SinceOpenWithNoResponse = int64(*s.SinceOpenWithNoResponse / time.Second)
+	}
+
+	if s.SinceLastMessage != nil {
+		r.SinceLastMessage = int64(*s.SinceLastMessage / time.Second)
+	}
+
+	if s.OnUserLeave != nil {
+		r.OnUserLeave = *s.OnUserLeave
+	}
+
+	return r
 }

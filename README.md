@@ -48,7 +48,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Tickets v2—the revamped version of your favorite Tickets bot, carried forward by the original dedicated staff team.
+Tickets v2-the revamped version of your favorite Tickets bot, carried forward by the original dedicated staff team.
 Tickets v2 is set to elevate your server experience with a simple, customizable & powerful Discord ticket system complete with a web UI.
 
 Here's why:

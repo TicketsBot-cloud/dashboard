@@ -3,7 +3,9 @@ package middleware
 import (
 	"fmt"
 	"strconv"
+	"time"
 
+	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
@@ -36,6 +38,18 @@ func AuthenticateToken(ctx *gin.Context) {
 		parsedId, err := strconv.ParseUint(userId.(string), 10, 64)
 		if err != nil {
 			ctx.AbortWithStatusJSON(401, utils.ErrorStr("Token is invalid"))
+			return
+		}
+
+		store, err := session.Store.Get(parsedId)
+		if err != nil {
+			ctx.AbortWithStatusJSON(401, utils.ErrorStr("Session has expired"))
+			return
+		}
+
+		if store.Expiry <= time.Now().Unix() {
+			_ = session.Store.Clear(parsedId)
+			ctx.AbortWithStatusJSON(401, utils.ErrorStr("Session has expired"))
 			return
 		}
 

@@ -10,7 +10,7 @@ import (
 
 func ErrorJson(err error) map[string]any {
 	log.Logger.Error(err.Error(), zap.Error(err))
-	return ErrorStr(err.Error())
+	return ErrorStr("%s", err.Error())
 }
 
 func ErrorStr(err string, format ...any) map[string]any {

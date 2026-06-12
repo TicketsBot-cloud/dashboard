@@ -39,6 +39,7 @@ export const ACTION_TYPE_LABELS = {
   90: "Ticket Send Message",
   91: "Ticket Send Tag",
   92: "Ticket Close",
+  93: "Ticket Close Reason Update",
 
   100: "Integration Activate",
   101: "Integration Update Secrets",

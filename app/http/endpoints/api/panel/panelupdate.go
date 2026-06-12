@@ -127,6 +127,7 @@ func UpdatePanel(c *gin.Context) {
 
 	var emojiId *uint64
 	var emojiName *string
+	var emojiAnimated bool
 	{
 		emoji := data.getEmoji()
 		if emoji != nil {
@@ -134,6 +135,7 @@ func UpdatePanel(c *gin.Context) {
 
 			if emoji.Id.Value != 0 {
 				emojiId = &emoji.Id.Value
+				emojiAnimated = emoji.Animated
 			}
 		}
 	}
@@ -245,6 +247,7 @@ func UpdatePanel(c *gin.Context) {
 		TargetCategory:            data.CategoryId,
 		EmojiName:                 emojiName,
 		EmojiId:                   emojiId,
+		EmojiAnimated:             emojiAnimated,
 		WelcomeMessageEmbed:       welcomeMessageEmbed,
 		WithDefaultTeam:           data.WithDefaultTeam,
 		CustomId:                  existing.CustomId,
@@ -258,7 +261,7 @@ func UpdatePanel(c *gin.Context) {
 		Disabled:                  data.Disabled,
 		ExitSurveyFormId:          data.ExitSurveyFormId,
 		PendingCategory:           data.PendingCategory,
-		DeleteMentions:            data.DeleteMentions,
+		MentionBehaviour:          data.MentionBehaviour,
 		TranscriptChannelId:       data.TranscriptChannelId,
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,
@@ -267,6 +270,15 @@ func UpdatePanel(c *gin.Context) {
 		HideCloseButton:           data.HideCloseButton,
 		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
 		HideClaimButton:           data.HideClaimButton,
+		ShowInOpenCommand:         data.ShowInOpenCommand,
+		StoreTranscripts:          data.StoreTranscripts,
+		OverflowEnabled:           data.OverflowEnabled,
+		OverflowCategoryId:        data.OverflowCategoryId,
+		UsersCanClose:             data.UsersCanClose,
+		CloseConfirmation:         data.CloseConfirmation,
+		FeedbackEnabled:           data.FeedbackEnabled,
+		SupportCanView:            data.SupportCanView,
+		SupportCanType:            data.SupportCanType,
 	}
 
 
@@ -331,6 +343,11 @@ func UpdatePanel(c *gin.Context) {
 
 	if err := dbclient.Client.PanelTicketPermissions.Set(c, panel.PanelId, data.TicketPermissions); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))
+		return
+	}
+
+	if err := dbclient.Client.PanelAutoClose.Set(c, panel.PanelId, data.AutoClose.toDatabase()); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel auto-close settings"))
 		return
 	}
 

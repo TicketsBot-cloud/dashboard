@@ -114,6 +114,7 @@ func ImportHandler(ctx *gin.Context) {
 		TargetCategory:            targetCategory,
 		EmojiName:                 listing.EmojiName,
 		EmojiId:                   nil, // Gallery listings only support Unicode emojis
+		EmojiAnimated:             false,
 		WithDefaultTeam:           true,
 		CustomId:                  customId,
 		ImageUrl:                  listing.ImageUrl,
@@ -125,7 +126,7 @@ func ImportHandler(ctx *gin.Context) {
 		Disabled:                  false,
 		CooldownSeconds:           0,
 		TicketLimit:               nil,
-		DeleteMentions:            false,
+		MentionBehaviour:          "none",
 		UseThreads:                false,
 		HideCloseButton:           false,
 		HideCloseWithReasonButton: false,

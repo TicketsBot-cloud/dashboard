@@ -12,29 +12,28 @@ type Emoji struct {
 	IsCustomEmoji bool
 	Name          string
 	Id            *uint64
+	Animated      bool
 }
 
-func NewEmoji(emojiName *string, emojiId *uint64) Emoji {
+func NewEmoji(emojiName *string, emojiId *uint64, animated bool) Emoji {
 	if emojiName == nil || *emojiName == "" {
-		return Emoji{
-			IsCustomEmoji: false,
-			Name:          "",
-			Id:            nil,
-		}
+		return Emoji{}
 	}
 
 	return Emoji{
 		IsCustomEmoji: emojiId != nil,
 		Name:          *emojiName,
 		Id:            emojiId,
+		Animated:      animated,
 	}
 }
 
 func (e Emoji) IntoGdl() *emoji.Emoji {
 	if e.IsCustomEmoji {
 		return &emoji.Emoji{
-			Id:   objects.NewNullableSnowflake(*e.Id),
-			Name: e.Name,
+			Id:       objects.NewNullableSnowflake(*e.Id),
+			Name:     e.Name,
+			Animated: e.Animated,
 		}
 	} else {
 		if e.Name == "" {
@@ -48,8 +47,9 @@ func (e Emoji) IntoGdl() *emoji.Emoji {
 }
 
 type customEmoji struct {
-	Name string  `json:"name"`
-	Id   *uint64 `json:"id,string"`
+	Name     string  `json:"name"`
+	Id       *uint64 `json:"id,string"`
+	Animated bool    `json:"animated"`
 }
 
 func (e *Emoji) UnmarshalJSON(data []byte) error {
@@ -79,6 +79,7 @@ func (e *Emoji) UnmarshalJSON(data []byte) error {
 		e.IsCustomEmoji = true
 		e.Name = decoded.Name
 		e.Id = decoded.Id
+		e.Animated = decoded.Animated
 	default:
 		return fmt.Errorf("unknown type")
 	}
@@ -89,8 +90,9 @@ func (e *Emoji) UnmarshalJSON(data []byte) error {
 func (e Emoji) MarshalJSON() ([]byte, error) {
 	if e.IsCustomEmoji {
 		return json.Marshal(customEmoji{
-			Name: e.Name,
-			Id:   e.Id,
+			Name:     e.Name,
+			Id:       e.Id,
+			Animated: e.Animated,
 		})
 	} else {
 		return json.Marshal(e.Name)

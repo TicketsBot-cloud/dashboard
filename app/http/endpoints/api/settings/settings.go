@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"time"
 
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -16,27 +15,9 @@ import (
 type (
 	Settings struct {
 		database.Settings
-		ClaimSettings     database.ClaimSettings     `json:"claim_settings"`
-		AutoCloseSettings AutoCloseData              `json:"auto_close"`
-		TicketPermissions database.TicketPermissions `json:"ticket_permissions"`
-		Colours           ColourMap                  `json:"colours"`
-
-		WelcomeMessage    string                `json:"welcome_message"`
-		TicketLimit       uint8                 `json:"ticket_limit"`
-		Category          uint64                `json:"category,string"`
-		ArchiveChannel    *uint64               `json:"archive_channel,string"`
-		NamingScheme      database.NamingScheme `json:"naming_scheme"`
-		UsersCanClose     bool                  `json:"users_can_close"`
-		CloseConfirmation bool                  `json:"close_confirmation"`
-		FeedbackEnabled   bool                  `json:"feedback_enabled"`
-		Language          *string               `json:"language"`
-	}
-
-	AutoCloseData struct {
-		Enabled                 bool  `json:"enabled"`
-		SinceOpenWithNoResponse int64 `json:"since_open_with_no_response"`
-		SinceLastMessage        int64 `json:"since_last_message"`
-		OnUserLeave             bool  `json:"on_user_leave"`
+		ClaimSettings database.ClaimSettings `json:"claim_settings"`
+		Colours       ColourMap              `json:"colours"`
+		Language      *string                `json:"language"`
 	}
 
 	ColourMap map[customisation.Colour]utils.HexColour
@@ -57,71 +38,8 @@ func loadSettings(ctx context.Context, guildId uint64) (Settings, error) {
 		return
 	})
 
-	group.Go(func() error {
-		tmp, err := dbclient.Client.AutoClose.Get(ctx, guildId)
-		if err != nil {
-			return err
-		}
-
-		settings.AutoCloseSettings = convertToAutoCloseData(tmp)
-		return nil
-	})
-
-	group.Go(func() (err error) {
-		settings.TicketPermissions, err = dbclient.Client.TicketPermissions.Get(ctx, guildId)
-		return
-	})
-
 	group.Go(func() (err error) {
 		settings.Colours, err = getColourMap(guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.WelcomeMessage, err = dbclient.Client.WelcomeMessages.Get(ctx, guildId)
-		if err == nil && settings.WelcomeMessage == "" {
-			settings.WelcomeMessage = "Thank you for contacting support.\nPlease describe your issue and await a response."
-		}
-
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.TicketLimit, err = dbclient.Client.TicketLimit.Get(ctx, guildId)
-		if err == nil && settings.TicketLimit == 0 {
-			settings.TicketLimit = 5 // Set default
-		}
-
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.Category, err = dbclient.Client.ChannelCategory.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.ArchiveChannel, err = dbclient.Client.ArchiveChannel.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.UsersCanClose, err = dbclient.Client.UsersCanClose.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.NamingScheme, err = dbclient.Client.NamingScheme.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.CloseConfirmation, err = dbclient.Client.CloseConfirmation.Get(ctx, guildId)
-		return
-	})
-
-	group.Go(func() (err error) {
-		settings.FeedbackEnabled, err = dbclient.Client.FeedbackEnabled.Get(ctx, guildId)
 		return
 	})
 
@@ -199,22 +117,4 @@ func getColourMap(guildId uint64) (ColourMap, error) {
 	}
 
 	return colours, nil
-}
-
-func convertToAutoCloseData(settings database.AutoCloseSettings) (body AutoCloseData) {
-	body.Enabled = settings.Enabled
-
-	if settings.SinceOpenWithNoResponse != nil {
-		body.SinceOpenWithNoResponse = int64(*settings.SinceOpenWithNoResponse / time.Second)
-	}
-
-	if settings.SinceLastMessage != nil {
-		body.SinceLastMessage = int64(*settings.SinceLastMessage / time.Second)
-	}
-
-	if settings.OnUserLeave != nil {
-		body.OnUserLeave = *settings.OnUserLeave
-	}
-
-	return
 }

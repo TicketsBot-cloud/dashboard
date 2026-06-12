@@ -60,12 +60,14 @@ func resolveUsersBatch(ctx context.Context, userIds []uint64) map[uint64]submitt
 // such as source guild ID and review notes.
 type galleryListingPublicResponse struct {
 	Id                        int                  `json:"id"`
+	ListingType               string               `json:"listing_type"`
 	SubmittedUser             submittedUser        `json:"submitted_user"`
 	Name                      string               `json:"name"`
 	Description               string               `json:"description"`
 	Category                  string               `json:"category"`
 	ImportCount               int                  `json:"import_count"`
 	Featured                  bool                 `json:"featured"`
+	SnapshotData              stdjson.RawMessage   `json:"snapshot_data,omitempty"`
 	Title                     string               `json:"title"`
 	Content                   string               `json:"content"`
 	Colour                    int32                `json:"colour"`
@@ -84,6 +86,7 @@ type galleryListingPublicResponse struct {
 // used only for guild-scoped and admin endpoints.
 type galleryListingResponse struct {
 	Id                        int                  `json:"id"`
+	ListingType               string               `json:"listing_type"`
 	SubmittedUser             submittedUser        `json:"submitted_user"`
 	SourceGuildId             uint64               `json:"source_guild_id,string"`
 	Name                      string               `json:"name"`
@@ -93,6 +96,7 @@ type galleryListingResponse struct {
 	ReviewNote                *string              `json:"review_note,omitempty"`
 	ImportCount               int                  `json:"import_count"`
 	Featured                  bool                 `json:"featured"`
+	SnapshotData              stdjson.RawMessage   `json:"snapshot_data,omitempty"`
 	Title                     string               `json:"title"`
 	Content                   string               `json:"content"`
 	Colour                    int32                `json:"colour"`
@@ -129,14 +133,21 @@ func stripWelcomeMessageGuildId(raw []byte) stdjson.RawMessage {
 }
 
 func toPublicListingResponse(l database.GalleryListing, tags []string, user submittedUser) galleryListingPublicResponse {
+	listingType := l.ListingType
+	if listingType == "" {
+		listingType = database.GalleryListingTypePanel
+	}
+
 	return galleryListingPublicResponse{
 		Id:                        l.Id,
+		ListingType:               listingType,
 		SubmittedUser:             user,
 		Name:                      l.Name,
 		Description:               l.Description,
 		Category:                  l.Category,
 		ImportCount:               l.ImportCount,
 		Featured:                  l.Featured,
+		SnapshotData:              stdjson.RawMessage(l.SnapshotData),
 		Title:                     l.Title,
 		Content:                   l.Content,
 		Colour:                    l.Colour,
@@ -153,8 +164,14 @@ func toPublicListingResponse(l database.GalleryListing, tags []string, user subm
 }
 
 func toListingResponse(l database.GalleryListing, tags []string, user submittedUser) galleryListingResponse {
+	listingType := l.ListingType
+	if listingType == "" {
+		listingType = database.GalleryListingTypePanel
+	}
+
 	return galleryListingResponse{
 		Id:                        l.Id,
+		ListingType:               listingType,
 		SubmittedUser:             user,
 		SourceGuildId:             l.SourceGuildId,
 		Name:                      l.Name,
@@ -164,6 +181,7 @@ func toListingResponse(l database.GalleryListing, tags []string, user submittedU
 		ReviewNote:                l.ReviewNote,
 		ImportCount:               l.ImportCount,
 		Featured:                  l.Featured,
+		SnapshotData:              stdjson.RawMessage(l.SnapshotData),
 		Title:                     l.Title,
 		Content:                   l.Content,
 		Colour:                    l.Colour,

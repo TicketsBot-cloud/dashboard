@@ -6,24 +6,27 @@ import (
 
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api"
+	admin_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/affiliate"
+	admin_analytics_api "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/analytics"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/botstaff"
 	admin_entitlements "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/entitlements"
+	admin_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/gallery"
 	admin_globalblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/globalblacklist"
+	admin_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/integrations"
 	admin_polarproducts "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/polarproducts"
 	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
-	admin_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/gallery"
-	admin_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/integrations"
+	api_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/affiliate"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_automations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/automations"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
-	api_import "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/export"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
 	api_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/gallery"
 	api_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/integrations"
 	api_kb "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/kb"
+	api_onboarding "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/onboarding"
 	api_panels "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/panel"
 	api_polar "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/polar"
 	api_premium "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/premium"
@@ -34,11 +37,13 @@ import (
 	api_ticket "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
 	api_transcripts "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/transcripts"
+	api_user "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/user"
 	api_whitelabel "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/whitelabel"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/root"
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/config"
+	"github.com/TicketsBot-cloud/dashboard/internal/admin"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/penglongli/gin-metrics/ginmetrics"
@@ -62,12 +67,12 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	// Sessions
 	session.Store = session.NewRedisStore()
 
-	router.Use(rl(middleware.RateLimitTypeIp, 60, time.Minute))
-	router.Use(rl(middleware.RateLimitTypeIp, 20, time.Second*10))
-	router.Use(rl(middleware.RateLimitTypeUser, 60, time.Minute))
-	router.Use(rl(middleware.RateLimitTypeGuild, 600, time.Minute*5))
-
 	router.Use(middleware.Cors(config.Conf))
+
+	router.Use(rl(middleware.RateLimitTypeIp, 90, time.Minute))
+	router.Use(rl(middleware.RateLimitTypeIp, 40, time.Second*10))
+	router.Use(rl(middleware.RateLimitTypeUser, 120, time.Minute))
+	router.Use(rl(middleware.RateLimitTypeGuild, 900, time.Minute*5))
 
 	// Metrics
 	if len(config.Conf.Server.MetricHost) > 0 {
@@ -106,6 +111,10 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	)
 
 	// Public KB routes — no authentication required
+	router.GET("/unsubscribe", root.UnsubscribeHandler)
+	router.POST("/unsubscribe", root.UnsubscribeHandler)
+
+	// Public KB routes - no authentication required
 	kbPublic := router.Group("/api/kb/public/:guildId",
 		rl(middleware.RateLimitTypeIp, 30, time.Minute),
 		rl(middleware.RateLimitTypeIp, 10, time.Second*10),
@@ -169,6 +178,16 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 				)
 			}
 		}
+
+		{
+			affiliateGroup := apiGroup.Group("/affiliate/@me")
+			affiliateGroup.GET("", api_affiliate.GetStatus)
+			affiliateGroup.POST("/apply", rl(middleware.RateLimitTypeUser, 3, time.Minute), api_affiliate.Apply)
+			affiliateGroup.GET("/referrals", api_affiliate.ListReferrals)
+			affiliateGroup.POST("/redeem", rl(middleware.RateLimitTypeUser, 3, time.Minute), api_affiliate.Redeem)
+			affiliateGroup.POST("/verify-email", rl(middleware.RateLimitTypeUser, 5, time.Minute), api_affiliate.VerifyEmail)
+			affiliateGroup.POST("/resend-verification", rl(middleware.RateLimitTypeUser, 3, 5*time.Minute), api_affiliate.ResendVerification)
+		}
 	}
 
 	guildAuthApiAdmin := apiGroup.Group("/:id", middleware.AuthenticateGuild(permission.Admin), middleware.SentryUser)
@@ -180,7 +199,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/premium", api.PremiumHandler)
 		guildAuthApiSupport.GET("/user/:user", api.UserHandler)
 		guildAuthApiSupport.GET("/roles", api.RolesHandler)
-		guildAuthApiSupport.GET("/emojis", rl(middleware.RateLimitTypeGuild, 5, time.Second*30), api.EmojisHandler)
+		guildAuthApiSupport.GET("/emojis", rl(middleware.RateLimitTypeGuild, 10, time.Second*30), api.EmojisHandler)
 		guildAuthApiSupport.GET("/members/search",
 			rl(middleware.RateLimitTypeGuild, 5, time.Second),
 			rl(middleware.RateLimitTypeGuild, 10, time.Second*30),
@@ -192,11 +211,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/settings", api_settings.GetSettingsHandler)
 		guildAuthApiAdmin.POST("/settings", api_settings.UpdateSettingsHandler)
 
-		guildAuthApiAdmin.POST("/import", api_import.ImportHandler)
-		guildAuthApiAdmin.GET("/import/runs", api_import.GetRuns)
-		guildAuthApiAdmin.GET("/import/presign", api_import.PresignURL)
-		guildAuthApiAdmin.GET("/import/queue", api_import.CurrentQueue)
-
 		guildAuthApiSupport.GET("/blacklist", api_blacklist.GetBlacklistHandler)
 		guildAuthApiSupport.POST("/blacklist", api_blacklist.AddBlacklistHandler)
 		guildAuthApiSupport.DELETE("/blacklist/user/:user", api_blacklist.RemoveUserBlacklistHandler)
@@ -205,7 +219,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		// Must be readable to load transcripts page
 		guildAuthApiSupport.GET("/panels", api_panels.ListPanels)
 		guildAuthApiSupport.GET("/panels/:panelid", api_panels.GetPanel)
-		guildAuthApiAdmin.GET("/panels/permcheck", api_panels.PermCheckHandler)
+		guildAuthApiAdmin.GET("/panels/perm-check", api_panels.PermCheckHandler)
 		guildAuthApiAdmin.POST("/panels", api_panels.CreatePanel)
 		guildAuthApiAdmin.POST("/panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.ResendPanel)
 		guildAuthApiAdmin.PATCH("/panels/:panelid", api_panels.UpdatePanel)
@@ -219,18 +233,18 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.DELETE("/panels/:panelid/support-hours", api_panels.DeleteSupportHours)
 		guildAuthApiSupport.GET("/panels/:panelid/is-active", api_panels.IsPanelActive)
 
-		guildAuthApiAdmin.GET("/multipanels", api_panels.MultiPanelList)
-		guildAuthApiAdmin.GET("/multipanels/:panelid", api_panels.MultiPanelGet)
-		guildAuthApiAdmin.POST("/multipanels", api_panels.MultiPanelCreate)
-		guildAuthApiAdmin.POST("/multipanels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.MultiPanelResend)
-		guildAuthApiAdmin.PATCH("/multipanels/:panelid", api_panels.MultiPanelUpdate)
-		guildAuthApiAdmin.DELETE("/multipanels/:panelid", api_panels.MultiPanelDelete)
+		guildAuthApiAdmin.GET("/multi-panels", api_panels.MultiPanelList)
+		guildAuthApiAdmin.GET("/multi-panels/:panelid", api_panels.MultiPanelGet)
+		guildAuthApiAdmin.POST("/multi-panels", api_panels.MultiPanelCreate)
+		guildAuthApiAdmin.POST("/multi-panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.MultiPanelResend)
+		guildAuthApiAdmin.PATCH("/multi-panels/:panelid", api_panels.MultiPanelUpdate)
+		guildAuthApiAdmin.DELETE("/multi-panels/:panelid", api_panels.MultiPanelDelete)
 
 		guildAuthApiSupport.GET("/forms", api_forms.GetForms)
 		guildAuthApiAdmin.POST("/forms", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.CreateForm)
-		guildAuthApiAdmin.PATCH("/forms/:form_id", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.UpdateForm)
-		guildAuthApiAdmin.DELETE("/forms/:form_id", api_forms.DeleteForm)
-		guildAuthApiAdmin.PATCH("/forms/:form_id/inputs", api_forms.UpdateInputs)
+		guildAuthApiAdmin.PATCH("/forms/:form-id", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.UpdateForm)
+		guildAuthApiAdmin.DELETE("/forms/:form-id", api_forms.DeleteForm)
+		guildAuthApiAdmin.PATCH("/forms/:form-id/inputs", api_forms.UpdateInputs)
 
 		// Automations — admin-only CRUD + publish/enable lifecycle.
 		guildAuthApiAdmin.GET("/automations", api_automations.ListAutomations)
@@ -299,7 +313,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.DELETE("/team/:teamid", api_team.DeleteTeam)
 		guildAuthApiAdmin.DELETE("/team/:teamid/:snowflake", rl(middleware.RateLimitTypeGuild, 30, time.Minute), api_team.RemoveMember)
 		guildAuthApiAdmin.GET("/team/:teamid/permissions", api_team.GetTeamPermissions)
-		guildAuthApiAdmin.PATCH("/team/:teamid/permissions", rl(middleware.RateLimitTypeGuild, 5, time.Second*10), api_team.UpdateTeamPermissions)
+		guildAuthApiAdmin.PATCH("/team/:teamid/permissions", rl(middleware.RateLimitTypeGuild, 20, time.Minute), api_team.UpdateTeamPermissions)
 
 		guildAuthApiAdmin.GET("/staff-override", api_override.GetOverrideHandler)
 		guildAuthApiAdmin.POST("/staff-override", api_override.CreateOverrideHandler)
@@ -314,6 +328,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			rl(middleware.RateLimitTypeUser, 5, time.Second*30),
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_analytics.GetAnalyticsStaffHandler,
+		)
+		guildAuthApiAdmin.GET("/analytics/staff/:userid",
+			rl(middleware.RateLimitTypeUser, 5, time.Second*30),
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_analytics.GetAnalyticsStaffDetailHandler,
 		)
 
 		guildAuthApiAdmin.POST("/audit-logs", api_audit.GetAuditLogs)
@@ -358,6 +377,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			api_kb.VerifyDomainHandler,
 		)
 
+		// Onboarding
+		guildAuthApiAdmin.GET("/onboarding", api_onboarding.GetOnboardingHandler)
+		guildAuthApiAdmin.POST("/onboarding", api_onboarding.UpdateOnboardingHandler)
+		guildAuthApiAdmin.GET("/gallery/featured", api_gallery.FeaturedHandler)
+
 		// Gallery submissions (guild-scoped)
 		guildAuthApiAdmin.POST("/gallery/submit/:panelid",
 			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
@@ -369,6 +393,22 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.POST("/gallery/import/:listingId",
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_gallery.ImportHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/submit-tag/:tagid",
+			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
+			api_gallery.SubmitTagHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/submit-form/:formid",
+			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
+			api_gallery.SubmitFormHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/import-tag/:listingId",
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_gallery.ImportTagHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/import-form/:listingId",
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_gallery.ImportFormHandler,
 		)
 
 		// KB categories
@@ -388,10 +428,25 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		)
 	}
 
-	userGroup := router.Group("/user", middleware.AuthenticateToken, middleware.UpdateLastSeen)
+	userGroup := router.Group("/user", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.UpdateLastSeen)
 	{
 		userGroup.POST("/guilds/reload", api.ReloadGuildsHandler)
-		userGroup.GET("/permissionlevel", api.GetPermissionLevel)
+		userGroup.GET("/permission-level", api.GetPermissionLevel)
+
+		// User settings
+		userGroup.GET("/settings", api_user.GetSettings)
+		userGroup.PUT("/settings/email", api_user.UpdateEmail)
+		userGroup.DELETE("/settings/email", api_user.DeleteEmail)
+		userGroup.GET("/settings/notifications", api_user.GetNotificationPreferences)
+		userGroup.PUT("/settings/notifications", api_user.UpdateNotificationPreferences)
+		userGroup.POST("/settings/verify-email", rl(middleware.RateLimitTypeUser, 5, time.Minute), api_user.VerifyEmail)
+		userGroup.POST("/settings/resend-verification", rl(middleware.RateLimitTypeUser, 3, 5*time.Minute), api_user.ResendVerification)
+
+		// Notifications
+		userGroup.GET("/notifications", api_user.ListNotifications)
+		userGroup.GET("/notifications/unread-count", rl(middleware.RateLimitTypeUser, 10, 30*time.Second), api_user.UnreadCount)
+		userGroup.POST("/notifications/:id/read", api_user.MarkNotificationRead)
+		userGroup.POST("/notifications/read-all", api_user.MarkAllNotificationsRead)
 
 		{
 			whitelabelGroup := userGroup.Group("/whitelabel", middleware.VerifyWhitelabel(true))
@@ -408,41 +463,70 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		}
 	}
 
-	adminGroup := apiGroup.Group("/admin", middleware.AdminOnly)
+	adminBase := apiGroup.Group("/admin", middleware.RequireAdminTier(admin.AdminTierHelper))
 	{
-		adminGroup.GET("/bot-staff", botstaff.ListBotStaffHandler)
-		adminGroup.POST("/bot-staff/:userid", botstaff.AddBotStaffHandler)
-		adminGroup.DELETE("/bot-staff/:userid", botstaff.RemoveBotStaffHandler)
-		adminGroup.GET("/entitlements", admin_entitlements.ListEntitlementsHandler)
-		adminGroup.GET("/premium-keys", admin_premiumkeys.ListPremiumKeysHandler)
-		adminGroup.GET("/global-blacklist", admin_globalblacklist.ListHandler)
-		adminGroup.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)
-		adminGroup.DELETE("/global-blacklist/:userid", admin_globalblacklist.RemoveHandler)
-		adminGroup.GET("/server-blacklist", admin_serverblacklist.ListHandler)
-		adminGroup.POST("/server-blacklist/:guildid", admin_serverblacklist.AddHandler)
-		adminGroup.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
-		adminGroup.GET("/skus", admin_skus.ListHandler)
-		adminGroup.POST("/skus", admin_skus.CreateHandler)
-		adminGroup.PUT("/skus/:skuid", admin_skus.UpdateHandler)
-		adminGroup.DELETE("/skus/:skuid", admin_skus.DeleteHandler)
-		adminGroup.GET("/polar-products", admin_polarproducts.ListHandler)
-		adminGroup.POST("/polar-products", admin_polarproducts.CreateHandler)
-		adminGroup.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
-		adminGroup.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
-		adminGroup.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
+		// Helper-accessible (read-only)
+		adminBase.GET("/server-blacklist", admin_serverblacklist.ListHandler)
+		adminBase.GET("/gallery", admin_gallery.ListHandler)
 
-		// Gallery moderation
-		adminGroup.GET("/gallery", admin_gallery.ListHandler)
-		adminGroup.POST("/gallery/:id/approve", admin_gallery.ApproveHandler)
-		adminGroup.POST("/gallery/:id/reject", admin_gallery.RejectHandler)
-		adminGroup.PUT("/gallery/:id", admin_gallery.UpdateHandler)
-		adminGroup.DELETE("/gallery/:id", admin_gallery.RemoveHandler)
+		// Admin-tier routes
+		adminTier := adminBase.Group("", middleware.RequireAdminTier(admin.AdminTierAdmin))
+		{
+			adminTier.GET("/bot-staff", botstaff.ListBotStaffHandler)
+			adminTier.POST("/bot-staff/:userid", botstaff.AddBotStaffHandler)
+			adminTier.PUT("/bot-staff/:userid", botstaff.UpdateBotStaffHandler)
+			adminTier.DELETE("/bot-staff/:userid", botstaff.RemoveBotStaffHandler)
+			adminTier.GET("/premium-keys", admin_premiumkeys.ListPremiumKeysHandler)
+			adminTier.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
 
-		// Custom integration moderation
-		adminGroup.GET("/integrations", admin_integrations.ListIntegrationsHandler)
-		adminGroup.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
-		adminGroup.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
-		adminGroup.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
+			adminTier.POST("/gallery/:id/approve", admin_gallery.ApproveHandler)
+			adminTier.POST("/gallery/:id/reject", admin_gallery.RejectHandler)
+			adminTier.PUT("/gallery/:id", admin_gallery.UpdateHandler)
+			adminTier.DELETE("/gallery/:id", admin_gallery.RemoveHandler)
+
+			adminTier.POST("/server-blacklist/:guildid", admin_serverblacklist.AddHandler)
+			adminTier.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
+
+			adminTier.GET("/integrations", admin_integrations.ListIntegrationsHandler)
+			adminTier.GET("/integrations/:integrationid", admin_integrations.GetIntegrationDetailHandler)
+			adminTier.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
+			adminTier.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
+			adminTier.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
+
+			adminTier.GET("/skus", admin_skus.ListHandler)
+
+			adminTier.GET("/affiliate", admin_affiliate.ListHandler)
+			adminTier.GET("/affiliate/:id/referrals", admin_affiliate.ReferralsHandler)
+			adminTier.GET("/affiliate/flagged", admin_affiliate.FlaggedHandler)
+
+			adminTier.GET("/analytics/usage", admin_analytics_api.GetUsageHandler)
+			adminTier.GET("/analytics/adoption", admin_analytics_api.GetAdoptionHandler)
+			adminTier.GET("/analytics/retention", admin_analytics_api.GetRetentionHandler)
+			adminTier.GET("/analytics/config-patterns", admin_analytics_api.GetConfigPatternsHandler)
+		}
+
+		// Owner-only routes
+		ownerTier := adminBase.Group("", middleware.RequireAdminTier(admin.AdminTierOwner))
+		{
+			ownerTier.GET("/entitlements", admin_entitlements.ListEntitlementsHandler)
+			ownerTier.GET("/global-blacklist", admin_globalblacklist.ListHandler)
+			ownerTier.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)
+			ownerTier.DELETE("/global-blacklist/:userid", admin_globalblacklist.RemoveHandler)
+			ownerTier.POST("/skus", admin_skus.CreateHandler)
+			ownerTier.PUT("/skus/:skuid", admin_skus.UpdateHandler)
+			ownerTier.DELETE("/skus/:skuid", admin_skus.DeleteHandler)
+			ownerTier.GET("/polar-products", admin_polarproducts.ListHandler)
+			ownerTier.POST("/polar-products", admin_polarproducts.CreateHandler)
+			ownerTier.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
+			ownerTier.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
+
+			ownerTier.POST("/affiliate", admin_affiliate.CreateHandler)
+			ownerTier.POST("/affiliate/:id/approve", admin_affiliate.ApproveHandler)
+			ownerTier.POST("/affiliate/:id/revoke", admin_affiliate.RevokeHandler)
+			ownerTier.PUT("/affiliate/:id/rates", admin_affiliate.UpdateRatesHandler)
+			ownerTier.PUT("/affiliate/:id/code", admin_affiliate.UpdateCodeHandler)
+			ownerTier.POST("/affiliate/referrals/:id/void", admin_affiliate.VoidHandler)
+		}
 	}
 
 	srv := &nethttp.Server{

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
@@ -25,6 +26,13 @@ import (
 )
 
 const freePanelLimit = 3
+
+type PanelAutoCloseBody struct {
+	Enabled                 bool  `json:"enabled"`
+	SinceOpenWithNoResponse int64 `json:"since_open_with_no_response"`
+	SinceLastMessage        int64 `json:"since_last_message"`
+	OnUserLeave             bool  `json:"on_user_leave"`
+}
 
 type panelBody struct {
 	ChannelId                 uint64                            `json:"channel_id,string"`
@@ -48,7 +56,7 @@ type panelBody struct {
 	ExitSurveyFormId          *int                              `json:"exit_survey_form_id"`
 	AccessControlList         []database.PanelAccessControlRule `json:"access_control_list"`
 	PendingCategory           *uint64                           `json:"pending_category,string"`
-	DeleteMentions            bool                              `json:"delete_mentions"`
+	MentionBehaviour          string                            `json:"mention_behaviour"`
 	TranscriptChannelId       *uint64                           `json:"transcript_channel_id,string"`
 	UseThreads                bool                              `json:"use_threads"`
 	TicketNotificationChannel *uint64                           `json:"ticket_notification_channel,string"`
@@ -57,7 +65,17 @@ type panelBody struct {
 	HideCloseButton           bool                              `json:"hide_close_button"`
 	HideCloseWithReasonButton bool                              `json:"hide_close_with_reason_button"`
 	HideClaimButton           bool                              `json:"hide_claim_button"`
+	ShowInOpenCommand         bool                              `json:"show_in_open_command"`
 	TicketPermissions         database.TicketPermissions        `json:"ticket_permissions"`
+	StoreTranscripts          bool                              `json:"store_transcripts"`
+	OverflowEnabled           bool                              `json:"overflow_enabled"`
+	OverflowCategoryId        *uint64                           `json:"overflow_category_id,string"`
+	UsersCanClose             bool                              `json:"users_can_close"`
+	CloseConfirmation         bool                              `json:"close_confirmation"`
+	FeedbackEnabled           bool                              `json:"feedback_enabled"`
+	SupportCanView            bool                              `json:"support_can_view"`
+	SupportCanType            bool                              `json:"support_can_type"`
+	AutoClose                 PanelAutoCloseBody                `json:"auto_close"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
@@ -199,6 +217,7 @@ func CreatePanel(c *gin.Context) {
 
 	var emojiId *uint64
 	var emojiName *string
+	var emojiAnimated bool
 	{
 		emoji := data.getEmoji()
 		if emoji != nil {
@@ -206,6 +225,7 @@ func CreatePanel(c *gin.Context) {
 
 			if emoji.Id.Value != 0 {
 				emojiId = &emoji.Id.Value
+				emojiAnimated = emoji.Animated
 			}
 		}
 	}
@@ -241,6 +261,7 @@ func CreatePanel(c *gin.Context) {
 		TargetCategory:            data.CategoryId,
 		EmojiId:                   emojiId,
 		EmojiName:                 emojiName,
+		EmojiAnimated:             emojiAnimated,
 		WelcomeMessageEmbed:       welcomeMessageEmbed,
 		WithDefaultTeam:           data.WithDefaultTeam,
 		CustomId:                  customId,
@@ -254,7 +275,7 @@ func CreatePanel(c *gin.Context) {
 		Disabled:                  data.Disabled,
 		ExitSurveyFormId:          data.ExitSurveyFormId,
 		PendingCategory:           data.PendingCategory,
-		DeleteMentions:            data.DeleteMentions,
+		MentionBehaviour:          data.MentionBehaviour,
 		TranscriptChannelId:       data.TranscriptChannelId,
 		UseThreads:                data.UseThreads,
 		TicketNotificationChannel: data.TicketNotificationChannel,
@@ -263,8 +284,16 @@ func CreatePanel(c *gin.Context) {
 		HideCloseButton:           data.HideCloseButton,
 		HideCloseWithReasonButton: data.HideCloseWithReasonButton,
 		HideClaimButton:           data.HideClaimButton,
+		ShowInOpenCommand:         data.ShowInOpenCommand,
+		StoreTranscripts:          data.StoreTranscripts,
+		OverflowEnabled:           data.OverflowEnabled,
+		OverflowCategoryId:        data.OverflowCategoryId,
+		UsersCanClose:             data.UsersCanClose,
+		CloseConfirmation:         data.CloseConfirmation,
+		FeedbackEnabled:           data.FeedbackEnabled,
+		SupportCanView:            data.SupportCanView,
+		SupportCanType:            data.SupportCanType,
 	}
-
 
 	createOptions := panelCreateOptions{
 		TeamIds:            data.Teams,             // Already validated
@@ -302,6 +331,11 @@ func CreatePanel(c *gin.Context) {
 
 	if err := dbclient.Client.PanelTicketPermissions.Set(c, panelId, data.TicketPermissions); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))
+		return
+	}
+
+	if err := dbclient.Client.PanelAutoClose.Set(c, panelId, data.AutoClose.toDatabase()); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel auto-close settings"))
 		return
 	}
 
@@ -373,4 +407,23 @@ func storePanel(ctx context.Context, panel database.Panel, options panelCreateOp
 // Data must be validated before calling this function
 func (p *panelBody) getEmoji() *emoji.Emoji {
 	return p.Emoji.IntoGdl()
+}
+
+func (b PanelAutoCloseBody) toDatabase() database.PanelAutoCloseSettings {
+	settings := database.PanelAutoCloseSettings{
+		Enabled:     b.Enabled,
+		OnUserLeave: &b.OnUserLeave,
+	}
+
+	if b.SinceOpenWithNoResponse > 0 {
+		d := time.Second * time.Duration(b.SinceOpenWithNoResponse)
+		settings.SinceOpenWithNoResponse = &d
+	}
+
+	if b.SinceLastMessage > 0 {
+		d := time.Second * time.Duration(b.SinceLastMessage)
+		settings.SinceLastMessage = &d
+	}
+
+	return settings
 }

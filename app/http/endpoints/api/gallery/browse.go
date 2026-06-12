@@ -43,12 +43,18 @@ func BrowseHandler(ctx *gin.Context) {
 		sort = "recent"
 	}
 
+	listingType := ctx.Query("type")
+	if listingType != "" && listingType != "panel" && listingType != "tag" && listingType != "form" {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid listing type"))
+		return
+	}
+
 	page, err := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	if err != nil || page < 1 {
 		page = 1
 	}
 
-	listings, total, err := dbclient.Client.GalleryListings.GetApproved(ctx, category, tag, search, sort, page, defaultPageSize)
+	listings, total, err := dbclient.Client.GalleryListings.GetApproved(ctx, category, tag, search, sort, listingType, page, defaultPageSize)
 	if err != nil {
 		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch gallery listings"))
 		return

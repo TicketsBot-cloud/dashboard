@@ -2,6 +2,7 @@ package gallery
 
 import (
 	stdjson "encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"unicode"
@@ -10,6 +11,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/notify"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -172,6 +174,14 @@ func SubmitHandler(ctx *gin.Context) {
 			"panel_id": panelId,
 		},
 	})
+
+	go notify.SendToAdmins(
+		ctx,
+		notify.CategoryAdminGallery,
+		"New Gallery Submission",
+		fmt.Sprintf("A new gallery listing \"%s\" has been submitted for review.", body.Name),
+		"/admin/gallery",
+	)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"success":    true,

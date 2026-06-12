@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
@@ -195,6 +196,18 @@ func BulkSendTag(ctx *gin.Context) {
 				},
 			}); err != nil {
 				return false
+			}
+		}
+
+		if ticket.Status != model.TicketStatusPending {
+			if err := dbclient.Client.Tickets.SetStatus(opCtx, guildId, ticketId, model.TicketStatusPending); err != nil {
+				return false
+			}
+
+			if !ticket.IsThread {
+				if err := dbclient.Client.CategoryUpdateQueue.Add(opCtx, guildId, ticketId, model.TicketStatusPending); err != nil {
+					return false
+				}
 			}
 		}
 

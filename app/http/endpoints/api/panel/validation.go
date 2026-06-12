@@ -79,6 +79,9 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateTicketNotificationChannel,
 		validateCooldownSeconds,
 		validateTicketLimit,
+		validateOverflowCategoryId,
+		validateSupportCanType,
+		validateAutoClose,
 	}
 }
 
@@ -464,7 +467,7 @@ func validateTranscriptChannelId(ctx PanelValidationContext) validation.Validati
 
 func validateTicketNotificationChannel(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		// Always validate the channel if provided, regardless of UseThreads
+		// Always validate the channel if provided
 		if ctx.Data.TicketNotificationChannel != nil {
 			channelFound := false
 			for _, ch := range ctx.Channels {
@@ -482,24 +485,9 @@ func validateTicketNotificationChannel(ctx PanelValidationContext) validation.Va
 			}
 		}
 
-		// If UseThreads is false, notification channel is not applicable
-		if !ctx.Data.UseThreads {
-			return nil
-		}
-
-		// If UseThreads is true and no panel-specific channel, check global setting exists
-		if ctx.Data.TicketNotificationChannel == nil {
-			globalCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-			defer cancel()
-
-			settings, err := dbclient.Client.Settings.Get(globalCtx, ctx.GuildId)
-			if err != nil {
-				return fmt.Errorf("Failed to fetch global settings: %w", err)
-			}
-
-			if settings.TicketNotificationChannel == nil {
-				return validation.NewInvalidInputError("You must select a ticket notification channel for this panel, or configure a global ticket notification channel in settings")
-			}
+		// Thread mode requires a per-panel notification channel
+		if ctx.Data.UseThreads && ctx.Data.TicketNotificationChannel == nil {
+			return validation.NewInvalidInputError("You must select a ticket notification channel for this panel when thread mode is enabled")
 		}
 
 		return nil
@@ -514,6 +502,69 @@ func validateTicketLimit(ctx PanelValidationContext) validation.ValidationFunc {
 
 		if *ctx.Data.TicketLimit > 10 {
 			return validation.NewInvalidInputError("Ticket limit must be at most 11")
+		}
+
+		return nil
+	}
+}
+
+func validateOverflowCategoryId(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.OverflowCategoryId == nil {
+			return nil
+		}
+
+		for _, ch := range ctx.Channels {
+			if ch.Id == *ctx.Data.OverflowCategoryId {
+				if ch.GuildId != ctx.GuildId {
+					return validation.NewInvalidInputError("Overflow category guild ID does not match")
+				}
+
+				if ch.Type != channel.ChannelTypeGuildCategory {
+					return validation.NewInvalidInputError("Overflow category is not a category")
+				}
+
+				return nil
+			}
+		}
+
+		return validation.NewInvalidInputError("Invalid overflow category")
+	}
+}
+
+func validateSupportCanType(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.SupportCanType && !ctx.Data.SupportCanView {
+			return validation.NewInvalidInputError("Support must be able to view a claimed ticket in order to type in it")
+		}
+
+		return nil
+	}
+}
+
+func validateAutoClose(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		ac := ctx.Data.AutoClose
+
+		if !ac.Enabled {
+			return nil
+		}
+
+		if !ctx.IsPremium {
+			return nil
+		}
+
+		if ac.SinceOpenWithNoResponse < 0 {
+			return validation.NewInvalidInputError("Auto-close time cannot be negative")
+		}
+
+		if ac.SinceLastMessage < 0 {
+			return validation.NewInvalidInputError("Auto-close time cannot be negative")
+		}
+
+		maxSeconds := int64((time.Hour * 24 * 60).Seconds())
+		if ac.SinceOpenWithNoResponse > maxSeconds || ac.SinceLastMessage > maxSeconds {
+			return validation.NewInvalidInputError("Auto-close time period cannot be longer than 60 days")
 		}
 
 		return nil

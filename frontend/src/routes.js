@@ -33,7 +33,6 @@ import CreateMultiPanel from "./views/panels/CreateMultiPanel.svelte";
 import EditPanel from "./views/panels/EditPanel.svelte";
 import EditMultiPanel from "./views/panels/EditMultiPanel.svelte";
 import SelectServers from "./views/premium/SelectServers.svelte";
-import Import from "./views/Import.svelte";
 import AuditLog from "./views/AuditLog.svelte";
 
 import TranscriptsView from "./views/TranscriptView.svelte";
@@ -128,7 +127,6 @@ export const routes = [
       },
       { name: "blacklist", component: Blacklist, layout: ManageLayout },
       { name: "tags", component: Tags, layout: ManageLayout },
-      { name: "import", component: Import, layout: ManageLayout },
       { name: "teams", component: Teams, layout: ManageLayout },
       { name: "forms", component: Forms, layout: ManageLayout },
       { name: "staffoverride", component: StaffOverride, layout: ManageLayout },

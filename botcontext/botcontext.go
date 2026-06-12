@@ -6,8 +6,8 @@ import (
 
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/common/restcache"
-	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/internal/admin"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	cacheclient "github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/database"
@@ -37,14 +37,8 @@ func (c *BotContext) Cache() permission.PermissionCache {
 	return permission.NewRedisCache(redis.Client.Client)
 }
 
-func (c *BotContext) IsBotAdmin(_ context.Context, userId uint64) bool {
-	for _, id := range config.Conf.Admins {
-		if id == userId {
-			return true
-		}
-	}
-
-	return false
+func (c *BotContext) IsBotAdmin(ctx context.Context, userId uint64) bool {
+	return admin.IsBotAdmin(ctx, userId)
 }
 
 func (c *BotContext) GetGuild(ctx context.Context, guildId uint64) (guild.Guild, error) {

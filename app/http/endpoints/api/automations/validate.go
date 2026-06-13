@@ -20,6 +20,8 @@ var (
 		"ticket.transferred": true,
 		"cron":               true,
 		"webhook":            true,
+		"message.sent":       true,
+		"rating.submitted":   true,
 	}
 
 	knownActionKinds = map[string]bool{
@@ -37,9 +39,12 @@ var (
 
 		// Phase 3 — validation-only until the executor ships them
 		"assign_team":  true,
-		"set_priority": true,
 		"transfer":     true,
 		"http_request": true,
+		"send_embed":      true,
+		"delay":           true,
+		"log_to_channel":  true,
+		"reopen_ticket":   true,
 	}
 
 	// Node kinds that require premium. The validator blocks them for free guilds.
@@ -47,6 +52,15 @@ var (
 		"cron":         true,
 		"webhook":      true,
 		"http_request": true,
+	}
+
+	knownConditionOps = map[string]bool{
+		"eq": true, "neq": true,
+		"contains": true, "not_contains": true,
+		"starts_with": true, "ends_with": true,
+		"in": true, "not_in": true,
+		"gt": true, "lt": true, "gte": true, "lte": true,
+		"is_empty": true, "is_not_empty": true,
 	}
 )
 
@@ -100,9 +114,24 @@ func ValidateGraph(g database.AutomationGraph, maxSteps int, tier premium.Premiu
 		case "trigger":
 			// already validated
 		case "condition":
-			// basic sanity
 			if n.Mode != "" && n.Mode != "AND" && n.Mode != "OR" {
 				return fmt.Sprintf("Condition node %q has invalid mode %q (expected AND or OR)", n.Id, n.Mode)
+			}
+			if len(n.Clauses) == 0 {
+				return fmt.Sprintf("Condition node %q must have at least one clause", n.Id)
+			}
+			for ci, clause := range n.Clauses {
+				if strings.TrimSpace(clause.Left) == "" {
+					return fmt.Sprintf("Condition node %q clause %d has empty left operand", n.Id, ci+1)
+				}
+				if !knownConditionOps[clause.Op] {
+					return fmt.Sprintf("Condition node %q clause %d has unknown operator %q", n.Id, ci+1, clause.Op)
+				}
+				if clause.Op != "is_empty" && clause.Op != "is_not_empty" {
+					if strings.TrimSpace(clause.Right) == "" {
+						return fmt.Sprintf("Condition node %q clause %d requires a non-empty right operand for operator %q", n.Id, ci+1, clause.Op)
+					}
+				}
 			}
 		case "switch":
 			expr, _ := n.Config["expression"].(string)
@@ -121,6 +150,25 @@ func ValidateGraph(g database.AutomationGraph, maxSteps int, tier premium.Premiu
 			if premiumOnlyKinds[n.Kind] && tier == premium.None {
 				return fmt.Sprintf("Action %q requires premium", n.Kind)
 			}
+			if msg := validateActionConfig(n); msg != "" {
+				return msg
+			}
+
+			// Enforce tier-specific delay duration caps.
+			if n.Kind == "delay" {
+				durRaw, _ := n.Config["duration_seconds"]
+				dur, _ := toFloat64(durRaw)
+				maxDelay := float64(5 * 60) // 5 minutes for free tier
+				if tier >= premium.Whitelabel {
+					maxDelay = float64(7 * 24 * 60 * 60) // 7 days for whitelabel
+				} else if tier > premium.None {
+					maxDelay = float64(24 * 60 * 60) // 24 hours for premium
+				}
+				if dur > maxDelay {
+					return fmt.Sprintf("Delay at node %q exceeds the maximum for your tier (%d seconds)", n.Id, int(maxDelay))
+				}
+			}
+
 			actionSteps++
 		default:
 			return fmt.Sprintf("Unsupported node type %q at node %q", n.Type, n.Id)
@@ -144,6 +192,26 @@ func ValidateGraph(g database.AutomationGraph, maxSteps int, tier premium.Premiu
 	// Cycle detection. Phase 1 allows only acyclic graphs; linear walker would loop forever otherwise.
 	if hasCycle(g) {
 		return "Automation graph contains a cycle"
+	}
+
+	// Reachability: every node must be reachable from the trigger.
+	reachable := make(map[string]bool, len(g.Nodes))
+	queue := []string{triggerNode.Id}
+	reachable[triggerNode.Id] = true
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for _, e := range g.Edges {
+			if e.From == cur && !reachable[e.To] {
+				reachable[e.To] = true
+				queue = append(queue, e.To)
+			}
+		}
+	}
+	for _, n := range g.Nodes {
+		if !reachable[n.Id] {
+			return fmt.Sprintf("Node %q is not reachable from the trigger", n.Id)
+		}
 	}
 
 	return ""
@@ -224,4 +292,109 @@ func validateCronTrigger(node database.AutomationNode) string {
 		return fmt.Sprintf("Invalid cron expression: %s", err.Error())
 	}
 	return ""
+}
+
+// validateActionConfig checks that the action's config map contains the fields
+// required by its kind. Returns an empty string when valid.
+func validateActionConfig(node database.AutomationNode) string {
+	cfg := node.Config
+	switch node.Kind {
+	case "send_message":
+		content, _ := cfg["content"].(string)
+		if strings.TrimSpace(content) == "" {
+			return fmt.Sprintf("Action %q at node %q requires non-empty content", node.Kind, node.Id)
+		}
+	case "dm_user":
+		content, _ := cfg["content"].(string)
+		if strings.TrimSpace(content) == "" {
+			return fmt.Sprintf("Action %q at node %q requires non-empty content", node.Kind, node.Id)
+		}
+	case "add_label", "remove_label":
+		labelIdRaw, ok := cfg["label_id"]
+		if !ok {
+			return fmt.Sprintf("Action %q at node %q requires a label_id", node.Kind, node.Id)
+		}
+		labelId, err := toFloat64(labelIdRaw)
+		if err != nil || labelId <= 0 {
+			return fmt.Sprintf("Action %q at node %q requires label_id > 0", node.Kind, node.Id)
+		}
+	case "send_tag":
+		tagId, _ := cfg["tag_id"].(string)
+		if strings.TrimSpace(tagId) == "" {
+			return fmt.Sprintf("Action %q at node %q requires a non-empty tag_id", node.Kind, node.Id)
+		}
+	case "assign_user":
+		userId, _ := cfg["user_id"].(string)
+		if strings.TrimSpace(userId) == "" {
+			return fmt.Sprintf("Action %q at node %q requires a non-empty user_id", node.Kind, node.Id)
+		}
+	case "close_ticket":
+		// always valid; reason is optional
+	case "http_request":
+		url, _ := cfg["url"].(string)
+		if strings.TrimSpace(url) == "" {
+			return fmt.Sprintf("Action %q at node %q requires a non-empty url", node.Kind, node.Id)
+		}
+		method, _ := cfg["method"].(string)
+		validMethods := map[string]bool{"GET": true, "POST": true, "PUT": true, "PATCH": true, "DELETE": true}
+		if !validMethods[method] {
+			return fmt.Sprintf("Action %q at node %q has unknown HTTP method %q", node.Kind, node.Id, method)
+		}
+	case "assign_team":
+		teamId, _ := cfg["team_id"].(string)
+		if strings.TrimSpace(teamId) == "" {
+			return fmt.Sprintf("Action %q at node %q requires a non-empty team_id", node.Kind, node.Id)
+		}
+	case "transfer":
+		toUserId, _ := cfg["to_user_id"].(string)
+		if strings.TrimSpace(toUserId) == "" {
+			return fmt.Sprintf("Action %q at node %q requires a non-empty to_user_id", node.Kind, node.Id)
+		}
+	case "reply_to_trigger":
+		content, _ := cfg["content"].(string)
+		if strings.TrimSpace(content) == "" {
+			return fmt.Sprintf("Action %q at node %q requires non-empty content", node.Kind, node.Id)
+		}
+	case "send_embed":
+		content, _ := cfg["content"].(string)
+		title, _ := cfg["title"].(string)
+		desc, _ := cfg["description"].(string)
+		if strings.TrimSpace(content) == "" && strings.TrimSpace(title) == "" && strings.TrimSpace(desc) == "" {
+			return fmt.Sprintf("Action %q at node %q requires at least one of content, title, or description", node.Kind, node.Id)
+		}
+	case "delay":
+		durRaw, ok := cfg["duration_seconds"]
+		if !ok {
+			return fmt.Sprintf("Action %q at node %q requires duration_seconds", node.Kind, node.Id)
+		}
+		dur, err := toFloat64(durRaw)
+		if err != nil || dur <= 0 {
+			return fmt.Sprintf("Action %q at node %q requires a positive duration_seconds", node.Kind, node.Id)
+		}
+	case "log_to_channel":
+		channelId, _ := cfg["channel_id"].(string)
+		if strings.TrimSpace(channelId) == "" {
+			return fmt.Sprintf("Action %q at node %q requires a non-empty channel_id", node.Kind, node.Id)
+		}
+		content, _ := cfg["content"].(string)
+		if strings.TrimSpace(content) == "" {
+			return fmt.Sprintf("Action %q at node %q requires non-empty content", node.Kind, node.Id)
+		}
+	case "reopen_ticket":
+		// no config required
+	}
+	return ""
+}
+
+func toFloat64(v any) (float64, error) {
+	switch n := v.(type) {
+	case float64:
+		return n, nil
+	case int:
+		return float64(n), nil
+	case int64:
+		return float64(n), nil
+	default:
+		return 0, fmt.Errorf("expected number, got %T", v)
+	}
 }

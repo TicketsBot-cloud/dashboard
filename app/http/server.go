@@ -260,8 +260,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.GET("/automations/:automationId/stats", api_automations.GetStats)
 		guildAuthApiAdmin.GET("/automations/:automationId/export", api_automations.ExportAutomation)
 		guildAuthApiAdmin.POST("/automations/import", rl(middleware.RateLimitTypeGuild, 10, time.Hour), api_automations.ImportAutomation)
-		guildAuthApiAdmin.GET("/automation-templates", api_automations.ListTemplates)
-		guildAuthApiAdmin.POST("/automation-templates/:templateId/clone", rl(middleware.RateLimitTypeGuild, 20, time.Hour), api_automations.CloneTemplate)
 
 		// Should be a GET, but easier to take a body for development purposes
 		guildAuthApiSupport.POST("/transcripts",
@@ -409,6 +407,14 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.POST("/gallery/import-form/:listingId",
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_gallery.ImportFormHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/submit-automation/:automationId",
+			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
+			api_gallery.SubmitAutomationHandler,
+		)
+		guildAuthApiAdmin.POST("/gallery/import-automation/:listingId",
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_gallery.ImportAutomationHandler,
 		)
 
 		// KB categories

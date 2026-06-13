@@ -125,7 +125,7 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 			headers[header.Name] = value
 		}
 
-		res, statusCode, err := utils.SecureProxyClient.DoRequest(http.MethodPost, *integration.ValidationUrl, headers, secretValues)
+		res, statusCode, err := utils.SecureProxyClient.DoRequest(ctx, http.MethodPost, *integration.ValidationUrl, headers, secretValues)
 		if err != nil {
 			if statusCode == http.StatusRequestTimeout {
 				ctx.JSON(400, utils.ErrorStr("Secret validation server did not respond in time (contact the integration author)"))

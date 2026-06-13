@@ -44,7 +44,7 @@ func BrowseHandler(ctx *gin.Context) {
 	}
 
 	listingType := ctx.Query("type")
-	if listingType != "" && listingType != "panel" && listingType != "tag" && listingType != "form" {
+	if listingType != "" && listingType != "panel" && listingType != "tag" && listingType != "form" && listingType != "automation" {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid listing type"))
 		return
 	}

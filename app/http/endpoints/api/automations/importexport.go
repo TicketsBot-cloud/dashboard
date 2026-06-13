@@ -86,7 +86,7 @@ func ImportAutomation(c *gin.Context) {
 		return
 	}
 
-	rewriteNodeIds(&imported.Graph)
+	database.RewriteAutomationNodeIds(&imported.Graph)
 
 	desc := imported.Description
 	var descPtr *string

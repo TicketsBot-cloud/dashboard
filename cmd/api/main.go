@@ -7,7 +7,6 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -19,8 +18,9 @@ import (
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/common/secureproxy"
 	"github.com/TicketsBot-cloud/common/workflowbus"
-	api_automations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/automations"
 	app "github.com/TicketsBot-cloud/dashboard/app/http"
+	api_automations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/automations"
+	api_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/gallery"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/config"
@@ -90,6 +90,11 @@ func main() {
 	logger.Info("Connecting to database")
 	database.ConnectToDatabase()
 
+	// Seed built-in automation templates into the gallery (idempotent).
+	seedCtx, seedCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	api_gallery.SeedAutomationTemplates(seedCtx, database.Client, logger)
+	seedCancel()
+
 	logger.Info("Connecting to cache")
 	cache.Instance = cache.NewCache()
 
@@ -131,26 +136,15 @@ func main() {
 	// endpoint to emit signed trigger envelopes to Kafka. Optional; if Kafka isn't
 	// configured the webhook endpoint returns 503.
 	{
-		kafkaBrokersEnv := os.Getenv("KAFKA_BROKERS")
-		var kafkaBrokers []string
-		if kafkaBrokersEnv != "" {
-			for _, b := range strings.Split(kafkaBrokersEnv, ",") {
-				if t := strings.TrimSpace(b); t != "" {
-					kafkaBrokers = append(kafkaBrokers, t)
-				}
-			}
-		}
-		if len(kafkaBrokers) > 0 {
-			wfSigner := workflowbus.NewSigner([]byte(os.Getenv(workflowbus.SecretEnvVar)))
-			wfProducer, err := workflowbus.NewProducer(kafkaBrokers, logger.With(zap.String("service", "workflowbus")), wfSigner)
-			if err != nil {
-				logger.Error("Failed to create webhook producer — webhooks will return 503", zap.Error(err))
-			} else {
-				workflowbus.SetGlobal(wfProducer)
-				api_automations.SetWebhookProducer(wfProducer)
-				defer wfProducer.Close()
-				logger.Info("Workflow webhook producer ready")
-			}
+		wfSigner := workflowbus.NewSigner([]byte(os.Getenv(workflowbus.SecretEnvVar)))
+		wfProducer, err := workflowbus.NewProducer(redis.Client.Client, logger.With(zap.String("service", "workflowbus")), wfSigner)
+		if err != nil {
+			logger.Error("Failed to create webhook producer — webhooks will return 503", zap.Error(err))
+		} else {
+			workflowbus.SetGlobal(wfProducer)
+			api_automations.SetWebhookProducer(wfProducer)
+			defer wfProducer.Close()
+			logger.Info("Workflow webhook producer ready")
 		}
 	}
 

@@ -4,9 +4,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/TicketsBot-cloud/common/workflowbus"
 	"github.com/TicketsBot-cloud/dashboard/app"
@@ -101,7 +103,14 @@ func HandleWebhook(c *gin.Context) {
 		Body:         bodyJSON,
 	}
 
-	workflowbus.Emit(c, workflowbus.TriggerWebhook, guildId, "", payload)
+	// Use a deterministic causation ID derived from the automation ID and a
+	// rolling one-minute window. This prevents webhook->http_request->same_webhook
+	// loops: the (causation_id, automation_id) unique constraint in StartRun
+	// deduplicates within the same minute, while different automations or
+	// different time windows still fire normally.
+	causationId := fmt.Sprintf("webhook:%d:%d", auto.Id, time.Now().Unix()/60)
+
+	workflowbus.Emit(c, workflowbus.TriggerWebhook, guildId, causationId, payload)
 	c.JSON(http.StatusAccepted, gin.H{"status": "accepted"})
 }
 

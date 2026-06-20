@@ -6,12 +6,6 @@ replace github.com/TicketsBot-cloud/database => ../database
 
 replace github.com/TicketsBot-cloud/common => ../common
 
-//replace github.com/TicketsBot-cloud/gdl => ../gdl
-
-//replace github.com/TicketsBot-cloud/logarchiver => ../logarchiver
-
-//replace github.com/TicketsBot-cloud/archiverclient => ../archiverclient
-
 replace github.com/TicketsBot-cloud/worker => ../worker
 
 replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0

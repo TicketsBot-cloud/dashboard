@@ -489,6 +489,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.PUT("/skus/:skuid", admin_skus.UpdateHandler)
 			ownerTier.DELETE("/skus/:skuid", admin_skus.DeleteHandler)
 			ownerTier.GET("/polar-products", admin_polarproducts.ListHandler)
+			ownerTier.GET("/polar-products/lookup", admin_polarproducts.LookupHandler)
 			ownerTier.POST("/polar-products", admin_polarproducts.CreateHandler)
 			ownerTier.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
 			ownerTier.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)

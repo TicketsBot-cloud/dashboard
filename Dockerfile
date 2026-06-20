@@ -4,6 +4,7 @@ FROM golang:alpine AS builder
 RUN apk update && apk upgrade && apk add git zlib-dev gcc musl-dev
 
 # Copy local modules that replace directives point to
+COPY common/ /go/src/github.com/TicketsBot-cloud/common/
 COPY database/ /go/src/github.com/TicketsBot-cloud/database/
 COPY worker/ /go/src/github.com/TicketsBot-cloud/worker/
 

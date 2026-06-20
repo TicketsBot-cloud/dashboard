@@ -38,7 +38,7 @@ func GetOrders(ctx *gin.Context) {
 
 	externalIdFilter := operations.CreateOrdersListQueryParamExternalCustomerIDFilterStr(userIdStr)
 
-	res, err := getPolarClient().Orders.List(ctx, operations.OrdersListRequest{
+	res, err := GetPolarClient().Orders.List(ctx, operations.OrdersListRequest{
 		ExternalCustomerID: &externalIdFilter,
 		Page:               &page,
 		Limit:              &limit,
@@ -95,7 +95,7 @@ func GetOrderInvoice(ctx *gin.Context) {
 	orderId := ctx.Param("orderid")
 
 	// Verify the order belongs to this user by fetching it and checking the customer.
-	orderRes, err := getPolarClient().Orders.Get(ctx, orderId)
+	orderRes, err := GetPolarClient().Orders.Get(ctx, orderId)
 	if err != nil || orderRes.Order == nil {
 		ctx.JSON(http.StatusNotFound, utils.ErrorStr("Order not found"))
 		return
@@ -106,7 +106,7 @@ func GetOrderInvoice(ctx *gin.Context) {
 		return
 	}
 
-	invoiceRes, err := getPolarClient().Orders.Invoice(ctx, orderId)
+	invoiceRes, err := GetPolarClient().Orders.Invoice(ctx, orderId)
 	if err != nil || invoiceRes.OrderInvoice == nil {
 		ctx.JSON(http.StatusBadGateway, utils.ErrorStr("Failed to fetch invoice from payment provider."))
 		return

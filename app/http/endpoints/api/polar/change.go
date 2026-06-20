@@ -48,7 +48,7 @@ func ChangeSubscription(ctx *gin.Context) {
 	}
 
 	// Request plan change via Polar SDK
-	_, err := getPolarClient().Subscriptions.Update(ctx, subId,
+	_, err := GetPolarClient().Subscriptions.Update(ctx, subId,
 		components.CreateSubscriptionUpdateSubscriptionUpdateProduct(components.SubscriptionUpdateProduct{
 			ProductID: body.NewProductId,
 		}),

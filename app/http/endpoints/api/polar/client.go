@@ -11,8 +11,8 @@ import (
 
 var polarClient *polargo.Polar
 
-// getPolarClient returns a lazily-initialised Polar SDK client.
-func getPolarClient() *polargo.Polar {
+// GetPolarClient returns a lazily-initialised Polar SDK client.
+func GetPolarClient() *polargo.Polar {
 
 	server := polargo.ServerProduction
 	if config.Conf.Polar.IsSandbox {

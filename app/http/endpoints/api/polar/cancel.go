@@ -33,7 +33,7 @@ func CancelSubscription(ctx *gin.Context) {
 	}
 
 	// Request cancellation at period end via Polar SDK
-	_, err := getPolarClient().Subscriptions.Update(ctx, subId,
+	_, err := GetPolarClient().Subscriptions.Update(ctx, subId,
 		components.CreateSubscriptionUpdateSubscriptionCancel(components.SubscriptionCancel{
 			CancelAtPeriodEnd: true,
 		}),

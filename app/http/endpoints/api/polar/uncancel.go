@@ -33,7 +33,7 @@ func UncancelSubscription(ctx *gin.Context) {
 	}
 
 	// Reverse the pending cancellation via Polar SDK
-	_, err := getPolarClient().Subscriptions.Update(ctx, subId,
+	_, err := GetPolarClient().Subscriptions.Update(ctx, subId,
 		components.CreateSubscriptionUpdateSubscriptionCancel(components.SubscriptionCancel{
 			CancelAtPeriodEnd: false,
 		}),

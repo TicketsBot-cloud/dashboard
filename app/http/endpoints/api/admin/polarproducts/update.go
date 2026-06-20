@@ -18,7 +18,8 @@ type updateBody struct {
 	Name             string   `json:"name"`
 	Description      string   `json:"description"`
 	Interval         string   `json:"interval"`
-	PriceGbp         int      `json:"price_gbp"`
+	Price            int      `json:"price"`
+	Currency         string   `json:"currency"`
 	Features         []string `json:"features"`
 	Highlighted      bool     `json:"highlighted"`
 	SortOrder        int      `json:"sort_order"`
@@ -52,8 +53,17 @@ func UpdateHandler(ctx *gin.Context) {
 		return
 	}
 
-	if body.PriceGbp <= 0 {
+	if body.Price <= 0 {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Price must be greater than zero."))
+		return
+	}
+
+	validCurrencies := map[string]bool{
+		"aud": true, "brl": true, "cad": true, "chf": true, "eur": true,
+		"inr": true, "gbp": true, "jpy": true, "sek": true, "usd": true,
+	}
+	if !validCurrencies[body.Currency] {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Currency must be a valid Polar currency code."))
 		return
 	}
 
@@ -91,7 +101,8 @@ func UpdateHandler(ctx *gin.Context) {
 		Name:             body.Name,
 		Description:      body.Description,
 		Interval:         body.Interval,
-		PriceGbp:         body.PriceGbp,
+		Price:            body.Price,
+		Currency:         body.Currency,
 		Features:         body.Features,
 		Highlighted:      body.Highlighted,
 		SortOrder:        body.SortOrder,

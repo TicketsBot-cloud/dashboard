@@ -79,13 +79,13 @@ func CreateCheckout(ctx *gin.Context) {
 
 	userIdStr := strconv.FormatUint(userId, 10)
 	successUrl := config.Conf.Polar.CheckoutSuccessUrl
-	gbp := components.PresentmentCurrencyGbp
+	currency := components.PresentmentCurrency(selected.Currency)
 
 	res, err := getPolarClient().Checkouts.Create(ctx, components.CheckoutCreate{
 		Products:           productIds,
 		ExternalCustomerID: &userIdStr,
 		SuccessURL:         &successUrl,
-		Currency:           &gbp,
+		Currency:           &currency,
 		DiscountID:         discountId,
 		Metadata:           metadata,
 	})

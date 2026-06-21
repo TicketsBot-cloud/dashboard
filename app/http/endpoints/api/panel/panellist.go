@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils/types"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -46,6 +49,40 @@ func ListPanels(c *gin.Context) {
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
 		return
+	}
+
+	// If any panels are force-disabled and the server has premium, re-enable them all.
+	hasForceDisabled := false
+	for _, p := range panels {
+		if p.ForceDisabled {
+			hasForceDisabled = true
+			break
+		}
+	}
+
+	if hasForceDisabled {
+		botContext, err := botcontext.ContextForGuild(guildId)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
+			return
+		}
+
+		premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
+			return
+		}
+
+		if premiumTier > premium.None {
+			if err := dbclient.Client.Panel.EnableAll(c, guildId); err != nil {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
+				return
+			}
+
+			for i := range panels {
+				panels[i].ForceDisabled = false
+			}
+		}
 	}
 
 	wrapped := make([]panelResponse, len(panels))

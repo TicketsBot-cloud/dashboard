@@ -6,9 +6,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/log"
+	"github.com/TicketsBot-cloud/dashboard/rpc"
+	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -82,6 +86,24 @@ func parseDays(ctx *gin.Context) int {
 
 func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+
+	botCtx, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
+		return
+	}
+
+	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botCtx.Token, botCtx.RateLimiter)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
+	if premiumTier == premium.None {
+		ctx.JSON(http.StatusPaymentRequired, utils.ErrorStr("Analytics requires a premium subscription."))
+		return
+	}
+
 	days := parseDays(ctx)
 
 	// Queries using generate_series or CURRENT_DATE arithmetic need a positive day count.

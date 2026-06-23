@@ -2,10 +2,15 @@ package api_analytics
 
 import (
 	"context"
+	"net/http"
 	"time"
 
+	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/log"
+	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
@@ -32,6 +37,24 @@ type (
 
 func GetAnalyticsStaffHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+
+	botCtx, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
+		return
+	}
+
+	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botCtx.Token, botCtx.RateLimiter)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
+	if premiumTier == premium.None {
+		ctx.JSON(http.StatusPaymentRequired, utils.ErrorStr("Analytics requires a premium subscription."))
+		return
+	}
+
 	days := parseDays(ctx)
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)

@@ -7,10 +7,12 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/log"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 	"github.com/polarsource/polar-go/models/components"
+	"go.uber.org/zap"
 )
 
 type createCheckoutBody struct {
@@ -90,6 +92,14 @@ func CreateCheckout(ctx *gin.Context) {
 		Metadata:           metadata,
 	})
 	if err != nil {
+		log.Logger.Error("failed to create checkout", zap.Error(err), zap.Any("request_body", components.CheckoutCreate{
+			Products:           productIds,
+			ExternalCustomerID: &userIdStr,
+			SuccessURL:         &successUrl,
+			Currency:           &currency,
+			DiscountID:         discountId,
+			Metadata:           metadata,
+		}))
 		ctx.JSON(http.StatusBadGateway, utils.ErrorStr("Failed to create checkout session with payment provider."))
 		return
 	}

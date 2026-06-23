@@ -18,6 +18,15 @@ type activateIntegrationBody struct {
 	Secrets map[string]string `json:"secrets"`
 }
 
+func substituteIntegrationPlaceholders(value string, guildId, userId uint64, secretValues map[string]string) string {
+	value = strings.ReplaceAll(value, "%user_id%", strconv.FormatUint(userId, 10))
+	value = strings.ReplaceAll(value, "%guild_id%", strconv.FormatUint(guildId, 10))
+	for key, secret := range secretValues {
+		value = strings.ReplaceAll(value, fmt.Sprintf("%%%s%%", key), secret)
+	}
+	return value
+}
+
 func ActivateIntegrationHandler(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
 	guildId := ctx.Keys["guildid"].(uint64)
@@ -117,15 +126,18 @@ func ActivateIntegrationHandler(ctx *gin.Context) {
 
 		headers := make(map[string]string)
 		for _, header := range integrationHeaders {
-			value := header.Value
-			for key, secret := range secretValues {
-				value = strings.ReplaceAll(value, fmt.Sprintf("%%%s%%", key), secret)
-			}
-
-			headers[header.Name] = value
+			headers[header.Name] = substituteIntegrationPlaceholders(header.Value, guildId, userId, secretValues)
 		}
 
-		res, statusCode, err := utils.SecureProxyClient.DoRequest(http.MethodPost, *integration.ValidationUrl, headers, secretValues)
+		validationBody := make(map[string]string, len(secretValues)+2)
+		validationBody["guild_id"] = strconv.FormatUint(guildId, 10)
+		validationBody["user_id"] = strconv.FormatUint(userId, 10)
+		for k, v := range secretValues {
+			validationBody[k] = v
+		}
+
+		validationUrl := substituteIntegrationPlaceholders(*integration.ValidationUrl, guildId, userId, secretValues)
+		res, statusCode, err := utils.SecureProxyClient.DoRequest(http.MethodPost, validationUrl, headers, validationBody)
 		if err != nil {
 			if statusCode == http.StatusRequestTimeout {
 				ctx.JSON(400, utils.ErrorStr("Secret validation server did not respond in time (contact the integration author)"))

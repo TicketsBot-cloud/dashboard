@@ -14,8 +14,8 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260620182815-55fda9a14c01
-	github.com/TicketsBot-cloud/database v0.0.0-20260423165031-495c2e8a5bc7
-	github.com/TicketsBot-cloud/gdl v0.0.0-20260426095953-999472e6e538
+	github.com/TicketsBot-cloud/database v0.0.0-20260621202541-dd80c4370280
+	github.com/TicketsBot-cloud/gdl v0.0.0-20260612070331-a3947b410d3e
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
 	github.com/TicketsBot-cloud/worker v0.0.0-20260620183502-78b4655311f6
 	github.com/apex/log v1.1.2
@@ -48,12 +48,8 @@ require (
 )
 
 require (
-	github.com/ClickHouse/ch-go v0.66.0 // indirect
-	github.com/ClickHouse/clickhouse-go/v2 v2.36.0 // indirect
-	github.com/TicketsBot-cloud/analytics-client v0.0.0-20250604180646-6606dfc8fc8c // indirect
 	github.com/TicketsBot/common v0.0.0-20241117150316-ff54c97b45c1 // indirect
 	github.com/TicketsBot/ttlcache v1.6.1-0.20200405150101-acc18e37b261 // indirect
-	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/boj/redistore v0.0.0-20180917114910-cd5dcc76aeff // indirect
@@ -71,8 +67,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.1 // indirect
-	github.com/go-faster/city v1.0.1 // indirect
-	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -110,10 +104,8 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pasztorpisti/qs v0.0.0-20171216220353-8d6c33ee906c // indirect
-	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
@@ -121,15 +113,11 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/schollz/progressbar/v3 v3.18.0 // indirect
-	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spyzhov/ajson v0.8.0 // indirect
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
 	github.com/tinylib/msgp v1.4.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
-	go.opentelemetry.io/otel v1.36.0 // indirect
-	go.opentelemetry.io/otel/trace v1.36.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.17.0 // indirect

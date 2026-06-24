@@ -318,10 +318,12 @@ func CreatePanel(c *gin.Context) {
 			}
 
 			if validRoles.Contains(roleId) {
-				createOptions.RoleMentions = append(roleMentions, roleId)
+				roleMentions = append(roleMentions, roleId)
 			}
 		}
 	}
+
+	createOptions.RoleMentions = roleMentions
 
 	panelId, err := storePanel(c, panel, createOptions)
 	if err != nil {

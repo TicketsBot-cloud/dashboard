@@ -10,6 +10,7 @@ import (
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
+	"github.com/TicketsBot-cloud/dashboard/app/http/validation"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -74,7 +75,12 @@ func MultiPanelUpdate(c *gin.Context) {
 	// validate body & get sub-panels
 	panels, err := data.doValidations(guildId)
 	if err != nil {
-		c.JSON(400, utils.ErrorStr("Failed to update multi-panel. Please try again."))
+		var validationError *validation.InvalidInputError
+		if errors.As(err, &validationError) {
+			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
+		} else {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+		}
 		return
 	}
 
@@ -165,8 +171,12 @@ func MultiPanelUpdate(c *gin.Context) {
 		messageId, err = messageData.send(botContext, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
-			if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
-				c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+			if errors.As(err, &unwrapped) {
+				if unwrapped.StatusCode == 403 {
+					c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+				} else {
+					c.JSON(http.StatusBadRequest, utils.ErrorStr("%s", multiPanelDiscordSubPanelError("send", unwrapped.ApiError.Message)))
+				}
 			} else {
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 			}
@@ -182,8 +192,12 @@ func MultiPanelUpdate(c *gin.Context) {
 				messageId, err = messageData.send(botContext, panelsWithCustom)
 				if err != nil {
 					var unwrapped2 request.RestError
-					if errors.As(err, &unwrapped2) && unwrapped2.StatusCode == 403 {
-						c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+					if errors.As(err, &unwrapped2) {
+						if unwrapped2.StatusCode == 403 {
+							c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+						} else {
+							c.JSON(http.StatusBadRequest, utils.ErrorStr("%s", multiPanelDiscordSubPanelError("send", unwrapped2.ApiError.Message)))
+						}
 					} else {
 						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 					}
@@ -192,6 +206,9 @@ func MultiPanelUpdate(c *gin.Context) {
 				}
 			} else if errors.As(err, &unwrapped) && unwrapped.StatusCode == 403 {
 				c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to edit messages in the provided channel"))
+				return
+			} else if errors.As(err, &unwrapped) {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr("%s", multiPanelDiscordSubPanelError("edit", unwrapped.ApiError.Message)))
 				return
 			} else {
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))

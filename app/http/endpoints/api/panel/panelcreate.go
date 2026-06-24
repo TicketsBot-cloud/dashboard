@@ -246,7 +246,7 @@ func CreatePanel(c *gin.Context) {
 	}
 
 	// If ticket limit is 0, treat it as use global setting
-	if data.TicketLimit == utils.Ptr(uint8(0)) {
+	if data.TicketLimit != nil && *data.TicketLimit == 0 {
 		data.TicketLimit = nil
 	}
 

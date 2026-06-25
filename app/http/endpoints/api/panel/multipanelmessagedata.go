@@ -26,6 +26,14 @@ type multiPanelMessageData struct {
 	Embed *embed.Embed
 }
 
+func multiPanelDiscordSubPanelError(action, detail string) string {
+	return fmt.Sprintf(
+		"Failed to %s multi-panel message. One of the included panels may be misconfigured: %s",
+		action,
+		detail,
+	)
+}
+
 func multiPanelIntoMessageData(panel database.MultiPanel, isPremium bool) multiPanelMessageData {
 	return multiPanelMessageData{
 		IsPremium: isPremium,

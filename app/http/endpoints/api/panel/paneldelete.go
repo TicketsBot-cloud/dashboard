@@ -88,6 +88,14 @@ func DeletePanel(c *gin.Context) {
 		return
 	}
 
+	// Re-enforce the free tier panel limit after deletion.
+	if premiumTier == premium.None {
+		if err := database.Client.Panel.ForceDisableSome(c, guildId, freePanelLimit); err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
+			return
+		}
+	}
+
 	// Update all multi panels messages to remove the button
 	for i, multiPanel := range multiPanels {
 		// Only update 5 multi-panels maximum: Prevent DoS

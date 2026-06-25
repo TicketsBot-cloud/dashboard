@@ -9,6 +9,7 @@ import (
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
+	"github.com/TicketsBot-cloud/dashboard/app/http/validation"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
@@ -81,7 +82,12 @@ func MultiPanelCreate(c *gin.Context) {
 	// validate body & get sub-panels
 	panels, err := data.doValidations(guildId)
 	if err != nil {
-		c.JSON(400, utils.ErrorStr("Failed to create multi-panel. Please try again."))
+		var validationError *validation.InvalidInputError
+		if errors.As(err, &validationError) {
+			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
+		} else {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
+		}
 		return
 	}
 
@@ -136,8 +142,12 @@ func MultiPanelCreate(c *gin.Context) {
 	messageId, err := messageData.send(botContext, panelsWithCustom)
 	if err != nil {
 		var unwrapped request.RestError
-		if errors.As(err, &unwrapped); unwrapped.StatusCode == 403 {
-			c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+		if errors.As(err, &unwrapped) {
+			if unwrapped.StatusCode == 403 {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr("I do not have permission to send messages in the provided channel"))
+			} else {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr("%s", multiPanelDiscordSubPanelError("send", unwrapped.ApiError.Message)))
+			}
 		} else {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 		}
@@ -240,7 +250,7 @@ func (d *multiPanelCreateData) validateChannel(guildId uint64) func() error {
 		}
 
 		if !valid {
-			return errors.New("channel does not exist")
+			return validation.NewInvalidInputError("The selected channel does not exist")
 		}
 
 		return nil
@@ -249,12 +259,12 @@ func (d *multiPanelCreateData) validateChannel(guildId uint64) func() error {
 
 func (d *multiPanelCreateData) validatePanels(guildId uint64) (panels []database.Panel, err error) {
 	if len(d.Panels) < 2 {
-		err = errors.New("a multi-panel must contain at least 2 sub-panels")
+		err = validation.NewInvalidInputError("a multi-panel must contain at least 2 sub-panels")
 		return
 	}
 
 	if len(d.Panels) > 15 {
-		err = errors.New("multi-panels cannot contain more than 15 sub-panels")
+		err = validation.NewInvalidInputError("multi-panels cannot contain more than 15 sub-panels")
 		return
 	}
 
@@ -274,7 +284,7 @@ func (d *multiPanelCreateData) validatePanels(guildId uint64) (panels []database
 		}
 
 		if !valid {
-			return nil, errors.New("invalid panel ID")
+			return nil, validation.NewInvalidInputError("invalid panel ID")
 		}
 	}
 

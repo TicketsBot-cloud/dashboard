@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -23,6 +24,15 @@ import (
 	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 )
+
+func multiPanelSyncError(multiPanelId int, action, detail string) string {
+	return fmt.Sprintf(
+		"This panel is used in a multi-panel (ID %d). Failed to %s multi-panel message: %s",
+		multiPanelId,
+		action,
+		detail,
+	)
+}
 
 func UpdatePanel(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
@@ -387,11 +397,14 @@ func UpdatePanel(c *gin.Context) {
 					var unwrapped2 request.RestError
 					if errors.As(err, &unwrapped2) {
 						if unwrapped2.StatusCode == http.StatusForbidden {
-							c.JSON(400, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
+							c.JSON(400, utils.ErrorStr(
+								"This panel is used in a multi-panel (ID %d). I do not have permission to send messages in the multi-panel's channel",
+								multiPanel.Id,
+							))
 						} else {
 							log.Logger.Error("Body", zap.Any("body", messageData))
-							log.Logger.Error("Error sending panel message", zap.Any("errs", unwrapped2.ApiError.Errors))
-							c.JSON(400, utils.ErrorStr("%s", "Error sending panel message: "+unwrapped2.ApiError.Message))
+							log.Logger.Error("Error sending multi-panel message", zap.Int("multi_panel_id", multiPanel.Id), zap.Any("errs", unwrapped2.ApiError.Errors))
+							c.JSON(400, utils.ErrorStr("%s", multiPanelSyncError(multiPanel.Id, "send", unwrapped2.ApiError.Message)))
 						}
 					} else {
 						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
@@ -400,13 +413,16 @@ func UpdatePanel(c *gin.Context) {
 					return
 				}
 			} else if errors.As(err, &unwrapped) && unwrapped.StatusCode == http.StatusForbidden {
-				c.JSON(400, utils.ErrorStr("I do not have permission to edit messages in the specified channel"))
+				c.JSON(400, utils.ErrorStr(
+					"This panel is used in a multi-panel (ID %d). I do not have permission to edit messages in the multi-panel's channel",
+					multiPanel.Id,
+				))
 				return
 			} else {
 				log.Logger.Error("Body", zap.Any("body", messageData))
 				if errors.As(err, &unwrapped) {
-					log.Logger.Error("Error editing panel message", zap.Any("errs", unwrapped.ApiError.Errors))
-					c.JSON(400, utils.ErrorStr("%s", "Error editing panel message: "+unwrapped.ApiError.Message))
+					log.Logger.Error("Error editing multi-panel message", zap.Int("multi_panel_id", multiPanel.Id), zap.Any("errs", unwrapped.ApiError.Errors))
+					c.JSON(400, utils.ErrorStr("%s", multiPanelSyncError(multiPanel.Id, "edit", unwrapped.ApiError.Message)))
 				} else {
 					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				}

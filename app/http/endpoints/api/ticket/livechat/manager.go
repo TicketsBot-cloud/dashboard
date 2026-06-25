@@ -85,7 +85,7 @@ func (sm *SocketManager) Run() {
 			}
 
 			for _, client := range guildClients {
-				if !client.Authenticated {
+				if !client.authenticated.Load() {
 					continue
 				}
 

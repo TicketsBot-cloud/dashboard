@@ -19,6 +19,7 @@ import (
 	admin_analytics_api "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/analytics"
 	api_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/affiliate"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
+	api_overview "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/overview"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
@@ -291,6 +292,12 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.GET("/staff-override", api_override.GetOverrideHandler)
 		guildAuthApiAdmin.POST("/staff-override", api_override.CreateOverrideHandler)
 		guildAuthApiAdmin.DELETE("/staff-override", api_override.DeleteOverrideHandler)
+
+		guildAuthApiSupport.GET("/overview",
+			rl(middleware.RateLimitTypeUser, 5, time.Second*30),
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_overview.GetBasicOverviewHandler,
+		)
 
 		guildAuthApiSupport.GET("/analytics/overview",
 			rl(middleware.RateLimitTypeUser, 5, time.Second*30),

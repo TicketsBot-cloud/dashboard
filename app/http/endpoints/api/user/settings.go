@@ -258,6 +258,7 @@ func UpdateNotificationPreferences(ctx *gin.Context) {
 
 	allowedCategories := map[string]bool{
 		notify.CategoryAffiliate:         true,
+		notify.CategoryIntegrations:      true,
 		notify.CategoryAdminGallery:      true,
 		notify.CategoryAdminAffiliates:   true,
 		notify.CategoryAdminIntegrations: true,

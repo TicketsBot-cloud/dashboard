@@ -2,6 +2,7 @@ package notify
 
 const (
 	CategoryAffiliate         = "affiliate"
+	CategoryIntegrations      = "integrations"
 	CategoryAdminGallery      = "admin_gallery"
 	CategoryAdminAffiliates   = "admin_affiliates"
 	CategoryAdminIntegrations = "admin_integrations"
@@ -16,6 +17,7 @@ type CategoryInfo struct {
 
 var AllCategories = []CategoryInfo{
 	{Key: CategoryAffiliate, Label: "Affiliate", Description: "Application status, referrals, and credit updates", AdminOnly: false},
+	{Key: CategoryIntegrations, Label: "Integrations", Description: "Updates when your public integration request is approved, rejected, or unapproved", AdminOnly: false},
 	{Key: CategoryAdminGallery, Label: "Gallery Submissions", Description: "New gallery panel submissions for review", AdminOnly: true},
 	{Key: CategoryAdminAffiliates, Label: "Affiliate Applications", Description: "New affiliate applications pending approval", AdminOnly: true},
 	{Key: CategoryAdminIntegrations, Label: "Integration Requests", Description: "Integration public access requests", AdminOnly: true},

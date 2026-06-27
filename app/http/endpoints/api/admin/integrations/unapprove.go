@@ -1,6 +1,8 @@
 package admin_integrations
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/notify"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -80,6 +83,19 @@ func UnapproveIntegrationHandler(ctx *gin.Context) {
 		webhookReason = &reason
 	}
 	postReviewWebhookBestEffort(ctx, "Integration unapproved", colourUnapproved, integration, userId, webhookReason)
+
+	dmBody := fmt.Sprintf("Your integration **%s** has been unapproved and is no longer publicly available.", integration.Name)
+	if reason != "" {
+		dmBody += fmt.Sprintf("\n\n**Reason:** %s", reason)
+	}
+	go notify.Send(
+		context.Background(),
+		integration.OwnerId,
+		notify.CategoryIntegrations,
+		"Integration unapproved",
+		dmBody,
+		"",
+	)
 
 	newData := map[string]any{
 		"public":           false,

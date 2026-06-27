@@ -1,6 +1,8 @@
 package admin_integrations
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/notify"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -73,6 +76,15 @@ func RejectIntegrationHandler(ctx *gin.Context) {
 	}
 
 	postReviewWebhookBestEffort(ctx, "Integration rejected", colourRejected, integration, userId, &reason)
+
+	go notify.Send(
+		context.Background(),
+		integration.OwnerId,
+		notify.CategoryIntegrations,
+		"Integration rejected",
+		fmt.Sprintf("Your integration **%s** was rejected.\n\n**Reason:** %s", integration.Name, reason),
+		"",
+	)
 
 	audit.Log(audit.LogEntry{
 		UserId:       userId,

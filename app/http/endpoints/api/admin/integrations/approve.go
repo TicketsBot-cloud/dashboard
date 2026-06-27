@@ -1,12 +1,15 @@
 package admin_integrations
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/notify"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -45,6 +48,15 @@ func ApproveIntegrationHandler(ctx *gin.Context) {
 	}
 
 	postReviewWebhookBestEffort(ctx, "Integration approved", colourApproved, integration, userId, nil)
+
+	go notify.Send(
+		context.Background(),
+		integration.OwnerId,
+		notify.CategoryIntegrations,
+		"Integration approved",
+		fmt.Sprintf("Your integration **%s** has been approved and is now publicly available.", integration.Name),
+		"",
+	)
 
 	audit.Log(audit.LogEntry{
 		UserId:       userId,

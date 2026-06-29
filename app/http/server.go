@@ -59,6 +59,9 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	router.Use(middleware.Logging(logger))
 	router.Use(middleware.ErrorHandler)
 
+	// Health check - registered before rate-limit middleware so probes aren't rate-limited
+	router.GET("/health", root.HealthHandler)
+
 	router.RemoteIPHeaders = config.Conf.Server.RealIpHeaders
 	if err := router.SetTrustedProxies(config.Conf.Server.TrustedProxies); err != nil {
 		panic(err)

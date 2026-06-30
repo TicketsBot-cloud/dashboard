@@ -188,7 +188,13 @@ func MultiPanelUpdate(c *gin.Context) {
 		err = messageData.edit(botContext, multiPanel.MessageId, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
-			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008) {
+			// Gone (404/10008), or authored by a different bot and so uneditable (50005):
+			// delete the old message if we can (ignoring failure) and resend.
+			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005) {
+				delCtx, delCancel := app.DefaultContext()
+				_ = rest.DeleteMessage(delCtx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
+				delCancel()
+
 				messageId, err = messageData.send(botContext, panelsWithCustom)
 				if err != nil {
 					var unwrapped2 request.RestError

@@ -180,7 +180,11 @@ func UpdatePanel(c *gin.Context) {
 		err = messageData.edit(botContext, existing.MessageId)
 		if err != nil {
 			var unwrapped request.RestError
-			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008) {
+			// Message is gone (404/10008), or was authored by a different bot — e.g. the
+			// guild switched between the main bot and a whitelabel bot — and so cannot be
+			// edited (50005). Delete the old message if we can (ignoring failure) and resend.
+			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005) {
+				_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
 				newMessageId, err = messageData.send(botContext)
 				if err != nil {
 					var unwrapped2 request.RestError
@@ -391,7 +395,10 @@ func UpdatePanel(c *gin.Context) {
 		err = messageData.edit(botContext, multiPanel.MessageId, panels)
 		if err != nil {
 			var unwrapped request.RestError
-			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008) {
+			// Gone (404/10008), or authored by a different bot and so uneditable (50005):
+			// delete the old message if we can (ignoring failure) and resend.
+			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005) {
+				_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
 				messageId, err = messageData.send(botContext, panels)
 				if err != nil {
 					var unwrapped2 request.RestError

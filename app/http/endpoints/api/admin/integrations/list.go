@@ -6,8 +6,10 @@ import (
 
 	"github.com/TicketsBot-cloud/dashboard/app"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,6 +18,19 @@ var allowedStatuses = map[string]struct{}{
 	"approved": {},
 	"rejected": {},
 }
+
+type (
+	integrationWithAuthor struct {
+		database.CustomIntegrationWithGuildCount
+		Author *integrationAuthor `json:"author"`
+	}
+
+	integrationAuthor struct {
+		Id       uint64      `json:"id,string"`
+		Username string      `json:"username"`
+		Avatar   user.Avatar `json:"avatar"`
+	}
+)
 
 const (
 	defaultPage  = 1
@@ -69,13 +84,32 @@ func ListIntegrationsHandler(ctx *gin.Context) {
 		return
 	}
 
-	if integrations == nil {
-		integrations = make([]database.CustomIntegrationWithGuildCount, 0)
+	ownerIds := make([]uint64, len(integrations))
+	for i, integration := range integrations {
+		ownerIds[i] = integration.OwnerId
+	}
+
+	authors, err := cache.Instance.GetUsers(ctx, ownerIds)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to resolve integration owners"))
+		return
+	}
+
+	wrapped := make([]integrationWithAuthor, len(integrations))
+	for i, integration := range integrations {
+		wrapped[i] = integrationWithAuthor{CustomIntegrationWithGuildCount: integration}
+		if author, ok := authors[integration.OwnerId]; ok {
+			wrapped[i].Author = &integrationAuthor{
+				Id:       author.Id,
+				Username: author.Username,
+				Avatar:   author.Avatar,
+			}
+		}
 	}
 
 	ctx.Header("Cache-Control", "no-store")
 	ctx.JSON(http.StatusOK, gin.H{
-		"integrations": integrations,
+		"integrations": wrapped,
 		"total":        total,
 		"page":         page,
 		"limit":        limit,

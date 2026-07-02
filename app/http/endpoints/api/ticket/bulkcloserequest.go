@@ -77,7 +77,7 @@ func BulkCloseRequest(c *gin.Context) {
 	deadline := time.Now().Add(bulkTimeoutSeconds * time.Second)
 
 	locale := utils.ResolveGuildLocale(context.Background(), guildId)
-	msgEmbed, components := buildCloseRequestMessage(locale, userId, body.Reason)
+	msgEmbed, components := buildCloseRequestMessage(locale, userId, body.Reason, closeAt)
 
 	sendOne := func(opCtx context.Context, ticketId int) bool {
 		ticket, err := database.Client.Tickets.Get(opCtx, ticketId, guildId)

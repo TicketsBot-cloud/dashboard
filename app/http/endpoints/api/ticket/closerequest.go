@@ -112,7 +112,7 @@ func CloseRequest(c *gin.Context) {
 
 	if ticket.ChannelId != nil {
 		locale := utils.ResolveGuildLocale(context.Background(), guildId)
-		msgEmbed, components := buildCloseRequestMessage(locale, userId, body.Reason)
+		msgEmbed, components := buildCloseRequestMessage(locale, userId, body.Reason, closeAt)
 		_, _ = rest.CreateMessage(context.Background(), botCtx.Token, botCtx.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{
 			Content: fmt.Sprintf("<@%d>", ticket.UserId),
 			Embeds:  []*embed.Embed{msgEmbed},
@@ -135,13 +135,18 @@ func CloseRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SuccessResponse)
 }
 
-func buildCloseRequestMessage(locale *i18n.Locale, requesterId uint64, reason *string) (*embed.Embed, []component.Component) {
-	var description string
-	if reason == nil || strings.TrimSpace(*reason) == "" {
-		description = i18n.GetMessage(locale, i18n.MessageCloseRequestNoReason, requesterId)
-	} else {
-		description = i18n.GetMessage(locale, i18n.MessageCloseRequestWithReason, requesterId, strings.ReplaceAll(*reason, "`", "\\`"))
+func buildCloseRequestMessage(locale *i18n.Locale, requesterId uint64, reason *string, closeAt *time.Time) (*embed.Embed, []component.Component) {
+	description := i18n.GetMessage(locale, i18n.MessageCloseRequestIntro, requesterId)
+
+	if reason != nil && strings.TrimSpace(*reason) != "" {
+		description += fmt.Sprintf("\n\n**%s**\n```\n%s\n```", i18n.GetMessage(locale, i18n.Reason), strings.ReplaceAll(*reason, "`", "\\`"))
 	}
+
+	if closeAt != nil {
+		description += fmt.Sprintf("\n\n**%s**\n<t:%d:f> (<t:%d:R>)", i18n.GetMessage(locale, i18n.MessageCloseRequestCloseAt), closeAt.Unix(), closeAt.Unix())
+	}
+
+	description += "\n\n" + i18n.GetMessage(locale, i18n.MessageCloseRequestPrompt)
 
 	msgEmbed := &embed.Embed{
 		Title:       i18n.GetMessage(locale, i18n.TitleCloseRequest),

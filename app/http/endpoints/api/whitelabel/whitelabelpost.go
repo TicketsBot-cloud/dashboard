@@ -15,6 +15,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/log"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -23,6 +24,7 @@ import (
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/TicketsBot-cloud/worker/bot/command/manager"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func WhitelabelPost() func(*gin.Context) {
@@ -121,6 +123,10 @@ func WhitelabelPost() func(*gin.Context) {
 		if err := createInteractions(cm, bot.Id, data.Token); err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
+		}
+
+		if err := syncWhitelabelGuilds(c, bot.Id, data.Token); err != nil {
+			log.Logger.Error("Failed to sync whitelabel guilds", zap.Error(err), zap.Uint64("bot_id", bot.Id))
 		}
 
 		audit.Log(audit.LogEntry{

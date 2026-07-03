@@ -13,8 +13,9 @@ import (
 )
 
 type whitelabelResponse struct {
-	Id       uint64 `json:"id,string"`
-	Username string `json:"username"`
+	Id         uint64 `json:"id,string"`
+	Username   string `json:"username"`
+	GuildCount int    `json:"guild_count"`
 	statusUpdateBody
 }
 
@@ -40,11 +41,18 @@ func WhitelabelGet(c *gin.Context) {
 		return
 	}
 
+	guilds, err := database.Client.WhitelabelGuilds.GetGuilds(c, bot.BotId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load whitelabel bots"))
+		return
+	}
+
 	username := getBotUsername(c, bot.Token)
 
 	c.JSON(200, whitelabelResponse{
-		Id:       bot.BotId,
-		Username: username,
+		Id:         bot.BotId,
+		Username:   username,
+		GuildCount: len(guilds),
 		statusUpdateBody: statusUpdateBody{ // Zero values if no status is fine
 			Status:     status,
 			StatusType: user.ActivityType(statusType),

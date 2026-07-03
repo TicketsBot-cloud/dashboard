@@ -436,8 +436,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 			whitelabelGroup.GET("/", api_whitelabel.WhitelabelGet)
 			whitelabelGroup.GET("/errors", api_whitelabel.WhitelabelGetErrors)
-			whitelabelGroup.GET("/guilds", api_whitelabel.WhitelabelGetGuilds)
-			whitelabelGroup.POST("/create-interactions", api_whitelabel.GetWhitelabelCreateInteractions())
+			whitelabelGroup.POST("/resync", rl(middleware.RateLimitTypeUser, 5, time.Minute), api_whitelabel.WhitelabelResync())
 			whitelabelGroup.DELETE("/", api_whitelabel.WhitelabelDelete)
 
 			whitelabelGroup.POST("/", rl(middleware.RateLimitTypeUser, 5, time.Minute), api_whitelabel.WhitelabelPost())

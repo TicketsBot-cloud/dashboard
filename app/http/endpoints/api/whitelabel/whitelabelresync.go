@@ -21,10 +21,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// WhitelabelResync re-applies the stored token to the Discord application (interactions
-// endpoint + intents), re-registers the bot's slash commands, re-signals the sharder via a
-// token-change publish, and reconciles the whitelabel_guilds table against the guilds the
-// bot is actually in. It's a full "reset" of everything the dashboard configures for the bot.
+// WhitelabelResync reapplies the bot's gateway intents, re-registers its slash commands,
+// re-signals the sharder via a token-change publish, and reconciles the whitelabel_guilds
+// table against the guilds the bot is actually in. It's a full "reset" of everything the
+// dashboard configures for the bot, using the token already stored for the user.
 func WhitelabelResync() func(*gin.Context) {
 	cm := new(manager.CommandManager)
 	cm.RegisterCommands()

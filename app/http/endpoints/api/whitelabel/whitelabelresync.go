@@ -1,12 +1,12 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/TicketsBot-cloud/common/tokenchange"
+	"github.com/TicketsBot-cloud/common/whitelabel"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -14,8 +14,6 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/TicketsBot-cloud/gdl/objects/application"
-	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/worker/bot/command/manager"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -43,27 +41,7 @@ func WhitelabelResync() func(*gin.Context) {
 			return
 		}
 
-		// Fetch the current application to preserve its existing flags
-		current, err := rest.GetCurrentApplication(context.Background(), bot.Token, nil)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to reach Discord with the stored token"))
-			return
-		}
-
-		var currentFlags application.Flag = 0
-		if current.Flags != nil {
-			currentFlags = *current.Flags
-		}
-		
-		editData := rest.EditCurrentApplicationData{
-			Flags: utils.Ptr(application.BuildFlags(
-				currentFlags,
-				application.FlagIntentGatewayGuildMembersLimited,
-				application.FlagGatewayMessageContentLimited,
-			)),
-		}
-
-		if _, err := rest.EditCurrentApplication(context.Background(), bot.Token, nil, editData); err != nil {
+		if err := whitelabel.ReapplyIntents(c, bot.Token); err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update the Discord application"))
 			return
 		}
@@ -86,7 +64,7 @@ func WhitelabelResync() func(*gin.Context) {
 			log.Logger.Warn("Skipped slash command re-registration during resync (on cooldown)", zap.Uint64("bot_id", bot.BotId))
 		}
 
-		if err := syncWhitelabelGuilds(c, bot.BotId, bot.Token); err != nil {
+		if err := whitelabel.SyncGuilds(c, dbclient.Client, bot.Token, bot.BotId); err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to sync guilds"))
 			return
 		}

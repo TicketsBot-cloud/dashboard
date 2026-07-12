@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/TicketsBot-cloud/common/tokenchange"
+	"github.com/TicketsBot-cloud/common/whitelabel"
 	"github.com/TicketsBot-cloud/common/whitelabeldelete"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -125,7 +126,7 @@ func WhitelabelPost() func(*gin.Context) {
 			return
 		}
 
-		if err := syncWhitelabelGuilds(c, bot.Id, data.Token); err != nil {
+		if err := whitelabel.SyncGuilds(c, dbclient.Client, data.Token, bot.Id); err != nil {
 			log.Logger.Error("Failed to sync whitelabel guilds", zap.Error(err), zap.Uint64("bot_id", bot.Id))
 		}
 

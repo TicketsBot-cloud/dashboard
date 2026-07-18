@@ -23,6 +23,7 @@ var slugStripRegex = regexp.MustCompile(`[^a-z0-9-]+`)
 
 type articleRequest struct {
 	Title       string             `json:"title"`
+	Description *string            `json:"description"`
 	Content     *string            `json:"content"`
 	Embed       *types.CustomEmbed `json:"embed"`
 	CategoryIds []int              `json:"category_ids"`
@@ -156,6 +157,7 @@ func CreateArticleHandler(ctx *gin.Context) {
 		GuildId:     guildId,
 		Title:       body.Title,
 		Slug:        slug,
+		Description: body.Description,
 		Content:     body.Content,
 		Embed:       embed,
 		CategoryIds: body.CategoryIds,
@@ -260,6 +262,7 @@ func UpdateArticleHandler(ctx *gin.Context) {
 		GuildId:     guildId,
 		Title:       body.Title,
 		Slug:        slug,
+		Description: body.Description,
 		Content:     body.Content,
 		Embed:       embed,
 		CategoryIds: body.CategoryIds,
@@ -332,6 +335,10 @@ func validateArticleRequest(body articleRequest) error {
 
 	if len(body.Title) > 100 {
 		return fmt.Errorf("title must be 100 characters or fewer")
+	}
+
+	if body.Description != nil && len(*body.Description) > 255 {
+		return fmt.Errorf("description must be 255 characters or fewer")
 	}
 
 	if body.Content != nil && len(*body.Content) > 4096 {

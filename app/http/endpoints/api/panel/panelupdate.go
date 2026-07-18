@@ -295,7 +295,6 @@ func UpdatePanel(c *gin.Context) {
 		SupportCanType:            data.SupportCanType,
 	}
 
-
 	// insert mention data
 	validRoles := utils.ToSet(utils.Map(roles, utils.RoleToId))
 
@@ -344,6 +343,10 @@ func UpdatePanel(c *gin.Context) {
 		}
 
 		if err := dbclient.Client.PanelAccessControlRules.ReplaceWithTx(c, tx, panel.PanelId, data.AccessControlList); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.PanelKBCategories.SetWithTx(c, tx, panel.PanelId, data.KBCategoryIds); err != nil {
 			return err
 		}
 

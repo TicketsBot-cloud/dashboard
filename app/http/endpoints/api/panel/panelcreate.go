@@ -46,6 +46,7 @@ type panelBody struct {
 	Mentions                  []string                          `json:"mentions"`
 	WithDefaultTeam           bool                              `json:"default_team"`
 	Teams                     []int                             `json:"teams"`
+	KBCategoryIds             []int                             `json:"kb_category_ids"`
 	ImageUrl                  *string                           `json:"image_url,omitempty"`
 	ThumbnailUrl              *string                           `json:"thumbnail_url,omitempty"`
 	ButtonStyle               component.ButtonStyle             `json:"button_style,string"`
@@ -298,6 +299,7 @@ func CreatePanel(c *gin.Context) {
 	createOptions := panelCreateOptions{
 		TeamIds:            data.Teams,             // Already validated
 		AccessControlRules: data.AccessControlList, // Already validated
+		KBCategoryIds:      data.KBCategoryIds,     // Already validated
 	}
 
 	// insert role mention data
@@ -364,6 +366,7 @@ type panelCreateOptions struct {
 	RoleMentions       []uint64
 	TeamIds            []int
 	AccessControlRules []database.PanelAccessControlRule
+	KBCategoryIds      []int
 }
 
 func storePanel(ctx context.Context, panel database.Panel, options panelCreateOptions) (int, error) {
@@ -393,6 +396,10 @@ func storePanel(ctx context.Context, panel database.Panel, options panelCreateOp
 		}
 
 		if err := dbclient.Client.PanelAccessControlRules.ReplaceWithTx(ctx, tx, panelId, options.AccessControlRules); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.PanelKBCategories.SetWithTx(ctx, tx, panelId, options.KBCategoryIds); err != nil {
 			return err
 		}
 

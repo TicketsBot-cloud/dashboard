@@ -20,6 +20,7 @@ func GetPanel(c *gin.Context) {
 		Emoji                        types.Emoji                       `json:"emote"`
 		Mentions                     []string                          `json:"mentions"`
 		Teams                        []int                             `json:"teams"`
+		KBCategoryIds                []int                             `json:"kb_category_ids"`
 		UseServerDefaultNamingScheme bool                              `json:"use_server_default_naming_scheme"`
 		AccessControlList            []database.PanelAccessControlRule `json:"access_control_list"`
 		HasSupportHours              bool                              `json:"has_support_hours"`
@@ -97,6 +98,17 @@ func GetPanel(c *gin.Context) {
 		teamIds = make([]int, 0)
 	}
 
+	// Get linked knowledge base category IDs
+	kbCategoryIds, err := dbclient.Client.PanelKBCategories.GetByPanel(c, panel.PanelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panel"))
+		return
+	}
+
+	if kbCategoryIds == nil {
+		kbCategoryIds = make([]int, 0)
+	}
+
 	// Get welcome message
 	var welcomeMessage *types.CustomEmbed
 	if panel.WelcomeMessage != nil {
@@ -164,6 +176,7 @@ func GetPanel(c *gin.Context) {
 		Emoji:                        types.NewEmoji(panel.EmojiName, panel.EmojiId, panel.EmojiAnimated),
 		Mentions:                     mentions,
 		Teams:                        teamIds,
+		KBCategoryIds:                kbCategoryIds,
 		UseServerDefaultNamingScheme: panel.NamingScheme == nil,
 		AccessControlList:            accessControlList,
 		HasSupportHours:              hasSupportHours,

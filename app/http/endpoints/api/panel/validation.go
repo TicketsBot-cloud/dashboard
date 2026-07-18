@@ -71,6 +71,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateFormId,
 		validateExitSurveyFormId,
 		validateTeams,
+		validateKBCategories,
 		validateNamingScheme,
 		validateWelcomeMessage,
 		validateAccessControlList,
@@ -294,6 +295,32 @@ func validateTeams(ctx PanelValidationContext) validation.ValidationFunc {
 
 		if !ok {
 			return validation.NewInvalidInputError("Invalid support team")
+		}
+
+		return nil
+	}
+}
+
+func validateKBCategories(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if len(ctx.Data.KBCategoryIds) == 0 {
+			return nil
+		}
+
+		categories, err := dbclient.Client.KBCategories.GetByGuild(context.Background(), ctx.GuildId)
+		if err != nil {
+			return err
+		}
+
+		valid := make(map[int]struct{}, len(categories))
+		for _, category := range categories {
+			valid[category.Id] = struct{}{}
+		}
+
+		for _, id := range ctx.Data.KBCategoryIds {
+			if _, ok := valid[id]; !ok {
+				return validation.NewInvalidInputError("Invalid knowledge base category")
+			}
 		}
 
 		return nil

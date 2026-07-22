@@ -512,7 +512,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.POST("/affiliate/referrals/:id/void", admin_affiliate.VoidHandler)
 
 			ownerTier.POST("/utilities/commands/main", rl(middleware.RateLimitTypeUser, 3, time.Minute), admin_utilities.RecreateMainCommands())
-			ownerTier.POST("/utilities/commands/main/admin", rl(middleware.RateLimitTypeUser, 3, time.Minute), admin_utilities.RecreateMainAdminCommands())
 			ownerTier.POST("/utilities/commands/whitelabel/all", rl(middleware.RateLimitTypeUser, 2, time.Minute), admin_utilities.RecreateAllWhitelabelCommands())
 			ownerTier.GET("/utilities/commands/whitelabel/all/status", admin_utilities.WhitelabelRecreateStatusHandler())
 		}

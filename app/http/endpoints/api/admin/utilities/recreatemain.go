@@ -13,47 +13,62 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RecreateMainCommands re-registers the main bot's global (public) slash commands with Discord,
-// overwriting whatever is currently registered. Owner-only.
+type recreateMainBody struct {
+	AdminOnly bool `json:"admin_only"`
+}
+
+// RecreateMainCommands re-registers the main bot's slash commands with Discord, overwriting
+// whatever is currently registered. Mirrors the registercommands CLI: by default it re-creates the
+// global (public) commands and, if an admin guild is configured (ADMIN_GUILD_ID), the admin/helper
+// commands in that guild. With admin_only set it re-creates only the admin commands, which requires
+// ADMIN_GUILD_ID. Owner-only.
 func RecreateMainCommands() func(*gin.Context) {
 	cm := new(manager.CommandManager)
 	cm.RegisterCommands()
 
 	return func(c *gin.Context) {
-		botCtx := botcontext.PublicContext()
-		commands, _ := cm.BuildCreatePayload(false, nil)
+		var body recreateMainBody
+		_ = c.ShouldBindJSON(&body) // empty/missing body is fine — defaults to a full recreate
 
-		if _, err := rest.ModifyGlobalCommands(context.Background(), config.Conf.Bot.Token, botCtx.RateLimiter, config.Conf.Bot.Id, commands); err != nil {
-			c.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to re-create the main bot's slash commands"))
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"success": true, "count": countLeafCommands(commands)})
-	}
-}
-
-// RecreateMainAdminCommands re-registers the main bot's helper/admin slash commands in the
-// configured admin guild (ADMIN_GUILD_ID), overwriting the guild command set. Owner-only.
-func RecreateMainAdminCommands() func(*gin.Context) {
-	cm := new(manager.CommandManager)
-	cm.RegisterCommands()
-
-	return func(c *gin.Context) {
 		adminGuildId := config.Conf.Bot.AdminGuildId
-		if adminGuildId == 0 {
+		if body.AdminOnly && adminGuildId == 0 {
 			c.JSON(http.StatusBadRequest, utils.ErrorStr("No admin guild is configured (ADMIN_GUILD_ID is not set)"))
 			return
 		}
 
 		botCtx := botcontext.PublicContext()
-		_, adminCommands := cm.BuildCreatePayload(false, &adminGuildId)
 
-		if _, err := rest.ModifyGuildCommands(context.Background(), config.Conf.Bot.Token, botCtx.RateLimiter, config.Conf.Bot.Id, adminGuildId, adminCommands); err != nil {
-			c.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to re-create the main bot's admin slash commands"))
-			return
+		globalCount := 0
+		if !body.AdminOnly {
+			data, _ := cm.BuildCreatePayload(false, nil)
+			if _, err := rest.ModifyGlobalCommands(context.Background(), config.Conf.Bot.Token, botCtx.RateLimiter, config.Conf.Bot.Id, data); err != nil {
+				c.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to re-create the main bot's global slash commands"))
+				return
+			}
+			globalCount = countLeafCommands(data)
 		}
 
-		c.JSON(http.StatusOK, gin.H{"success": true, "count": countLeafCommands(adminCommands)})
+		adminCount := 0
+		adminSkipped := false
+		if adminGuildId != 0 {
+			_, adminCommands := cm.BuildCreatePayload(false, &adminGuildId)
+			if _, err := rest.ModifyGuildCommands(context.Background(), config.Conf.Bot.Token, botCtx.RateLimiter, config.Conf.Bot.Id, adminGuildId, adminCommands); err != nil {
+				c.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to re-create the main bot's admin slash commands"))
+				return
+			}
+			adminCount = countLeafCommands(adminCommands)
+		} else if !body.AdminOnly {
+			// Global-only run because no admin guild is configured — report it so the UI can say so.
+			adminSkipped = true
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success":       true,
+			"admin_only":    body.AdminOnly,
+			"global_count":  globalCount,
+			"admin_count":   adminCount,
+			"admin_skipped": adminSkipped,
+		})
 	}
 }
 

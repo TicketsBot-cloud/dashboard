@@ -42,6 +42,7 @@ type Config struct {
 	Bot struct {
 		Id                                   uint64 `env:"BOT_ID,required"`
 		Token                                string `env:"BOT_TOKEN,required"`
+		AdminGuildId                         uint64 `env:"ADMIN_GUILD_ID"`
 		ObjectStore                          string `env:"LOG_ARCHIVER_URL"`
 		AesKey                               string `env:"LOG_AES_KEY" toml:"aes-key"`
 		ProxyUrl                             string `env:"DISCORD_PROXY_URL" toml:"discord-proxy-url"`

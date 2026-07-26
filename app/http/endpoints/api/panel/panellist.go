@@ -27,6 +27,8 @@ func ListPanels(c *gin.Context) {
 		Emote             *string `json:"emote,omitempty"`
 		HasSupportHours   bool    `json:"has_support_hours"`
 		IsCurrentlyActive bool    `json:"is_currently_active"`
+		Disabled          bool    `json:"disabled"`
+		ForceDisabled     bool    `json:"force_disabled"`
 	}
 
 	guildId := c.Keys["guildid"].(uint64)
@@ -121,6 +123,8 @@ func ListPanels(c *gin.Context) {
 			Emote:             p.EmojiName,
 			HasSupportHours:   hasSH,
 			IsCurrentlyActive: !hasSH || activeSet[p.PanelId],
+			Disabled:          p.Disabled,
+			ForceDisabled:     p.ForceDisabled,
 		}
 	}
 

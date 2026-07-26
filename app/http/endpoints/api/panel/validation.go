@@ -37,8 +37,15 @@ func DefaultApplicators(data *panelBody) []defaults.DefaultApplicator {
 		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ImageUrl, nil),
 		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.ThumbnailUrl, nil),
 		defaults.NewDefaultApplicator[*string](defaults.NilOrEmptyStringCheck, &data.NamingScheme, nil),
+		defaults.NewDefaultApplicator(defaults.EmptyStringCheck, &data.MentionBehaviour, MentionBehaviourNone),
 	}
 }
+
+const (
+	MentionBehaviourNone   = "none"
+	MentionBehaviourHide   = "hide"
+	MentionBehaviourDelete = "delete"
+)
 
 type PanelValidationContext struct {
 	Data       panelBody
@@ -83,6 +90,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateOverflowCategoryId,
 		validateSupportCanType,
 		validateAutoClose,
+		validateMentionBehaviour,
 	}
 }
 
@@ -566,6 +574,17 @@ func validateSupportCanType(ctx PanelValidationContext) validation.ValidationFun
 		}
 
 		return nil
+	}
+}
+
+func validateMentionBehaviour(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		switch ctx.Data.MentionBehaviour {
+		case MentionBehaviourNone, MentionBehaviourHide, MentionBehaviourDelete:
+			return nil
+		default:
+			return validation.NewInvalidInputError("Invalid mention behaviour")
+		}
 	}
 }
 

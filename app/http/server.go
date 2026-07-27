@@ -272,6 +272,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.DELETE("/tickets/:ticketId", api_ticket.CloseTicket)
 		guildAuthApiSupport.POST("/tickets/:ticketId/claim", api_ticket.ClaimTicket)
 		guildAuthApiSupport.DELETE("/tickets/:ticketId/claim", api_ticket.UnclaimTicket)
+		guildAuthApiSupport.POST("/tickets/:ticketId/transfer", api_ticket.TransferTicket)
 		guildAuthApiSupport.POST("/tickets/:ticketId/close-request", api_ticket.CloseRequest)
 		guildAuthApiSupport.POST("/tickets/bulk-close", rl(middleware.RateLimitTypeGuild, 5, time.Minute), api_ticket.BulkCloseTickets)
 		guildAuthApiSupport.POST("/tickets/bulk-close-request", rl(middleware.RateLimitTypeGuild, 5, time.Minute), api_ticket.BulkCloseRequest)

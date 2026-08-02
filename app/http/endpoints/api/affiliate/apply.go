@@ -144,7 +144,7 @@ func Apply(ctx *gin.Context) {
 		username = user.Username
 	}
 
-	go notify.SendToOwner(
+	go notify.SendToAdmins(
 		context.Background(),
 		notify.CategoryAdminAffiliates,
 		"New Affiliate Application",

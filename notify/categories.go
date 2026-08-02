@@ -8,6 +8,8 @@ const (
 	CategoryAdminIntegrations = "admin_integrations"
 )
 
+const CategoryGroupAdmin = "admin"
+
 type CategoryInfo struct {
 	Key         string `json:"key"`
 	Label       string `json:"label"`
@@ -21,6 +23,38 @@ var AllCategories = []CategoryInfo{
 	{Key: CategoryAdminGallery, Label: "Gallery Submissions", Description: "New gallery panel submissions for review", AdminOnly: true},
 	{Key: CategoryAdminAffiliates, Label: "Affiliate Applications", Description: "New affiliate applications pending approval", AdminOnly: true},
 	{Key: CategoryAdminIntegrations, Label: "Integration Requests", Description: "Integration public access requests", AdminOnly: true},
+}
+
+func AdminCategoryKeys() []string {
+	keys := make([]string, 0, len(AllCategories))
+	for _, c := range AllCategories {
+		if c.AdminOnly {
+			keys = append(keys, c.Key)
+		}
+	}
+	return keys
+}
+
+func IsValidCategory(key string) bool {
+	for _, c := range AllCategories {
+		if c.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
+func ResolveCategoryFilter(param string) ([]string, bool) {
+	switch {
+	case param == "":
+		return nil, true
+	case param == CategoryGroupAdmin:
+		return AdminCategoryKeys(), true
+	case IsValidCategory(param):
+		return []string{param}, true
+	default:
+		return nil, false
+	}
 }
 
 type DefaultPreference struct {

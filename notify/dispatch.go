@@ -71,16 +71,23 @@ func Send(ctx context.Context, userId uint64, category, title, body, link string
 	}
 }
 
-// SendToAdmins dispatches a notification to all bot staff members.
 func SendToAdmins(ctx context.Context, category, title, body, link string) {
 	staff, err := dbclient.Client.BotStaff.GetAll(ctx)
 	if err != nil {
+		// Not fatal: the owner is configured rather than stored, so still notify them.
 		log.Printf("Failed to fetch bot staff for admin notification: %v", err)
-		return
 	}
 
+	recipients := make(map[uint64]struct{}, len(staff)+1)
 	for _, s := range staff {
-		Send(ctx, s.UserId, category, title, body, link)
+		recipients[s.UserId] = struct{}{}
+	}
+	if config.Conf.Owner != 0 {
+		recipients[config.Conf.Owner] = struct{}{}
+	}
+
+	for userId := range recipients {
+		Send(ctx, userId, category, title, body, link)
 	}
 }
 

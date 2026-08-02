@@ -1,6 +1,7 @@
 package gallery
 
 import (
+	"context"
 	stdjson "encoding/json"
 	"fmt"
 	"net/http"
@@ -176,7 +177,7 @@ func SubmitHandler(ctx *gin.Context) {
 	})
 
 	go notify.SendToAdmins(
-		ctx,
+		context.Background(),
 		notify.CategoryAdminGallery,
 		"New Gallery Submission",
 		fmt.Sprintf("A new gallery listing \"%s\" has been submitted for review.", body.Name),

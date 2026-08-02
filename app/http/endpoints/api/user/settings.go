@@ -256,16 +256,8 @@ func UpdateNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
-	allowedCategories := map[string]bool{
-		notify.CategoryAffiliate:         true,
-		notify.CategoryIntegrations:      true,
-		notify.CategoryAdminGallery:      true,
-		notify.CategoryAdminAffiliates:   true,
-		notify.CategoryAdminIntegrations: true,
-	}
-
 	for _, p := range body {
-		if !allowedCategories[p.Category] {
+		if !notify.IsValidCategory(p.Category) {
 			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid notification category."))
 			return
 		}

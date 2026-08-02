@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/notify"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
@@ -84,5 +86,14 @@ func SetIntegrationPublicHandler(ctx *gin.Context) {
 		ResourceType: dbmodel.AuditResourceUserIntegration,
 		ResourceId:   audit.StringPtr(strconv.Itoa(integration.Id)),
 	})
+
+	go notify.SendToAdmins(
+		context.Background(),
+		notify.CategoryAdminIntegrations,
+		"New Public Integration Request",
+		fmt.Sprintf("Integration **%s** has been submitted for public access review.", integration.Name),
+		"/admin/integrations",
+	)
+
 	ctx.Status(204)
 }

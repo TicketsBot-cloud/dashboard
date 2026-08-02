@@ -6,6 +6,7 @@ import (
 
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/notify"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
@@ -51,9 +52,10 @@ func ListNotifications(ctx *gin.Context) {
 		perPage = maxPerPage
 	}
 
-	var categoryPtr *string
-	if cat := ctx.Query("category"); cat != "" {
-		categoryPtr = &cat
+	categories, ok := notify.ResolveCategoryFilter(ctx.Query("category"))
+	if !ok {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid notification category."))
+		return
 	}
 
 	offset := (page - 1) * perPage
@@ -65,13 +67,13 @@ func ListNotifications(ctx *gin.Context) {
 
 	group.Go(func() error {
 		var err error
-		notifications, err = dbclient.Client.Notifications.ListByUserId(groupCtx, userId, categoryPtr, perPage, offset)
+		notifications, err = dbclient.Client.Notifications.ListByUserId(groupCtx, userId, categories, perPage, offset)
 		return err
 	})
 
 	group.Go(func() error {
 		var err error
-		total, err = dbclient.Client.Notifications.CountByUserId(groupCtx, userId, categoryPtr)
+		total, err = dbclient.Client.Notifications.CountByUserId(groupCtx, userId, categories)
 		return err
 	})
 

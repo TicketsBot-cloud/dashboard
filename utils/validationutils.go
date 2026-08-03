@@ -23,6 +23,18 @@ func FormatValidationError(err validator.FieldError) string {
 		}
 	case "required":
 		return fmt.Sprintf("Field \"%s\" is required", err.Field())
+	case "webhook":
+		return fmt.Sprintf("Field \"%s\" must be a valid http:// or https:// URL and cannot point to Discord", err.Field())
+	case "url":
+		return fmt.Sprintf("Field \"%s\" must be a valid URL", err.Field())
+	case "startswith":
+		return fmt.Sprintf("Field \"%s\" must start with \"%s\"", err.Field(), err.Param())
+	case "startsnotwith":
+		return fmt.Sprintf("Field \"%s\" cannot start with \"%s\"", err.Field(), err.Param())
+	case "oneof":
+		return fmt.Sprintf("Field \"%s\" must be one of: %s", err.Field(), strings.ReplaceAll(err.Param(), " ", ", "))
+	case "excludes", "excludesall":
+		return fmt.Sprintf("Field \"%s\" cannot contain \"%s\"", err.Field(), err.Param())
 	default:
 		return err.Error()
 	}

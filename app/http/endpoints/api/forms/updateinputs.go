@@ -49,7 +49,7 @@ type (
 
 	inputApiConfigBody struct {
 		EndpointUrl          string               `json:"endpoint_url" validate:"required,min=1,max=500"`
-		Method               string               `json:"method" validate:"required,oneof=GET POST PUT PATCH DELETE"`
+		Method               string               `json:"method" validate:"required,oneof=GET POST"`
 		CacheDurationSeconds *int                 `json:"cache_duration_seconds,omitempty" validate:"omitempty,min=0"`
 		NoOptionsMessage     *string              `json:"no_options_message,omitempty" validate:"omitempty,max=100"`
 		Headers              []inputApiHeaderBody `json:"headers,omitempty" validate:"omitempty,max=20,dive"`

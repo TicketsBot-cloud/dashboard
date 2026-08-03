@@ -1,9 +1,7 @@
 package api
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -20,8 +18,8 @@ type integrationUpdateBody struct {
 	PrivacyPolicyUrl *string `json:"privacy_policy_url" validate:"omitempty,url,max=255,startswith=https://"`
 
 	Method        string  `json:"http_method" validate:"required,oneof=GET POST"`
-	WebhookUrl    string  `json:"webhook_url" validate:"required,webhook,max=255,startsnotwith=https://discord.com,startsnotwith=https://discord.gg"`
-	ValidationUrl *string `json:"validation_url" validate:"omitempty,url,max=255,startsnotwith=https://discord.com,startsnotwith=https://discord.gg"`
+	WebhookUrl    string  `json:"webhook_url" validate:"required,webhook,max=255"`
+	ValidationUrl *string `json:"validation_url" validate:"omitempty,webhook,max=255"`
 
 	Secrets []struct {
 		Id          int     `json:"id" validate:"omitempty,min=1"`
@@ -64,13 +62,8 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 			return
 		}
 
-		formatted := "Your input contained the following errors:"
-		for _, validationError := range validationErrors {
-			formatted += fmt.Sprintf("\n%s", validationError.Error())
-		}
-
-		formatted = strings.TrimSuffix(formatted, "\n")
-		ctx.JSON(400, utils.ErrorStr(formatted))
+		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
+		ctx.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 

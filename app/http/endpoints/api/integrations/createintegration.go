@@ -21,8 +21,8 @@ type integrationCreateBody struct {
 	PrivacyPolicyUrl *string `json:"privacy_policy_url" validate:"omitempty,url,max=255,startswith=https://"`
 
 	Method        string  `json:"http_method" validate:"required,oneof=GET POST"`
-	WebhookUrl    string  `json:"webhook_url" validate:"required,webhook,max=255,startsnotwith=https://discord.com,startsnotwith=https://discord.gg"`
-	ValidationUrl *string `json:"validation_url" validate:"omitempty,url,max=255,startsnotwith=https://discord.com,startsnotwith=https://discord.gg"`
+	WebhookUrl    string  `json:"webhook_url" validate:"required,webhook,max=255"`
+	ValidationUrl *string `json:"validation_url" validate:"omitempty,webhook,max=255"`
 
 	Secrets []struct {
 		Name        string  `json:"name" validate:"required,min=1,max=32,excludesall=% "`
@@ -70,7 +70,7 @@ func CreateIntegrationHandler(ctx *gin.Context) {
 		}
 
 		formatted := "Your input contained the following errors:\n" + utils.FormatValidationErrors(validationErrors)
-		ctx.JSON(400, utils.ErrorStr(formatted))
+		ctx.JSON(400, utils.ErrorStr("%s", formatted))
 		return
 	}
 

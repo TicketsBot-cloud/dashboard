@@ -195,6 +195,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/premium", api.PremiumHandler)
 		guildAuthApiSupport.GET("/user/:user", api.UserHandler)
 		guildAuthApiSupport.GET("/roles", api.RolesHandler)
+		guildAuthApiSupport.GET("/feature-flags", api_user.GetGuildFeatureFlags)
 		guildAuthApiSupport.GET("/emojis", rl(middleware.RateLimitTypeGuild, 10, time.Second*30), api.EmojisHandler)
 		guildAuthApiSupport.GET("/members/search",
 			rl(middleware.RateLimitTypeGuild, 5, time.Second),

@@ -18,6 +18,7 @@ import (
 // the flag out afterwards still needs no deploy, which is the point.
 var browserFlags = []string{
 	"202608_NEW_PRICING_PAGE",
+	"202608_ANALYTICS_PANEL_FILTER",
 }
 
 // GetFeatureFlags evaluates the browser-visible flags for the logged-in user.

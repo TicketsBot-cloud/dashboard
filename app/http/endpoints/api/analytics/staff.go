@@ -13,6 +13,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgtype"
 	"go.uber.org/zap"
@@ -56,6 +57,11 @@ func GetAnalyticsStaffHandler(ctx *gin.Context) {
 	}
 
 	days := parseDays(ctx)
+
+	filter, ok := parsePanelFilter(ctx)
+	if !ok {
+		return
+	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -159,6 +165,15 @@ func GetAnalyticsStaffHandler(ctx *gin.Context) {
 		return
 	}
 
+	panelArr, panelUnassigned, err := filter.Args()
+	if err != nil {
+		log.Logger.Error("Failed to build panel filter args", zap.Error(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to retrieve staff analytics. Please try again later."))
+		return
+	}
+
+	panelPred := database.PanelPredicate("t", 4, 5)
+
 	query := `
 SELECT
 	staff.user_id,
@@ -173,14 +188,14 @@ LEFT JOIN LATERAL (
 	INNER JOIN tickets t ON p.guild_id = t.guild_id AND p.ticket_id = t.id
 	WHERE p.guild_id = $1 AND p.user_id = staff.user_id
 		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))
-		AND p.user_id != t.user_id
+		AND p.user_id != t.user_id` + panelPred + `
 ) answered ON true
 LEFT JOIN LATERAL (
 	SELECT COUNT(*) AS cnt
 	FROM ticket_claims tc
 	INNER JOIN tickets t ON tc.guild_id = t.guild_id AND tc.ticket_id = t.id
 	WHERE tc.guild_id = $1 AND tc.user_id = staff.user_id
-		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))
+		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))` + panelPred + `
 ) claimed ON true
 LEFT JOIN LATERAL (
 	SELECT AVG(sr.rating)::float4 AS avg_rating, COUNT(sr.rating) AS rating_count
@@ -188,12 +203,12 @@ LEFT JOIN LATERAL (
 	INNER JOIN ticket_claims tc ON sr.guild_id = tc.guild_id AND sr.ticket_id = tc.ticket_id
 	INNER JOIN tickets t ON sr.guild_id = t.guild_id AND sr.ticket_id = t.id
 	WHERE sr.guild_id = $1 AND tc.user_id = staff.user_id
-		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))
+		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))` + panelPred + `
 ) ratings ON true
 ORDER BY tickets_answered DESC, tickets_claimed DESC
 LIMIT 50;`
 
-	rows, err := dbclient.Client.Tickets.Query(timeoutCtx, query, guildId, days, staffIdArray)
+	rows, err := dbclient.Client.Tickets.Query(timeoutCtx, query, guildId, days, staffIdArray, panelArr, panelUnassigned)
 	if err != nil {
 		log.Logger.Error("Failed to query staff analytics", zap.Uint64("guild_id", guildId), zap.Error(err))
 		ctx.JSON(500, utils.ErrorStr("Failed to retrieve staff analytics. Please try again later."))

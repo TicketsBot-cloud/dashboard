@@ -38,7 +38,8 @@ type Config struct {
 		RedirectUri string `env:"REDIRECT_URI,required"`
 	} `envPrefix:"OAUTH_"`
 	Database struct {
-		Uri string `env:"URI,required"`
+		Uri      string `env:"URI,required"`
+		MaxConns int32  `env:"MAX_CONNS" envDefault:"3"`
 	} `envPrefix:"DATABASE_"`
 	Bot struct {
 		Id                                   uint64 `env:"BOT_ID,required"`

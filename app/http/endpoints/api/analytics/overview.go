@@ -21,32 +21,37 @@ import (
 
 type (
 	overviewResponse struct {
-		TotalTickets          uint64                        `json:"total_tickets"`
-		OpenTickets           uint64                        `json:"open_tickets"`
-		FirstResponseTime     tripleWindowSeconds           `json:"first_response_time"`
-		ResolutionTime        tripleWindowSeconds           `json:"resolution_time"`
-		AverageRating         float64                       `json:"average_rating"`
-		FeedbackCount         uint64                        `json:"feedback_count"`
-		TicketsPerDay         []database.CountOnDate        `json:"tickets_per_day"`
-		TopCloseReasons       []database.CloseReasonCount    `json:"top_close_reasons"`
-		TicketsByPanel        []database.PanelTicketCount   `json:"tickets_by_panel"`
-		TicketsByLabel        []database.LabelTicketCount   `json:"tickets_by_label"`
-		FeedbackDistribution  [5]int                        `json:"feedback_distribution"`
-		FeedbackResponseRate  database.FeedbackResponseRate `json:"feedback_response_rate"`
-		AutoCloseStats        database.AutoCloseStats       `json:"auto_close_stats"`
-		ThreadChannelSplit    database.ThreadChannelSplit   `json:"thread_channel_split"`
-		BacklogTrend          []database.CountOnDate        `json:"backlog_trend"`
-		OneTouchResolution    *float64                      `json:"one_touch_resolution_rate"`
-		AvgMessageCounts      database.AverageMessageCounts `json:"avg_message_counts"`
-		PeakHours             []database.PeakHourEntry      `json:"peak_hours"`
-		TicketsBySource       []database.SourceBreakdown    `json:"tickets_by_source"`
-		ResponseTimeByHour    []database.ResponseTimeByHour `json:"response_time_by_hour"`
+		TotalTickets         uint64                        `json:"total_tickets"`
+		OpenTickets          uint64                        `json:"open_tickets"`
+		FirstResponseTime    metricWindowSeconds           `json:"first_response_time"`
+		ResolutionTime       metricWindowSeconds           `json:"resolution_time"`
+		AverageRating        float64                       `json:"average_rating"`
+		FeedbackCount        uint64                        `json:"feedback_count"`
+		TicketsPerDay        []database.CountOnDate        `json:"tickets_per_day"`
+		TopCloseReasons      []database.CloseReasonCount   `json:"top_close_reasons"`
+		TicketsByPanel       []database.PanelTicketCount   `json:"tickets_by_panel"`
+		TicketsByLabel       []database.LabelTicketCount   `json:"tickets_by_label"`
+		FeedbackDistribution [5]int                        `json:"feedback_distribution"`
+		FeedbackResponseRate database.FeedbackResponseRate `json:"feedback_response_rate"`
+		AutoCloseStats       database.AutoCloseStats       `json:"auto_close_stats"`
+		ThreadChannelSplit   database.ThreadChannelSplit   `json:"thread_channel_split"`
+		BacklogTrend         []database.CountOnDate        `json:"backlog_trend"`
+		OneTouchResolution   *float64                      `json:"one_touch_resolution_rate"`
+		TotalClosed          *int                          `json:"total_closed"`
+		AvgMessageCounts     database.AverageMessageCounts `json:"avg_message_counts"`
+		PeakHours            []database.PeakHourEntry      `json:"peak_hours"`
+		TicketsBySource      []database.SourceBreakdown    `json:"tickets_by_source"`
+		ResponseTimeByHour   []database.ResponseTimeByHour `json:"response_time_by_hour"`
 	}
 
-	tripleWindowSeconds struct {
-		AllTime *float64 `json:"all_time"`
-		Monthly *float64 `json:"monthly"`
-		Weekly  *float64 `json:"weekly"`
+	// metricWindowSeconds is the JSON shape for time-based metric windows.
+	// Renamed from tripleWindowSeconds; JSON keys are unchanged for backwards
+	// compatibility. The new "selected" field is purely additive.
+	metricWindowSeconds struct {
+		Selected *float64 `json:"selected"`
+		AllTime  *float64 `json:"all_time"`
+		Monthly  *float64 `json:"monthly"`
+		Weekly   *float64 `json:"weekly"`
 	}
 )
 
@@ -59,11 +64,12 @@ func durationToSeconds(d *time.Duration) *float64 {
 	return &secs
 }
 
-func convertTripleWindow(tw database.TripleWindow) tripleWindowSeconds {
-	return tripleWindowSeconds{
-		AllTime: durationToSeconds(tw.AllTime),
-		Monthly: durationToSeconds(tw.Monthly),
-		Weekly:  durationToSeconds(tw.Weekly),
+func convertMetricWindows(mw database.MetricWindows) metricWindowSeconds {
+	return metricWindowSeconds{
+		Selected: durationToSeconds(mw.Selected),
+		AllTime:  durationToSeconds(mw.AllTime),
+		Monthly:  durationToSeconds(mw.Monthly),
+		Weekly:   durationToSeconds(mw.Weekly),
 	}
 }
 
@@ -106,6 +112,11 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 
 	days := parseDays(ctx)
 
+	filter, ok := parsePanelFilter(ctx)
+	if !ok {
+		return // parsePanelFilter already wrote the 400 response
+	}
+
 	// Queries using generate_series or CURRENT_DATE arithmetic need a positive day count.
 	// For "all time" (days=0), use a large value so the date filter includes everything.
 	legacyDays := days
@@ -114,14 +125,15 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	}
 
 	var resp overviewResponse
-	var firstResponseTime, resolutionTime database.TripleWindow
+	var firstResponseTime, resolutionTime database.MetricWindows
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	group, groupCtx := errgroup.WithContext(timeoutCtx)
+	group.SetLimit(fanOutLimit())
 
 	group.Go(func() error {
-		count, err := dbclient.Client.Tickets.GetTotalTicketCount(groupCtx, guildId)
+		count, err := dbclient.Client.Tickets.GetTotalTicketCountFiltered(groupCtx, guildId, filter)
 		if err != nil {
 			return err
 		}
@@ -130,11 +142,7 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	})
 
 	group.Go(func() error {
-		openFlag := true
-		count, err := dbclient.Client.Tickets.CountByOptions(groupCtx, database.TicketQueryOptions{
-			GuildId: guildId,
-			Open:    &openFlag,
-		})
+		count, err := dbclient.Client.Tickets.CountOpenTickets(groupCtx, guildId, filter)
 		if err != nil {
 			return err
 		}
@@ -143,17 +151,17 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	})
 
 	group.Go(func() (err error) {
-		firstResponseTime, err = dbclient.Client.FirstResponseTime.GetAverageTripleWindow(groupCtx, guildId)
+		firstResponseTime, err = dbclient.Client.FirstResponseTime.GetAverageWindows(groupCtx, guildId, days, filter)
 		return
 	})
 
 	group.Go(func() (err error) {
-		resolutionTime, err = dbclient.Client.Tickets.GetTicketDurationTripleWindow(groupCtx, guildId)
+		resolutionTime, err = dbclient.Client.Tickets.GetDurationWindows(groupCtx, guildId, days, filter)
 		return
 	})
 
 	group.Go(func() error {
-		avg, err := dbclient.Client.ServiceRatings.GetAverage(groupCtx, guildId)
+		avg, err := dbclient.Client.ServiceRatings.GetAverageFiltered(groupCtx, guildId, days, filter)
 		if err != nil {
 			return err
 		}
@@ -162,7 +170,7 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	})
 
 	group.Go(func() error {
-		count, err := dbclient.Client.ServiceRatings.GetCount(groupCtx, guildId)
+		count, err := dbclient.Client.ServiceRatings.GetCountFiltered(groupCtx, guildId, days, filter)
 		if err != nil {
 			return err
 		}
@@ -172,96 +180,98 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 
 	group.Go(func() (err error) {
 		if days == 0 || days > 90 {
-			resp.TicketsPerDay, err = dbclient.Client.Tickets.GetTicketsPerWeek(groupCtx, guildId, days)
+			resp.TicketsPerDay, err = dbclient.Client.Tickets.GetTicketsPerWeek(groupCtx, guildId, days, filter)
 		} else {
-			resp.TicketsPerDay, err = dbclient.Client.Tickets.GetTicketsPerDay(groupCtx, guildId, days)
+			resp.TicketsPerDay, err = dbclient.Client.Tickets.GetTicketsPerDayFiltered(groupCtx, guildId, days, filter)
 		}
 		return
 	})
 
 	group.Go(func() (err error) {
-		resp.TopCloseReasons, err = dbclient.Client.CloseReason.GetTopCloseReasonsWithCount(groupCtx, guildId, nil, 10, days)
+		resp.TopCloseReasons, err = dbclient.Client.CloseReason.GetTopCloseReasonsWithCount(groupCtx, guildId, nil, 10, days, filter)
 		return
 	})
 
 	// Tickets by panel
 	group.Go(func() (err error) {
-		resp.TicketsByPanel, err = dbclient.Client.Tickets.GetTicketCountByPanel(groupCtx, guildId, legacyDays)
+		resp.TicketsByPanel, err = dbclient.Client.Tickets.GetTicketCountByPanel(groupCtx, guildId, legacyDays, filter)
 		return
 	})
 
 	// Tickets by label
 	group.Go(func() (err error) {
-		resp.TicketsByLabel, err = dbclient.Client.TicketLabelAssignments.GetTicketCountByLabel(groupCtx, guildId, legacyDays)
+		resp.TicketsByLabel, err = dbclient.Client.TicketLabelAssignments.GetTicketCountByLabel(groupCtx, guildId, legacyDays, filter)
 		return
 	})
 
 	// Feedback distribution
 	group.Go(func() (err error) {
-		resp.FeedbackDistribution, err = dbclient.Client.ServiceRatings.GetDistribution(groupCtx, guildId)
+		resp.FeedbackDistribution, err = dbclient.Client.ServiceRatings.GetDistributionFiltered(groupCtx, guildId, days, filter)
 		return
 	})
 
 	// Feedback response rate
 	group.Go(func() (err error) {
-		resp.FeedbackResponseRate, err = dbclient.Client.ServiceRatings.GetResponseRate(groupCtx, guildId, legacyDays)
+		resp.FeedbackResponseRate, err = dbclient.Client.ServiceRatings.GetResponseRateFiltered(groupCtx, guildId, legacyDays, filter)
 		return
 	})
 
 	// Auto-close stats
 	group.Go(func() (err error) {
-		resp.AutoCloseStats, err = dbclient.Client.CloseReason.GetAutoCloseVsManualClose(groupCtx, guildId, legacyDays)
+		resp.AutoCloseStats, err = dbclient.Client.CloseReason.GetAutoCloseVsManualCloseFiltered(groupCtx, guildId, legacyDays, filter)
 		return
 	})
 
 	// Thread vs channel split
 	group.Go(func() (err error) {
-		resp.ThreadChannelSplit, err = dbclient.Client.Tickets.GetThreadChannelSplit(groupCtx, guildId, legacyDays)
+		resp.ThreadChannelSplit, err = dbclient.Client.Tickets.GetThreadChannelSplitFiltered(groupCtx, guildId, legacyDays, filter)
 		return
 	})
 
 	// Backlog trend (skip for "all" as it's too expensive to compute over full history)
 	if days > 0 {
 		group.Go(func() (err error) {
-			resp.BacklogTrend, err = dbclient.Client.Tickets.GetBacklogTrend(groupCtx, guildId, days)
+			resp.BacklogTrend, err = dbclient.Client.Tickets.GetBacklogTrend(groupCtx, guildId, days, filter)
 			return
 		})
 	}
 
-	// One-touch resolution rate
+	// One-touch resolution rate - surface TotalClosed so the frontend can
+	// suppress percentages at low sample sizes.
 	group.Go(func() error {
-		result, err := dbclient.Client.TicketMessageCounts.GetOneTouchResolutionRate(groupCtx, guildId, days)
+		result, err := dbclient.Client.TicketMessageCounts.GetOneTouchResolutionRateFiltered(groupCtx, guildId, days, filter)
 		if err != nil {
 			return err
 		}
 		if result.TotalClosed > 0 {
 			rate := float64(result.OneTouchCount) / float64(result.TotalClosed)
 			resp.OneTouchResolution = &rate
+			resp.TotalClosed = &result.TotalClosed
 		}
 		return nil
 	})
 
 	// Average message counts
 	group.Go(func() (err error) {
-		resp.AvgMessageCounts, err = dbclient.Client.TicketMessageCounts.GetAverageMessageCounts(groupCtx, guildId, days)
+		resp.AvgMessageCounts, err = dbclient.Client.TicketMessageCounts.GetAverageMessageCountsFiltered(groupCtx, guildId, days, filter)
 		return
 	})
 
 	// Peak hours heatmap
 	group.Go(func() (err error) {
-		resp.PeakHours, err = dbclient.Client.Tickets.GetPeakHours(groupCtx, guildId, days)
+		resp.PeakHours, err = dbclient.Client.Tickets.GetPeakHours(groupCtx, guildId, days, filter)
 		return
 	})
 
 	// Tickets by source
 	group.Go(func() (err error) {
-		resp.TicketsBySource, err = dbclient.Client.Tickets.GetTicketsBySource(groupCtx, guildId, days)
+		resp.TicketsBySource, err = dbclient.Client.Tickets.GetTicketsBySource(groupCtx, guildId, days, filter)
 		return
 	})
 
 	// Response time by hour of day
 	group.Go(func() (err error) {
-		resp.ResponseTimeByHour, err = dbclient.Client.FirstResponseTime.GetAverageByHour(groupCtx, guildId, days)
+		resp.ResponseTimeByHour, err = dbclient.Client.FirstResponseTime.GetAverageByHour(groupCtx, guildId, days, filter)
 		return
 	})
 
@@ -271,8 +281,8 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 		return
 	}
 
-	resp.FirstResponseTime = convertTripleWindow(firstResponseTime)
-	resp.ResolutionTime = convertTripleWindow(resolutionTime)
+	resp.FirstResponseTime = convertMetricWindows(firstResponseTime)
+	resp.ResolutionTime = convertMetricWindows(resolutionTime)
 
 	if resp.TicketsPerDay == nil {
 		resp.TicketsPerDay = make([]database.CountOnDate, 0)

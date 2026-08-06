@@ -23,7 +23,7 @@ type staffDetailResponse struct {
 	UserId               uint64                  `json:"user_id,string"`
 	Username             string                  `json:"username"`
 	Avatar               string                  `json:"avatar"`
-	FirstResponseTime    tripleWindowSeconds     `json:"first_response_time"`
+	FirstResponseTime    metricWindowSeconds     `json:"first_response_time"`
 	AverageRating        *float32                `json:"average_rating"`
 	RatingCount          int                     `json:"rating_count"`
 	FeedbackDistribution [5]int                  `json:"feedback_distribution"`
@@ -227,7 +227,7 @@ func GetAnalyticsStaffDetailHandler(ctx *gin.Context) {
 		return
 	}
 
-	resp.FirstResponseTime = tripleWindowSeconds{
+	resp.FirstResponseTime = metricWindowSeconds{
 		AllTime: durationToSeconds(frtAllTime),
 		Monthly: durationToSeconds(frtMonthly),
 		Weekly:  durationToSeconds(frtWeekly),

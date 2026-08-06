@@ -312,6 +312,12 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_analytics.GetAnalyticsOverviewHandler,
 		)
+		guildAuthApiSupport.GET("/analytics/panels",
+			rl(middleware.RateLimitTypeUser, 5, time.Second*30),
+			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
+			api_analytics.GetAnalyticsPanelsHandler,
+		)
+
 		guildAuthApiAdmin.GET("/analytics/staff",
 			rl(middleware.RateLimitTypeUser, 5, time.Second*30),
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),

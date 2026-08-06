@@ -16,23 +16,25 @@ import (
 var Client *database.Database
 
 func ConnectToDatabase() {
-	config, err := pgxpool.ParseConfig(config.Conf.Database.Uri)
+	dbConf := config.Conf.Database
+
+	poolConfig, err := pgxpool.ParseConfig(dbConf.Uri)
 	if err != nil {
 		panic(err)
 	}
 
 	// TODO: Sentry
-	config.ConnConfig.LogLevel = pgx.LogLevelWarn
-	config.ConnConfig.Logger = logrusadapter.NewLogger(logrus.New())
+	poolConfig.ConnConfig.LogLevel = pgx.LogLevelWarn
+	poolConfig.ConnConfig.Logger = logrusadapter.NewLogger(logrus.New())
 
-	config.MinConns = 1
-	config.MaxConns = 3
+	poolConfig.MinConns = 1
+	poolConfig.MaxConns = dbConf.MaxConns
 
-	config.ConnConfig.BuildStatementCache = func(conn *pgconn.PgConn) stmtcache.Cache {
+	poolConfig.ConnConfig.BuildStatementCache = func(conn *pgconn.PgConn) stmtcache.Cache {
 		return stmtcache.New(conn, stmtcache.ModeDescribe, 512)
 	}
 
-	pool, err := pgxpool.ConnectConfig(context.Background(), config)
+	pool, err := pgxpool.ConnectConfig(context.Background(), poolConfig)
 	if err != nil {
 		panic(err)
 	}

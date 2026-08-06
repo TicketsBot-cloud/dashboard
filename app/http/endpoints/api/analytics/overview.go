@@ -90,6 +90,16 @@ func parseDays(ctx *gin.Context) int {
 	}
 }
 
+// parseCaseInsensitive reads the "case_insensitive" query param. Defaults to false.
+func parseCaseInsensitive(ctx *gin.Context) bool {
+	caseInsensitive, err := strconv.ParseBool(ctx.DefaultQuery("case_insensitive", "false"))
+	if err != nil {
+		return false
+	}
+
+	return caseInsensitive
+}
+
 func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 
@@ -111,6 +121,7 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	}
 
 	days := parseDays(ctx)
+	caseInsensitive := parseCaseInsensitive(ctx)
 
 	filter, ok := parsePanelFilter(ctx)
 	if !ok {
@@ -188,7 +199,7 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 	})
 
 	group.Go(func() (err error) {
-		resp.TopCloseReasons, err = dbclient.Client.CloseReason.GetTopCloseReasonsWithCount(groupCtx, guildId, nil, 10, days, filter)
+		resp.TopCloseReasons, err = dbclient.Client.CloseReason.GetTopCloseReasonsWithCount(groupCtx, guildId, nil, 10, days, caseInsensitive, filter)
 		return
 	})
 

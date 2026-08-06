@@ -1,5 +1,7 @@
 package notify
 
+import "github.com/TicketsBot-cloud/dashboard/internal/admin"
+
 const (
 	CategoryAffiliate         = "affiliate"
 	CategoryIntegrations      = "integrations"
@@ -14,21 +16,21 @@ type CategoryInfo struct {
 	Key         string `json:"key"`
 	Label       string `json:"label"`
 	Description string `json:"description"`
-	AdminOnly   bool   `json:"admin_only"`
+	MinTier admin.AdminTier `json:"min_tier"`
 }
 
 var AllCategories = []CategoryInfo{
-	{Key: CategoryAffiliate, Label: "Affiliate", Description: "Application status, referrals, and credit updates", AdminOnly: false},
-	{Key: CategoryIntegrations, Label: "Integrations", Description: "Updates when your public integration request is approved, rejected, or unapproved", AdminOnly: false},
-	{Key: CategoryAdminGallery, Label: "Gallery Submissions", Description: "New gallery panel submissions for review", AdminOnly: true},
-	{Key: CategoryAdminAffiliates, Label: "Affiliate Applications", Description: "New affiliate applications pending approval", AdminOnly: true},
-	{Key: CategoryAdminIntegrations, Label: "Integration Requests", Description: "Integration public access requests", AdminOnly: true},
+	{Key: CategoryAffiliate, Label: "Affiliate", Description: "Application status, referrals, and credit updates", MinTier: admin.AdminTierNone},
+	{Key: CategoryIntegrations, Label: "Integrations", Description: "Updates when your public integration request is approved, rejected, or unapproved", MinTier: admin.AdminTierNone},
+	{Key: CategoryAdminGallery, Label: "Gallery Submissions", Description: "New gallery panel submissions for review", MinTier: admin.AdminTierAdmin},
+	{Key: CategoryAdminAffiliates, Label: "Affiliate Applications", Description: "New affiliate applications pending approval", MinTier: admin.AdminTierOwner},
+	{Key: CategoryAdminIntegrations, Label: "Integration Requests", Description: "Integration public access requests", MinTier: admin.AdminTierAdmin},
 }
 
 func AdminCategoryKeys() []string {
 	keys := make([]string, 0, len(AllCategories))
 	for _, c := range AllCategories {
-		if c.AdminOnly {
+		if c.MinTier != admin.AdminTierNone {
 			keys = append(keys, c.Key)
 		}
 	}
@@ -42,6 +44,33 @@ func IsValidCategory(key string) bool {
 		}
 	}
 	return false
+}
+
+func CategoryMinTier(key string) (admin.AdminTier, bool) {
+	for _, c := range AllCategories {
+		if c.Key == key {
+			return c.MinTier, true
+		}
+	}
+	return admin.AdminTierNone, false
+}
+
+func CategoriesForTier(tier admin.AdminTier) []CategoryInfo {
+	categories := make([]CategoryInfo, 0, len(AllCategories))
+	for _, c := range AllCategories {
+		if admin.TierSatisfies(tier, c.MinTier) {
+			categories = append(categories, c)
+		}
+	}
+	return categories
+}
+
+func IsCategoryVisibleTo(key string, tier admin.AdminTier) bool {
+	minTier, ok := CategoryMinTier(key)
+	if !ok {
+		return false
+	}
+	return admin.TierSatisfies(tier, minTier)
 }
 
 func ResolveCategoryFilter(param string) ([]string, bool) {

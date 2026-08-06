@@ -26,6 +26,22 @@ func wrapNotification(content, unsubscribeURL string) string {
 	)
 }
 
+func wrapNotificationText(content, unsubscribeURL string) string {
+	return fmt.Sprintf(`%s
+
+--
+You are receiving this email because you enabled email notifications on your Tickets Bot account.
+
+Tickets Bot: https://tickets.bot
+Support: https://discord.gg/ticketsbot
+Unsubscribe: %s
+
+BH Cloud Labs Ltd, trading as Tickets Bot
+Registered in England and Wales (No. 16211348)
+The Grange, Grange Road, Great Malvern, WR14 3HA
+`, content, unsubscribeURL)
+}
+
 func wrapEmail(content, footerNote, footerLinks string) string {
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -284,9 +300,10 @@ Go to Affiliate Dashboard
 }
 
 // NotificationEmail generates a generic notification email body.
-func NotificationEmail(title, body, unsubscribeURL string) string {
+func NotificationEmail(title, body, ctaURL, unsubscribeURL string) string {
 	escapedTitle := html.EscapeString(title)
-	escapedBody := html.EscapeString(body)
+	renderedBody := RenderDiscordMarkdown(body)
+	escapedCTA := html.EscapeString(ctaURL)
 
 	return wrapNotification(fmt.Sprintf(`<!-- Heading -->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%">
@@ -306,8 +323,14 @@ func NotificationEmail(title, body, unsubscribeURL string) string {
 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
 <tr>
 <td align="center" style="background-color: #3498db; border-radius: 8px;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="%s" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="18%%" strokecolor="#3498db" fillcolor="#3498db">
+<w:anchorlock/>
+<center style="color:#ffffff;font-family:sans-serif;font-size:15px;font-weight:600;">Go to Dashboard</center>
+</v:roundrect>
+<![endif]-->
 <!--[if !mso]><!-->
-<a href="https://dashboard.tickets.bot" target="_blank" style="display: inline-block; background-color: #3498db; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px; text-align: center;">
+<a href="%s" target="_blank" style="display: inline-block; background-color: #3498db; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px; text-align: center;">
 Go to Dashboard
 </a>
 <!--<![endif]-->
@@ -316,7 +339,16 @@ Go to Dashboard
 </table>
 </td>
 </tr>
-</table>`, escapedTitle, escapedBody), unsubscribeURL)
+</table>`, escapedTitle, renderedBody, escapedCTA, escapedCTA), unsubscribeURL)
+}
+
+// NotificationEmailText is the text/plain counterpart of NotificationEmail.
+func NotificationEmailText(title, body, ctaURL, unsubscribeURL string) string {
+	return wrapNotificationText(fmt.Sprintf(`%s
+
+%s
+
+Go to Dashboard: %s`, title, RenderDiscordMarkdownText(body), ctaURL), unsubscribeURL)
 }
 
 // AffiliateRevoked generates the email body sent when an affiliate code is revoked.

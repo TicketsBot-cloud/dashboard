@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,7 +68,7 @@ func Send(ctx context.Context, userId uint64, category, title, body, link string
 	}
 
 	if sendEmail {
-		sendEmailNotification(ctx, userId, category, title, body)
+		sendEmailNotification(ctx, userId, category, title, body, link)
 	}
 }
 
@@ -142,7 +143,7 @@ func sendDiscordDM(ctx context.Context, userId uint64, title, body string) {
 	}
 }
 
-func sendEmailNotification(ctx context.Context, userId uint64, category, title, body string) {
+func sendEmailNotification(ctx context.Context, userId uint64, category, title, body, link string) {
 	if email.DefaultClient == nil {
 		return
 	}
@@ -158,8 +159,27 @@ func sendEmailNotification(ctx context.Context, userId uint64, category, title, 
 	}
 
 	unsubURL := email.UnsubscribeURL(config.Conf.Server.BaseUrl, config.Conf.Security.VerificationHmacSecret, userId, category)
-	htmlBody := email.NotificationEmail(title, body, unsubURL)
-	if err := email.DefaultClient.SendNotification(ctx, userEmail.Email, title, htmlBody, unsubURL); err != nil {
+	ctaURL := dashboardURL(link)
+	htmlBody := email.NotificationEmail(title, body, ctaURL, unsubURL)
+	textBody := email.NotificationEmailText(title, body, ctaURL, unsubURL)
+	if err := email.DefaultClient.SendNotification(ctx, userEmail.Email, title, htmlBody, textBody, unsubURL); err != nil {
 		log.Printf("Failed to send notification email to user %d: %v", userId, err)
+	}
+}
+
+// Notification links are stored relative ("/admin/affiliate"), but an email button
+// needs an absolute one.
+func dashboardURL(link string) string {
+	base := strings.TrimRight(config.Conf.Server.BaseUrl, "/")
+
+	switch {
+	case link == "":
+		return base
+	case strings.HasPrefix(link, "http://"), strings.HasPrefix(link, "https://"):
+		return link
+	case strings.HasPrefix(link, "/"):
+		return base + link
+	default:
+		return base + "/" + link
 	}
 }

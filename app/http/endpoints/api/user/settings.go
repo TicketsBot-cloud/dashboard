@@ -20,6 +20,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/config"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/email"
+	"github.com/TicketsBot-cloud/dashboard/internal/admin"
 	"github.com/TicketsBot-cloud/dashboard/notify"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
@@ -62,6 +63,7 @@ func GetSettings(ctx *gin.Context) {
 	var emailPtr *string
 	var emailVerified bool
 	var prefs []database.NotificationPreference
+	var userTier admin.AdminTier
 
 	group.Go(func() error {
 		userEmail, err := dbclient.Client.UserEmails.GetByUserId(groupCtx, userId)
@@ -81,6 +83,11 @@ func GetSettings(ctx *gin.Context) {
 		return err
 	})
 
+	group.Go(func() error {
+		userTier = admin.GetAdminTier(groupCtx, userId)
+		return nil
+	})
+
 	if err := group.Wait(); err != nil {
 		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
 		return
@@ -91,8 +98,10 @@ func GetSettings(ctx *gin.Context) {
 		savedPrefs[p.Category] = p
 	}
 
-	prefResponses := make([]notificationPreferenceResponse, 0, len(notify.AllCategories))
-	for _, cat := range notify.AllCategories {
+	visibleCategories := notify.CategoriesForTier(userTier)
+
+	prefResponses := make([]notificationPreferenceResponse, 0, len(visibleCategories))
+	for _, cat := range visibleCategories {
 		if saved, ok := savedPrefs[cat.Key]; ok {
 			prefResponses = append(prefResponses, notificationPreferenceResponse{
 				Category:  cat.Key,
@@ -114,7 +123,7 @@ func GetSettings(ctx *gin.Context) {
 		Email:         emailPtr,
 		EmailVerified: emailVerified,
 		Preferences:   prefResponses,
-		Categories:    notify.AllCategories,
+		Categories:    visibleCategories,
 	})
 }
 
@@ -216,8 +225,14 @@ func GetNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
+	userTier := admin.GetAdminTier(ctx, userId)
+
 	prefResponses := make([]notificationPreferenceResponse, 0, len(prefs))
 	for _, p := range prefs {
+		if !notify.IsCategoryVisibleTo(p.Category, userTier) {
+			continue
+		}
+
 		prefResponses = append(prefResponses, notificationPreferenceResponse{
 			Category:  p.Category,
 			DiscordDm: p.DiscordDm,
@@ -256,9 +271,16 @@ func UpdateNotificationPreferences(ctx *gin.Context) {
 		return
 	}
 
+	userTier := admin.GetAdminTier(ctx, userId)
+
 	for _, p := range body {
 		if !notify.IsValidCategory(p.Category) {
 			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid notification category."))
+			return
+		}
+
+		if !notify.IsCategoryVisibleTo(p.Category, userTier) {
+			ctx.JSON(http.StatusForbidden, utils.ErrorStr("You do not have access to this notification category."))
 			return
 		}
 	}

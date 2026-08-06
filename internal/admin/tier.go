@@ -53,10 +53,14 @@ func GetAdminTier(ctx context.Context, id uint64) AdminTier {
 	}
 
 	tier, err := dbclient.Client.BotStaff.GetTier(ctx, id)
-	if err != nil || tier == "" {
+	if err != nil {
 		return AdminTierNone
 	}
 
+	return TierFromBotStaff(tier)
+}
+
+func TierFromBotStaff(tier database.BotStaffTier) AdminTier {
 	switch tier {
 	case database.BotStaffTierAdmin:
 		return AdminTierAdmin
@@ -64,5 +68,23 @@ func GetAdminTier(ctx context.Context, id uint64) AdminTier {
 		return AdminTierHelper
 	default:
 		return AdminTierNone
+	}
+}
+
+// Tiers are hierarchical: each inherits everything below it.
+func TierSatisfies(userTier, minimumTier AdminTier) bool {
+	return TierRank(userTier) >= TierRank(minimumTier)
+}
+
+func TierRank(tier AdminTier) int {
+	switch tier {
+	case AdminTierOwner:
+		return 3
+	case AdminTierAdmin:
+		return 2
+	case AdminTierHelper:
+		return 1
+	default:
+		return 0
 	}
 }

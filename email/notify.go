@@ -35,7 +35,7 @@ func NotifyAffiliateApproved(userId uint64, emailAddr string, emailVerified bool
 	if DefaultClient != nil && emailAddr != "" && emailVerified {
 		unsubURL := UnsubscribeURL(config.Conf.Server.BaseUrl, config.Conf.Security.VerificationHmacSecret, userId, "affiliate")
 		body := AffiliateApproved(code, unsubURL)
-		if err := DefaultClient.SendNotification(ctx, emailAddr, "Your Affiliate Code is Active", body, unsubURL); err != nil {
+		if err := DefaultClient.SendNotification(ctx, emailAddr, "Your Affiliate Code is Active", body, "", unsubURL); err != nil {
 			log.Printf("Failed to send affiliate approval email to user %d: %v", userId, err)
 		}
 	}
@@ -76,7 +76,7 @@ func NotifyAffiliateRevoked(userId uint64, emailAddr string, emailVerified bool,
 	if DefaultClient != nil && emailAddr != "" && emailVerified {
 		unsubURL := UnsubscribeURL(config.Conf.Server.BaseUrl, config.Conf.Security.VerificationHmacSecret, userId, "affiliate")
 		body := AffiliateRevoked(code, unsubURL)
-		if err := DefaultClient.SendNotification(ctx, emailAddr, "Your Affiliate Code Has Been Revoked", body, unsubURL); err != nil {
+		if err := DefaultClient.SendNotification(ctx, emailAddr, "Your Affiliate Code Has Been Revoked", body, "", unsubURL); err != nil {
 			log.Printf("Failed to send affiliate revocation email to user %d: %v", userId, err)
 		}
 	}

@@ -76,6 +76,7 @@ require (
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/gorilla/sessions v1.2.1 // indirect
+	github.com/growthbook/growthbook-golang v0.2.9 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
@@ -116,6 +117,7 @@ require (
 	github.com/spyzhov/ajson v0.8.0 // indirect
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
 	github.com/tinylib/msgp v1.4.0 // indirect
+	github.com/tmaxmax/go-sse v0.10.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/atomic v1.11.0 // indirect

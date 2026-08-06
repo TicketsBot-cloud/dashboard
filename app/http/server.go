@@ -6,9 +6,11 @@ import (
 
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api"
+	admin_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/affiliate"
+	admin_analytics_api "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/analytics"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/botstaff"
 	admin_entitlements "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/entitlements"
-	admin_utilities "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/utilities"
+	admin_featureflags "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/featureflags"
 	admin_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/gallery"
 	admin_globalblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/globalblacklist"
 	admin_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/integrations"
@@ -16,24 +18,23 @@ import (
 	admin_premiumkeys "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/serverblacklist"
 	admin_skus "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/skus"
-	admin_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/affiliate"
-	admin_analytics_api "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/analytics"
+	admin_utilities "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/utilities"
 	api_affiliate "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/affiliate"
 	api_analytics "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/analytics"
-	api_overview "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/overview"
 	api_audit "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/auditlog"
 	api_blacklist "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/blacklist"
 	api_forms "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/forms"
 	api_gallery "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/gallery"
 	api_integrations "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/integrations"
 	api_kb "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/kb"
+	api_onboarding "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/onboarding"
+	api_overview "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/overview"
 	api_panels "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/panel"
 	api_polar "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/polar"
 	api_premium "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/premium"
 	api_settings "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/settings"
 	api_override "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/staffoverride"
 	api_tags "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/tags"
-	api_onboarding "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/onboarding"
 	api_team "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/team"
 	api_ticket "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
@@ -421,6 +422,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		userGroup.GET("/permission-level", api.GetPermissionLevel)
 
 		// User settings
+		userGroup.GET("/feature-flags", api_user.GetFeatureFlags)
 		userGroup.GET("/settings", api_user.GetSettings)
 		userGroup.PUT("/settings/email", api_user.UpdateEmail)
 		userGroup.DELETE("/settings/email", api_user.DeleteEmail)
@@ -484,6 +486,14 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.GET("/affiliate", admin_affiliate.ListHandler)
 			adminTier.GET("/affiliate/:id/referrals", admin_affiliate.ReferralsHandler)
 			adminTier.GET("/affiliate/flagged", admin_affiliate.FlaggedHandler)
+
+			// Feature flags. Read plus the atomic per-environment toggle, which is
+			// the kill switch. Rule authoring stays in GrowthBook's own UI.
+			adminTier.GET("/feature-flags", admin_featureflags.ListHandler)
+			adminTier.GET("/feature-flags/experiments", admin_featureflags.ListExperimentsHandler)
+			adminTier.POST("/feature-flags", admin_featureflags.CreateHandler)
+			adminTier.POST("/feature-flags/:key/toggle", admin_featureflags.ToggleHandler)
+			adminTier.PUT("/feature-flags/:key/environments/:environment/rules", admin_featureflags.UpdateRulesHandler)
 
 			adminTier.GET("/analytics/usage", admin_analytics_api.GetUsageHandler)
 			adminTier.GET("/analytics/adoption", admin_analytics_api.GetAdoptionHandler)

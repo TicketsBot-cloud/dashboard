@@ -8,7 +8,7 @@ COPY common/ /go/src/github.com/TicketsBot-cloud/common/
 COPY database/ /go/src/github.com/TicketsBot-cloud/database/
 COPY worker/ /go/src/github.com/TicketsBot-cloud/worker/
 
-COPY dashboard/ /go/src/github.com/TicketsBot-cloud/dashboard/
+COPY dash-api/ /go/src/github.com/TicketsBot-cloud/dashboard/
 WORKDIR /go/src/github.com/TicketsBot-cloud/dashboard
 
 RUN set -Eeux && \

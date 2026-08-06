@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/zap/zapcore"
 )
@@ -82,6 +83,19 @@ type Config struct {
 	Security       struct {
 		VerificationHmacSecret string `env:"VERIFICATION_HMAC_SECRET" envDefault:"default-dev-secret-change-in-production"`
 	} `envPrefix:"SECURITY_"`
+
+	// FeatureFlags carries its own fully qualified GROWTHBOOK_* env tags, so it
+	// needs no envPrefix. Leaving it unset disables flag evaluation rather than
+	// failing startup. Under the config.toml path it maps to a [featureflags]
+	// table, matched on field name.
+	FeatureFlags featureflags.Config
+
+	// GrowthBookApiKey authenticates the management REST API used by the admin
+	// flag pages. This is a different, far more privileged credential than
+	// FeatureFlags.ClientKey: it can mutate flag state, so it stays server-side
+	// and is never included in a response. Unset means the admin pages report
+	// that flags are not configured.
+	GrowthBookApiKey string `env:"GROWTHBOOK_API_KEY"`
 }
 
 // TODO: Don't use a global variable

@@ -13,21 +13,25 @@ import (
 	"github.com/TicketsBot-cloud/archiverclient"
 	"github.com/TicketsBot-cloud/common/chatrelay"
 	"github.com/TicketsBot-cloud/common/experiments"
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/observability"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/common/secureproxy"
 	app "github.com/TicketsBot-cloud/dashboard/app/http"
+	admin_featureflags "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
 	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/email"
+	"github.com/TicketsBot-cloud/dashboard/growthbook"
 	"github.com/TicketsBot-cloud/dashboard/log"
 	"github.com/TicketsBot-cloud/dashboard/redis"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/TicketsBot-cloud/worker/i18n"
 	"github.com/getsentry/sentry-go"
@@ -108,6 +112,52 @@ func main() {
 	expManager := experiments.NewManager(redis.Client.Client, database.Client)
 	experiments.SetGlobalManager(expManager)
 
+	// The management client is what the admin pages use. Its API key can mutate
+	// flag state, so it stays server-side and is never returned in a response.
+	admin_featureflags.Client = growthbook.NewClient(
+		config.Conf.FeatureFlags.ApiHost,
+		config.Conf.GrowthBookApiKey,
+		config.Conf.FeatureFlags.ClientKey,
+	)
+	if !admin_featureflags.Client.Configured() {
+		logger.Warn("GrowthBook management API not configured, admin flag pages will be unavailable")
+	}
+
+	logger.Info("Configuring feature flags")
+	utils.ExposureRecorder = featureflags.NewRecorder(
+		logger.With(zap.String("service", "feature_flag_exposures")),
+		featureflags.SinkFunc(func(ctx context.Context, exposures []featureflags.RecordedExposure) error {
+			rows := make([]dbmodel.ExperimentExposure, 0, len(exposures))
+			for _, exposure := range exposures {
+				rows = append(rows, dbmodel.ExperimentExposure{
+					ExperimentKey:  exposure.ExperimentKey,
+					VariationId:    exposure.VariationId,
+					IdentifierType: exposure.IdentifierType,
+					Identifier:     exposure.Identifier,
+					FeatureKey:     exposure.FeatureKey,
+					ExposedAt:      exposure.ExposedAt,
+				})
+			}
+
+			return database.Client.ExperimentExposures.InsertBatch(ctx, rows)
+		}),
+		featureflags.NewRedisDeduper(redis.Client.Client),
+		featureflags.RecorderConfig{},
+	)
+
+	// A GrowthBook outage must not stop the API booting, so a failure here is
+	// logged and evaluation degrades to every flag off.
+	utils.FeatureFlags, err = featureflags.New(
+		context.Background(),
+		config.Conf.FeatureFlags,
+		logger.With(zap.String("service", "feature_flags")),
+		redis.Client.Client,
+		utils.ExposureRecorder,
+	)
+	if err != nil {
+		logger.Error("Failed to configure feature flags, all flags will evaluate to off", zap.Error(err))
+	}
+
 	socketManager := livechat.NewSocketManager()
 	go socketManager.Run()
 
@@ -141,6 +191,18 @@ func main() {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Error("HTTP server shutdown error", zap.Error(err))
+	}
+
+	// Flush queued exposures before exit, otherwise a rolling restart silently
+	// discards whatever this pod had accepted but not yet written.
+	if err := utils.FeatureFlags.Close(); err != nil {
+		logger.Warn("Failed to close feature flag client", zap.Error(err))
+	}
+
+	if utils.ExposureRecorder != nil {
+		if err := utils.ExposureRecorder.Close(); err != nil {
+			logger.Warn("Failed to flush exposure recorder", zap.Error(err))
+		}
 	}
 
 	if !sentry.Flush(2 * time.Second) {

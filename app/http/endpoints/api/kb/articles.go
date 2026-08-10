@@ -22,14 +22,15 @@ const freeArticleLimit = 5
 var slugStripRegex = regexp.MustCompile(`[^a-z0-9-]+`)
 
 type articleRequest struct {
-	Title       string             `json:"title"`
-	Description *string            `json:"description"`
-	Content     *string            `json:"content"`
-	Embed       *types.CustomEmbed `json:"embed"`
-	CategoryIds []int              `json:"category_ids"`
-	Keywords    []string           `json:"keywords"`
-	Position    int                `json:"position"`
-	Published   *bool              `json:"published"`
+	Title            string             `json:"title"`
+	Description      *string            `json:"description"`
+	Content          *string            `json:"content"`
+	Embed            *types.CustomEmbed `json:"embed"`
+	CategoryIds      []int              `json:"category_ids"`
+	Keywords         []string           `json:"keywords"`
+	Position         int                `json:"position"`
+	Published        *bool              `json:"published"`
+	ShowHelpfulCount *bool              `json:"show_helpful_count"`
 }
 
 // ListArticlesHandler returns all articles for the guild.
@@ -145,6 +146,11 @@ func CreateArticleHandler(ctx *gin.Context) {
 		published = *body.Published
 	}
 
+	showHelpfulCount := false
+	if body.ShowHelpfulCount != nil {
+		showHelpfulCount = *body.ShowHelpfulCount
+	}
+
 	if body.CategoryIds == nil {
 		body.CategoryIds = make([]int, 0)
 	}
@@ -154,16 +160,17 @@ func CreateArticleHandler(ctx *gin.Context) {
 	}
 
 	article := database.KBArticle{
-		GuildId:     guildId,
-		Title:       body.Title,
-		Slug:        slug,
-		Description: body.Description,
-		Content:     body.Content,
-		Embed:       embed,
-		CategoryIds: body.CategoryIds,
-		Keywords:    body.Keywords,
-		Position:    body.Position,
-		Published:   published,
+		GuildId:          guildId,
+		Title:            body.Title,
+		Slug:             slug,
+		Description:      body.Description,
+		Content:          body.Content,
+		Embed:            embed,
+		CategoryIds:      body.CategoryIds,
+		Keywords:         body.Keywords,
+		Position:         body.Position,
+		Published:        published,
+		ShowHelpfulCount: showHelpfulCount,
 	}
 
 	articleId, err := dbclient.Client.KBArticles.Create(ctx, article)
@@ -249,6 +256,11 @@ func UpdateArticleHandler(ctx *gin.Context) {
 		published = *body.Published
 	}
 
+	showHelpfulCount := existing.ShowHelpfulCount
+	if body.ShowHelpfulCount != nil {
+		showHelpfulCount = *body.ShowHelpfulCount
+	}
+
 	if body.CategoryIds == nil {
 		body.CategoryIds = make([]int, 0)
 	}
@@ -258,17 +270,18 @@ func UpdateArticleHandler(ctx *gin.Context) {
 	}
 
 	updated := database.KBArticle{
-		Id:          articleId,
-		GuildId:     guildId,
-		Title:       body.Title,
-		Slug:        slug,
-		Description: body.Description,
-		Content:     body.Content,
-		Embed:       embed,
-		CategoryIds: body.CategoryIds,
-		Keywords:    body.Keywords,
-		Position:    body.Position,
-		Published:   published,
+		Id:               articleId,
+		GuildId:          guildId,
+		Title:            body.Title,
+		Slug:             slug,
+		Description:      body.Description,
+		Content:          body.Content,
+		Embed:            embed,
+		CategoryIds:      body.CategoryIds,
+		Keywords:         body.Keywords,
+		Position:         body.Position,
+		Published:        published,
+		ShowHelpfulCount: showHelpfulCount,
 	}
 
 	if err := dbclient.Client.KBArticles.Update(ctx, updated); err != nil {

@@ -365,6 +365,10 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
 			api_kb.DeleteArticleHandler,
 		)
+		guildAuthApiAdmin.PATCH("/kb/reorder",
+			rl(middleware.RateLimitTypeGuild, 60, time.Minute),
+			api_kb.ReorderArticlesHandler,
+		)
 
 		// KB settings
 		guildAuthApiAdmin.GET("/kb/settings", api_kb.GetKBSettingsHandler)

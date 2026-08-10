@@ -28,7 +28,7 @@ type articleRequest struct {
 	Embed            *types.CustomEmbed `json:"embed"`
 	CategoryIds      []int              `json:"category_ids"`
 	Keywords         []string           `json:"keywords"`
-	Position         int                `json:"position"`
+	Position         *int               `json:"position"`
 	Published        *bool              `json:"published"`
 	ShowHelpfulCount *bool              `json:"show_helpful_count"`
 }
@@ -151,6 +151,18 @@ func CreateArticleHandler(ctx *gin.Context) {
 		showHelpfulCount = *body.ShowHelpfulCount
 	}
 
+	position := 0
+	if body.Position != nil {
+		position = *body.Position
+	} else {
+		count, err := dbclient.Client.KBArticles.GetCountByGuild(ctx, guildId)
+		if err != nil {
+			ctx.JSON(500, utils.ErrorStr("Failed to determine article position"))
+			return
+		}
+		position = count
+	}
+
 	if body.CategoryIds == nil {
 		body.CategoryIds = make([]int, 0)
 	}
@@ -168,7 +180,7 @@ func CreateArticleHandler(ctx *gin.Context) {
 		Embed:            embed,
 		CategoryIds:      body.CategoryIds,
 		Keywords:         body.Keywords,
-		Position:         body.Position,
+		Position:         position,
 		Published:        published,
 		ShowHelpfulCount: showHelpfulCount,
 	}
@@ -261,6 +273,11 @@ func UpdateArticleHandler(ctx *gin.Context) {
 		showHelpfulCount = *body.ShowHelpfulCount
 	}
 
+	position := existing.Position
+	if body.Position != nil {
+		position = *body.Position
+	}
+
 	if body.CategoryIds == nil {
 		body.CategoryIds = make([]int, 0)
 	}
@@ -279,7 +296,7 @@ func UpdateArticleHandler(ctx *gin.Context) {
 		Embed:            embed,
 		CategoryIds:      body.CategoryIds,
 		Keywords:         body.Keywords,
-		Position:         body.Position,
+		Position:         position,
 		Published:        published,
 		ShowHelpfulCount: showHelpfulCount,
 	}
@@ -300,6 +317,51 @@ func UpdateArticleHandler(ctx *gin.Context) {
 	})
 
 	ctx.JSON(200, updated)
+}
+
+type articleOrderRequest struct {
+	ArticleIds []int `json:"article_ids"`
+}
+
+// ReorderArticlesHandler assigns positions from the given order.
+func ReorderArticlesHandler(ctx *gin.Context) {
+	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
+
+	var body articleOrderRequest
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+		return
+	}
+
+	if len(body.ArticleIds) == 0 {
+		ctx.JSON(400, utils.ErrorStr("No articles provided"))
+		return
+	}
+
+	seen := make(map[int]struct{}, len(body.ArticleIds))
+	for _, id := range body.ArticleIds {
+		if _, duplicate := seen[id]; duplicate {
+			ctx.JSON(400, utils.ErrorStr("Duplicate article in order"))
+			return
+		}
+		seen[id] = struct{}{}
+	}
+
+	if err := dbclient.Client.KBArticles.SetPositions(ctx, guildId, body.ArticleIds); err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to reorder knowledge base articles"))
+		return
+	}
+
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   database.AuditActionKBArticleUpdate,
+		ResourceType: database.AuditResourceKBArticle,
+		NewData:      body,
+	})
+
+	ctx.JSON(200, gin.H{"success": true})
 }
 
 // DeleteArticleHandler deletes a knowledge base article.

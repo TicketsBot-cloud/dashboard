@@ -42,7 +42,12 @@ func WhitelabelResync() func(*gin.Context) {
 		}
 
 		if err := whitelabel.ReapplyIntents(c, bot.Token); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update the Discord application"))
+			if whitelabel.IsIntentsRejection(err) {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr(whitelabel.IntentsRejectedMessage))
+				return
+			}
+
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
 			return
 		}
 

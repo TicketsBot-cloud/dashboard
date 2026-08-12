@@ -91,22 +91,23 @@ func WhitelabelPost() func(*gin.Context) {
 		}
 
 		editData := rest.EditCurrentApplicationData{
-			Flags: utils.Ptr(application.BuildFlags(
-				currentFlags,
-				application.FlagIntentGatewayGuildMembersLimited,
-				application.FlagGatewayMessageContentLimited,
-			)),
+			Flags:                   whitelabel.DesiredIntentFlags(currentFlags),
 			InteractionsEndpointUrl: utils.Ptr(fmt.Sprintf("%s/handle/%d", config.Conf.Bot.InteractionsBaseUrl, bot.Id)),
 		}
 
-		if _, err := rest.EditCurrentApplication(context.Background(), data.Token, nil, editData); err != nil {
+		if _, err := rest.EditCurrentApplication(c, data.Token, nil, editData); err != nil {
 			// TODO: Use a transaction
-			if _, err := dbclient.Client.Whitelabel.Delete(c, bot.Id); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+			if _, deleteErr := dbclient.Client.Whitelabel.Delete(c, bot.Id); deleteErr != nil {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(deleteErr, "Failed to process request"))
 				return
 			}
 
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+			if whitelabel.IsIntentsRejection(err) {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr(whitelabel.IntentsRejectedMessage))
+				return
+			}
+
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
 			return
 		}
 

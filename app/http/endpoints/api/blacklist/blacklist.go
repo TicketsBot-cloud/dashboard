@@ -13,9 +13,11 @@ import (
 
 type (
 	response struct {
-		PageLimit int                     `json:"page_limit"`
-		Users     []blacklistedUser       `json:"users"`
-		Roles     types.UInt64StringSlice `json:"roles"`
+		PageLimit  int                     `json:"page_limit"`
+		TotalPages int                     `json:"total_pages"`
+		TotalCount int                     `json:"total_count"`
+		Users      []blacklistedUser       `json:"users"`
+		Roles      types.UInt64StringSlice `json:"roles"`
 	}
 
 	blacklistedUser struct {
@@ -71,9 +73,23 @@ func GetBlacklistHandler(ctx *gin.Context) {
 		return
 	}
 
+	// Roles are returned unpaginated, so only the user count drives the page count.
+	totalCount, err := database.Client.Blacklist.GetBlacklistedCount(ctx, guildId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to load blacklist. Please try again."))
+		return
+	}
+
+	totalPages := (totalCount + pageLimit - 1) / pageLimit
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
 	ctx.JSON(200, response{
-		PageLimit: pageLimit,
-		Users:     users,
-		Roles:     blacklistedRoles,
+		PageLimit:  pageLimit,
+		TotalPages: totalPages,
+		TotalCount: totalCount,
+		Users:      users,
+		Roles:      blacklistedRoles,
 	})
 }

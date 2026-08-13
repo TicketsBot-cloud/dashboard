@@ -14,6 +14,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/member"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgtype"
 	"go.uber.org/zap"
@@ -72,8 +73,24 @@ func GetAnalyticsStaffHandler(ctx *gin.Context) {
 	var directStaff []uint64
 	var teamMembers []uint64
 	var adminRoles, supportRoles, teamRoles []uint64
+	var cachedMembers []member.Member
 
 	group, groupCtx := errgroup.WithContext(timeoutCtx)
+	group.SetLimit(fanOutLimit())
+
+	// Separate group: this reads the member cache pool, so counting it against
+	// fanOutLimit would serialise it behind the permission queries for nothing.
+	var memberFetch errgroup.Group
+	memberFetch.Go(func() error {
+		members, err := cache.Instance.GetGuildMembers(timeoutCtx, guildId, false)
+		if err != nil {
+			log.Logger.Warn("Failed to fetch cached guild members for staff resolution", zap.Error(err))
+			return nil
+		}
+
+		cachedMembers = members
+		return nil
+	})
 
 	group.Go(func() (err error) {
 		directStaff, err = dbclient.Client.Permissions.GetSupport(groupCtx, guildId)
@@ -100,8 +117,11 @@ func GetAnalyticsStaffHandler(ctx *gin.Context) {
 		return
 	})
 
-	if err := group.Wait(); err != nil {
-		log.Logger.Error("Failed to resolve staff members", zap.Uint64("guild_id", guildId), zap.Error(err))
+	groupErr := group.Wait()
+	_ = memberFetch.Wait()
+
+	if groupErr != nil {
+		log.Logger.Error("Failed to resolve staff members", zap.Uint64("guild_id", guildId), zap.Error(groupErr))
 		ctx.JSON(500, utils.ErrorStr("Failed to retrieve staff analytics. Please try again later."))
 		return
 	}
@@ -129,19 +149,14 @@ func GetAnalyticsStaffHandler(ctx *gin.Context) {
 
 	// Resolve role-based staff from cached guild members
 	if len(staffRoleSet) > 0 {
-		cachedMembers, err := cache.Instance.GetGuildMembers(timeoutCtx, guildId, false)
-		if err != nil {
-			log.Logger.Warn("Failed to fetch cached guild members for staff resolution", zap.Error(err))
-		} else {
-			for _, m := range cachedMembers {
-				if staffSet[m.User.Id] {
-					continue
-				}
-				for _, roleId := range m.Roles {
-					if staffRoleSet[roleId] {
-						staffSet[m.User.Id] = true
-						break
-					}
+		for _, m := range cachedMembers {
+			if staffSet[m.User.Id] {
+				continue
+			}
+			for _, roleId := range m.Roles {
+				if staffRoleSet[roleId] {
+					staffSet[m.User.Id] = true
+					break
 				}
 			}
 		}
@@ -172,39 +187,43 @@ func GetAnalyticsStaffHandler(ctx *gin.Context) {
 		return
 	}
 
-	panelPred := database.PanelPredicate("t", 4, 5)
-
+	// Grouped rather than LATERAL per staff member: the staff set is unbounded,
+	// and ORDER BY on computed columns means LIMIT 50 cannot prune before sorting.
 	query := `
+WITH scoped AS (
+	SELECT t.guild_id, t.id, t.user_id AS opener
+	FROM tickets t
+	WHERE t.guild_id = $1
+		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))` + database.PanelPredicate("t", 4, 5) + `
+),
+answered AS (
+	SELECT p.user_id, COUNT(DISTINCT p.ticket_id) AS cnt
+	FROM participant p
+	INNER JOIN scoped s ON p.guild_id = s.guild_id AND p.ticket_id = s.id
+	WHERE p.user_id = ANY($3::int8[]) AND p.user_id != s.opener
+	GROUP BY p.user_id
+),
+claimed AS (
+	SELECT
+		tc.user_id,
+		COUNT(*) AS cnt,
+		AVG(sr.rating)::float4 AS avg_rating,
+		COUNT(sr.rating) AS rating_count
+	FROM ticket_claims tc
+	INNER JOIN scoped s ON tc.guild_id = s.guild_id AND tc.ticket_id = s.id
+	LEFT JOIN service_ratings sr ON sr.guild_id = s.guild_id AND sr.ticket_id = s.id
+	WHERE tc.user_id = ANY($3::int8[])
+	GROUP BY tc.user_id
+)
 SELECT
 	staff.user_id,
-	COALESCE(answered.cnt, 0) AS tickets_answered,
-	COALESCE(claimed.cnt, 0) AS tickets_claimed,
-	ratings.avg_rating,
-	COALESCE(ratings.rating_count, 0) AS rating_count
+	COALESCE(a.cnt, 0) AS tickets_answered,
+	COALESCE(c.cnt, 0) AS tickets_claimed,
+	c.avg_rating,
+	COALESCE(c.rating_count, 0) AS rating_count
 FROM unnest($3::int8[]) AS staff(user_id)
-LEFT JOIN LATERAL (
-	SELECT COUNT(DISTINCT p.ticket_id) AS cnt
-	FROM participant p
-	INNER JOIN tickets t ON p.guild_id = t.guild_id AND p.ticket_id = t.id
-	WHERE p.guild_id = $1 AND p.user_id = staff.user_id
-		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))
-		AND p.user_id != t.user_id` + panelPred + `
-) answered ON true
-LEFT JOIN LATERAL (
-	SELECT COUNT(*) AS cnt
-	FROM ticket_claims tc
-	INNER JOIN tickets t ON tc.guild_id = t.guild_id AND tc.ticket_id = t.id
-	WHERE tc.guild_id = $1 AND tc.user_id = staff.user_id
-		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))` + panelPred + `
-) claimed ON true
-LEFT JOIN LATERAL (
-	SELECT AVG(sr.rating)::float4 AS avg_rating, COUNT(sr.rating) AS rating_count
-	FROM service_ratings sr
-	INNER JOIN ticket_claims tc ON sr.guild_id = tc.guild_id AND sr.ticket_id = tc.ticket_id
-	INNER JOIN tickets t ON sr.guild_id = t.guild_id AND sr.ticket_id = t.id
-	WHERE sr.guild_id = $1 AND tc.user_id = staff.user_id
-		AND ($2 = 0 OR t.open_time > NOW() - make_interval(days => $2))` + panelPred + `
-) ratings ON true
+LEFT JOIN answered a ON a.user_id = staff.user_id
+LEFT JOIN claimed c ON c.user_id = staff.user_id
 ORDER BY tickets_answered DESC, tickets_claimed DESC
 LIMIT 50;`
 
@@ -228,6 +247,12 @@ LIMIT 50;`
 		}
 		resultIds = append(resultIds, s.UserId)
 		staffMap[s.UserId] = &s
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Logger.Error("Failed to read staff analytics rows", zap.Uint64("guild_id", guildId), zap.Error(err))
+		ctx.JSON(500, utils.ErrorStr("Failed to retrieve staff analytics. Please try again later."))
+		return
 	}
 
 	// Resolve usernames from cache and identify bots

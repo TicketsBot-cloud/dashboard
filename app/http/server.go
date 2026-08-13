@@ -367,11 +367,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_kb.UpdateKBSettingsHandler,
 		)
-		guildAuthApiAdmin.POST("/kb/settings/verify-domain",
-			rl(middleware.RateLimitTypeGuild, 5, time.Minute),
-			api_kb.VerifyDomainHandler,
-		)
-
 		// Onboarding
 		guildAuthApiAdmin.GET("/onboarding", api_onboarding.GetOnboardingHandler)
 		guildAuthApiAdmin.POST("/onboarding", api_onboarding.UpdateOnboardingHandler)

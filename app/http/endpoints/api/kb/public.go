@@ -108,14 +108,31 @@ func PublicListArticlesHandler(ctx *gin.Context) {
 	}
 
 	// Filter to only published articles
-	published := make([]database.KBArticle, 0)
+	published := make([]publicArticleResponse, 0)
 	for _, a := range articles {
 		if a.Published {
-			published = append(published, a)
+			published = append(published, toPublicArticle(a))
 		}
 	}
 
 	ctx.JSON(200, published)
+}
+
+// These pointers shadow the embedded counters, so a nil omits the key entirely.
+// NotHelpfulCount is always nil: the dislike tally stays internal.
+type publicArticleResponse struct {
+	database.KBArticle
+	HelpfulCount    *int `json:"helpful_count,omitempty"`
+	NotHelpfulCount *int `json:"not_helpful_count,omitempty"`
+}
+
+func toPublicArticle(article database.KBArticle) publicArticleResponse {
+	res := publicArticleResponse{KBArticle: article}
+	if article.ShowHelpfulCount {
+		count := article.HelpfulCount
+		res.HelpfulCount = &count
+	}
+	return res
 }
 
 // PublicGetArticleBySlugHandler returns a single published article by its slug.
@@ -143,7 +160,7 @@ func PublicGetArticleBySlugHandler(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(200, article)
+	ctx.JSON(200, toPublicArticle(article))
 }
 
 // PublicListCategoriesHandler returns all knowledge base categories for a guild.
@@ -177,7 +194,7 @@ func PublicSearchHandler(ctx *gin.Context) {
 
 	q := ctx.Query("q")
 	if q == "" {
-		ctx.JSON(200, make([]database.KBArticle, 0))
+		ctx.JSON(200, make([]publicArticleResponse, 0))
 		return
 	}
 
@@ -187,9 +204,59 @@ func PublicSearchHandler(ctx *gin.Context) {
 		return
 	}
 
-	if results == nil {
-		results = make([]database.KBArticle, 0)
+	public := make([]publicArticleResponse, 0, len(results))
+	for _, a := range results {
+		public = append(public, toPublicArticle(a))
 	}
 
-	ctx.JSON(200, results)
+	ctx.JSON(200, public)
+}
+
+type publicArticleFeedbackRequest struct {
+	// Pointer so a missing field does not read as a downvote.
+	Helpful *bool `json:"helpful"`
+}
+
+// PublicArticleFeedbackHandler records a web visitor's helpfulness vote for an article.
+// POST /api/kb/public/:guildId/articles/:slug/feedback
+func PublicArticleFeedbackHandler(ctx *gin.Context) {
+	guildId, ok := parsePublicGuildId(ctx)
+	if !ok {
+		return
+	}
+
+	slug := ctx.Param("slug")
+	if slug == "" {
+		ctx.JSON(400, utils.ErrorStr("Article slug is required"))
+		return
+	}
+
+	var body publicArticleFeedbackRequest
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
+		return
+	}
+
+	if body.Helpful == nil {
+		ctx.JSON(400, utils.ErrorStr("A vote is required"))
+		return
+	}
+
+	article, found, err := dbclient.Client.KBArticles.GetBySlug(ctx, guildId, slug)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to fetch knowledge base article"))
+		return
+	}
+
+	if !found || !article.Published {
+		ctx.JSON(404, utils.ErrorStr("Article not found"))
+		return
+	}
+
+	if err := dbclient.Client.KBArticles.IncrementFeedback(ctx, guildId, article.Id, *body.Helpful); err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to record article feedback"))
+		return
+	}
+
+	ctx.JSON(200, gin.H{"success": true})
 }

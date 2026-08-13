@@ -13,9 +13,14 @@ import (
 )
 
 const pageLimit = 20
-const builtInCount = 1
 
 type (
+	listResponse struct {
+		Integrations []integrationWithMetadata `json:"integrations"`
+		TotalPages   int                       `json:"total_pages"`
+		TotalCount   int                       `json:"total_count"`
+	}
+
 	integrationWithMetadata struct {
 		integrationResponse
 		Author     *integrationAuthor `json:"author"`
@@ -42,15 +47,21 @@ func ListIntegrationsHandler(ctx *gin.Context) {
 
 	page -= 1
 
-	limit := pageLimit
-	if page == 0 {
-		limit -= builtInCount
-	}
-
-	availableIntegrations, err := dbclient.Client.CustomIntegrationGuilds.GetAvailableIntegrationsWithActive(ctx, guildId, userId, limit, page*pageLimit)
+	availableIntegrations, err := dbclient.Client.CustomIntegrationGuilds.GetAvailableIntegrationsWithActive(ctx, guildId, userId, pageLimit, page*pageLimit)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
 		return
+	}
+
+	totalCount, err := dbclient.Client.CustomIntegrationGuilds.CountAvailableIntegrations(ctx, guildId, userId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to load integrations. Please try again."))
+		return
+	}
+
+	totalPages := (totalCount + pageLimit - 1) / pageLimit
+	if totalPages < 1 {
+		totalPages = 1
 	}
 
 	var authorIds []uint64
@@ -111,5 +122,9 @@ func ListIntegrationsHandler(ctx *gin.Context) {
 		integrations = make([]integrationWithMetadata, 0)
 	}
 
-	ctx.JSON(200, integrations)
+	ctx.JSON(200, listResponse{
+		Integrations: integrations,
+		TotalPages:   totalPages,
+		TotalCount:   totalCount,
+	})
 }

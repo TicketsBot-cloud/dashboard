@@ -121,6 +121,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		kbPublic.GET("/articles/:slug", api_kb.PublicGetArticleBySlugHandler)
 		kbPublic.GET("/categories", api_kb.PublicListCategoriesHandler)
 		kbPublic.GET("/search", api_kb.PublicSearchHandler)
+		kbPublic.POST("/articles/:slug/feedback",
+			rl(middleware.RateLimitTypeIp, 10, time.Minute),
+			rl(middleware.RateLimitTypeIp, 3, time.Second*10),
+			api_kb.PublicArticleFeedbackHandler,
+		)
 	}
 
 	apiGroup := router.Group("/api", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.SentryUser, middleware.UpdateLastSeen)
@@ -359,6 +364,10 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.DELETE("/kb/articles/:articleId",
 			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
 			api_kb.DeleteArticleHandler,
+		)
+		guildAuthApiAdmin.PATCH("/kb/reorder",
+			rl(middleware.RateLimitTypeGuild, 60, time.Minute),
+			api_kb.ReorderArticlesHandler,
 		)
 
 		// KB settings

@@ -21,7 +21,6 @@ import (
 	app "github.com/TicketsBot-cloud/dashboard/app/http"
 	admin_featureflags "github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/admin/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/endpoints/api/ticket/livechat"
-	"github.com/TicketsBot-cloud/dashboard/app/http/middleware"
 	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/email"
@@ -174,9 +173,6 @@ func main() {
 		rpc.PremiumClient = &c
 	}
 
-	// Load verified KB custom domains into CORS cache
-	loadVerifiedDomains(logger)
-
 	logger.Info("Starting server")
 	srv := app.StartServer(logger, socketManager)
 
@@ -219,20 +215,6 @@ func ListenChat(client *redis.RedisClient, sm *livechat.SocketManager) {
 	for event := range ch {
 		sm.BroadcastMessage(event)
 	}
-}
-
-func loadVerifiedDomains(logger *zap.Logger) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	domains, err := database.Client.KBSettings.GetAllVerifiedDomains(ctx)
-	if err != nil {
-		logger.Warn("Failed to load verified KB domains for CORS", zap.Error(err))
-		return
-	}
-
-	middleware.RefreshVerifiedDomains(domains)
-	logger.Info("Loaded verified KB custom domains", zap.Int("count", len(domains)))
 }
 
 func startPprof() {

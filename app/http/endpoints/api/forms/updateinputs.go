@@ -2,6 +2,7 @@ package forms
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -52,6 +53,7 @@ type (
 		Method               string               `json:"method" validate:"required,oneof=GET POST"`
 		CacheDurationSeconds *int                 `json:"cache_duration_seconds,omitempty" validate:"omitempty,min=0"`
 		NoOptionsMessage     *string              `json:"no_options_message,omitempty" validate:"omitempty,max=100"`
+		BodyTemplate         *string              `json:"body_template,omitempty" validate:"omitempty,max=8192"`
 		Headers              []inputApiHeaderBody `json:"headers,omitempty" validate:"omitempty,max=20,dive"`
 	}
 
@@ -203,6 +205,8 @@ func UpdateInputs(c *gin.Context) {
 		return
 	}
 
+	redactSecretHeaderValues(&data)
+
 	audit.Log(audit.LogEntry{
 		GuildId:      audit.Uint64Ptr(guildId),
 		UserId:       userId,
@@ -279,6 +283,23 @@ func validateUniqueOptionValues(options []inputOption) error {
 	return nil
 }
 
+func validateApiBodyTemplate(config *inputApiConfigBody) error {
+	if config.BodyTemplate == nil || strings.TrimSpace(*config.BodyTemplate) == "" {
+		return nil
+	}
+
+	if config.Method == http.MethodGet {
+		return fmt.Errorf("A request body cannot be sent with the GET method")
+	}
+
+	stripped := utils.PlaceholderRegex.ReplaceAllString(*config.BodyTemplate, "null")
+	if !json.Valid([]byte(stripped)) {
+		return fmt.Errorf("The API request body must be valid JSON")
+	}
+
+	return nil
+}
+
 func validateInputOptions(input inputCreateBody, optionTypes map[int]string) error {
 	typeName, requiresOptions := optionTypes[input.Type]
 	if !requiresOptions {
@@ -290,8 +311,11 @@ func validateInputOptions(input inputCreateBody, optionTypes map[int]string) err
 		if len(input.Options) > 0 {
 			return fmt.Errorf("String select inputs cannot have both options and an API configuration")
 		}
-		if !strings.HasPrefix(input.ApiConfig.EndpointUrl, "https://") && !strings.HasPrefix(input.ApiConfig.EndpointUrl, "http://") {
-			return fmt.Errorf("API endpoint URL must start with https:// or http://")
+		if err := utils.ValidateWebhookUrl(input.ApiConfig.EndpointUrl); err != nil {
+			return fmt.Errorf("API endpoint URL: %v", err)
+		}
+		if err := validateApiBodyTemplate(input.ApiConfig); err != nil {
+			return err
 		}
 		return nil
 	}
@@ -544,7 +568,7 @@ func saveApiConfig(ctx context.Context, tx pgx.Tx, formInputId int, input inputC
 		return nil
 	}
 
-	existingConfig, hasExisting, err := dbclient.Client.FormInputApiConfig.Get(ctx, formInputId)
+	existingConfig, hasExisting, err := dbclient.Client.FormInputApiConfig.GetTx(ctx, tx, formInputId)
 	if err != nil {
 		return err
 	}
@@ -558,14 +582,27 @@ func saveApiConfig(ctx context.Context, tx pgx.Tx, formInputId int, input inputC
 		return nil
 	}
 
+	bodyTemplate := input.ApiConfig.BodyTemplate
+	if bodyTemplate != nil && strings.TrimSpace(*bodyTemplate) == "" {
+		bodyTemplate = nil
+	}
+
+	var existingSecrets map[string]string
+	if hasExisting {
+		existingSecrets, err = existingSecretHeaders(ctx, existingConfig.Id)
+		if err != nil {
+			return err
+		}
+	}
+
 	var configId int
 	if hasExisting {
-		if err := dbclient.Client.FormInputApiConfig.UpdateTx(ctx, tx, existingConfig.Id, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds, input.ApiConfig.NoOptionsMessage); err != nil {
+		if err := dbclient.Client.FormInputApiConfig.UpdateTx(ctx, tx, existingConfig.Id, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds, input.ApiConfig.NoOptionsMessage, bodyTemplate); err != nil {
 			return err
 		}
 		configId = existingConfig.Id
 	} else {
-		configId, err = dbclient.Client.FormInputApiConfig.CreateTx(ctx, tx, formInputId, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds, input.ApiConfig.NoOptionsMessage)
+		configId, err = dbclient.Client.FormInputApiConfig.CreateTx(ctx, tx, formInputId, input.ApiConfig.EndpointUrl, input.ApiConfig.Method, input.ApiConfig.CacheDurationSeconds, input.ApiConfig.NoOptionsMessage, bodyTemplate)
 		if err != nil {
 			return err
 		}
@@ -578,7 +615,17 @@ func saveApiConfig(ctx context.Context, tx pgx.Tx, formInputId int, input inputC
 	}
 
 	for _, header := range input.ApiConfig.Headers {
-		if _, err := dbclient.Client.FormInputApiHeaders.CreateTx(ctx, tx, configId, header.HeaderName, header.HeaderValue, header.IsSecret); err != nil {
+		value := header.HeaderValue
+		if header.IsSecret && value == SecretHeaderMask {
+			previous, ok := existingSecrets[header.HeaderName]
+			if !ok {
+				return fmt.Errorf("Header \"%s\" was submitted masked but has no stored value - please enter it again", header.HeaderName)
+			}
+
+			value = previous
+		}
+
+		if _, err := dbclient.Client.FormInputApiHeaders.CreateTx(ctx, tx, configId, header.HeaderName, value, header.IsSecret); err != nil {
 			return err
 		}
 	}

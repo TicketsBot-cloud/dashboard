@@ -376,6 +376,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			rl(middleware.RateLimitTypeGuild, 10, time.Minute),
 			api_kb.UpdateKBSettingsHandler,
 		)
+
 		// Onboarding
 		guildAuthApiAdmin.GET("/onboarding", api_onboarding.GetOnboardingHandler)
 		guildAuthApiAdmin.POST("/onboarding", api_onboarding.UpdateOnboardingHandler)

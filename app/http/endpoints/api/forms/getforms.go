@@ -9,9 +9,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type redactedApiHeader struct {
+	database.FormInputApiHeader
+	HeaderValue string `json:"header_value"`
+}
+
 type embeddedApiConfig struct {
 	database.FormInputApiConfig
-	Headers []database.FormInputApiHeader `json:"headers"`
+	Headers []redactedApiHeader `json:"headers"`
+}
+
+func redactHeaders(headers []database.FormInputApiHeader) []redactedApiHeader {
+	redacted := make([]redactedApiHeader, len(headers))
+	for i, header := range headers {
+		value := header.HeaderValue
+		if header.IsSecret {
+			value = SecretHeaderMask
+		}
+
+		redacted[i] = redactedApiHeader{FormInputApiHeader: header, HeaderValue: value}
+	}
+
+	return redacted
 }
 
 type embeddedFormInput struct {
@@ -74,13 +93,9 @@ func GetForms(c *gin.Context) {
 
 			if apiConfigs != nil {
 				if cfg, ok := apiConfigs[input.Id]; ok {
-					headers := apiHeaders[cfg.Id]
-					if headers == nil {
-						headers = []database.FormInputApiHeader{}
-					}
 					embedded.ApiConfig = &embeddedApiConfig{
 						FormInputApiConfig: cfg,
-						Headers:            headers,
+						Headers:            redactHeaders(apiHeaders[cfg.Id]),
 					}
 				}
 			}

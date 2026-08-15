@@ -1,23 +1,12 @@
 package api
 
 import (
-	"net/url"
 	"reflect"
-	"regexp"
 	"strings"
 
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/go-playground/validator/v10"
 )
-
-var placeholderRegex = regexp.MustCompile(`%[\w|-]+%`)
-
-// Hosts integrations must not target. Matched on the registrable domain so
-// subdomains (ptb.discord.com) and casing variants are covered.
-var blockedDomains = map[string]bool{
-	"discord.com": true,
-	"discord.gg":  true,
-}
 
 func newIntegrationValidator() *validator.Validate {
 	v := validator.New()
@@ -38,21 +27,5 @@ func newIntegrationValidator() *validator.Validate {
 }
 
 func WebhookValidator(fl validator.FieldLevel) bool {
-	value := fl.Field().String()
-	stripped := placeholderRegex.ReplaceAllString(value, "")
-
-	parsed, err := url.Parse(stripped)
-	if err != nil {
-		return false
-	}
-
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return false
-	}
-
-	if parsed.Host == "" {
-		return false
-	}
-
-	return !blockedDomains[utils.SecondLevelDomain(strings.ToLower(parsed.Hostname()))]
+	return utils.ValidateWebhookUrl(fl.Field().String()) == nil
 }

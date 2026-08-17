@@ -7,10 +7,8 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/archiverclient"
-	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
-	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,20 +57,7 @@ func GetTranscriptHandler(ctx *gin.Context) {
 		return
 	}
 
-	isElevated := utils.IsElevatedStaffAccess(context.Background(), guildId, userId)
-
 	if !hasContentPermission {
-		if isElevated {
-			audit.Log(audit.LogEntry{
-				GuildId:      audit.Uint64Ptr(guildId),
-				UserId:       userId,
-				ActionType:   database.AuditActionTranscriptContentView,
-				ResourceType: database.AuditResourceTicket,
-				ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-				Metadata:     map[string]interface{}{"restricted": true},
-			})
-		}
-
 		ctx.JSON(200, gin.H{
 			"content_restricted": true,
 		})
@@ -89,17 +74,6 @@ func GetTranscriptHandler(ctx *gin.Context) {
 		}
 
 		return
-	}
-
-	if isElevated {
-		audit.Log(audit.LogEntry{
-			GuildId:      audit.Uint64Ptr(guildId),
-			UserId:       userId,
-			ActionType:   database.AuditActionTranscriptContentView,
-			ResourceType: database.AuditResourceTicket,
-			ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-			Metadata:     map[string]interface{}{"restricted": false},
-		})
 	}
 
 	ctx.JSON(200, messages)

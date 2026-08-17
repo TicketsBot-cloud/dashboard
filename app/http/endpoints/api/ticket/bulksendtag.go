@@ -121,8 +121,6 @@ func BulkSendTag(ctx *gin.Context) {
 	anonymise := settings.AnonymiseDashboardResponses
 	tagId := body.TagId
 
-	isElevated := utils.IsElevatedStaffAccess(ctx, guildId, userId)
-
 	sendOne := func(opCtx context.Context, ticketId int) bool {
 		ticket, err := dbclient.Client.Tickets.Get(opCtx, ticketId, guildId)
 		if err != nil || ticket.UserId == 0 || ticket.GuildId != guildId {
@@ -131,17 +129,6 @@ func BulkSendTag(ctx *gin.Context) {
 
 		hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(opCtx, guildId, userId, ticket)
 		if contentErr != nil || !hasContentPermission {
-			if isElevated {
-				audit.Log(audit.LogEntry{
-					GuildId:      audit.Uint64Ptr(guildId),
-					UserId:       userId,
-					ActionType:   database.AuditActionTicketContentSendBlock,
-					ResourceType: database.AuditResourceTicket,
-					ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-					Metadata:     map[string]interface{}{"bulk": true},
-				})
-			}
-
 			return false
 		}
 

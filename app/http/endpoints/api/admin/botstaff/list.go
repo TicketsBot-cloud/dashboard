@@ -14,10 +14,11 @@ import (
 )
 
 type userData struct {
-	Id        uint64              `json:"id,string"`
-	Username  string              `json:"username"`
-	AvatarUrl string              `json:"avatar_url,omitempty"`
-	Tier      dbmodel.BotStaffTier `json:"tier"`
+	Id         uint64               `json:"id,string"`
+	Username   string               `json:"username"`
+	AvatarUrl  string               `json:"avatar_url,omitempty"`
+	Tier       dbmodel.BotStaffTier `json:"tier"`
+	GlobalView bool                 `json:"global_view"`
 }
 
 func ListBotStaffHandler(ctx *gin.Context) {
@@ -37,8 +38,9 @@ func ListBotStaffHandler(ctx *gin.Context) {
 
 		group.Go(func() error {
 			data := userData{
-				Id:   entry.UserId,
-				Tier: entry.Tier,
+				Id:         entry.UserId,
+				Tier:       entry.Tier,
+				GlobalView: entry.GlobalView,
 			}
 
 			user, err := cache.Instance.GetUser(ctx, entry.UserId)

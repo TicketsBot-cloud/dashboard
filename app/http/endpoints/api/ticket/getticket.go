@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
-	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
@@ -88,8 +87,6 @@ func GetTicket(c *gin.Context) {
 		return
 	}
 
-	isElevated := utils.IsElevatedStaffAccess(c, guildId, userId)
-
 	var panelTitle *string
 	if ticket.PanelId != nil {
 		panel, err := dbclient.Client.Panel.GetById(c, *ticket.PanelId)
@@ -127,17 +124,6 @@ func GetTicket(c *gin.Context) {
 	}
 
 	if !hasContentPermission {
-		if isElevated {
-			audit.Log(audit.LogEntry{
-				GuildId:      audit.Uint64Ptr(guildId),
-				UserId:       userId,
-				ActionType:   database.AuditActionTicketContentView,
-				ResourceType: database.AuditResourceTicket,
-				ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-				Metadata:     map[string]interface{}{"restricted": true},
-			})
-		}
-
 		c.JSON(200, gin.H{
 			"success":            true,
 			"ticket":             ticketData,
@@ -157,17 +143,6 @@ func GetTicket(c *gin.Context) {
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, fmt.Sprintf("Failed to fetch messages for ticket #%d from Discord", ticketId)))
 		return
-	}
-
-	if isElevated {
-		audit.Log(audit.LogEntry{
-			GuildId:      audit.Uint64Ptr(guildId),
-			UserId:       userId,
-			ActionType:   database.AuditActionTicketContentView,
-			ResourceType: database.AuditResourceTicket,
-			ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-			Metadata:     map[string]interface{}{"restricted": false},
-		})
 	}
 
 	c.JSON(200, gin.H{

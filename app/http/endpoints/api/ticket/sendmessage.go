@@ -83,16 +83,6 @@ func SendMessage(ctx *gin.Context) {
 	}
 
 	if !hasContentPermission {
-		if utils.IsElevatedStaffAccess(ctx, guildId, userId) {
-			audit.Log(audit.LogEntry{
-				GuildId:      audit.Uint64Ptr(guildId),
-				UserId:       userId,
-				ActionType:   dbmodel.AuditActionTicketContentSendBlock,
-				ResourceType: dbmodel.AuditResourceTicket,
-				ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-			})
-		}
-
 		ctx.JSON(403, utils.ErrorStr("You do not have permission to send messages to this ticket."))
 		return
 	}

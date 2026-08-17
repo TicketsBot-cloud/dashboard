@@ -516,6 +516,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		// Owner-only routes
 		ownerTier := adminBase.Group("", middleware.RequireAdminTier(admin.AdminTierOwner))
 		{
+			ownerTier.PUT("/bot-staff/:userid/global-view", botstaff.SetGlobalViewHandler)
 			ownerTier.GET("/entitlements", admin_entitlements.ListEntitlementsHandler)
 			ownerTier.GET("/global-blacklist", admin_globalblacklist.ListHandler)
 			ownerTier.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)

@@ -79,8 +79,6 @@ func BulkCloseRequest(c *gin.Context) {
 	locale := utils.ResolveGuildLocale(context.Background(), guildId)
 	msgEmbed, components := buildCloseRequestMessage(locale, userId, body.Reason, closeAt)
 
-	isElevated := utils.IsElevatedStaffAccess(c, guildId, userId)
-
 	sendOne := func(opCtx context.Context, ticketId int) bool {
 		ticket, err := database.Client.Tickets.Get(opCtx, ticketId, guildId)
 		if err != nil || ticket.UserId == 0 {
@@ -94,17 +92,6 @@ func BulkCloseRequest(c *gin.Context) {
 
 		hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(opCtx, guildId, userId, ticket)
 		if contentErr != nil || !hasContentPermission {
-			if isElevated {
-				audit.Log(audit.LogEntry{
-					GuildId:      audit.Uint64Ptr(guildId),
-					UserId:       userId,
-					ActionType:   dbmodel.AuditActionTicketContentSendBlock,
-					ResourceType: dbmodel.AuditResourceTicket,
-					ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-					Metadata:     map[string]interface{}{"bulk": true},
-				})
-			}
-
 			return false
 		}
 

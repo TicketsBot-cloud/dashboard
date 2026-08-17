@@ -47,6 +47,19 @@ func IsBotHelper(ctx context.Context, id uint64) bool {
 	return tier != ""
 }
 
+func HasGlobalView(ctx context.Context, id uint64) bool {
+	if IsBotOwner(id) {
+		return true
+	}
+
+	globalView, err := dbclient.Client.BotStaff.HasGlobalView(ctx, id)
+	if err != nil {
+		return false
+	}
+
+	return globalView
+}
+
 func GetAdminTier(ctx context.Context, id uint64) AdminTier {
 	if IsBotOwner(id) {
 		return AdminTierOwner

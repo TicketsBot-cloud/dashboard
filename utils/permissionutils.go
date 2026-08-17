@@ -405,17 +405,17 @@ func GetAccessiblePanelIds(ctx context.Context, guildId, userId uint64) ([]int, 
 // HasPermissionToViewTicketContent checks whether a user may view the actual
 // message content of a ticket (live messages or archived transcript). Unlike
 // HasPermissionToViewTicket, bot-admin-tier staff and staff-override-elevated
-// users are denied content access. Only the hardcoded bot owner bypasses this
-// restriction. All other checks (ticket opener, claimer, guild admin/support
-// roles, panel team membership) are identical to HasPermissionToViewTicket.
+// users are denied content access. Only the bot owner and admins the owner has
+// granted global view bypass this restriction. All other checks (ticket opener,
+// guild admin/support roles, panel team membership) are identical to
+// HasPermissionToViewTicket.
 func HasPermissionToViewTicketContent(ctx context.Context, guildId, userId uint64, ticket database.Ticket) (bool, *api.RequestError) {
 	// Ticket opener always has permission
 	if ticket.UserId == userId && ticket.GuildId == guildId {
 		return true, nil
 	}
 
-	// Only the bot owner gets the content bypass, not general bot admins
-	if admin.IsBotOwner(userId) {
+	if admin.HasGlobalView(ctx, userId) {
 		return true, nil
 	}
 
@@ -518,31 +518,6 @@ func HasPermissionToViewTicketContent(ctx context.Context, guildId, userId uint6
 
 		return false, nil
 	}
-}
-
-// IsElevatedStaffAccess returns true when the user's access to this guild is
-// granted via bot-admin status (including bot owner) or via an active staff
-// override. Used to decide whether a content access event should be audit-logged.
-func IsElevatedStaffAccess(ctx context.Context, guildId, userId uint64) bool {
-	if admin.IsBotAdmin(ctx, userId) {
-		return true
-	}
-
-	staffOverride, err := dbclient.Client.StaffOverride.HasActiveOverride(ctx, guildId)
-	if err != nil {
-		return false
-	}
-
-	if staffOverride {
-		isBotStaff, err := dbclient.Client.BotStaff.IsStaff(ctx, userId)
-		if err != nil {
-			return false
-		}
-
-		return isBotStaff
-	}
-
-	return false
 }
 
 func isOnDefaultTeam(ctx context.Context, guildId uint64, member member.Member) (bool, *api.RequestError) {

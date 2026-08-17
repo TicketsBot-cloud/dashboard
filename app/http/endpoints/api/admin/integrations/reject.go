@@ -86,7 +86,7 @@ func RejectIntegrationHandler(ctx *gin.Context) {
 		"",
 	)
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   database.AuditActionUserIntegrationReject,
 		ResourceType: database.AuditResourceUserIntegration,

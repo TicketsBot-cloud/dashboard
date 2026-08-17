@@ -12,6 +12,7 @@ import (
 )
 
 type LogEntry struct {
+	Category     database.AuditCategory
 	GuildId      *uint64
 	UserId       uint64
 	ActionType   database.AuditActionType
@@ -22,12 +23,27 @@ type LogEntry struct {
 	Metadata     any
 }
 
+// Staff actions are indistinguishable from user ones at this layer, so the admin API tags them.
+func LogStaff(entry LogEntry) {
+	entry.Category = database.AuditCategoryStaff
+	Log(entry)
+}
+
 func Log(entry LogEntry) {
+	if entry.Category == 0 {
+		if entry.GuildId != nil {
+			entry.Category = database.AuditCategoryGuild
+		} else {
+			entry.Category = database.AuditCategoryUser
+		}
+	}
+
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		dbEntry := database.AuditLogEntry{
+			Category:     entry.Category,
 			GuildId:      entry.GuildId,
 			UserId:       entry.UserId,
 			ActionType:   entry.ActionType,

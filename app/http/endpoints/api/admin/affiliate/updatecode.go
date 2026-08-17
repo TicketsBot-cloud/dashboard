@@ -94,7 +94,7 @@ func UpdateCodeHandler(ctx *gin.Context) {
 		}
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       adminUserId,
 		ActionType:   database.AuditActionAffiliateUpdateCode,
 		ResourceType: database.AuditResourceAffiliate,

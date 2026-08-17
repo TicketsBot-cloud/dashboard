@@ -106,7 +106,7 @@ func UnapproveIntegrationHandler(ctx *gin.Context) {
 		newData["reason"] = reason
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   database.AuditActionUserIntegrationUnapprove,
 		ResourceType: database.AuditResourceUserIntegration,

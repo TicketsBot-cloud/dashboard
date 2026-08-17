@@ -58,7 +58,7 @@ func VoidHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       adminUserId,
 		ActionType:   database.AuditActionAffiliateVoid,
 		ResourceType: database.AuditResourceAffiliateReferral,

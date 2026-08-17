@@ -84,7 +84,7 @@ func GenerateHandler(ctx *gin.Context) {
 		}
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   dbmodel.AuditActionPremiumKeyGenerate,
 		ResourceType: dbmodel.AuditResourcePremiumKey,

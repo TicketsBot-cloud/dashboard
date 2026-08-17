@@ -57,7 +57,7 @@ func RevokeHandler(ctx *gin.Context) {
 		}
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       adminUserId,
 		ActionType:   database.AuditActionAffiliateRevoke,
 		ResourceType: database.AuditResourceAffiliate,

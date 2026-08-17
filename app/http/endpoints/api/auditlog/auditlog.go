@@ -44,9 +44,21 @@ type paginatedAuditLogs struct {
 	CurrentPage int                `json:"current_page"`
 }
 
-func GetAuditLogs(ctx *gin.Context) {
+func GetGuildAuditLogs(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	handleAuditLogQuery(ctx, func(opts *database.AuditLogQueryOptions) {
+		opts.GuildId = &guildId
+	})
+}
 
+func GetStaffAuditLogs(ctx *gin.Context) {
+	category := database.AuditCategoryStaff
+	handleAuditLogQuery(ctx, func(opts *database.AuditLogQueryOptions) {
+		opts.Category = &category
+	})
+}
+
+func handleAuditLogQuery(ctx *gin.Context, scope func(*database.AuditLogQueryOptions)) {
 	var body auditLogFilterBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
@@ -58,10 +70,11 @@ func GetAuditLogs(ctx *gin.Context) {
 	}
 
 	opts := database.AuditLogQueryOptions{
-		GuildId: &guildId,
-		Limit:   pageSize,
-		Offset:  (body.Page - 1) * pageSize,
+		Limit:  pageSize,
+		Offset: (body.Page - 1) * pageSize,
 	}
+
+	scope(&opts)
 
 	if body.UserId != nil {
 		opts.UserId = body.UserId

@@ -106,7 +106,7 @@ func CreateHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   dbmodel.AuditActionPolarProductCreate,
 		ResourceType: dbmodel.AuditResourcePolarProduct,

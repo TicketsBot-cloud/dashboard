@@ -64,7 +64,7 @@ func RejectHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   database.AuditActionGalleryReject,
 		ResourceType: database.AuditResourceGalleryListing,

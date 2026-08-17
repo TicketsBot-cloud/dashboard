@@ -57,7 +57,7 @@ func UpdateHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   database.AuditActionGalleryApprove, // Re-use approve action for admin updates
 		ResourceType: database.AuditResourceGalleryListing,

@@ -86,7 +86,7 @@ func UpdateRatesHandler(ctx *gin.Context) {
 		}
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       adminUserId,
 		ActionType:   database.AuditActionAffiliateUpdateRate,
 		ResourceType: database.AuditResourceAffiliate,

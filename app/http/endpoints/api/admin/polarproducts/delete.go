@@ -29,7 +29,7 @@ func DeleteHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   dbmodel.AuditActionPolarProductDelete,
 		ResourceType: dbmodel.AuditResourcePolarProduct,

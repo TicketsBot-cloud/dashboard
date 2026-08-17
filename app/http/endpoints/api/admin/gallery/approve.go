@@ -44,7 +44,7 @@ func ApproveHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   database.AuditActionGalleryApprove,
 		ResourceType: database.AuditResourceGalleryListing,

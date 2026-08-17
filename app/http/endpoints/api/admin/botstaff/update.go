@@ -67,7 +67,7 @@ func UpdateBotStaffHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       authUserId,
 		ActionType:   dbmodel.AuditActionBotStaffTierUpdate,
 		ResourceType: dbmodel.AuditResourceBotStaff,

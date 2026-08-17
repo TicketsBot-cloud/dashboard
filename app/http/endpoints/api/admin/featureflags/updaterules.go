@@ -108,7 +108,7 @@ func UpdateRulesHandler(ctx *gin.Context) {
 		oldRules = append(oldRules, FromGrowthBook(rule))
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       authUserId,
 		ActionType:   dbmodel.AuditActionFeatureFlagRulesUpdate,
 		ResourceType: dbmodel.AuditResourceFeatureFlag,

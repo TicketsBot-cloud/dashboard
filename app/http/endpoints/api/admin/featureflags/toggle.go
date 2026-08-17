@@ -100,7 +100,7 @@ func ToggleHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       authUserId,
 		ActionType:   dbmodel.AuditActionFeatureFlagToggle,
 		ResourceType: dbmodel.AuditResourceFeatureFlag,

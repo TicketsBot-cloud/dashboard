@@ -123,7 +123,7 @@ func UpdateHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       userId,
 		ActionType:   dbmodel.AuditActionSkuUpdate,
 		ResourceType: dbmodel.AuditResourceSku,

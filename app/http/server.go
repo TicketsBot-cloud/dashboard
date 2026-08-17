@@ -335,7 +335,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			api_analytics.GetAnalyticsStaffDetailHandler,
 		)
 
-		guildAuthApiAdmin.POST("/audit-logs", api_audit.GetAuditLogs)
+		guildAuthApiAdmin.POST("/audit-logs", api_audit.GetGuildAuditLogs)
 
 		guildAuthApiAdmin.GET("/integrations/available", api_integrations.ListIntegrationsHandler)
 		guildAuthApiAdmin.GET("/integrations/:integrationid", api_integrations.IsIntegrationActiveHandler)
@@ -478,6 +478,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.DELETE("/bot-staff/:userid", botstaff.RemoveBotStaffHandler)
 			adminTier.GET("/premium-keys", admin_premiumkeys.ListPremiumKeysHandler)
 			adminTier.POST("/premium-keys/generate", admin_premiumkeys.GenerateHandler)
+
+			adminTier.POST("/audit-logs", api_audit.GetStaffAuditLogs)
 
 			adminTier.POST("/gallery/:id/approve", admin_gallery.ApproveHandler)
 			adminTier.POST("/gallery/:id/reject", admin_gallery.RejectHandler)

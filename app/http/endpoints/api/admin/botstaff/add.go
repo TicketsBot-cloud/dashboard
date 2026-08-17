@@ -49,7 +49,7 @@ func AddBotStaffHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       authUserId,
 		ActionType:   dbmodel.AuditActionBotStaffAdd,
 		ResourceType: dbmodel.AuditResourceBotStaff,

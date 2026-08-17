@@ -116,7 +116,7 @@ func CreateHandler(ctx *gin.Context) {
 		return
 	}
 
-	audit.Log(audit.LogEntry{
+	audit.LogStaff(audit.LogEntry{
 		UserId:       adminUserId,
 		ActionType:   database.AuditActionAffiliateCreate,
 		ResourceType: database.AuditResourceAffiliate,

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
@@ -30,11 +31,11 @@ type ticketUser struct {
 }
 
 type ticketViewData struct {
-	Id        int         `json:"id"`
-	PanelId   *int        `json:"panel_id"`
-	OpenedAt  time.Time   `json:"opened_at"`
-	Opener    ticketUser  `json:"opener"`
-	Claimer   *ticketUser `json:"claimer"`
+	Id       int         `json:"id"`
+	PanelId  *int        `json:"panel_id"`
+	OpenedAt time.Time   `json:"opened_at"`
+	Opener   ticketUser  `json:"opener"`
+	Claimer  *ticketUser `json:"claimer"`
 }
 
 func GetTicket(c *gin.Context) {
@@ -81,16 +82,13 @@ func GetTicket(c *gin.Context) {
 		return
 	}
 
-	if ticket.ChannelId == nil {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Ticket #%d has no associated Discord channel", ticketId))
+	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(c, guildId, userId, ticket)
+	if contentErr != nil {
+		c.JSON(contentErr.StatusCode, app.NewError(contentErr, fmt.Sprintf("Failed to verify content permissions for user %d on ticket #%d", userId, ticketId)))
 		return
 	}
 
-	messages, err := fetchMessages(c.Request.Context(), botContext, ticket)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, fmt.Sprintf("Failed to fetch messages for ticket #%d from Discord", ticketId)))
-		return
-	}
+	isElevated := utils.IsElevatedStaffAccess(c, guildId, userId)
 
 	var panelTitle *string
 	if ticket.PanelId != nil {
@@ -128,11 +126,56 @@ func GetTicket(c *gin.Context) {
 		Claimer:  claimer,
 	}
 
+	if !hasContentPermission {
+		if isElevated {
+			audit.Log(audit.LogEntry{
+				GuildId:      audit.Uint64Ptr(guildId),
+				UserId:       userId,
+				ActionType:   database.AuditActionTicketContentView,
+				ResourceType: database.AuditResourceTicket,
+				ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
+				Metadata:     map[string]interface{}{"restricted": true},
+			})
+		}
+
+		c.JSON(200, gin.H{
+			"success":            true,
+			"ticket":             ticketData,
+			"panel_title":        panelTitle,
+			"messages":           []StrippedMessage{},
+			"content_restricted": true,
+		})
+		return
+	}
+
+	if ticket.ChannelId == nil {
+		c.JSON(http.StatusNotFound, utils.ErrorStr("Ticket #%d has no associated Discord channel", ticketId))
+		return
+	}
+
+	messages, err := fetchMessages(c.Request.Context(), botContext, ticket)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, fmt.Sprintf("Failed to fetch messages for ticket #%d from Discord", ticketId)))
+		return
+	}
+
+	if isElevated {
+		audit.Log(audit.LogEntry{
+			GuildId:      audit.Uint64Ptr(guildId),
+			UserId:       userId,
+			ActionType:   database.AuditActionTicketContentView,
+			ResourceType: database.AuditResourceTicket,
+			ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
+			Metadata:     map[string]interface{}{"restricted": false},
+		})
+	}
+
 	c.JSON(200, gin.H{
-		"success":     true,
-		"ticket":      ticketData,
-		"panel_title": panelTitle,
-		"messages":    messages,
+		"success":            true,
+		"ticket":             ticketData,
+		"panel_title":        panelTitle,
+		"messages":           messages,
+		"content_restricted": false,
 	})
 }
 

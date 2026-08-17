@@ -76,6 +76,27 @@ func SendTag(ctx *gin.Context) {
 		return
 	}
 
+	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(ctx, guildId, userId, ticket)
+	if contentErr != nil {
+		ctx.JSON(contentErr.StatusCode, utils.ErrorStr("Failed to verify content permissions. Please try again."))
+		return
+	}
+
+	if !hasContentPermission {
+		if utils.IsElevatedStaffAccess(ctx, guildId, userId) {
+			audit.Log(audit.LogEntry{
+				GuildId:      audit.Uint64Ptr(guildId),
+				UserId:       userId,
+				ActionType:   database.AuditActionTicketContentSendBlock,
+				ResourceType: database.AuditResourceTicket,
+				ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
+			})
+		}
+
+		ctx.JSON(403, utils.ErrorStr("You do not have permission to send messages to this ticket."))
+		return
+	}
+
 	// Get tag
 	tag, ok, err := dbclient.Client.Tag.Get(ctx, guildId, body.TagId)
 	if err != nil {

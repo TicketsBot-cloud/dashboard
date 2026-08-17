@@ -73,6 +73,27 @@ func CloseRequest(c *gin.Context) {
 		return
 	}
 
+	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(context.Background(), guildId, userId, ticket)
+	if contentErr != nil {
+		c.JSON(contentErr.StatusCode, utils.ErrorStr("Failed to verify content permissions. Please try again."))
+		return
+	}
+
+	if !hasContentPermission {
+		if utils.IsElevatedStaffAccess(context.Background(), guildId, userId) {
+			audit.Log(audit.LogEntry{
+				GuildId:      audit.Uint64Ptr(guildId),
+				UserId:       userId,
+				ActionType:   dbmodel.AuditActionTicketContentSendBlock,
+				ResourceType: dbmodel.AuditResourceTicket,
+				ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
+			})
+		}
+
+		c.JSON(http.StatusForbidden, utils.ErrorStr("You do not have permission to send messages to this ticket."))
+		return
+	}
+
 	botCtx, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorStr("Unable to connect to Discord. Please try again later."))

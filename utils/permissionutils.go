@@ -7,6 +7,7 @@ import (
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
+	"github.com/TicketsBot-cloud/dashboard/internal/admin"
 	"github.com/TicketsBot-cloud/dashboard/internal/api"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/member"
@@ -399,6 +400,149 @@ func GetAccessiblePanelIds(ctx context.Context, guildId, userId uint64) ([]int, 
 	}
 
 	return panelIds, nil
+}
+
+// HasPermissionToViewTicketContent checks whether a user may view the actual
+// message content of a ticket (live messages or archived transcript). Unlike
+// HasPermissionToViewTicket, bot-admin-tier staff and staff-override-elevated
+// users are denied content access. Only the hardcoded bot owner bypasses this
+// restriction. All other checks (ticket opener, claimer, guild admin/support
+// roles, panel team membership) are identical to HasPermissionToViewTicket.
+func HasPermissionToViewTicketContent(ctx context.Context, guildId, userId uint64, ticket database.Ticket) (bool, *api.RequestError) {
+	// Ticket opener always has permission
+	if ticket.UserId == userId && ticket.GuildId == guildId {
+		return true, nil
+	}
+
+	// Only the bot owner gets the content bypass, not general bot admins
+	if admin.IsBotOwner(userId) {
+		return true, nil
+	}
+
+	// Staff override intentionally omitted: it must not grant content access
+
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		return false, api.NewInternalServerError(err, "Unable to connect to Discord. Please try again later.")
+	}
+
+	// Check if server owner
+	guild, err := botContext.GetGuild(ctx, guildId)
+	if err != nil {
+		return false, api.NewInternalServerError(err, "Error retrieving guild object")
+	}
+
+	if guild.OwnerId == userId {
+		return true, nil
+	}
+
+	member, err := botContext.GetGuildMember(ctx, guildId, userId)
+	if err != nil {
+		return false, api.NewErrorWithMessage(http.StatusForbidden, err, "User not in server: are you logged into the correct account?")
+	}
+
+	// Admins should have access to all tickets
+	isAdmin, err := dbclient.Client.Permissions.IsAdmin(ctx, guildId, userId)
+	if err != nil {
+		return false, api.NewDatabaseError(err)
+	}
+
+	if isAdmin {
+		return true, nil
+	}
+
+	adminRoles, err := dbclient.Client.RolePermissions.GetAdminRoles(ctx, guildId)
+	if err != nil {
+		return false, api.NewDatabaseError(err)
+	}
+
+	for _, roleId := range adminRoles {
+		if member.HasRole(roleId) {
+			return true, nil
+		}
+	}
+
+	if ticket.PanelId == nil {
+		canView, apiErr := isOnDefaultTeam(ctx, guildId, member)
+		if apiErr != nil {
+			return false, apiErr
+		}
+
+		return canView, nil
+	} else {
+		panel, err := dbclient.Client.Panel.GetById(ctx, *ticket.PanelId)
+		if err != nil {
+			return false, api.NewDatabaseError(err)
+		}
+
+		if panel.WithDefaultTeam {
+			canView, apiErr := isOnDefaultTeam(ctx, guildId, member)
+			if apiErr != nil {
+				return false, apiErr
+			}
+
+			if canView {
+				return true, nil
+			}
+		}
+
+		supportTeams, err := dbclient.Client.PanelTeams.GetTeams(ctx, *ticket.PanelId)
+		if err != nil {
+			return false, api.NewDatabaseError(err)
+		}
+
+		if len(supportTeams) > 0 {
+			var supportTeamIds []int
+			for _, team := range supportTeams {
+				supportTeamIds = append(supportTeamIds, team.Id)
+			}
+
+			isSupport, err := dbclient.Client.SupportTeamMembers.IsSupportSubset(ctx, guildId, userId, supportTeamIds)
+			if err != nil {
+				return false, api.NewDatabaseError(err)
+			}
+
+			if isSupport {
+				return true, nil
+			}
+
+			isSupport, err = dbclient.Client.SupportTeamRoles.IsSupportAnySubset(ctx, guildId, member.Roles, supportTeamIds)
+			if err != nil {
+				return false, api.NewDatabaseError(err)
+			}
+
+			if isSupport {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	}
+}
+
+// IsElevatedStaffAccess returns true when the user's access to this guild is
+// granted via bot-admin status (including bot owner) or via an active staff
+// override. Used to decide whether a content access event should be audit-logged.
+func IsElevatedStaffAccess(ctx context.Context, guildId, userId uint64) bool {
+	if admin.IsBotAdmin(ctx, userId) {
+		return true
+	}
+
+	staffOverride, err := dbclient.Client.StaffOverride.HasActiveOverride(ctx, guildId)
+	if err != nil {
+		return false
+	}
+
+	if staffOverride {
+		isBotStaff, err := dbclient.Client.BotStaff.IsStaff(ctx, userId)
+		if err != nil {
+			return false
+		}
+
+		return isBotStaff
+	}
+
+	return false
 }
 
 func isOnDefaultTeam(ctx context.Context, guildId uint64, member member.Member) (bool, *api.RequestError) {

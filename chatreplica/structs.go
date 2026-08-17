@@ -12,9 +12,10 @@ import (
 
 type (
 	Payload struct {
-		Entities    Entities  `json:"entities"`
-		Messages    []Message `json:"messages"`
-		ChannelName string    `json:"channel_name"`
+		Entities          Entities  `json:"entities"`
+		Messages          []Message `json:"messages"`
+		ChannelName       string    `json:"channel_name"`
+		ContentRestricted bool      `json:"content_restricted,omitempty"`
 	}
 
 	// Entities Snowflake -> Entity map

@@ -76,6 +76,27 @@ func SendMessage(ctx *gin.Context) {
 		return
 	}
 
+	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(ctx, guildId, userId, ticket)
+	if contentErr != nil {
+		ctx.JSON(contentErr.StatusCode, utils.ErrorStr("Failed to verify content permissions. Please try again."))
+		return
+	}
+
+	if !hasContentPermission {
+		if utils.IsElevatedStaffAccess(ctx, guildId, userId) {
+			audit.Log(audit.LogEntry{
+				GuildId:      audit.Uint64Ptr(guildId),
+				UserId:       userId,
+				ActionType:   dbmodel.AuditActionTicketContentSendBlock,
+				ResourceType: dbmodel.AuditResourceTicket,
+				ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
+			})
+		}
+
+		ctx.JSON(403, utils.ErrorStr("You do not have permission to send messages to this ticket."))
+		return
+	}
+
 	content := body.Message.Content
 	if len(content) > 2000 {
 		content = content[0:1999]

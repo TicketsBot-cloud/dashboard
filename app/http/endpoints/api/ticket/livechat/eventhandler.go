@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/app/http/session"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/config"
@@ -17,6 +18,7 @@ import (
 	"github.com/TicketsBot-cloud/dashboard/internal/api"
 	"github.com/TicketsBot-cloud/dashboard/rpc"
 	"github.com/TicketsBot-cloud/dashboard/utils"
+	"github.com/TicketsBot-cloud/database"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -92,7 +94,27 @@ func (c *Client) handleAuthEvent(data AuthData) error {
 	}
 
 	if !hasPermission {
-		return api.NewErrorWithMessage(http.StatusForbidden, err, "You do not have permission to view this ticket")
+		return api.NewErrorWithMessage(http.StatusForbidden, errors.New("access denied"), "You do not have permission to view this ticket")
+	}
+
+	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(context.Background(), c.GuildId, userId, ticket)
+	if contentErr != nil {
+		return contentErr
+	}
+
+	if !hasContentPermission {
+		if utils.IsElevatedStaffAccess(context.Background(), c.GuildId, userId) {
+			audit.Log(audit.LogEntry{
+				GuildId:      audit.Uint64Ptr(c.GuildId),
+				UserId:       userId,
+				ActionType:   database.AuditActionTicketContentView,
+				ResourceType: database.AuditResourceTicket,
+				ResourceId:   audit.StringPtr(strconv.Itoa(c.TicketId)),
+				Metadata:     map[string]interface{}{"restricted": true, "channel": "websocket"},
+			})
+		}
+
+		return api.NewErrorWithMessage(http.StatusForbidden, errors.New("content restricted"), "You do not have permission to view this ticket's content")
 	}
 
 	// Check premium

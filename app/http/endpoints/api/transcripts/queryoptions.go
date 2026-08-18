@@ -41,6 +41,8 @@ type wrappedQueryOptions struct {
 	ClaimedById uint64 `json:"claimed_by_id"`
 	LabelIds    []int  `json:"label_ids"`
 	CloseReason string `json:"close_reason"`
+	SortBy      string `json:"sort_by"`
+	SortDir     string `json:"sort_dir"`
 }
 
 // UnmarshalJSON dynamically handles both string and number types, treating empty strings as 0
@@ -156,6 +158,21 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 		o.Rating = 0
 	}
 
+	var sortBy database.SortBy
+	switch o.SortBy {
+	case string(database.SortByRating):
+		sortBy = database.SortByRating
+	case string(database.SortByCloseReason):
+		sortBy = database.SortByCloseReason
+	default:
+		sortBy = database.SortByTicketId
+	}
+
+	order := database.OrderTypeDescending
+	if o.SortDir == "asc" {
+		order = database.OrderTypeAscending
+	}
+
 	opts := database.TicketQueryOptions{
 		Id:                o.Id,
 		GuildId:           guildId,
@@ -167,7 +184,8 @@ func (o *wrappedQueryOptions) toQueryOptions(guildId uint64) (database.TicketQue
 		ClaimedById:       o.ClaimedById,
 		LabelIds:          o.LabelIds,
 		CloseReasonSearch: o.CloseReason,
-		Order:             database.OrderTypeDescending,
+		SortBy:            sortBy,
+		Order:             order,
 		Limit:             pageLimit,
 		Offset:            offset,
 	}

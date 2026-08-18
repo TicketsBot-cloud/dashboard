@@ -24,6 +24,7 @@ import (
 var browserFlags = []string{
 	"202608_NEW_PRICING_PAGE",
 	"202608_ANALYTICS_PANEL_FILTER",
+	"202608_SETUP_ONBOARDING_WIZARD",
 }
 
 // buildDashboardAttributes builds the base targeting attributes for the

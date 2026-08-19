@@ -115,6 +115,10 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 		}
 	}
 
+	if s.Colours == nil {
+		s.Colours = make(ColourMap)
+	}
+
 	for _, colourCode := range activeColours {
 		if _, ok := s.Colours[colourCode]; !ok {
 			s.Colours[colourCode] = utils.HexColour(customisation.DefaultColours[colourCode])

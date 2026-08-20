@@ -505,6 +505,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.GET("/analytics/adoption", admin_analytics_api.GetAdoptionHandler)
 			adminTier.GET("/analytics/retention", admin_analytics_api.GetRetentionHandler)
 			adminTier.GET("/analytics/config-patterns", admin_analytics_api.GetConfigPatternsHandler)
+
+			// Feature flags: read-only. Mutations (create, toggle, rule edits) stay
+			// owner-only below, since a toggle is effectively a kill switch.
+			adminTier.GET("/feature-flags", admin_featureflags.ListHandler)
+			adminTier.GET("/feature-flags/experiments", admin_featureflags.ListExperimentsHandler)
 		}
 
 		// Owner-only routes
@@ -531,10 +536,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.PUT("/affiliate/:id/code", admin_affiliate.UpdateCodeHandler)
 			ownerTier.POST("/affiliate/referrals/:id/void", admin_affiliate.VoidHandler)
 
-			// Feature flags. Read plus the atomic per-environment toggle, which is
-			// the kill switch. Rule authoring stays in GrowthBook's own UI.
-			ownerTier.GET("/feature-flags", admin_featureflags.ListHandler)
-			ownerTier.GET("/feature-flags/experiments", admin_featureflags.ListExperimentsHandler)
+			// Feature flags. The atomic per-environment toggle is the kill switch.
+			// Rule authoring stays in GrowthBook's own UI. Reads are admin-tier, above.
 			ownerTier.POST("/feature-flags", admin_featureflags.CreateHandler)
 			ownerTier.POST("/feature-flags/:key/toggle", admin_featureflags.ToggleHandler)
 			ownerTier.PUT("/feature-flags/:key/environments/:environment/rules", admin_featureflags.UpdateRulesHandler)

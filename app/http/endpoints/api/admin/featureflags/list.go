@@ -2,8 +2,10 @@ package featureflags
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/TicketsBot-cloud/dashboard/growthbook"
+	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -16,12 +18,19 @@ type listResponse struct {
 }
 
 type flagResponse struct {
-	Key          string   `json:"key"`
-	Description  string   `json:"description"`
-	ValueType    string   `json:"value_type"`
-	DefaultValue string   `json:"default_value"`
-	Owner        string   `json:"owner"`
-	Tags         []string `json:"tags"`
+	Key          string `json:"key"`
+	Description  string `json:"description"`
+	ValueType    string `json:"value_type"`
+	DefaultValue string `json:"default_value"`
+	// Owner is whatever GrowthBook holds for the feature: the dashboard writes
+	// the creating staff member's Discord user ID here (see create.go), but a
+	// flag created directly in GrowthBook's own UI may hold arbitrary text.
+	Owner string `json:"owner"`
+	// OwnerName is the resolved display name for Owner, when Owner parses as a
+	// Discord user ID and that user is in cache. Empty otherwise, so the
+	// frontend falls back to the raw Owner string.
+	OwnerName string   `json:"owner_name,omitempty"`
+	Tags      []string `json:"tags"`
 	// UpdatedAt doubles as the optimistic concurrency token for rule writes.
 	UpdatedAt    string                     `json:"updated_at"`
 	Environments map[string]environmentData `json:"environments"`
@@ -62,7 +71,44 @@ func ListHandler(ctx *gin.Context) {
 		flags = append(flags, buildFlagResponse(feature))
 	}
 
+	resolveOwnerNames(ctx, flags)
+
 	ctx.JSON(200, listResponse{Flags: flags, Environments: environments})
+}
+
+// resolveOwnerNames fills in OwnerName for every flag whose Owner parses as a
+// Discord user ID and is found in cache, deduplicating lookups across flags
+// sharing the same owner. Unresolved owners (not a valid ID, or not cached)
+// are left as-is; the frontend falls back to the raw Owner string.
+func resolveOwnerNames(ctx *gin.Context, flags []flagResponse) {
+	ownerIds := make(map[uint64]struct{})
+	for _, flag := range flags {
+		if id, err := strconv.ParseUint(flag.Owner, 10, 64); err == nil {
+			ownerIds[id] = struct{}{}
+		}
+	}
+
+	if len(ownerIds) == 0 {
+		return
+	}
+
+	names := make(map[uint64]string, len(ownerIds))
+	for id := range ownerIds {
+		if user, err := cache.Instance.GetUser(ctx, id); err == nil {
+			names[id] = user.Username
+		}
+	}
+
+	for i := range flags {
+		id, err := strconv.ParseUint(flags[i].Owner, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		if name, ok := names[id]; ok {
+			flags[i].OwnerName = name
+		}
+	}
 }
 
 func buildFlagResponse(feature growthbook.Feature) flagResponse {

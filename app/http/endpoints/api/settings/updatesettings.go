@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/TicketsBot-cloud/common/premium"
+	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -31,14 +33,14 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	// Get a list of all channel IDs
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	// Includes voting
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to verify premium status. Please try again."))
 		return
 	}
 
@@ -50,7 +52,7 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	// Fetch current settings before mutation for audit diff
 	oldSettings, err := loadSettings(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to save settings. Please try again."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save settings. Please try again."))
 		return
 	}
 
@@ -71,7 +73,7 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	}
 
 	if err := group.Wait(); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to save settings. Please try again."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save settings. Please try again."))
 		return
 	}
 
@@ -113,6 +115,10 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 		if !utils.Exists(activeColours, colour) {
 			return errors.New("Invalid colour")
 		}
+	}
+
+	if s.Colours == nil {
+		s.Colours = make(ColourMap)
 	}
 
 	for _, colourCode := range activeColours {

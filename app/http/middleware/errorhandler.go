@@ -5,7 +5,9 @@ import (
 	"errors"
 
 	"github.com/TicketsBot-cloud/dashboard/app"
+	"github.com/TicketsBot-cloud/dashboard/log"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type ErrorResponse struct {
@@ -53,6 +55,14 @@ func ErrorHandler(c *gin.Context) {
 	}
 
 	if c.Writer.Status() >= 500 {
+		// The handler's own message never reaches the client, so keep it in the logs
+		log.Logger.Error("Request failed",
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.Int("status", c.Writer.Status()),
+			zap.String("response", cw.buf.String()),
+		)
+
 		c.Writer = cw.ResponseWriter
 
 		c.JSON(-1, ErrorResponse{

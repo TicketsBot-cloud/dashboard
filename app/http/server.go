@@ -501,14 +501,6 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.GET("/affiliate/:id/referrals", admin_affiliate.ReferralsHandler)
 			adminTier.GET("/affiliate/flagged", admin_affiliate.FlaggedHandler)
 
-			// Feature flags. Read plus the atomic per-environment toggle, which is
-			// the kill switch. Rule authoring stays in GrowthBook's own UI.
-			adminTier.GET("/feature-flags", admin_featureflags.ListHandler)
-			adminTier.GET("/feature-flags/experiments", admin_featureflags.ListExperimentsHandler)
-			adminTier.POST("/feature-flags", admin_featureflags.CreateHandler)
-			adminTier.POST("/feature-flags/:key/toggle", admin_featureflags.ToggleHandler)
-			adminTier.PUT("/feature-flags/:key/environments/:environment/rules", admin_featureflags.UpdateRulesHandler)
-
 			adminTier.GET("/analytics/usage", admin_analytics_api.GetUsageHandler)
 			adminTier.GET("/analytics/adoption", admin_analytics_api.GetAdoptionHandler)
 			adminTier.GET("/analytics/retention", admin_analytics_api.GetRetentionHandler)
@@ -538,6 +530,14 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.PUT("/affiliate/:id/rates", admin_affiliate.UpdateRatesHandler)
 			ownerTier.PUT("/affiliate/:id/code", admin_affiliate.UpdateCodeHandler)
 			ownerTier.POST("/affiliate/referrals/:id/void", admin_affiliate.VoidHandler)
+
+			// Feature flags. Read plus the atomic per-environment toggle, which is
+			// the kill switch. Rule authoring stays in GrowthBook's own UI.
+			ownerTier.GET("/feature-flags", admin_featureflags.ListHandler)
+			ownerTier.GET("/feature-flags/experiments", admin_featureflags.ListExperimentsHandler)
+			ownerTier.POST("/feature-flags", admin_featureflags.CreateHandler)
+			ownerTier.POST("/feature-flags/:key/toggle", admin_featureflags.ToggleHandler)
+			ownerTier.PUT("/feature-flags/:key/environments/:environment/rules", admin_featureflags.UpdateRulesHandler)
 
 			ownerTier.POST("/utilities/commands/main", rl(middleware.RateLimitTypeUser, 3, time.Minute), admin_utilities.RecreateMainCommands())
 			ownerTier.POST("/utilities/commands/whitelabel/all", rl(middleware.RateLimitTypeUser, 2, time.Minute), admin_utilities.RecreateAllWhitelabelCommands())

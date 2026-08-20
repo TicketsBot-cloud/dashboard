@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
@@ -20,6 +21,11 @@ import (
 func MultiPanelResend(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_PANELS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(503, utils.ErrorStr("Panel management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	// parse panel ID
 	panelId, err := strconv.Atoi(ctx.Param("panelid"))

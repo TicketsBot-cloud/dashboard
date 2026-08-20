@@ -2,10 +2,12 @@ package api
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -44,6 +46,11 @@ var validate = newIntegrationValidator()
 
 func CreateIntegrationHandler(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_INTEGRATIONS", featureflags.ForDashboardUser(userId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Integration management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	ownedCount, err := dbclient.Client.CustomIntegrations.GetOwnedCount(ctx, userId)
 	if err != nil {

@@ -145,7 +145,13 @@ func main() {
 	)
 
 	// A GrowthBook outage must not stop the API booting, so a failure here is
-	// logged and evaluation degrades to every flag off.
+	// logged. New only errors on genuine misconfiguration (not on GrowthBook
+	// simply being unreachable, which it retries in the background). A nil
+	// utils.FeatureFlags evaluates every flag as enabled, which is correct when
+	// GrowthBook was never configured at all, but wrong when it was configured
+	// and construction still failed - that deployment intended to use
+	// GrowthBook, so it must keep failing closed like an unreachable backend
+	// does, not fail open.
 	utils.FeatureFlags, err = featureflags.New(
 		context.Background(),
 		config.Conf.FeatureFlags,
@@ -154,7 +160,28 @@ func main() {
 		utils.ExposureRecorder,
 	)
 	if err != nil {
-		logger.Error("Failed to configure feature flags, all flags will evaluate to off", zap.Error(err))
+		logger.Error("Failed to configure feature flags", zap.Error(err))
+
+		if config.Conf.FeatureFlags.Attempted() {
+			// Some GrowthBook configuration was supplied and New still failed, so
+			// this is not the self-hosted "no GrowthBook at all" case - that
+			// includes a partial config (only one of ApiHost/ClientKey set), which
+			// New now rejects as an error rather than silently falling through to
+			// unconfigured. Using Attempted rather than Enabled here matters: Enabled
+			// is false for a partial config too, and gating on it would route this
+			// exact failure back to the fail-open default. Build a fail-closed
+			// client with an empty ruleset instead of leaving utils.FeatureFlags
+			// nil, which would otherwise evaluate every flag, including kill
+			// switches, as enabled.
+			utils.FeatureFlags, err = featureflags.NewOffline(context.Background(), logger, "{}", utils.ExposureRecorder)
+			if err != nil {
+				logger.Error("Failed to build fail-closed feature flags fallback, every flag will evaluate to enabled", zap.Error(err))
+			} else {
+				logger.Warn("Feature flags falling back to a fail-closed client: every flag evaluates to off until this is fixed")
+			}
+		} else {
+			logger.Warn("Feature flags unavailable with GrowthBook not configured: every flag evaluates to enabled")
+		}
 	}
 
 	socketManager := livechat.NewSocketManager()

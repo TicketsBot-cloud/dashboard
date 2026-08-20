@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -26,6 +27,11 @@ type importFormBody struct {
 func ImportFormHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_FORMS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Form management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	listingId, err := strconv.Atoi(ctx.Param("listingId"))
 	if err != nil {

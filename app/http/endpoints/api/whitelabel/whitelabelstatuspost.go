@@ -5,6 +5,7 @@ import (
 
 	"fmt"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/statusupdates"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -23,6 +24,11 @@ type statusUpdateBody struct {
 
 func WhitelabelStatusPost(c *gin.Context) {
 	userId := c.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(c, "202608_FEATURE_WHITELABEL", featureflags.ForDashboardUser(userId)) {
+		c.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Whitelabel management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	// Get bot
 	bot, err := database.Client.Whitelabel.GetByUserId(c, userId)

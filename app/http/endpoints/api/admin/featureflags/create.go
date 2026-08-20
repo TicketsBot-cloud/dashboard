@@ -28,6 +28,12 @@ type createBody struct {
 	// for a multivariate one.
 	ValueType    string `json:"value_type"`
 	DefaultValue string `json:"default_value"`
+	// StartEnabled opts a boolean flag into starting enabled in every environment,
+	// rather than the usual disabled-until-someone-flips-it default. Intended only
+	// for FEATURE_* kill switches that guard an already-shipped feature: creating
+	// one disabled would mean the feature it guards is broken for everyone from
+	// the moment the flag exists until someone manually enables it.
+	StartEnabled bool `json:"start_enabled"`
 }
 
 var allowedValueTypes = map[string]string{
@@ -67,6 +73,11 @@ func CreateHandler(ctx *gin.Context) {
 		return
 	}
 
+	if body.StartEnabled && body.ValueType != "boolean" {
+		ctx.JSON(400, utils.ErrorStr("start_enabled is only valid for boolean flags."))
+		return
+	}
+
 	defaultValue := body.DefaultValue
 	if defaultValue == "" {
 		defaultValue = fallback
@@ -77,6 +88,13 @@ func CreateHandler(ctx *gin.Context) {
 		return
 	}
 
+	// A flag created enabled must actually evaluate to true with no rules in
+	// place yet, so the default value is forced to match rather than trusting
+	// whatever (or nothing) the caller passed as default_value.
+	if body.StartEnabled {
+		defaultValue = "true"
+	}
+
 	if body.ValueType == "number" {
 		if _, err := strconv.ParseFloat(defaultValue, 64); err != nil {
 			ctx.JSON(400, utils.ErrorStr("A number flag's default must be numeric."))
@@ -84,8 +102,10 @@ func CreateHandler(ctx *gin.Context) {
 		}
 	}
 
-	// Created disabled in every environment. A new flag must never start on: the
-	// point of creating it is to roll it out deliberately afterwards.
+	// Created disabled in every environment by default. A new flag must never
+	// start on: the point of creating it is to roll it out deliberately
+	// afterwards. The one opt-in exception is StartEnabled, for a FEATURE_* kill
+	// switch created around a feature that already ships to everyone.
 	environments, err := Client.ListEnvironments(ctx)
 	if err != nil {
 		if errors.Is(err, growthbook.ErrNotConfigured) {
@@ -101,7 +121,7 @@ func CreateHandler(ctx *gin.Context) {
 	environmentSettings := make(map[string]growthbook.FeatureEnvironment, len(environments))
 	for _, name := range environments {
 		environmentSettings[name] = growthbook.FeatureEnvironment{
-			Enabled: false,
+			Enabled: body.StartEnabled,
 			Rules:   []growthbook.FeatureRule{},
 		}
 	}
@@ -142,6 +162,7 @@ func CreateHandler(ctx *gin.Context) {
 			"description":   body.Description,
 			"value_type":    body.ValueType,
 			"default_value": defaultValue,
+			"start_enabled": body.StartEnabled,
 		},
 	})
 

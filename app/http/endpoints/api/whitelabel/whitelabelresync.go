@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/tokenchange"
 	"github.com/TicketsBot-cloud/common/whitelabel"
 	"github.com/TicketsBot-cloud/dashboard/app"
@@ -29,6 +30,11 @@ func WhitelabelResync() func(*gin.Context) {
 
 	return func(c *gin.Context) {
 		userId := c.Keys["userid"].(uint64)
+
+		if !utils.FeatureFlags.IsEnabled(c, "202608_FEATURE_WHITELABEL", featureflags.ForDashboardUser(userId)) {
+			c.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Whitelabel management is temporarily unavailable. Please try again shortly."))
+			return
+		}
 
 		bot, err := dbclient.Client.Whitelabel.GetByUserId(c, userId)
 		if err != nil {

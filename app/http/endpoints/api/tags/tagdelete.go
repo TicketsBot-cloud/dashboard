@@ -2,7 +2,9 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	"github.com/TicketsBot-cloud/dashboard/database"
@@ -18,6 +20,11 @@ type deleteBody struct {
 func DeleteTag(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_TAGS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Tag management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	var body deleteBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {

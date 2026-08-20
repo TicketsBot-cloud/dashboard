@@ -3,9 +3,11 @@ package api
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
@@ -37,6 +39,11 @@ var (
 func CreateTag(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_TAGS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Tag management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	// Max of 200 tags
 	count, err := dbclient.Client.Tag.GetTagCount(ctx, guildId)

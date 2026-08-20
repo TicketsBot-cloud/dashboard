@@ -2,8 +2,10 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -14,6 +16,11 @@ import (
 func AddMember(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_TEAMS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Team management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	snowflake, err := strconv.ParseUint(ctx.Param("snowflake"), 10, 64)
 	if err != nil {

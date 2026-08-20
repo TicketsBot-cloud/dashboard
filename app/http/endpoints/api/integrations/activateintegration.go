@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -30,6 +31,11 @@ func substituteIntegrationPlaceholders(value string, guildId, userId uint64, sec
 func ActivateIntegrationHandler(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
 	guildId := ctx.Keys["guildid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_INTEGRATIONS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Integration management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	activeCount, err := dbclient.Client.CustomIntegrationGuilds.GetGuildIntegrationCount(ctx, guildId)
 	if err != nil {

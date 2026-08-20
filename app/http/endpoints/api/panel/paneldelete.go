@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -22,6 +23,11 @@ import (
 func DeletePanel(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
 	userId := c.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(c, "202608_FEATURE_PANELS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		c.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Panel management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {

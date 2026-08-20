@@ -2,7 +2,9 @@ package api
 
 import (
 	"context"
+	"net/http"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
@@ -38,6 +40,11 @@ const (
 func AddBlacklistHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_BLACKLIST", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Blacklist management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	var body blacklistAddBody
 	if err := ctx.ShouldBindJSON(&body); err != nil {

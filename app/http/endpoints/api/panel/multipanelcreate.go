@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/dashboard/app"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
@@ -60,6 +61,11 @@ func (d *multiPanelCreateData) IntoMessageData(isPremium bool) multiPanelMessage
 func MultiPanelCreate(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
 	userId := c.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(c, "202608_FEATURE_PANELS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		c.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Panel management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	var data multiPanelCreateData
 	if err := c.ShouldBindJSON(&data); err != nil {

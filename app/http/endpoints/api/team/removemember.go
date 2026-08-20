@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/botcontext"
 	dbclient "github.com/TicketsBot-cloud/dashboard/database"
@@ -18,6 +20,11 @@ import (
 
 func RemoveMember(ctx *gin.Context) {
 	guildId, selfId := ctx.Keys["guildid"].(uint64), ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_TEAMS", featureflags.ForDashboardUser(selfId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Team management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	snowflake, err := strconv.ParseUint(ctx.Param("snowflake"), 10, 64)
 	if err != nil {

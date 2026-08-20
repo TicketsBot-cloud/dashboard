@@ -1,10 +1,12 @@
 package api
 
 import (
+	"net/http"
 	"strconv"
 
 	"fmt"
 
+	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/dashboard/app/http/audit"
 	"github.com/TicketsBot-cloud/dashboard/database"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -15,6 +17,11 @@ import (
 func RemoveUserBlacklistHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	authUserId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_BLACKLIST", featureflags.ForDashboardUser(authUserId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Blacklist management is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	userId, err := strconv.ParseUint(ctx.Param("user"), 10, 64)
 	if err != nil {

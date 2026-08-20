@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/TicketsBot-cloud/dashboard/config"
 	"github.com/TicketsBot-cloud/dashboard/growthbook"
 	"github.com/TicketsBot-cloud/dashboard/rpc/cache"
 	"github.com/TicketsBot-cloud/dashboard/utils"
@@ -15,6 +16,8 @@ type listResponse struct {
 	// Environments is what GrowthBook actually has configured, so the UI offers
 	// real names instead of assuming production and staging.
 	Environments []string `json:"environments"`
+	Configured     bool `json:"configured"`
+	FlagsDefaultOn bool `json:"flags_default_on"`
 }
 
 type flagResponse struct {
@@ -45,7 +48,11 @@ func ListHandler(ctx *gin.Context) {
 	features, err := Client.ListFeatures(ctx)
 	if err != nil {
 		if errors.Is(err, growthbook.ErrNotConfigured) {
-			ctx.JSON(503, utils.ErrorStr("Feature flags are not configured for this environment."))
+			ctx.JSON(200, listResponse{
+				Flags:          []flagResponse{},
+				Environments:   []string{},
+				FlagsDefaultOn: !config.Conf.FeatureFlags.Enabled(),
+			})
 			return
 		}
 
@@ -73,7 +80,12 @@ func ListHandler(ctx *gin.Context) {
 
 	resolveOwnerNames(ctx, flags)
 
-	ctx.JSON(200, listResponse{Flags: flags, Environments: environments})
+	ctx.JSON(200, listResponse{
+		Flags:          flags,
+		Environments:   environments,
+		Configured:     true,
+		FlagsDefaultOn: !config.Conf.FeatureFlags.Enabled(),
+	})
 }
 
 // resolveOwnerNames fills in OwnerName for every flag whose Owner parses as a

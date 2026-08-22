@@ -150,7 +150,7 @@ func SendTag(ctx *gin.Context) {
 		fieldsCopy := make([]database.EmbedField, len(tag.Embed.Fields))
 		for i, field := range tag.Embed.Fields {
 			fieldsCopy[i] = field
-			fieldsCopy[i].Name = replacePlaceholders(ctx, field.Name, &ticket, botContext)
+			fieldsCopy[i].Name = replacePlainTextPlaceholders(ctx, field.Name, &ticket, botContext)
 			fieldsCopy[i].Value = replacePlaceholders(ctx, field.Value, &ticket, botContext)
 		}
 

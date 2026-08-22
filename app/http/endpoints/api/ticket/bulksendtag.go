@@ -146,7 +146,7 @@ func BulkSendTag(ctx *gin.Context) {
 			fieldsCopy := make([]database.EmbedField, len(tag.Embed.Fields))
 			for j, field := range tag.Embed.Fields {
 				fieldsCopy[j] = field
-				fieldsCopy[j].Name = replacePlaceholders(opCtx, field.Name, &ticket, botContext)
+				fieldsCopy[j].Name = replacePlainTextPlaceholders(opCtx, field.Name, &ticket, botContext)
 				fieldsCopy[j].Value = replacePlaceholders(opCtx, field.Value, &ticket, botContext)
 			}
 

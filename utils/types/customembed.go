@@ -6,10 +6,22 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
 )
 
+const AvatarUrlPlaceholder = "%avatar_url%"
+
+const DefaultAvatarUrl = "https://cdn.discordapp.com/embed/avatars/0.png"
+
+func resolveAvatarPlaceholder(url string) string {
+	if url == AvatarUrlPlaceholder {
+		return DefaultAvatarUrl
+	}
+
+	return url
+}
+
 type CustomEmbed struct {
 	Title        *string        `json:"title" validate:"omitempty,min=1,max=256"`
 	Description  *string        `json:"description" validate:"omitempty,min=1,max=4096"`
-	Url          *string        `json:"url" validate:"omitempty,url,max=255"`
+	Url          *string        `json:"url" validate:"omitempty,max=255"`
 	Colour       Colour         `json:"colour" validate:"gte=0,lte=16777215"`
 	Author       Author         `json:"author" validate:"dive"`
 	ImageUrl     *string        `json:"image_url" validate:"omitempty,max=255"`
@@ -21,13 +33,13 @@ type CustomEmbed struct {
 
 type Author struct {
 	Name    *string `json:"name" validate:"omitempty,min=1,max=256"`
-	IconUrl *string `json:"icon_url" validate:"omitempty,url,max=255"`
-	Url     *string `json:"url" validate:"omitempty,url,max=255"`
+	IconUrl *string `json:"icon_url" validate:"omitempty,max=255"`
+	Url     *string `json:"url" validate:"omitempty,max=255"`
 }
 
 type Footer struct {
 	Text    *string `json:"text" validate:"omitempty,min=1,max=2048"`
-	IconUrl *string `json:"icon_url" validate:"omitempty,url,max=255"`
+	IconUrl *string `json:"icon_url" validate:"omitempty,max=255"`
 }
 
 type Field struct {
@@ -97,7 +109,7 @@ func (c *CustomEmbed) IntoDiscordEmbed() *embed.Embed {
 	e := &embed.Embed{
 		Title:       utils.ValueOrZero(c.Title),
 		Description: utils.ValueOrZero(c.Description),
-		Url:         utils.ValueOrZero(c.Url),
+		Url:         resolveAvatarPlaceholder(utils.ValueOrZero(c.Url)),
 		Timestamp:   TimeOrNil(c.Timestamp),
 		Color:       int(c.Colour),
 	}
@@ -105,23 +117,23 @@ func (c *CustomEmbed) IntoDiscordEmbed() *embed.Embed {
 	if c.Footer.Text != nil {
 		e.Footer = &embed.EmbedFooter{
 			Text:    *c.Footer.Text,
-			IconUrl: utils.ValueOrZero(c.Footer.IconUrl),
+			IconUrl: resolveAvatarPlaceholder(utils.ValueOrZero(c.Footer.IconUrl)),
 		}
 	}
 
-	if c.ImageUrl != nil {
-		e.SetImage(*c.ImageUrl)
+	if imageUrl := resolveAvatarPlaceholder(utils.ValueOrZero(c.ImageUrl)); imageUrl != "" {
+		e.SetImage(imageUrl)
 	}
 
-	if c.ThumbnailUrl != nil {
-		e.SetThumbnail(*c.ThumbnailUrl)
+	if thumbnailUrl := resolveAvatarPlaceholder(utils.ValueOrZero(c.ThumbnailUrl)); thumbnailUrl != "" {
+		e.SetThumbnail(thumbnailUrl)
 	}
 
 	if c.Author.Name != nil {
 		e.Author = &embed.EmbedAuthor{
 			Name:    *c.Author.Name,
-			IconUrl: utils.ValueOrZero(c.Author.IconUrl),
-			Url:     utils.ValueOrZero(c.Author.Url),
+			IconUrl: resolveAvatarPlaceholder(utils.ValueOrZero(c.Author.IconUrl)),
+			Url:     resolveAvatarPlaceholder(utils.ValueOrZero(c.Author.Url)),
 		}
 	}
 

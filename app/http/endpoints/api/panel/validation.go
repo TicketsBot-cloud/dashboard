@@ -447,29 +447,21 @@ func validateEmbed(e *types.CustomEmbed) error {
 		return nil
 	}
 
-	if e.Title != nil || e.Description != nil || len(e.Fields) > 0 || e.ImageUrl != nil || e.ThumbnailUrl != nil {
-		if e.ImageUrl != nil && (len(*e.ImageUrl) > 255 || !urlRegex.MatchString(*e.ImageUrl)) {
-			if *e.ImageUrl == "%avatar_url%" {
-				// Ignore validation as it is a placeholder
-				return nil
-			}
-
-			return validation.NewInvalidInputError("Invalid URL")
-		}
-
-		if e.ThumbnailUrl != nil && (len(*e.ThumbnailUrl) > 255 || !urlRegex.MatchString(*e.ThumbnailUrl)) {
-			if *e.ThumbnailUrl == "%avatar_url%" {
-				// Ignore validation as it is a placeholder
-				return nil
-			}
-
-			return validation.NewInvalidInputError("Invalid URL")
-		}
-
-		return nil
+	if e.Title == nil && e.Description == nil && len(e.Fields) == 0 && e.ImageUrl == nil && e.ThumbnailUrl == nil {
+		return validation.NewInvalidInputError("Your embed message does not contain any content")
 	}
 
-	return validation.NewInvalidInputError("Your embed message does not contain any content")
+	for _, url := range []*string{e.ImageUrl, e.ThumbnailUrl} {
+		if url == nil || *url == types.AvatarUrlPlaceholder {
+			continue
+		}
+
+		if len(*url) > 255 || !urlRegex.MatchString(*url) {
+			return validation.NewInvalidInputError("Invalid URL")
+		}
+	}
+
+	return nil
 }
 
 func validateCooldownSeconds(ctx PanelValidationContext) validation.ValidationFunc {

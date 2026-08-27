@@ -1,12 +1,12 @@
 module github.com/ticketsbot-cloud/dashboard/backend
 
-go 1.25.0
+go 1.26.0
 
-replace github.com/TicketsBot-cloud/database => ../../database
+// replace github.com/TicketsBot-cloud/database => ../../database
 
-replace github.com/TicketsBot-cloud/common => ../../common
+// replace github.com/TicketsBot-cloud/common => ../../common
 
-replace github.com/TicketsBot-cloud/worker => ../../worker
+// replace github.com/TicketsBot-cloud/worker => ../../worker
 
 replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0
 
@@ -17,7 +17,7 @@ require (
 	github.com/TicketsBot-cloud/database v0.0.0-20260827064551-53077b598c5f
 	github.com/TicketsBot-cloud/gdl v0.0.0-20260612070331-a3947b410d3e
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
-	github.com/TicketsBot-cloud/worker v0.0.0-20260620183502-78b4655311f6
+	github.com/TicketsBot-cloud/worker v0.0.0-20260827073646-455b39e53841
 	github.com/apex/log v1.1.2
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/getsentry/sentry-go v0.33.0
@@ -40,8 +40,8 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/polarsource/polar-go v0.15.0
 	github.com/prometheus/client_golang v1.22.0
-	github.com/sirupsen/logrus v1.9.4
-	github.com/stretchr/testify v1.11.1
+	github.com/sirupsen/logrus v1.10.2
+	github.com/stretchr/testify v1.12.1
 	github.com/weppos/publicsuffix-go v0.20.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/sync v0.22.0
@@ -60,7 +60,6 @@ require (
 	github.com/caarlos0/env/v10 v10.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/elliotchance/orderedmap v1.8.0 // indirect
@@ -107,7 +106,6 @@ require (
 	github.com/pasztorpisti/qs v0.0.0-20171216220353-8d6c33ee906c // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
@@ -122,9 +120,10 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/arch v0.17.0 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
+	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect

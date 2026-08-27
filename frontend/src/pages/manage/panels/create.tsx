@@ -865,6 +865,7 @@ const PanelsPage: FC = () => {
           {panel.overflow_enabled && (
             <Select
               label="Overflow Category"
+              placeholder="Select a category..."
               options={
                 selectedGuild?.channels
                   ?.filter((c) => c.type === 4)

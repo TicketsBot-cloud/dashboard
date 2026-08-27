@@ -98,8 +98,8 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      target: "es2015",
-      minify: "terser",
+      target: "es2022",
+      minify: "esbuild",
       sourcemap: false,
     },
   };

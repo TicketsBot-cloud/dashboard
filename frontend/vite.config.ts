@@ -98,7 +98,7 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      target: "es2015",
+      target: "es2022",
       minify: "terser",
       sourcemap: false,
     },

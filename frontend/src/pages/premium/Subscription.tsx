@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth";
 import { PATREON_URL } from "@/lib/constants";
 import { formatCurrency } from "@/lib/currency";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
+import { PRICING_FLAG } from "@/lib/feature-flags";
 import type { UserEntitlement, LegacyEntitlement, PolarSubscription, Guild } from "@/types";
 
 interface SubscriptionData {
@@ -98,6 +100,8 @@ export default function Subscription() {
   const [orders, setOrders] = useState<PolarOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
+  const { enabled: billingEnabled } = useFeatureFlag(PRICING_FLAG);
+
   const loadData = useCallback(async () => {
     try {
       const res = await apiClient.premium.getEntitlements();
@@ -129,8 +133,13 @@ export default function Subscription() {
     const storedGuilds = useAuthStore.getState().guilds;
     setGuilds(storedGuilds);
     loadData();
+  }, [loadData]);
+
+  // enabled is undefined while flags load, so this waits rather than firing on the off path.
+  useEffect(() => {
+    if (!billingEnabled) return;
     loadOrders();
-  }, [loadData, loadOrders]);
+  }, [billingEnabled, loadOrders]);
 
   const handleCancel = async () => {
     if (!cancelTarget) return;
@@ -397,7 +406,7 @@ export default function Subscription() {
           </div>
         )}
         {/* Billing history */}
-        {!ordersLoading && orders.length > 0 && (
+        {billingEnabled && !ordersLoading && orders.length > 0 && (
           <div className="bg-gray-800 rounded-xl p-6">
             <h2 className="text-xl font-bold text-white mb-4">Billing History</h2>
             <Table variant="compact">

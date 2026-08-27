@@ -50,7 +50,7 @@ import { useFeatureLock } from "@/hooks/useFeatureLock";
 
 const PRESET_NAMING_SCHEMES = [
   "ticket-%id%",
-  "ticket-%name%",
+  "ticket-%username%",
   "ticket-%id%-%username%",
   "ticket-%nickname%",
   "ticket-%id_padded%",
@@ -733,7 +733,7 @@ const EditPanelsPage: FC = () => {
             label="Naming Scheme"
             options={[
               { label: "ticket-%id%", key: "ticket-%id%" },
-              { label: "ticket-%username%", key: "ticket-%name%" },
+              { label: "ticket-%username%", key: "ticket-%username%" },
               { label: "ticket-%id%-%username%", key: "ticket-%id%-%username%" },
               { label: "ticket-%nickname%", key: "ticket-%nickname%" },
               { label: "ticket-%id_padded%", key: "ticket-%id_padded%" },

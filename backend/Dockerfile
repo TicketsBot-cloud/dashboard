@@ -6,12 +6,10 @@ FROM golang:1.25 AS builder
 # COPY database/ /go/src/github.com/TicketsBot-cloud/database/
 # COPY worker/ /go/src/github.com/TicketsBot-cloud/worker/
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y ca-certificates git zlib1g-dev
+RUN apt-get update && apt-get upgrade -y && apt-get install -y ca-certificates zlib1g-dev
 
 COPY . /go/src/github.com/TicketsBot-cloud/dashboard
 WORKDIR /go/src/github.com/TicketsBot-cloud/dashboard
-
-RUN git submodule update --init --recursive --remote
 
 RUN set -Eeux && \
     go mod download && \

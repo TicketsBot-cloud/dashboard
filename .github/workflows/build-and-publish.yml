@@ -20,4 +20,5 @@ jobs:
       package_name: api
       sha: ${{ github.sha }}
       working_directory: backend
+      update_submodules_remote: true
     secrets: inherit

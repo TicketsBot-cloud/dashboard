@@ -1,7 +1,14 @@
 import { forwardRef, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
 
 export type ButtonVariant =
-  "primary" | "danger" | "secondary" | "success" | "purple" | "ghost" | "outline" | "dashed";
+  | "primary"
+  | "danger"
+  | "secondary"
+  | "success"
+  | "purple"
+  | "ghost"
+  | "outline"
+  | "dashed";
 type ButtonSize = "sm" | "md" | "icon";
 
 interface ButtonProps extends Omit<

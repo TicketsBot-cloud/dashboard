@@ -84,7 +84,11 @@ const ALL_ANALYTICS_COLUMNS = [
 ];
 
 type StaffSortKey =
-  "staff_member" | "tickets_answered" | "tickets_claimed" | "avg_rating" | "rating_count";
+  | "staff_member"
+  | "tickets_answered"
+  | "tickets_claimed"
+  | "avg_rating"
+  | "rating_count";
 
 const STAFF_SORT_COLUMNS: Record<StaffSortKey, SortColumn<StaffMemberStats>> = {
   staff_member: { value: (m) => m.username || m.user_id, defaultDir: "asc" },

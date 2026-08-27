@@ -1,0 +1,16 @@
+User-agent: *
+
+# Allow the main page exactly
+Allow: /$
+
+# Allow Vite static assets so the main page can render for search engines
+Allow: /assets/
+Allow: /images/
+Allow: /fonts/
+Allow: /*.png
+Allow: /*.svg
+Allow: /*.ico
+Allow: /site.webmanifest
+
+# Disallow all other routes (dashboard panels, auth redirects, etc.)
+Disallow: /

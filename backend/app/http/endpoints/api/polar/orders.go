@@ -29,6 +29,11 @@ func GetOrders(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
 	userIdStr := strconv.FormatUint(userId, 10)
 
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_NEW_PRICING_PAGE", utils.DashboardFlagAttributes(ctx, userId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Billing history is temporarily unavailable. Please try again shortly."))
+		return
+	}
+
 	page := int64(1)
 	limit := int64(50)
 
@@ -93,6 +98,11 @@ func GetOrderInvoice(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
 	userIdStr := strconv.FormatUint(userId, 10)
 	orderId := ctx.Param("orderid")
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_NEW_PRICING_PAGE", utils.DashboardFlagAttributes(ctx, userId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Billing history is temporarily unavailable. Please try again shortly."))
+		return
+	}
 
 	// Verify the order belongs to this user by fetching it and checking the customer.
 	orderRes, err := GetPolarClient().Orders.Get(ctx, orderId)

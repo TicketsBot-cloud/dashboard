@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
-	"github.com/ticketsbot-cloud/dashboard/backend/internal/admin"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 )
@@ -33,23 +32,6 @@ var browserFlags = []string{
 	"202608_FEATURE_WHITELABEL",
 	"202608_FEATURE_INTEGRATIONS",
 	"202608_FEATURE_AUTOMATIONS",
-}
-
-// buildDashboardAttributes builds the base targeting attributes for the
-// logged-in dashboard user, bucketed on the dashboard user.
-func buildDashboardAttributes(ctx *gin.Context, userId uint64) featureflags.Attributes {
-	attributes := featureflags.ForDashboardUser(userId)
-
-	// Staff tier lets internal users see a feature before anyone else. This route
-	// is not under RequireAdminTier, so admin_tier is absent from ctx.Keys and the
-	// tier has to be looked up. That is one query per page load, not per request in
-	// a hot path, and without it every staff-targeted rule would silently never
-	// match.
-	if tier := admin.GetAdminTier(ctx, userId); tier != admin.AdminTierNone {
-		attributes = attributes.WithStaffTier(string(tier))
-	}
-
-	return attributes
 }
 
 // evalBrowserFlags evaluates the allowlisted flags against the given attributes.
@@ -81,7 +63,7 @@ func evalBrowserFlags(ctx *gin.Context, attributes featureflags.Attributes) map[
 // frontend reads them through useFeatureFlag.
 func GetFeatureFlags(ctx *gin.Context) {
 	userId := ctx.Keys["userid"].(uint64)
-	ctx.JSON(200, evalBrowserFlags(ctx, buildDashboardAttributes(ctx, userId)))
+	ctx.JSON(200, evalBrowserFlags(ctx, utils.DashboardFlagAttributes(ctx, userId)))
 }
 
 // GetGuildFeatureFlags evaluates the same browser-visible flags, scoped to a
@@ -103,7 +85,7 @@ func GetGuildFeatureFlags(ctx *gin.Context) {
 		return
 	}
 
-	attributes := buildDashboardAttributes(ctx, userId).
+	attributes := utils.DashboardFlagAttributes(ctx, userId).
 		WithGuild(guildId).
 		WithPremiumTier(int8(premiumTier))
 

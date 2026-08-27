@@ -117,13 +117,13 @@ export const useUpdateKBCategory = (guildId: string) => {
   });
 };
 
-export const useKBSettings = (guildId: string | undefined) => {
+export const useKBSettings = (guildId: string | undefined, enabled = true) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return useQuery<KBCustomisation>({
     queryKey: kbKeys.settings(guildId || ""),
     queryFn: () => apiClient.kb.getSettings(guildId!).then((res) => res.data),
-    enabled: isAuthenticated && !!guildId,
+    enabled: isAuthenticated && !!guildId && enabled,
     staleTime: 30_000,
   });
 };

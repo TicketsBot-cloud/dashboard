@@ -404,7 +404,7 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile hamburger button - always z-50 so the sidebar (z-50) physically slides over/away from it */}
+      {/* Mobile hamburger button - sits below the sidebar (z-mobile-nav) so the drawer slides over it when open */}
       <div className="block md:hidden fixed top-4 left-4 z-50">
         <button
           type="button"
@@ -424,9 +424,9 @@ const Sidebar = () => {
         </button>
       </div>
 
-      {/* Mobile overlay */}
+      {/* Mobile overlay - above z-popover (10001) so it covers any dropdown menus left open behind it */}
       <div
-        className={`fixed inset-0 bg-black/50 z-55 transition-opacity md:hidden ${
+        className={`fixed inset-0 bg-black/50 z-mobile-nav-backdrop transition-opacity md:hidden ${
           mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={toggleMobileMenu}
@@ -436,7 +436,7 @@ const Sidebar = () => {
       <aside
         id="navigation"
         className={`
-          fixed top-0 left-0 h-screen bg-gray-800 text-white z-58 flex flex-col
+          fixed top-0 left-0 h-screen bg-gray-800 text-white z-mobile-nav flex flex-col
           transform transition-all duration-300 ease-in-out
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
           md:translate-x-0 md:sticky md:top-0 md:h-screen md:z-auto md:shrink-0

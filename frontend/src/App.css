@@ -105,6 +105,8 @@
   --z-index-dropdown: 9999;
   --z-index-modal: 10000;
   --z-index-popover: 10001;
+  --z-index-mobile-nav-backdrop: 10010;
+  --z-index-mobile-nav: 10020;
 }
 
 :root {

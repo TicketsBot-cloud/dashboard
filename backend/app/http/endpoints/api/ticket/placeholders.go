@@ -9,24 +9,35 @@ import (
 
 	"github.com/TicketsBot-cloud/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 )
 
 // replacePlaceholders replaces common placeholders in content
 func replacePlaceholders(ctx context.Context, content string, ticket *database.Ticket, botCtx *botcontext.BotContext) string {
+	return doReplacePlaceholders(ctx, content, ticket, botCtx, false)
+}
+
+func replacePlainTextPlaceholders(ctx context.Context, content string, ticket *database.Ticket, botCtx *botcontext.BotContext) string {
+	return doReplacePlaceholders(ctx, content, ticket, botCtx, true)
+}
+
+func doReplacePlaceholders(ctx context.Context, content string, ticket *database.Ticket, botCtx *botcontext.BotContext, plainTextOnly bool) string {
 	// Basic placeholders that don't require API calls
 	content = strings.ReplaceAll(content, "%user_id%", strconv.FormatUint(ticket.UserId, 10))
-	content = strings.ReplaceAll(content, "%user%", fmt.Sprintf("<@%d>", ticket.UserId))
 	content = strings.ReplaceAll(content, "%ticket_id%", strconv.Itoa(ticket.Id))
 
-	if ticket.ChannelId != nil {
-		content = strings.ReplaceAll(content, "%channel%", fmt.Sprintf("<#%d>", *ticket.ChannelId))
-	}
+	if !plainTextOnly {
+		content = strings.ReplaceAll(content, "%user%", fmt.Sprintf("<@%d>", ticket.UserId))
 
-	// Time placeholders
-	now := time.Now().Unix()
-	content = strings.ReplaceAll(content, "%time%", fmt.Sprintf("<t:%d:t>", now))
-	content = strings.ReplaceAll(content, "%date%", fmt.Sprintf("<t:%d:d>", now))
-	content = strings.ReplaceAll(content, "%datetime%", fmt.Sprintf("<t:%d:f>", now))
+		if ticket.ChannelId != nil {
+			content = strings.ReplaceAll(content, "%channel%", fmt.Sprintf("<#%d>", *ticket.ChannelId))
+		}
+
+		now := time.Now().Unix()
+		content = strings.ReplaceAll(content, "%time%", fmt.Sprintf("<t:%d:t>", now))
+		content = strings.ReplaceAll(content, "%date%", fmt.Sprintf("<t:%d:d>", now))
+		content = strings.ReplaceAll(content, "%datetime%", fmt.Sprintf("<t:%d:f>", now))
+	}
 
 	// Placeholders that require API calls (best effort, ignore errors)
 	if user, err := botCtx.GetUser(ctx, ticket.UserId); err == nil {
@@ -49,7 +60,7 @@ func replacePlaceholders(ctx context.Context, content string, ticket *database.T
 // replacePlaceholdersInEmbed replaces placeholders in embed fields
 func replacePlaceholdersInEmbed(ctx context.Context, e *database.CustomEmbed, ticket *database.Ticket, botCtx *botcontext.BotContext) {
 	if e.Title != nil {
-		replaced := replacePlaceholders(ctx, *e.Title, ticket, botCtx)
+		replaced := replacePlainTextPlaceholders(ctx, *e.Title, ticket, botCtx)
 		e.Title = &replaced
 	}
 
@@ -59,27 +70,34 @@ func replacePlaceholdersInEmbed(ctx context.Context, e *database.CustomEmbed, ti
 	}
 
 	if e.FooterText != nil {
-		replaced := replacePlaceholders(ctx, *e.FooterText, ticket, botCtx)
+		replaced := replacePlainTextPlaceholders(ctx, *e.FooterText, ticket, botCtx)
 		e.FooterText = &replaced
 	}
 
 	if e.AuthorName != nil {
-		replaced := replacePlaceholders(ctx, *e.AuthorName, ticket, botCtx)
+		replaced := replacePlainTextPlaceholders(ctx, *e.AuthorName, ticket, botCtx)
 		e.AuthorName = &replaced
 	}
 
-	// Handle avatar URL placeholder
-	if e.ImageUrl != nil && *e.ImageUrl == "%avatar_url%" {
-		if user, err := botCtx.GetUser(ctx, ticket.UserId); err == nil {
-			avatarUrl := user.AvatarUrl(256)
-			e.ImageUrl = &avatarUrl
-		}
+	e.Url = replaceAvatarPlaceholder(ctx, e.Url, ticket, botCtx)
+	e.ImageUrl = replaceAvatarPlaceholder(ctx, e.ImageUrl, ticket, botCtx)
+	e.ThumbnailUrl = replaceAvatarPlaceholder(ctx, e.ThumbnailUrl, ticket, botCtx)
+	e.AuthorIconUrl = replaceAvatarPlaceholder(ctx, e.AuthorIconUrl, ticket, botCtx)
+	e.AuthorUrl = replaceAvatarPlaceholder(ctx, e.AuthorUrl, ticket, botCtx)
+	e.FooterIconUrl = replaceAvatarPlaceholder(ctx, e.FooterIconUrl, ticket, botCtx)
+}
+
+func replaceAvatarPlaceholder(ctx context.Context, url *string, ticket *database.Ticket, botCtx *botcontext.BotContext) *string {
+	if url == nil || *url != types.AvatarUrlPlaceholder {
+		return url
 	}
 
-	if e.ThumbnailUrl != nil && *e.ThumbnailUrl == "%avatar_url%" {
-		if user, err := botCtx.GetUser(ctx, ticket.UserId); err == nil {
-			avatarUrl := user.AvatarUrl(256)
-			e.ThumbnailUrl = &avatarUrl
-		}
+	user, err := botCtx.GetUser(ctx, ticket.UserId)
+	if err != nil {
+		fallback := types.DefaultAvatarUrl
+		return &fallback
 	}
+
+	avatarUrl := user.AvatarUrl(256)
+	return &avatarUrl
 }

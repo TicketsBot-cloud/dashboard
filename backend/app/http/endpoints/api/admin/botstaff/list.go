@@ -4,21 +4,22 @@ import (
 	"context"
 	"errors"
 
-	dbmodel "github.com/TicketsBot-cloud/database"
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/config"
 	"github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/internal/admin"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"golang.org/x/sync/errgroup"
 )
 
 type userData struct {
-	Id         uint64               `json:"id,string"`
-	Username   string               `json:"username"`
-	AvatarUrl  string               `json:"avatar_url,omitempty"`
-	Tier       dbmodel.BotStaffTier `json:"tier"`
-	GlobalView bool                 `json:"global_view"`
+	Id         uint64          `json:"id,string"`
+	Username   string          `json:"username"`
+	AvatarUrl  string          `json:"avatar_url,omitempty"`
+	Tier       admin.AdminTier `json:"tier"`
+	GlobalView bool            `json:"global_view"`
 }
 
 func ListBotStaffHandler(ctx *gin.Context) {
@@ -28,32 +29,50 @@ func ListBotStaffHandler(ctx *gin.Context) {
 		return
 	}
 
+	users := make([]userData, 0, len(staff)+1)
+	ownerListed := false
+
+	for _, entry := range staff {
+		data := userData{
+			Id:         entry.UserId,
+			Tier:       admin.AdminTier(entry.Tier),
+			GlobalView: entry.GlobalView,
+		}
+
+		// Owner access comes from config, so a stored row understates it
+		if admin.IsBotOwner(entry.UserId) {
+			data.Tier = admin.AdminTierOwner
+			data.GlobalView = true
+			ownerListed = true
+		}
+
+		users = append(users, data)
+	}
+
+	if config.Conf.Owner != 0 && !ownerListed {
+		users = append(users, userData{
+			Id:         config.Conf.Owner,
+			Tier:       admin.AdminTierOwner,
+			GlobalView: true,
+		})
+	}
+
 	// Get usernames
 	group, _ := errgroup.WithContext(context.Background())
 
-	users := make([]userData, len(staff))
-	for i, entry := range staff {
+	for i := range users {
 		i := i
-		entry := entry
 
 		group.Go(func() error {
-			data := userData{
-				Id:         entry.UserId,
-				Tier:       entry.Tier,
-				GlobalView: entry.GlobalView,
-			}
-
-			user, err := cache.Instance.GetUser(ctx, entry.UserId)
+			user, err := cache.Instance.GetUser(ctx, users[i].Id)
 			if err == nil {
-				data.Username = user.Username
-				data.AvatarUrl = user.AvatarUrl(256)
+				users[i].Username = user.Username
+				users[i].AvatarUrl = user.AvatarUrl(256)
 			} else if errors.Is(err, cache2.ErrNotFound) {
-				data.Username = "Unknown User"
+				users[i].Username = "Unknown User"
 			} else {
 				return err
 			}
-
-			users[i] = data
 
 			return nil
 		})

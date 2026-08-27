@@ -33,7 +33,7 @@ func ListExperimentsHandler(ctx *gin.Context) {
 	experiments, err := Client.ListExperiments(ctx)
 	if err != nil {
 		if errors.Is(err, growthbook.ErrNotConfigured) {
-			ctx.JSON(503, utils.ErrorStr("Feature flags are not configured for this environment."))
+			ctx.JSON(200, []experimentResponse{})
 			return
 		}
 

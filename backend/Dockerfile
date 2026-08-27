@@ -11,6 +11,8 @@ RUN apk update && apk upgrade && apk add git zlib-dev gcc musl-dev
 COPY . /go/src/github.com/ticketsbot-cloud/dashboard/backend/
 WORKDIR /go/src/github.com/ticketsbot-cloud/dashboard/backend
 
+RUN git submodule update --init --recursive --remote
+
 RUN set -Eeux && \
     go mod download && \
     go mod verify

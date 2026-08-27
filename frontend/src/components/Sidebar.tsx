@@ -436,7 +436,7 @@ const Sidebar = () => {
       <aside
         id="navigation"
         className={`
-          fixed top-0 left-0 h-screen bg-gray-800 text-white z-mobile-nav flex flex-col
+          fixed top-0 left-0 h-dvh bg-gray-800 text-white z-mobile-nav flex flex-col
           transform transition-all duration-300 ease-in-out
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
           md:translate-x-0 md:sticky md:top-0 md:h-screen md:z-auto md:shrink-0

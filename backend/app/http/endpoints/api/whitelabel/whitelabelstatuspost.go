@@ -1,0 +1,90 @@
+package api
+
+import (
+	"net/http"
+
+	"fmt"
+
+	"github.com/TicketsBot-cloud/common/featureflags"
+	"github.com/TicketsBot-cloud/common/statusupdates"
+	dbmodel "github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/user"
+	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
+	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
+	"github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/redis"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+)
+
+type statusUpdateBody struct {
+	Status     string            `json:"status"`
+	StatusType user.ActivityType `json:"status_type,string"`
+}
+
+func WhitelabelStatusPost(c *gin.Context) {
+	userId := c.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(c, "202608_FEATURE_WHITELABEL", featureflags.ForDashboardUser(userId)) {
+		c.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Whitelabel management is temporarily unavailable. Please try again shortly."))
+		return
+	}
+
+	// Get bot
+	bot, err := database.Client.Whitelabel.GetByUserId(c, userId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
+	// Ensure bot exists
+	if bot.BotId == 0 {
+		c.JSON(404, utils.ErrorStr("No bot found"))
+		return
+	}
+
+	// Parse status
+	var data statusUpdateBody
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
+		return
+	}
+
+	// Validate status length
+	if len(data.Status) == 0 || len(data.Status) > 255 {
+		c.JSON(400, utils.ErrorStr("Status must be between 1-255 characters in length"))
+		return
+	}
+
+	// Validate status type
+	validActivities := []user.ActivityType{
+		user.ActivityTypePlaying,
+		user.ActivityTypeListening,
+		user.ActivityTypeWatching,
+		user.ActivityTypeCompeting,
+		user.ActivityTypeCustom,
+	}
+
+	if !utils.Contains(validActivities, data.StatusType) {
+		c.JSON(400, utils.ErrorStr("Invalid status type"))
+		return
+	}
+
+	// Update in database
+	if err := database.Client.WhitelabelStatuses.Set(c, bot.BotId, data.Status, int16(data.StatusType)); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return
+	}
+
+	// Send status update to sharder
+	go statusupdates.Publish(redis.Client.Client, bot.BotId)
+
+	audit.Log(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionWhitelabelStatusSet,
+		ResourceType: dbmodel.AuditResourceWhitelabel,
+		ResourceId:   audit.StringPtr(fmt.Sprintf("%d", bot.BotId)),
+		NewData:      data,
+	})
+	c.JSON(200, utils.SuccessResponse)
+}

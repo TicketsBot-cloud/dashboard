@@ -1,0 +1,57 @@
+package api
+
+import (
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/TicketsBot-cloud/common/featureflags"
+	dbmodel "github.com/TicketsBot-cloud/database"
+	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
+	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+)
+
+func DeleteTeam(ctx *gin.Context) {
+	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
+
+	if !utils.FeatureFlags.IsEnabled(ctx, "202608_FEATURE_TEAMS", featureflags.ForDashboardUser(userId).WithGuild(guildId)) {
+		ctx.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Team management is temporarily unavailable. Please try again shortly."))
+		return
+	}
+
+	teamId, err := strconv.Atoi(ctx.Param("teamid"))
+	if err != nil {
+		ctx.JSON(400, utils.ErrorStr("Failed to delete team. Please try again."))
+		return
+	}
+
+	// check team belongs to guild
+	team, exists, err := dbclient.Client.SupportTeam.GetById(ctx, guildId, teamId)
+	if err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
+		return
+	}
+
+	if !exists {
+		ctx.JSON(400, utils.ErrorStr(fmt.Sprintf("Team not found: %d", teamId)))
+		return
+	}
+
+	if err := dbclient.Client.SupportTeam.Delete(ctx, teamId); err != nil {
+		ctx.JSON(500, utils.ErrorStr("Failed to delete team. Please try again."))
+		return
+	}
+
+	audit.Log(audit.LogEntry{
+		GuildId:      audit.Uint64Ptr(guildId),
+		UserId:       userId,
+		ActionType:   dbmodel.AuditActionTeamDelete,
+		ResourceType: dbmodel.AuditResourceTeam,
+		ResourceId:   audit.StringPtr(strconv.Itoa(teamId)),
+		OldData:      team,
+	})
+	ctx.JSON(200, utils.SuccessResponse)
+}

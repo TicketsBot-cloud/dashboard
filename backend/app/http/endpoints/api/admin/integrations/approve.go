@@ -1,0 +1,75 @@
+package admin_integrations
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/TicketsBot-cloud/database"
+	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
+	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
+	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/notify"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+)
+
+// ApproveIntegrationHandler handles POST /api/admin/integrations/:integrationid/approve.
+func ApproveIntegrationHandler(ctx *gin.Context) {
+	userId := ctx.Keys["userid"].(uint64)
+
+	integrationId, err := strconv.Atoi(ctx.Param("integrationid"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid integration ID"))
+		return
+	}
+
+	integration, ok, err := dbclient.Client.CustomIntegrations.Get(ctx, integrationId)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch integration"))
+		return
+	}
+
+	if !ok {
+		ctx.JSON(http.StatusNotFound, utils.ErrorStr("Integration not found"))
+		return
+	}
+
+	oldData := map[string]any{
+		"public":           integration.Public,
+		"approved":         integration.Approved,
+		"rejection_reason": integration.RejectionReason,
+	}
+
+	if err := dbclient.Client.CustomIntegrations.Approve(ctx, integrationId, userId); err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to approve integration"))
+		return
+	}
+
+	postReviewWebhookBestEffort(ctx, "Integration approved", colourApproved, integration, userId, nil)
+
+	go notify.Send(
+		context.Background(),
+		integration.OwnerId,
+		notify.CategoryIntegrations,
+		"Integration approved",
+		fmt.Sprintf("Your integration **%s** has been approved and is now publicly available.", integration.Name),
+		"",
+	)
+
+	audit.LogStaff(audit.LogEntry{
+		UserId:       userId,
+		ActionType:   database.AuditActionUserIntegrationApprove,
+		ResourceType: database.AuditResourceUserIntegration,
+		ResourceId:   audit.StringPtr(strconv.Itoa(integrationId)),
+		OldData:      oldData,
+		NewData: map[string]any{
+			"public":           true,
+			"approved":         true,
+			"rejection_reason": nil,
+		},
+	})
+
+	ctx.Status(http.StatusNoContent)
+}

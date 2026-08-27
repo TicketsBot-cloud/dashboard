@@ -225,10 +225,6 @@ const EditFormPage: FC = () => {
             ...input,
             style: parseInt(input.style?.toString() || "1"),
             placeholder: blankToUndefined(input.placeholder),
-            max_length:
-              input.type === 3 && !input.max_length && input.options?.length
-                ? input.options.length
-                : input.max_length,
           };
         }),
       update: form.inputs
@@ -239,10 +235,6 @@ const EditFormPage: FC = () => {
             ...input,
             style: parseInt(input.style?.toString() || "1"),
             placeholder: blankToUndefined(input.placeholder),
-            max_length:
-              input.type === 3 && !input.max_length && input.options?.length
-                ? input.options.length
-                : input.max_length,
           };
         }),
       delete: toDelete,

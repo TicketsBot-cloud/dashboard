@@ -375,8 +375,8 @@ export interface FormInput {
   description?: string;
   options?: Array<FormInputOption>;
   required: boolean;
-  min_length: number;
-  max_length: number;
+  min_length?: number;
+  max_length?: number;
   api_config?: {
     id?: number;
     form_input_id?: number;

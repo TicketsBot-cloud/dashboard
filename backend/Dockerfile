@@ -26,8 +26,8 @@ FROM alpine:latest
 
 RUN apk update && apk upgrade && apk add curl
 
-COPY --from=builder /go/src/github.com/ticketsbot-cloud/dashboard/locale /srv/dashboard/locale
-COPY --from=builder /go/src/github.com/ticketsbot-cloud/dashboard/main /srv/dashboard/main
+COPY --from=builder /go/src/github.com/TicketsBot-cloud/dashboard/locale /srv/dashboard/locale
+COPY --from=builder /go/src/github.com/TicketsBot-cloud/dashboard/main /srv/dashboard/main
 
 RUN chmod +x /srv/dashboard/main
 

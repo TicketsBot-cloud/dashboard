@@ -349,6 +349,9 @@ func validateInput(input inputCreateBody, optionTypes map[int]string) error {
 		if len(input.Options) == 0 {
 			return fmt.Errorf("%s inputs must have at least one option", typeName)
 		}
+		if len(input.Options) > 25 {
+			return fmt.Errorf("%s inputs must have at most 25 options", typeName)
+		}
 	}
 
 	return validateUniqueOptionValues(input.Options)
@@ -362,35 +365,29 @@ func normalizeLengths(input inputCreateBody) (*uint16, *uint16) {
 	minLength := input.MinLength
 	maxLength := input.MaxLength
 
-	if input.Type == 3 || (input.Type >= 5 && input.Type <= 8) || input.Type == 22 {
-		if minLength > 25 {
-			minLength = 25
+	if input.Type != 4 {
+		ceiling := uint16(25)
+		if input.Type == 22 {
+			ceiling = 10
 		}
 
 		if input.Type == 3 || input.Type == 22 {
-			optionsLength := uint16(len(input.Options))
-			if optionsLength > 0 {
-				if maxLength == 0 || maxLength > optionsLength {
-					maxLength = optionsLength
-				}
-			} else {
-				if maxLength == 0 || maxLength > 25 {
-					maxLength = 25
-				}
-			}
-		} else {
-			if maxLength == 0 || maxLength > 25 {
-				maxLength = 25
+			if optionCount := uint16(len(input.Options)); optionCount > 0 && optionCount < ceiling {
+				ceiling = optionCount
 			}
 		}
 
-		if maxLength < 1 {
-			maxLength = 1
+		if maxLength == 0 || maxLength > ceiling {
+			maxLength = ceiling
 		}
+	}
 
-		if minLength > maxLength {
-			minLength = maxLength
-		}
+	if maxLength < 1 {
+		maxLength = 1
+	}
+
+	if minLength > maxLength {
+		minLength = maxLength
 	}
 
 	return &minLength, &maxLength

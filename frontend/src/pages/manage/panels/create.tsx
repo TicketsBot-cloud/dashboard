@@ -1114,33 +1114,33 @@ const PanelsPage: FC = () => {
         subtitle="Automatically close tickets based on inactivity"
         defaultOpen={false}
       >
+        <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <Slider
+            label="Enable Auto Close"
+            value={panel.auto_close.enabled}
+            onChange={(e) =>
+              setPanel((prev) =>
+                prev ? { ...prev, auto_close: { ...prev.auto_close, enabled: e } } : prev,
+              )
+            }
+          />
+          <Slider
+            label="Close on User Leave"
+            value={panel.auto_close.on_user_leave}
+            disabled={!panel.auto_close.enabled}
+            onChange={(e) =>
+              setPanel((prev) =>
+                prev ? { ...prev, auto_close: { ...prev.auto_close, on_user_leave: e } } : prev,
+              )
+            }
+          />
+        </div>
         <PremiumGate
           isPremium={!!premiumState?.premium}
           feature="auto-close"
           description="Auto-close inactive tickets after a set period."
           variant="overlay"
         >
-          <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            <Slider
-              label="Enable Auto Close"
-              value={panel.auto_close.enabled}
-              onChange={(e) =>
-                setPanel((prev) =>
-                  prev ? { ...prev, auto_close: { ...prev.auto_close, enabled: e } } : prev,
-                )
-              }
-            />
-            <Slider
-              label="Close on User Leave"
-              value={panel.auto_close.on_user_leave}
-              disabled={!panel.auto_close.enabled}
-              onChange={(e) =>
-                setPanel((prev) =>
-                  prev ? { ...prev, auto_close: { ...prev.auto_close, on_user_leave: e } } : prev,
-                )
-              }
-            />
-          </div>
           <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
             <DurationPicker
               label="Since Open with No Response"

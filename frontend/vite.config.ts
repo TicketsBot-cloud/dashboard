@@ -100,6 +100,9 @@ export default defineConfig(({ mode }) => {
       },
       target: "es2022",
       minify: "terser",
+      terserOptions: {
+        ecma: 2022, // Retains modern ES syntax during minification
+      },
       sourcemap: false,
     },
   };

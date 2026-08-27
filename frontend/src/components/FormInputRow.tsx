@@ -346,21 +346,23 @@ const FormInputRow: FC<FormInputRowProps> = ({
         </div>
       </div>
 
-      <div className="mt-3">
-        <RangeSlider
-          label={input.type == 4 ? "Length Range" : "Items Range"}
-          min={0}
-          max={input.type == 4 ? 4000 : 25}
-          value={[input.min_length || 0, input.max_length || (input.type == 4 ? 255 : 10)]}
-          onChange={([min, max]) => {
-            const updated = { ...input, min_length: min, max_length: max };
-            setInput(updated);
-            onChange?.(updated);
-          }}
-          minLabel="Min"
-          maxLabel="Max"
-        />
-      </div>
+      {input.type !== 21 && (
+        <div className="mt-3">
+          <RangeSlider
+            label={input.type == 4 ? "Length Range" : "Items Range"}
+            min={0}
+            max={input.type == 4 ? 4000 : 25}
+            value={[input.min_length || 0, input.max_length || (input.type == 4 ? 255 : 10)]}
+            onChange={([min, max]) => {
+              const updated = { ...input, min_length: min, max_length: max };
+              setInput(updated);
+              onChange?.(updated);
+            }}
+            minLabel="Min"
+            maxLabel="Max"
+          />
+        </div>
+      )}
 
       {input.type === 3 && isApiSelect && (
         <div className="mt-3">

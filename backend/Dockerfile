@@ -1,5 +1,5 @@
 # Build container
-FROM golang:1.25 AS builder
+FROM golang:1.26 AS builder
 
 # Copy local modules that replace directives point to
 # COPY common/ /go/src/github.com/TicketsBot-cloud/common/

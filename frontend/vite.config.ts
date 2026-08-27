@@ -99,7 +99,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       target: "es2022",
-      minify: "esbuild",
+      minify: "terser",
       sourcemap: false,
     },
   };

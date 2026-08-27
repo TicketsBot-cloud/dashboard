@@ -1,15 +1,15 @@
 # Build container
-FROM golang:alpine AS builder
-
-RUN apk update && apk upgrade && apk add git zlib-dev gcc musl-dev
+FROM golang:1.25 AS builder
 
 # Copy local modules that replace directives point to
 # COPY common/ /go/src/github.com/TicketsBot-cloud/common/
 # COPY database/ /go/src/github.com/TicketsBot-cloud/database/
 # COPY worker/ /go/src/github.com/TicketsBot-cloud/worker/
 
-COPY . /go/src/github.com/ticketsbot-cloud/dashboard/backend/
-WORKDIR /go/src/github.com/ticketsbot-cloud/dashboard/backend
+RUN apt-get update && apt-get upgrade -y && apt-get install -y ca-certificates git zlib1g-dev git zlib-dev gcc musl-dev
+
+COPY . /go/src/github.com/TicketsBot-cloud/dashboard
+WORKDIR /go/src/github.com/TicketsBot-cloud/dashboard
 
 RUN git submodule update --init --recursive --remote
 
@@ -28,8 +28,8 @@ FROM alpine:latest
 
 RUN apk update && apk upgrade && apk add curl
 
-COPY --from=builder /go/src/github.com/ticketsbot-cloud/dashboard/backend/locale /srv/dashboard/locale
-COPY --from=builder /go/src/github.com/ticketsbot-cloud/dashboard/backend/main /srv/dashboard/main
+COPY --from=builder /go/src/github.com/ticketsbot-cloud/dashboard/locale /srv/dashboard/locale
+COPY --from=builder /go/src/github.com/ticketsbot-cloud/dashboard/main /srv/dashboard/main
 
 RUN chmod +x /srv/dashboard/main
 

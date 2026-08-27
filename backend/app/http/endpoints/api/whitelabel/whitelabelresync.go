@@ -1,0 +1,92 @@
+package api
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+
+	"github.com/TicketsBot-cloud/common/featureflags"
+	"github.com/TicketsBot-cloud/common/tokenchange"
+	"github.com/TicketsBot-cloud/common/whitelabel"
+	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/worker/bot/command/manager"
+	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
+	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
+	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/log"
+	"github.com/ticketsbot-cloud/dashboard/backend/redis"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+	"go.uber.org/zap"
+)
+
+// WhitelabelResync reapplies the bot's gateway intents, re-registers its slash commands,
+// re-signals the sharder via a token-change publish, and reconciles the whitelabel_guilds
+// table against the guilds the bot is actually in. It's a full "reset" of everything the
+// dashboard configures for the bot, using the token already stored for the user.
+func WhitelabelResync() func(*gin.Context) {
+	cm := new(manager.CommandManager)
+	cm.RegisterCommands()
+
+	return func(c *gin.Context) {
+		userId := c.Keys["userid"].(uint64)
+
+		if !utils.FeatureFlags.IsEnabled(c, "202608_FEATURE_WHITELABEL", featureflags.ForDashboardUser(userId)) {
+			c.JSON(http.StatusServiceUnavailable, utils.ErrorStr("Whitelabel management is temporarily unavailable. Please try again shortly."))
+			return
+		}
+
+		bot, err := dbclient.Client.Whitelabel.GetByUserId(c, userId)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load whitelabel bot"))
+			return
+		}
+
+		if bot.BotId == 0 {
+			c.JSON(http.StatusNotFound, utils.ErrorStr("No bot found"))
+			return
+		}
+
+		if err := whitelabel.ReapplyIntents(c, bot.Token); err != nil {
+			if whitelabel.IsIntentsRejection(err) {
+				c.JSON(http.StatusBadRequest, utils.ErrorStr(whitelabel.IntentsRejectedMessage))
+				return
+			}
+
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewServerError(err))
+			return
+		}
+
+		if err := tokenchange.PublishTokenChange(redis.Client.Client, tokenchange.TokenChangeData{
+			Token: bot.Token,
+			NewId: bot.BotId,
+			OldId: 0,
+		}); err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+			return
+		}
+
+		// Re-register slash commands. The cooldown is non-fatal here: the rest of the resync
+		// (token reapply + guild sync) still succeeded, and commands were registered recently.
+		if err := createInteractions(cm, bot.BotId, bot.Token); err != nil && !errors.Is(err, ErrInteractionCreateCooldown) {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to re-create slash commands"))
+			return
+		} else if err != nil {
+			log.Logger.Warn("Skipped slash command re-registration during resync (on cooldown)", zap.Uint64("bot_id", bot.BotId))
+		}
+
+		if err := whitelabel.SyncGuilds(c, dbclient.Client, bot.Token, bot.BotId); err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to sync guilds"))
+			return
+		}
+
+		audit.Log(audit.LogEntry{
+			UserId:       userId,
+			ActionType:   database.AuditActionWhitelabelResync,
+			ResourceType: database.AuditResourceWhitelabel,
+			ResourceId:   audit.StringPtr(fmt.Sprintf("%d", bot.BotId)),
+		})
+
+		c.JSON(http.StatusOK, gin.H{"success": true})
+	}
+}

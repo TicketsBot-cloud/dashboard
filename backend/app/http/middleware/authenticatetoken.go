@@ -1,0 +1,65 @@
+package middleware
+
+import (
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
+	"github.com/ticketsbot-cloud/dashboard/backend/app/http/session"
+	"github.com/ticketsbot-cloud/dashboard/backend/config"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+)
+
+func AuthenticateToken(ctx *gin.Context) {
+	header := ctx.GetHeader("Authorization")
+
+	token, err := jwt.Parse(header, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(config.Conf.Server.Secret), nil
+	})
+
+	if err != nil {
+		ctx.AbortWithStatusJSON(401, utils.ErrorStr("Failed to parse token: %v", err))
+		return
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userId, hasUserId := claims["userid"]
+		if !hasUserId {
+			ctx.AbortWithStatusJSON(401, utils.ErrorStr("Token is invalid"))
+			return
+		}
+
+		parsedId, err := strconv.ParseUint(userId.(string), 10, 64)
+		if err != nil {
+			ctx.AbortWithStatusJSON(401, utils.ErrorStr("Token is invalid"))
+			return
+		}
+
+		store, err := session.Store.Get(parsedId)
+		if err != nil {
+			ctx.AbortWithStatusJSON(401, utils.ErrorStr("Session has expired"))
+			return
+		}
+
+		if store.Expiry <= time.Now().Unix() {
+			_ = session.Store.Clear(parsedId)
+			ctx.AbortWithStatusJSON(401, utils.ErrorStr("Session has expired"))
+			return
+		}
+
+		if ctx.Keys == nil {
+			ctx.Keys = make(map[string]interface{})
+		}
+
+		ctx.Keys["userid"] = parsedId
+	} else {
+		ctx.AbortWithStatusJSON(401, utils.ErrorStr("Token is invalid"))
+		return
+	}
+}

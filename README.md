@@ -48,7 +48,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Tickets v2—the revamped version of your favorite Tickets bot, carried forward by the original dedicated staff team.
+Tickets v2-the revamped version of your favorite Tickets bot, carried forward by the original dedicated staff team.
 Tickets v2 is set to elevate your server experience with a simple, customizable & powerful Discord ticket system complete with a web UI.
 
 Here's why:
@@ -91,7 +91,7 @@ Don't forget to give the project a star! Thanks again!
 
 ### Top contributors
 
-<a href="https://github.com/TicketsBot-cloud/dashboard/graphs/contributors">
+<a href="https://github.com/ticketsbot-cloud/dashboard/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=TicketsBot-cloud/dashboard" alt="contrib.rocks image" />
 </a>
 
@@ -111,15 +111,15 @@ Distributed under the MIT license. See `LICENSE` for more information.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 [contributors-shield]: https://img.shields.io/github/contributors/TicketsBot-cloud/dashboard.svg?style=for-the-badge
-[contributors-url]: https://github.com/TicketsBot-cloud/dashboard/graphs/contributors
+[contributors-url]: https://github.com/ticketsbot-cloud/dashboard/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/TicketsBot-cloud/dashboard.svg?style=for-the-badge
-[forks-url]: https://github.com/TicketsBot-cloud/dashboard/network/members
+[forks-url]: https://github.com/ticketsbot-cloud/dashboard/network/members
 [stars-shield]: https://img.shields.io/github/stars/TicketsBot-cloud/dashboard.svg?style=for-the-badge
-[stars-url]: https://github.com/TicketsBot-cloud/dashboard/stargazers
+[stars-url]: https://github.com/ticketsbot-cloud/dashboard/stargazers
 [issues-shield]: https://img.shields.io/github/issues/TicketsBot-cloud/dashboard.svg?style=for-the-badge
-[issues-url]: https://github.com/TicketsBot-cloud/dashboard/issues
+[issues-url]: https://github.com/ticketsbot-cloud/dashboard/issues
 [license-shield]: https://img.shields.io/github/license/TicketsBot-cloud/dashboard.svg?style=for-the-badge
-[license-url]: https://github.com/TicketsBot-cloud/dashboard/blob/master/LICENSE.txt
+[license-url]: https://github.com/ticketsbot-cloud/dashboard/blob/master/LICENSE.txt
 
 [Golang]: https://img.shields.io/badge/Go-%2300ADD8?style=for-the-badge&logo=go&logoColor=white
 [Golang-url]: https://go.dev/

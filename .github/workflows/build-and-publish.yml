@@ -2,7 +2,10 @@ name: Build and Publish
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - 'master'
+    paths:
+      - 'backend/**'
     tags:
       - '*'
   workflow_dispatch:
@@ -16,4 +19,5 @@ jobs:
     with:
       package_name: api
       sha: ${{ github.sha }}
+      working_directory: backend
     secrets: inherit

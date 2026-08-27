@@ -130,7 +130,7 @@ function AppContent() {
         <Sidebar />
         <main
           id="main-content"
-          className="flex-1 pt-14 overflow-y-auto h-screen relative"
+          className="flex-1 pt-14 overflow-y-auto h-dvh relative"
           role="main"
         >
           <Outlet />

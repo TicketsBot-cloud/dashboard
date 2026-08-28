@@ -1,7 +1,6 @@
 import { useContext, useEffect, useMemo, useState, type FC } from "react";
 import { apiClient } from "@/lib/api";
-import { useParams, Link } from "react-router";
-import { toast } from "sonner";
+import { useParams, useNavigate, Link } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faEyeSlash, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { MainLayout } from "@/pages/layout/Main";
@@ -15,11 +14,14 @@ const TranscriptsView: FC = () => {
   guildId = guildId!;
   transcriptId = transcriptId!;
 
+  const navigate = useNavigate();
   const guild = useContext(GuildContext);
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [contentRestricted, setContentRestricted] = useState(false);
+
+  const canViewAllTranscripts = (guild?.permission_level ?? 0) >= 1;
 
   useEffect(() => {
     const fetchTranscript = async () => {
@@ -72,16 +74,20 @@ const TranscriptsView: FC = () => {
         };
 
         setTranscript(normalized);
-      } catch {
-        setError(true);
-        toast.error("Failed to load transcript.");
+      } catch (err) {
+        const res = (err as { response?: { status?: number; data?: { error?: string } } }).response;
+        if (res?.status === 403) {
+          navigate("/", { replace: true });
+          return;
+        }
+        setError(res?.data?.error ?? "Failed to load transcript. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchTranscript();
-  }, [guildId, transcriptId]);
+  }, [guildId, transcriptId, navigate]);
 
   const entities = useMemo(() => {
     if (!transcript) return null;
@@ -94,15 +100,17 @@ const TranscriptsView: FC = () => {
 
   return (
     <MainLayout title={`Transcript #${transcriptId}`}>
-      <div className="mb-4">
-        <Link
-          to={`/manage/${guildId}/transcripts`}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors cursor-pointer"
-        >
-          <FontAwesomeIcon icon={faArrowLeft} />
-          Back to transcripts
-        </Link>
-      </div>
+      {canViewAllTranscripts && (
+        <div className="mb-4">
+          <Link
+            to={`/manage/${guildId}/transcripts`}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <FontAwesomeIcon icon={faArrowLeft} />
+            Back to transcripts
+          </Link>
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center py-16 text-gray-400">
@@ -112,9 +120,7 @@ const TranscriptsView: FC = () => {
       )}
 
       {!loading && error && (
-        <div className="flex items-center justify-center py-16 text-gray-400">
-          Failed to load transcript. Please try again.
-        </div>
+        <div className="flex items-center justify-center py-16 text-gray-400">{error}</div>
       )}
 
       {!loading && !error && contentRestricted && (

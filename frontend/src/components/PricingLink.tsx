@@ -14,7 +14,6 @@ interface Props {
 export default function PricingLink({ className, children }: Props) {
   const { enabled, isLoading } = useFeatureFlag(PRICING_FLAG);
 
-  // Nothing while flags load, so a click never lands on the wrong target.
   if (isLoading) return null;
 
   if (enabled) {

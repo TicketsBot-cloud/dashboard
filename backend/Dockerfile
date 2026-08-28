@@ -15,7 +15,7 @@ RUN set -Eeux && \
     go mod download && \
     go mod verify
 
-RUN GOOS=linux GOARCH=amd64 \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build \
     -tags=jsoniter \
     -trimpath \
@@ -24,7 +24,7 @@ RUN GOOS=linux GOARCH=amd64 \
 # Prod container
 FROM alpine:latest
 
-RUN apk update && apk upgrade && apk add curl
+RUN apk update && apk upgrade && apk add curl ca-certificates
 
 COPY --from=builder /go/src/github.com/TicketsBot-cloud/dashboard/locale /srv/dashboard/locale
 COPY --from=builder /go/src/github.com/TicketsBot-cloud/dashboard/main /srv/dashboard/main

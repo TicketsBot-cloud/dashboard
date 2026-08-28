@@ -128,11 +128,7 @@ function AppContent() {
       <SkipLinks />
       <div className="flex bg-gray-900 text-gray-100">
         <Sidebar />
-        <main
-          id="main-content"
-          className="flex-1 pt-14 overflow-y-auto h-screen relative"
-          role="main"
-        >
+        <main id="main-content" className="flex-1 pt-14 overflow-y-auto h-dvh relative" role="main">
           <Outlet />
         </main>
         <Toaster theme="dark" richColors position="bottom-right" visibleToasts={5} />

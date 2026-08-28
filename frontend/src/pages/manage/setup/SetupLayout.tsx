@@ -188,7 +188,7 @@ function SetupLayoutContent() {
   return (
     <SkeletonTheme baseColor="#374151" highlightColor="#4B5563">
       <SkipLinks />
-      <div className="h-screen overflow-y-auto bg-gray-900 text-gray-100">
+      <div className="h-dvh overflow-y-auto bg-gray-900 text-gray-100">
         <main
           id="main-content"
           className="mx-auto flex min-h-screen max-w-4xl flex-col px-4 py-8"

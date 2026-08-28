@@ -13,6 +13,7 @@ import GalleryImportModal from "@/components/modals/GalleryImportModal";
 import GalleryImportTagModal from "@/components/modals/GalleryImportTagModal";
 import GalleryImportFormModal from "@/components/modals/GalleryImportFormModal";
 import DetailSkeleton from "@/components/skeletons/DetailSkeleton";
+import DiscordContent from "@/components/discord/DiscordContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -58,11 +59,16 @@ const PanelPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
           className="bg-gray-900 border-l-4 rounded-r p-4 max-w-lg"
           style={{ borderLeftColor: colourHex }}
         >
-          {listing.title && (
-            <h3 className="text-white font-semibold text-lg mb-2">{listing.title}</h3>
+          {listing.title?.trim() && (
+            <h3>
+              <DiscordContent
+                content={listing.title}
+                className="text-white font-semibold text-lg mb-2"
+              />
+            </h3>
           )}
           {listing.content && (
-            <p className="text-gray-300 text-sm whitespace-pre-wrap">{listing.content}</p>
+            <DiscordContent content={listing.content} className="text-gray-300 text-sm" />
           )}
           {listing.image_url && (
             <img
@@ -116,15 +122,19 @@ const PanelPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
                 : colourHex,
             }}
           >
-            {listing.welcome_message.title && (
-              <h3 className="text-white font-semibold text-lg mb-2">
-                {listing.welcome_message.title}
+            {listing.welcome_message.title?.trim() && (
+              <h3>
+                <DiscordContent
+                  content={listing.welcome_message.title}
+                  className="text-white font-semibold text-lg mb-2"
+                />
               </h3>
             )}
             {listing.welcome_message.description && (
-              <p className="text-gray-300 text-sm whitespace-pre-wrap">
-                {listing.welcome_message.description}
-              </p>
+              <DiscordContent
+                content={listing.welcome_message.description}
+                className="text-gray-300 text-sm"
+              />
             )}
           </div>
         </div>
@@ -156,9 +166,10 @@ const TagPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
       </h2>
 
       {snapshot.content && (
-        <p className="text-gray-300 text-sm whitespace-pre-wrap mb-4 bg-gray-900 rounded p-3">
-          {snapshot.content}
-        </p>
+        <DiscordContent
+          content={snapshot.content}
+          className="text-gray-300 text-sm mb-4 bg-gray-900 rounded p-3"
+        />
       )}
 
       {snapshot.embed && (
@@ -166,20 +177,29 @@ const TagPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
           className="bg-gray-900 border-l-4 rounded-r p-4 max-w-lg"
           style={{ borderLeftColor: colourHex }}
         >
-          {snapshot.embed.title && (
-            <h3 className="text-white font-semibold text-lg mb-2">{snapshot.embed.title}</h3>
+          {snapshot.embed.title?.trim() && (
+            <h3>
+              <DiscordContent
+                content={snapshot.embed.title}
+                className="text-white font-semibold text-lg mb-2"
+              />
+            </h3>
           )}
           {snapshot.embed.description && (
-            <p className="text-gray-300 text-sm whitespace-pre-wrap">
-              {snapshot.embed.description}
-            </p>
+            <DiscordContent
+              content={snapshot.embed.description}
+              className="text-gray-300 text-sm"
+            />
           )}
           {snapshot.embed.fields && snapshot.embed.fields.length > 0 && (
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {snapshot.embed.fields.map((field, i) => (
                 <div key={i} className={field.inline ? "" : "col-span-full"}>
-                  <p className="text-white text-xs font-semibold">{field.name}</p>
-                  <p className="text-gray-400 text-xs">{field.value}</p>
+                  <DiscordContent
+                    content={field.name}
+                    className="text-white text-xs font-semibold"
+                  />
+                  <DiscordContent content={field.value} className="text-gray-400 text-xs" />
                 </div>
               ))}
             </div>

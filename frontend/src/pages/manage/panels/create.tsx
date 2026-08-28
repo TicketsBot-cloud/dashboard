@@ -49,6 +49,8 @@ import {
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
+import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 const PRESET_NAMING_SCHEMES = [
   "ticket-%id%",
@@ -268,6 +270,8 @@ const PanelsPage: FC = () => {
                 placeholder="e.g. Open a ticket"
                 value={panel.title || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
+                maxLength={80}
+                showCount
               />
               <ColourSelect
                 label="Panel Colour"
@@ -284,7 +288,7 @@ const PanelsPage: FC = () => {
                 label="Panel Content"
                 value={panel.content || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, content: e } : prev))}
-                max={1000}
+                max={EMBED_LIMITS.DESCRIPTION}
               />
             </div>
             <div className="py-2">
@@ -317,12 +321,14 @@ const PanelsPage: FC = () => {
                 placeholder="e.g. https://example.com/thumbnail.png"
                 value={panel.thumbnail_url || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, thumbnail_url: e } : prev))}
+                maxLength={EMBED_LIMITS.URL}
               />
               <TextInput
                 label="Image URL"
                 placeholder="e.g. https://example.com/image.png"
                 value={panel.image_url || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, image_url: e } : prev))}
+                maxLength={EMBED_LIMITS.URL}
               />
             </div>
             <div className="py-2 grid gap-2 grid-cols-1 md:grid-cols-2">
@@ -565,6 +571,8 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.TITLE}
+                showCount
               />
               <ColourSelect
                 label="Colour"
@@ -594,6 +602,7 @@ const PanelsPage: FC = () => {
                     prev ? { ...prev, welcome_message: { ...prev.welcome_message, url: e } } : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
             </div>
             <div className="py-2">
@@ -607,7 +616,7 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
-                max={1000}
+                max={EMBED_LIMITS.DESCRIPTION}
               />
             </div>
 
@@ -629,6 +638,8 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                showCount
               />
               <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
                 <TextInput
@@ -648,6 +659,7 @@ const PanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
                 <TextInput
                   label="Author URL"
@@ -666,6 +678,7 @@ const PanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
               </div>
             </Collapsible>
@@ -684,6 +697,7 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
               <TextInput
                 label="Image URL"
@@ -696,10 +710,11 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
             </Collapsible>
             <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <TextInput
+              <Textarea
                 label="Footer Text"
                 placeholder="e.g. Powered by TicketBot"
                 value={panel.welcome_message?.footer?.text || ""}
@@ -716,6 +731,7 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                max={EMBED_LIMITS.FOOTER_TEXT}
               />
               <TextInput
                 label="Footer Icon URL"
@@ -734,6 +750,7 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
               <DateTimePicker
                 label="Footer Timestamp (Optional)"
@@ -763,6 +780,7 @@ const PanelsPage: FC = () => {
                 }
               />
             </Collapsible>
+            <EmbedCharacterTotal embed={panel.welcome_message} />
           </div>
 
           <div>

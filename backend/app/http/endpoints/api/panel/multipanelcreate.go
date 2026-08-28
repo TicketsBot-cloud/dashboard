@@ -45,7 +45,7 @@ type multiPanelCreateData struct {
 	SelectMenu            bool                 `json:"select_menu"`
 	SelectMenuPlaceholder *string              `json:"select_menu_placeholder,omitempty" validate:"omitempty,max=150"`
 	Panels                []panelConfiguration `json:"panels" validate:"dive"`
-	Embed                 *types.CustomEmbed   `json:"embed" validate:"omitempty,dive"`
+	Embed                 *types.CustomEmbed   `json:"embed" validate:"omitempty"`
 }
 
 func (d *multiPanelCreateData) IntoMessageData(isPremium bool) multiPanelMessageData {

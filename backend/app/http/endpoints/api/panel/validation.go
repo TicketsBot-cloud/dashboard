@@ -588,10 +588,6 @@ func validateAutoClose(ctx PanelValidationContext) validation.ValidationFunc {
 			return nil
 		}
 
-		if !ctx.IsPremium {
-			return nil
-		}
-
 		if ac.SinceOpenWithNoResponse < 0 {
 			return validation.NewInvalidInputError("Auto-close time cannot be negative")
 		}

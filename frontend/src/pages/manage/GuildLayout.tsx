@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { GuildContext } from "@/state/context";
 import { GuildBootstrapContext } from "@/state/guildBootstrapContext";
-import { useParams } from "react-router";
+import { useMatch, useParams } from "react-router";
 import { apiClient } from "@/lib/api";
 import { getGuildById, useAuthStore } from "@/stores/auth";
 import { useGuildStore } from "@/stores/guild";
@@ -20,6 +20,8 @@ export default function GuildLayout() {
   const [verified, setVerified] = useState(false);
   const [bootstrapReady, setBootstrapReady] = useState(false);
 
+  const isTranscriptView = useMatch("/manage/:guildId/transcripts/view/:id") !== null;
+
   useEffect(() => {
     if (!guildId) {
       console.error("No guild ID provided in URL");
@@ -33,6 +35,18 @@ export default function GuildLayout() {
 
     let cancelled = false;
 
+    const enterAsTicketOpener = (level: number) => {
+      const stored = getGuildById(guildId);
+      selectGuild({
+        id: guildId,
+        name: stored?.name ?? "",
+        icon: stored?.icon,
+        permission_level: level,
+      });
+      setVerified(true);
+      setBootstrapReady(true);
+    };
+
     const verifyAndLoad = async () => {
       let serverLevel: number;
       try {
@@ -41,6 +55,10 @@ export default function GuildLayout() {
         updateGuildPermission(guildId, serverLevel);
       } catch {
         if (cancelled) return;
+        if (isTranscriptView) {
+          enterAsTicketOpener(0);
+          return;
+        }
         selectGuild(null);
         toast.error("Failed to verify permissions.");
         navigate("/", { replace: true });
@@ -49,6 +67,10 @@ export default function GuildLayout() {
 
       if (serverLevel < 1) {
         if (cancelled) return;
+        if (isTranscriptView) {
+          enterAsTicketOpener(serverLevel);
+          return;
+        }
         selectGuild(null);
         toast.warning("You do not have permission to view this page.");
         navigate("/", { replace: true });
@@ -126,7 +148,15 @@ export default function GuildLayout() {
     return () => {
       cancelled = true;
     };
-  }, [guildId, selectGuild, updateGuild, updateGuildPermission, navigate, setOnboardingState]);
+  }, [
+    guildId,
+    selectGuild,
+    updateGuild,
+    updateGuildPermission,
+    navigate,
+    setOnboardingState,
+    isTranscriptView,
+  ]);
 
   if (!verified || !bootstrapReady) {
     const guildName = selectedGuild?.name ?? getGuildById(guildId ?? "")?.name;
@@ -147,7 +177,9 @@ export default function GuildLayout() {
   return (
     <GuildBootstrapContext.Provider value={true}>
       <GuildContext.Provider value={selectedGuild == undefined ? null : selectedGuild}>
-        {guildId && <OnboardingBanner guildId={guildId} />}
+        {guildId && (selectedGuild?.permission_level ?? 0) >= 1 && (
+          <OnboardingBanner guildId={guildId} />
+        )}
         <Outlet />
       </GuildContext.Provider>
     </GuildBootstrapContext.Provider>

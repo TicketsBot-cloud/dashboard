@@ -90,7 +90,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+      <div className="min-h-dvh bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center" role="status" aria-live="polite">
           <div
             className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"
@@ -105,7 +105,7 @@ function AppContent() {
 
   if (needsAuth) {
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+      <div className="min-h-dvh bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Tickets</h1>
           <p className="text-gray-400 mb-8">Log in to manage your servers.</p>
@@ -128,7 +128,11 @@ function AppContent() {
       <SkipLinks />
       <div className="flex bg-gray-900 text-gray-100">
         <Sidebar />
-        <main id="main-content" className="flex-1 pt-14 overflow-y-auto h-dvh relative" role="main">
+        <main
+          id="main-content"
+          className="flex-1 pt-14 pb-8 md:pb-0 overflow-y-auto h-dvh relative"
+          role="main"
+        >
           <Outlet />
         </main>
         <Toaster theme="dark" richColors position="bottom-right" visibleToasts={5} />

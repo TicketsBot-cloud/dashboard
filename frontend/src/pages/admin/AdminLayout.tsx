@@ -46,7 +46,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 md:p-12 lg:p-15">
+    <div className="p-4 sm:p-8 md:p-12 lg:p-15">
       <div className="max-w-6xl mx-auto">
         <AdminTabBar />
         <Outlet />

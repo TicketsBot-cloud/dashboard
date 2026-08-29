@@ -30,6 +30,7 @@ import { PANEL_MESSAGE_INFO } from "@/constants/panelChannelInfo";
 import MultiPanelInfoModal from "@/components/modals/MultiPanelInfoModal";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 type MultiPanelDraft = Omit<MultiPanelRequest, "channel_id"> & {
   channel_id?: MultiPanelRequest["channel_id"];
@@ -44,6 +45,10 @@ const MultiPanelsPage: FC = () => {
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Panel management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // Announce the lock lifting mid-session (e.g. a flag re-enabled while this page
@@ -525,20 +530,7 @@ const MultiPanelsPage: FC = () => {
             toast.success("Multi Panel Created");
             navigate(`/manage/${guildId}/panels`);
           } catch (error) {
-            const status = (error as { response?: { status?: number } })?.response?.status;
-            const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-              ?.error;
-            if (status === 503) {
-              toast.warning(
-                apiError ??
-                  "Panel management is temporarily unavailable. Please try again shortly.",
-              );
-              setForcedLock(true);
-            } else {
-              // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-              // status, not just 503, so every other failure needs its own here.
-              toast.error(apiError ?? "Failed to create multi panel. Please try again.");
-            }
+            handleApiError(error, "Failed to create multi panel. Please try again.");
             console.error("Failed to create multi panel:", error);
           }
         }}

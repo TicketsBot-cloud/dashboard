@@ -21,6 +21,7 @@ import TableSkeleton from "@/components/skeletons/TableSkeleton";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_BLACKLIST } from "@/lib/feature-flags";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 interface BlacklistedUser {
   id: string;
@@ -64,6 +65,10 @@ const BlacklistPage: FC = () => {
 
   const { locked: polledLock } = useFeatureLock(FEATURE_BLACKLIST, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Blacklist management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // This page is a long-lived list rather than a form the user navigates away
@@ -172,17 +177,7 @@ const BlacklistPage: FC = () => {
       setSelectedUser(null);
       setUserModalOpen(false);
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Blacklist management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to blacklist user. Please try again.");
-      }
+      handleApiError(error, "Failed to blacklist user. Please try again.");
       console.error("Failed to blacklist user:", error);
     }
   };
@@ -203,17 +198,7 @@ const BlacklistPage: FC = () => {
       setSelectedRoleId("");
       setRoleModalOpen(false);
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Blacklist management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to blacklist role. Please try again.");
-      }
+      handleApiError(error, "Failed to blacklist role. Please try again.");
       console.error("Failed to blacklist role:", error);
     }
   };
@@ -228,17 +213,7 @@ const BlacklistPage: FC = () => {
         prev ? { ...prev, users: prev.users.filter((u) => u.id !== user.id) } : prev,
       );
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Blacklist management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to remove user from the blacklist. Please try again.");
-      }
+      handleApiError(error, "Failed to remove user from the blacklist. Please try again.");
       console.error("Failed to remove user from blacklist:", error);
     }
   };
@@ -254,17 +229,7 @@ const BlacklistPage: FC = () => {
         prev ? { ...prev, roles: prev.roles.filter((id) => id !== roleId) } : prev,
       );
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Blacklist management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to remove role from the blacklist. Please try again.");
-      }
+      handleApiError(error, "Failed to remove role from the blacklist. Please try again.");
       console.error("Failed to remove role from blacklist:", error);
     }
   };

@@ -31,6 +31,7 @@ import GallerySubmitModal from "@/components/modals/GallerySubmitModal";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_TAGS } from "@/lib/feature-flags";
 import type { Tag } from "@/types";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const TAG_SORT_COLUMNS: Record<"id" | "type", SortColumn<Tag>> = {
   id: { value: (t) => t.id, defaultDir: "asc" },
@@ -88,20 +89,10 @@ const TagsPage: FC = () => {
     }
   }, [guildId, selectGuild, selectedGuild]);
 
-  // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status, not
-  // just 503, so every other failure needs its own toast here.
-  const handleLockableError = (error: unknown, fallbackMessage: string) => {
-    const status = (error as { response?: { status?: number } })?.response?.status;
-    const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-    if (status === 503) {
-      toast.warning(
-        apiError ?? "Tag management is temporarily unavailable. Please try again shortly.",
-      );
-      setForcedLock(true);
-    } else {
-      toast.error(apiError ?? fallbackMessage);
-    }
-  };
+  const handleLockableError = useApiErrorHandler(
+    "Tag management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
 
   const handleSave = async (tag: Tag, originalId?: string) => {
     try {

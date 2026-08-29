@@ -51,6 +51,7 @@ import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const PRESET_NAMING_SCHEMES = [
   "ticket-%id%",
@@ -171,6 +172,10 @@ const PanelsPage: FC = () => {
   const { isSubmitting, guard } = useMutationGuard();
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Panel management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // Announce the lock lifting mid-session (e.g. a flag re-enabled while this page
@@ -1236,20 +1241,7 @@ const PanelsPage: FC = () => {
               toast.success("Panel Created");
               navigate(`/manage/${guildId}/panels`);
             } catch (error) {
-              const status = (error as { response?: { status?: number } })?.response?.status;
-              const apiError = (error as { response?: { data?: { error?: string } } })?.response
-                ?.data?.error;
-              if (status === 503) {
-                toast.warning(
-                  apiError ??
-                    "Panel management is temporarily unavailable. Please try again shortly.",
-                );
-                setForcedLock(true);
-              } else {
-                // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-                // status, not just 503, so every other failure needs its own here.
-                toast.error(apiError ?? "Failed to create panel. Please try again.");
-              }
+              handleApiError(error, "Failed to create panel. Please try again.");
               console.error("Failed to create panel:", error);
             }
           });

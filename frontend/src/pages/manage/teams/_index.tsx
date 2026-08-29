@@ -20,6 +20,7 @@ import EmptyState from "@/components/EmptyState";
 import Table from "@/components/Table";
 import TableSkeleton from "@/components/skeletons/TableSkeleton";
 import type { Team, GuildRole } from "@/types";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const USER_TYPE = 0;
 const ROLE_TYPE = 1;
@@ -96,23 +97,11 @@ const TeamsPage: FC = () => {
     previousLockRef.current = isLocked;
   }, [isLocked]);
 
-  // Stable identity: only closes over toast/setForcedLock, both stable, so it is
-  // safe to depend on from other useCallbacks (e.g. flushPendingPermissionsSave)
-  // without their identity churning on every render.
-  const handleTeamMutationError = useCallback((error: unknown, fallbackMessage: string) => {
-    const status = (error as { response?: { status?: number } })?.response?.status;
-    const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-    if (status === 503) {
-      toast.warning(
-        apiError ?? "Team management is temporarily unavailable. Please try again shortly.",
-      );
-      setForcedLock(true);
-    } else {
-      // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status, not
-      // just 503, so every other failure needs its own here.
-      toast.error(apiError ?? fallbackMessage);
-    }
-  }, []);
+  // Stable identity: flushPendingPermissionsSave lists this in its dep array.
+  const handleTeamMutationError = useApiErrorHandler(
+    "Team management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
 
   const [searchParams, setSearchParams] = useSearchParams();
 

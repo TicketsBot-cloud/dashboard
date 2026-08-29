@@ -17,6 +17,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faServer, faEye, faCog, faTrash } from "@fortawesome/free-solid-svg-icons";
 import CardGridSkeleton from "@/components/skeletons/CardGridSkeleton";
 import Pagination from "@/components/Pagination";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 function generateProxyUrl(integration: Integration): string | null {
   if (!integration.image_url || !integration.proxy_token) return null;
@@ -190,6 +191,10 @@ const IntegrationsPage: FC = () => {
   } | null>(null);
   const { locked: polledLock } = useFeatureLock(FEATURE_INTEGRATIONS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Integration management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // This page is a long-lived list rather than a form the user navigates away
@@ -259,20 +264,7 @@ const IntegrationsPage: FC = () => {
         prev.map((i) => (i.id === removeModal.id ? { ...i, added: false } : i)),
       );
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ??
-            "Integration management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status,
-        // not just 503, so every other failure needs its own here.
-        toast.error(apiError ?? "Failed to remove integration. Please try again.");
-      }
+      handleApiError(error, "Failed to remove integration. Please try again.");
       console.error("Failed to remove integration:", error);
     }
     setRemoveModal(null);

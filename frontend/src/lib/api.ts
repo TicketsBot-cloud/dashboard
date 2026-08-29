@@ -2,7 +2,7 @@ import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/stores/auth";
-import { useErrorModalStore } from "@/stores/errorModal";
+import { showApiErrorToast } from "@/lib/api-error";
 import { router } from "@/router";
 import type {
   User,
@@ -160,44 +160,12 @@ api.interceptors.response.use(
     if ((error.config as RequestSlotConfig | undefined)?._requestSlot) {
       releaseRequestSlot();
     }
-    const apiError = (error.response?.data as { error?: string })?.error;
 
-    let errorMessage = "An unexpected error occurred";
-    let shouldRedirect = false;
-
-    if (error.code === "ECONNABORTED") {
-      errorMessage = "Request timed out. Please try again.";
-    } else if (error.response) {
-      const status = error.response.status;
-      switch (status) {
-        case 401:
-          errorMessage = "Authentication failed. Please log in again.";
-          useAuthStore.getState().logout();
-          shouldRedirect = true;
-          break;
-        case 402:
-          errorMessage = apiError || "This feature requires a premium subscription.";
-          break;
-        case 403:
-          errorMessage = apiError || "You don't have permission to perform this action.";
-          break;
-        case 404:
-          errorMessage = apiError || "The requested resource was not found.";
-          break;
-        case 429:
-          errorMessage = apiError || "Too many requests. Please wait a moment and try again.";
-          break;
-        case 500:
-          errorMessage = apiError || "Server error. Please try again later.";
-          break;
-        case 503:
-          errorMessage = apiError || "Service unavailable. Please try again later.";
-          break;
-        default:
-          errorMessage = apiError || `Request failed with status ${status}`;
-      }
-    } else if (error.request) {
-      errorMessage = "Network error. Please check your connection.";
+    if (error.response?.status === 401) {
+      useAuthStore.getState().logout();
+      setTimeout(() => {
+        router.navigate("/");
+      }, 2000);
     }
 
     // Bulk endpoints and opted-out callers manage their own error UI - skip the global toast
@@ -207,32 +175,7 @@ api.interceptors.response.use(
       (error.config as SkipErrorToastConfig | undefined)?._skipErrorToast === true;
 
     if (!skipToast) {
-      const toastId = `error-${Date.now()}`;
-      const details = {
-        status: error.response?.status,
-        message: errorMessage,
-        apiError,
-        requestUrl: error.config?.url,
-        requestMethod: error.config?.method,
-      };
-
-      toast.error(errorMessage, {
-        id: toastId,
-        action: {
-          label: "Details",
-          onClick: (event) => {
-            event.preventDefault();
-            toast.error(errorMessage, { id: toastId, duration: Infinity });
-            useErrorModalStore.getState().open(details, toastId);
-          },
-        },
-      });
-    }
-
-    if (shouldRedirect) {
-      setTimeout(() => {
-        router.navigate("/");
-      }, 2000);
+      showApiErrorToast(error);
     }
 
     return Promise.reject(error);

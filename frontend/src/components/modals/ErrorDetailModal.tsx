@@ -28,6 +28,7 @@ const ErrorDetailModal: FC = () => {
       message: details?.message,
       ...(details?.apiError &&
         details.apiError !== details?.message && { apiError: details.apiError }),
+      ...(details?.internalError && { internalError: details.internalError }),
       ...(userId && { userId }),
       ...(guildId && { guildId }),
       page: window.location.pathname,
@@ -91,6 +92,17 @@ const ErrorDetailModal: FC = () => {
               </span>
             </div>
           )}
+
+          {details?.internalError &&
+            details.internalError !== details.apiError &&
+            details.internalError !== details.message && (
+              <div className="flex items-start gap-3 bg-gray-700/50 rounded-lg px-3 py-2">
+                <span className="text-xs text-gray-400 w-24 shrink-0 pt-0.5">Internal Error</span>
+                <span className="text-sm font-mono text-gray-400 break-all whitespace-pre-wrap max-h-32 overflow-y-auto">
+                  {details.internalError}
+                </span>
+              </div>
+            )}
         </div>
 
         <div className="mt-5">

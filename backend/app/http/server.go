@@ -352,20 +352,20 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		// KB articles
 		guildAuthApiSupport.GET("/kb/articles", api_kb.ListArticlesHandler)
 		guildAuthApiSupport.GET("/kb/articles/:articleId", api_kb.GetArticleHandler)
-		guildAuthApiAdmin.POST("/kb/articles",
+		guildAuthApiSupport.POST("/kb/articles",
 			rl(middleware.RateLimitTypeUser, 10, time.Minute),
 			rl(middleware.RateLimitTypeGuild, 15, time.Minute),
 			api_kb.CreateArticleHandler,
 		)
-		guildAuthApiAdmin.PATCH("/kb/articles/:articleId",
+		guildAuthApiSupport.PATCH("/kb/articles/:articleId",
 			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
 			api_kb.UpdateArticleHandler,
 		)
-		guildAuthApiAdmin.DELETE("/kb/articles/:articleId",
+		guildAuthApiSupport.DELETE("/kb/articles/:articleId",
 			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
 			api_kb.DeleteArticleHandler,
 		)
-		guildAuthApiAdmin.PATCH("/kb/reorder",
+		guildAuthApiSupport.PATCH("/kb/reorder",
 			rl(middleware.RateLimitTypeGuild, 60, time.Minute),
 			api_kb.ReorderArticlesHandler,
 		)
@@ -413,16 +413,16 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 		// KB categories
 		guildAuthApiSupport.GET("/kb/categories", api_kb.ListCategoriesHandler)
-		guildAuthApiAdmin.POST("/kb/categories",
+		guildAuthApiSupport.POST("/kb/categories",
 			rl(middleware.RateLimitTypeUser, 10, time.Minute),
 			rl(middleware.RateLimitTypeGuild, 15, time.Minute),
 			api_kb.CreateCategoryHandler,
 		)
-		guildAuthApiAdmin.PATCH("/kb/categories/:catId",
+		guildAuthApiSupport.PATCH("/kb/categories/:catId",
 			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
 			api_kb.UpdateCategoryHandler,
 		)
-		guildAuthApiAdmin.DELETE("/kb/categories/:catId",
+		guildAuthApiSupport.DELETE("/kb/categories/:catId",
 			rl(middleware.RateLimitTypeGuild, 30, time.Minute),
 			api_kb.DeleteCategoryHandler,
 		)

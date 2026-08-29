@@ -51,6 +51,8 @@ const TagsPage: FC = () => {
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; tagId: string } | null>(null);
   const [gallerySubmitTag, setGallerySubmitTag] = useState<Tag | null>(null);
 
+  const canPublishToGallery = (getGuildById(guildId)?.permission_level ?? 0) >= 2;
+
   const { locked: polledLock } = useFeatureLock(FEATURE_TAGS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
   const isLocked = forcedLock || polledLock === true;
@@ -241,11 +243,15 @@ const TagsPage: FC = () => {
                               setEditorOpen(true);
                             },
                           },
-                          {
-                            label: "Publish to Gallery",
-                            icon: faShareNodes,
-                            onClick: () => setGallerySubmitTag(tag),
-                          },
+                          ...(canPublishToGallery
+                            ? [
+                                {
+                                  label: "Publish to Gallery",
+                                  icon: faShareNodes,
+                                  onClick: () => setGallerySubmitTag(tag),
+                                },
+                              ]
+                            : []),
                           {
                             label: "Remove",
                             icon: faTrash,

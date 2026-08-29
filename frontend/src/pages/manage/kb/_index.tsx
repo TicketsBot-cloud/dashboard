@@ -182,7 +182,11 @@ const KBPage: FC = () => {
   const [premiumState, setPremiumState] = useState<PremiumState | null>(null);
 
   // KB Customisation settings
-  const { data: kbSettings, isLoading: settingsLoading } = useKBSettings(guildId);
+  const canManageBranding = (getGuildById(guildId)?.permission_level ?? 0) >= 2;
+  const { data: kbSettings, isLoading: settingsLoading } = useKBSettings(
+    guildId,
+    canManageBranding,
+  );
   const updateSettings = useUpdateKBSettings(guildId);
 
   const [custPrimaryBg, setCustPrimaryBg] = useState(DEFAULT_PRIMARY_BG);
@@ -734,184 +738,186 @@ const KBPage: FC = () => {
         </Collapsible>
 
         {/* Customisation */}
-        <Collapsible
-          title="Customisation"
-          subtitle="Customise the appearance of your public knowledge base"
-          defaultOpen={false}
-        >
-          {!isPremium ? (
-            <div className="relative">
-              <div className="absolute inset-0 bg-gray-800/80 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10 p-6">
-                <FontAwesomeIcon
-                  icon={faLock}
-                  className="text-gray-400 text-2xl mb-3"
-                  aria-hidden="true"
-                />
-                <p className="text-white font-medium mb-2">
-                  Customise colours, branding, and logo for your knowledge base.
-                </p>
-                <a
-                  href="/premium"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors mt-2"
-                >
-                  View Premium Plans
-                </a>
-              </div>
-              <div className="opacity-30 pointer-events-none space-y-6 p-1" aria-hidden="true">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ColourSelect
-                    value={DEFAULT_PRIMARY_BG}
-                    onChange={() => {}}
-                    label="Primary Background"
+        {canManageBranding && (
+          <Collapsible
+            title="Customisation"
+            subtitle="Customise the appearance of your public knowledge base"
+            defaultOpen={false}
+          >
+            {!isPremium ? (
+              <div className="relative">
+                <div className="absolute inset-0 bg-gray-800/80 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10 p-6">
+                  <FontAwesomeIcon
+                    icon={faLock}
+                    className="text-gray-400 text-2xl mb-3"
+                    aria-hidden="true"
                   />
-                  <ColourSelect
-                    value={DEFAULT_CARD_BG}
-                    onChange={() => {}}
-                    label="Card Background"
-                  />
-                  <ColourSelect
-                    value={DEFAULT_TEXT_COLOUR}
-                    onChange={() => {}}
-                    label="Text Colour"
-                  />
-                  <ColourSelect
-                    value={DEFAULT_ACCENT_COLOUR}
-                    onChange={() => {}}
-                    label="Accent Colour"
-                  />
+                  <p className="text-white font-medium mb-2">
+                    Customise colours, branding, and logo for your knowledge base.
+                  </p>
+                  <a
+                    href="/premium"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors mt-2"
+                  >
+                    View Premium Plans
+                  </a>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Colour Scheme */}
-              <div>
-                <h4 className="text-white font-medium mb-3">Colour Scheme</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ColourSelect
-                    value={custPrimaryBg}
-                    onChange={setCustPrimaryBg}
-                    label="Primary Background"
-                  />
-                  <ColourSelect
-                    value={custCardBg}
-                    onChange={setCustCardBg}
-                    label="Card Background"
-                  />
-                  <ColourSelect
-                    value={custTextColour}
-                    onChange={setCustTextColour}
-                    label="Text Colour"
-                  />
-                  <ColourSelect
-                    value={custAccentColour}
-                    onChange={setCustAccentColour}
-                    label="Accent Colour"
-                  />
-                </div>
-                {/* Contrast warnings */}
-                {(() => {
-                  const warnings: string[] = [];
-                  const ratio1 = contrastRatio(custTextColour, custPrimaryBg);
-                  const ratio2 = contrastRatio(custTextColour, custCardBg);
-                  const ratio3 = contrastRatio(custAccentColour, custPrimaryBg);
-                  const ratio4 = contrastRatio(custAccentColour, custCardBg);
-                  if (ratio1 < 4.5)
-                    warnings.push(`Text on primary background: ${ratio1.toFixed(1)}:1`);
-                  if (ratio2 < 4.5)
-                    warnings.push(`Text on card background: ${ratio2.toFixed(1)}:1`);
-                  if (ratio3 < 3)
-                    warnings.push(`Accent on primary background: ${ratio3.toFixed(1)}:1`);
-                  if (ratio4 < 3)
-                    warnings.push(`Accent on card background: ${ratio4.toFixed(1)}:1`);
-                  if (warnings.length === 0) return null;
-                  return (
-                    <div
-                      role="alert"
-                      className="mt-3 p-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-yellow-300 text-sm font-medium mb-1">
-                            Contrast warning
-                          </p>
-                          <ul className="text-yellow-200/80 text-xs space-y-0.5">
-                            {warnings.map((w) => (
-                              <li key={w}>
-                                {w} (minimum: {w.includes("Accent") ? "3:1" : "4.5:1"})
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <a
-                          href="https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-yellow-300/70 hover:text-yellow-200 text-xs whitespace-nowrap shrink-0 transition-colors"
-                        >
-                          Learn more
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })()}
-                <Button variant="secondary" onClick={handleResetColours} className="mt-3">
-                  <FontAwesomeIcon icon={faTimes} className="text-xs" aria-hidden="true" />
-                  Reset colours to defaults
-                </Button>
-              </div>
-
-              {/* Logo */}
-              <div>
-                <h4 className="text-white font-medium mb-3">Logo</h4>
-                <div className="flex items-end gap-3">
-                  <div className="flex-1">
-                    <TextInput
-                      label="Logo URL"
-                      placeholder="https://example.com/logo.png"
-                      value={custLogoUrl}
-                      onChange={setCustLogoUrl}
+                <div className="opacity-30 pointer-events-none space-y-6 p-1" aria-hidden="true">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <ColourSelect
+                      value={DEFAULT_PRIMARY_BG}
+                      onChange={() => {}}
+                      label="Primary Background"
+                    />
+                    <ColourSelect
+                      value={DEFAULT_CARD_BG}
+                      onChange={() => {}}
+                      label="Card Background"
+                    />
+                    <ColourSelect
+                      value={DEFAULT_TEXT_COLOUR}
+                      onChange={() => {}}
+                      label="Text Colour"
+                    />
+                    <ColourSelect
+                      value={DEFAULT_ACCENT_COLOUR}
+                      onChange={() => {}}
+                      label="Accent Colour"
                     />
                   </div>
-                  {custLogoUrl && (
-                    <img
-                      src={custLogoUrl}
-                      alt="Logo preview"
-                      className="w-8 h-8 rounded object-cover border border-gray-600 mb-0.5"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  )}
                 </div>
-                <p className="text-gray-400 text-xs mt-1">
-                  Use a square image, at least 128x128px. Must be HTTPS.
-                </p>
               </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Colour Scheme */}
+                <div>
+                  <h4 className="text-white font-medium mb-3">Colour Scheme</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <ColourSelect
+                      value={custPrimaryBg}
+                      onChange={setCustPrimaryBg}
+                      label="Primary Background"
+                    />
+                    <ColourSelect
+                      value={custCardBg}
+                      onChange={setCustCardBg}
+                      label="Card Background"
+                    />
+                    <ColourSelect
+                      value={custTextColour}
+                      onChange={setCustTextColour}
+                      label="Text Colour"
+                    />
+                    <ColourSelect
+                      value={custAccentColour}
+                      onChange={setCustAccentColour}
+                      label="Accent Colour"
+                    />
+                  </div>
+                  {/* Contrast warnings */}
+                  {(() => {
+                    const warnings: string[] = [];
+                    const ratio1 = contrastRatio(custTextColour, custPrimaryBg);
+                    const ratio2 = contrastRatio(custTextColour, custCardBg);
+                    const ratio3 = contrastRatio(custAccentColour, custPrimaryBg);
+                    const ratio4 = contrastRatio(custAccentColour, custCardBg);
+                    if (ratio1 < 4.5)
+                      warnings.push(`Text on primary background: ${ratio1.toFixed(1)}:1`);
+                    if (ratio2 < 4.5)
+                      warnings.push(`Text on card background: ${ratio2.toFixed(1)}:1`);
+                    if (ratio3 < 3)
+                      warnings.push(`Accent on primary background: ${ratio3.toFixed(1)}:1`);
+                    if (ratio4 < 3)
+                      warnings.push(`Accent on card background: ${ratio4.toFixed(1)}:1`);
+                    if (warnings.length === 0) return null;
+                    return (
+                      <div
+                        role="alert"
+                        className="mt-3 p-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-yellow-300 text-sm font-medium mb-1">
+                              Contrast warning
+                            </p>
+                            <ul className="text-yellow-200/80 text-xs space-y-0.5">
+                              {warnings.map((w) => (
+                                <li key={w}>
+                                  {w} (minimum: {w.includes("Accent") ? "3:1" : "4.5:1"})
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <a
+                            href="https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-yellow-300/70 hover:text-yellow-200 text-xs whitespace-nowrap shrink-0 transition-colors"
+                          >
+                            Learn more
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <Button variant="secondary" onClick={handleResetColours} className="mt-3">
+                    <FontAwesomeIcon icon={faTimes} className="text-xs" aria-hidden="true" />
+                    Reset colours to defaults
+                  </Button>
+                </div>
 
-              {/* Branding */}
-              <div>
-                <h4 className="text-white font-medium mb-3">Branding</h4>
-                <Slider
-                  value={custHideBranding}
-                  onChange={setCustHideBranding}
-                  label="Hide 'Powered by Tickets.bot' footer"
-                />
-              </div>
+                {/* Logo */}
+                <div>
+                  <h4 className="text-white font-medium mb-3">Logo</h4>
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <TextInput
+                        label="Logo URL"
+                        placeholder="https://example.com/logo.png"
+                        value={custLogoUrl}
+                        onChange={setCustLogoUrl}
+                      />
+                    </div>
+                    {custLogoUrl && (
+                      <img
+                        src={custLogoUrl}
+                        alt="Logo preview"
+                        className="w-8 h-8 rounded object-cover border border-gray-600 mb-0.5"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Use a square image, at least 128x128px. Must be HTTPS.
+                  </p>
+                </div>
 
-              {/* Save */}
-              <div className="flex justify-end">
-                <Button
-                  variant="success"
-                  onClick={handleSaveCustomisation}
-                  disabled={!custIsDirty || updateSettings.isPending}
-                >
-                  {updateSettings.isPending ? "Saving..." : "Save Customisation"}
-                </Button>
+                {/* Branding */}
+                <div>
+                  <h4 className="text-white font-medium mb-3">Branding</h4>
+                  <Slider
+                    value={custHideBranding}
+                    onChange={setCustHideBranding}
+                    label="Hide 'Powered by Tickets.bot' footer"
+                  />
+                </div>
+
+                {/* Save */}
+                <div className="flex justify-end">
+                  <Button
+                    variant="success"
+                    onClick={handleSaveCustomisation}
+                    disabled={!custIsDirty || updateSettings.isPending}
+                  >
+                    {updateSettings.isPending ? "Saving..." : "Save Customisation"}
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </Collapsible>
+            )}
+          </Collapsible>
+        )}
 
         {/* Article table */}
         <section aria-label="Articles">

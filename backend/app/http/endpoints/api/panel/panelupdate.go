@@ -103,6 +103,10 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	if !data.OverflowEnabled {
+		data.OverflowCategoryId = nil
+	}
+
 	// Do custom validation
 	validationContext := PanelValidationContext{
 		Data:       data,

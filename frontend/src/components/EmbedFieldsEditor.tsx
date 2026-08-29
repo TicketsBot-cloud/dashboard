@@ -5,6 +5,7 @@ import Textarea from "@/components/Textarea";
 import Slider from "@/components/Slider";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
 
 interface EmbedField {
   name: string;
@@ -28,6 +29,7 @@ const EmbedFieldsEditor: FC<EmbedFieldsEditorProps> = ({ fields, onChange }) => 
   };
 
   const addField = () => {
+    if (fields.length >= EMBED_LIMITS.FIELDS) return;
     onChange([...fields, { name: "", value: "", inline: false }]);
   };
 
@@ -42,12 +44,14 @@ const EmbedFieldsEditor: FC<EmbedFieldsEditorProps> = ({ fields, onChange }) => 
                 placeholder="Field name"
                 value={field.name}
                 onChange={(v) => updateField(i, { name: v })}
+                maxLength={EMBED_LIMITS.FIELD_NAME}
+                showCount
               />
               <Textarea
                 label="Field Value"
                 value={field.value}
                 onChange={(v) => updateField(i, { value: v })}
-                max={1024}
+                max={EMBED_LIMITS.FIELD_VALUE}
               />
             </div>
             <Button
@@ -67,9 +71,19 @@ const EmbedFieldsEditor: FC<EmbedFieldsEditorProps> = ({ fields, onChange }) => 
           />
         </div>
       ))}
-      <Button variant="secondary" onClick={addField} className="text-sm font-medium w-fit">
-        <FontAwesomeIcon icon={faPlus} /> Add Field
-      </Button>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="secondary"
+          onClick={addField}
+          disabled={fields.length >= EMBED_LIMITS.FIELDS}
+          className="text-sm font-medium w-fit"
+        >
+          <FontAwesomeIcon icon={faPlus} /> Add Field
+        </Button>
+        <span className="text-xs">
+          {fields.length}/{EMBED_LIMITS.FIELDS} fields
+        </span>
+      </div>
     </div>
   );
 };

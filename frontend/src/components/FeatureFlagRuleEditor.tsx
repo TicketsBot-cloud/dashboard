@@ -245,6 +245,7 @@ export default function FeatureFlagRuleEditor({ rules, valueType, onChange, disa
             {ID_LIST_KINDS.includes(rule.kind) && (
               <div className="mt-3">
                 <Textarea
+                  max={1000}
                   label={`IDs (${(rule.ids ?? []).length})`}
                   value={(rule.ids ?? []).join("\n")}
                   onChange={(value) =>

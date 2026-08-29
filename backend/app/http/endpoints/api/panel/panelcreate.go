@@ -43,7 +43,7 @@ type panelBody struct {
 	Colour                    uint32                            `json:"colour"`
 	CategoryId                uint64                            `json:"category_id,string"`
 	Emoji                     types.Emoji                       `json:"emote"`
-	WelcomeMessage            *types.CustomEmbed                `json:"welcome_message" validate:"omitempty,dive"`
+	WelcomeMessage            *types.CustomEmbed                `json:"welcome_message" validate:"omitempty"`
 	Mentions                  []string                          `json:"mentions"`
 	WithDefaultTeam           bool                              `json:"default_team"`
 	Teams                     []int                             `json:"teams"`

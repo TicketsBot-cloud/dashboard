@@ -461,6 +461,10 @@ func validateEmbed(e *types.CustomEmbed) error {
 		}
 	}
 
+	if total := e.TotalCharacterCount(); total > types.EmbedTotalCharacterLimit {
+		return validation.NewInvalidInputErrorf("Total embed characters (%d) exceeds Discord's %d character limit", total, types.EmbedTotalCharacterLimit)
+	}
+
 	return nil
 }
 

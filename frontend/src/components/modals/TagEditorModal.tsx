@@ -13,6 +13,8 @@ import DateTimePicker from "@/components/DateTimePicker";
 import { useKBArticles } from "@/hooks/queries/useKB";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import type { Tag, TagEmbed } from "@/types";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
+import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 interface TagEditorModalProps {
   isOpen: boolean;
@@ -269,6 +271,8 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         placeholder="Embed title"
                         value={embed.title || ""}
                         onChange={(v) => setEmbed((prev) => ({ ...prev, title: v }))}
+                        maxLength={EMBED_LIMITS.TITLE}
+                        showCount
                       />
                       <ColourSelect
                         label="Colour"
@@ -286,7 +290,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                       label="Description"
                       value={embed.description || ""}
                       onChange={(v) => setEmbed((prev) => ({ ...prev, description: v }))}
-                      max={4096}
+                      max={EMBED_LIMITS.DESCRIPTION}
                     />
 
                     <Collapsible title="" subtitle="Author Settings" defaultOpen={false}>
@@ -300,6 +304,8 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                             author: { ...prev.author, name: v },
                           }))
                         }
+                        maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                        showCount
                       />
                       <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
                         <TextInput
@@ -312,6 +318,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                               author: { ...prev.author, icon_url: v },
                             }))
                           }
+                          maxLength={EMBED_LIMITS.URL}
                         />
                         <TextInput
                           label="Author URL"
@@ -323,6 +330,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                               author: { ...prev.author, url: v },
                             }))
                           }
+                          maxLength={EMBED_LIMITS.URL}
                         />
                       </div>
                     </Collapsible>
@@ -333,17 +341,19 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         placeholder="https://example.com/thumbnail.png"
                         value={embed.thumbnail_url || ""}
                         onChange={(v) => setEmbed((prev) => ({ ...prev, thumbnail_url: v }))}
+                        maxLength={EMBED_LIMITS.URL}
                       />
                       <TextInput
                         label="Image URL"
                         placeholder="https://example.com/image.png"
                         value={embed.image_url || ""}
                         onChange={(v) => setEmbed((prev) => ({ ...prev, image_url: v }))}
+                        maxLength={EMBED_LIMITS.URL}
                       />
                     </Collapsible>
 
                     <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-                      <TextInput
+                      <Textarea
                         label="Footer Text"
                         placeholder="e.g. Powered by Tickets.bot"
                         value={embed.footer?.text || ""}
@@ -353,6 +363,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                             footer: { ...prev.footer, text: v },
                           }))
                         }
+                        max={EMBED_LIMITS.FOOTER_TEXT}
                       />
                       <TextInput
                         label="Footer Icon URL"
@@ -364,6 +375,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                             footer: { ...prev.footer, icon_url: v },
                           }))
                         }
+                        maxLength={EMBED_LIMITS.URL}
                       />
                       <DateTimePicker
                         label="Footer Timestamp (Optional)"
@@ -383,6 +395,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         onChange={(fields) => setEmbed((prev) => ({ ...prev, fields }))}
                       />
                     </Collapsible>
+                    <EmbedCharacterTotal embed={embed} />
                   </div>
                 )}
               </>

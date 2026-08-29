@@ -28,6 +28,8 @@ import EmojiPicker from "@/components/EmojiPicker";
 import { sortGuildChannels } from "@/lib/guild-channels";
 import { PANEL_MESSAGE_INFO } from "@/constants/panelChannelInfo";
 import MultiPanelInfoModal from "@/components/modals/MultiPanelInfoModal";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
+import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 type MultiPanelDraft = Omit<MultiPanelRequest, "channel_id"> & {
   channel_id?: MultiPanelRequest["channel_id"];
@@ -314,6 +316,8 @@ const MultiPanelsPage: FC = () => {
                     prev ? { ...prev, embed: { ...prev.embed, title: e } } : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.TITLE}
+                showCount
               />
               <ColourSelect
                 label="Colour"
@@ -346,7 +350,7 @@ const MultiPanelsPage: FC = () => {
                     prev ? { ...prev, embed: { ...prev.embed, description: e } } : prev,
                   )
                 }
-                max={1000}
+                max={EMBED_LIMITS.DESCRIPTION}
               />
             </div>
 
@@ -368,6 +372,8 @@ const MultiPanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                showCount
               />
               <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
                 <TextInput
@@ -387,6 +393,7 @@ const MultiPanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
                 <TextInput
                   label="Author URL"
@@ -405,6 +412,7 @@ const MultiPanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
               </div>
             </Collapsible>
@@ -423,6 +431,7 @@ const MultiPanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
               <TextInput
                 label="Image URL"
@@ -433,10 +442,11 @@ const MultiPanelsPage: FC = () => {
                     prev ? { ...prev, embed: { ...prev.embed, image_url: e } } : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
             </Collapsible>
             <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <TextInput
+              <Textarea
                 label="Footer Text"
                 placeholder="e.g. Powered by TicketBot"
                 value={multiPanel.embed?.footer?.text || ""}
@@ -453,6 +463,7 @@ const MultiPanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                max={EMBED_LIMITS.FOOTER_TEXT}
               />
               <TextInput
                 label="Footer Icon URL"
@@ -471,6 +482,7 @@ const MultiPanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
               <DateTimePicker
                 label="Footer Timestamp (Optional)"
@@ -487,6 +499,7 @@ const MultiPanelsPage: FC = () => {
                 }
               />
             </Collapsible>
+            <EmbedCharacterTotal embed={multiPanel.embed} />
           </div>
 
           <div>

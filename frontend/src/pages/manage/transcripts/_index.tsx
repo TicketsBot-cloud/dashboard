@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FC } from "react";
+import { useCallback, useEffect, useMemo, useState, type FC, type ReactNode } from "react";
 import { apiClient } from "@/lib/api";
 import { Link, useParams, useSearchParams } from "react-router";
 import { getGuildById } from "@/stores/auth";
@@ -18,7 +18,9 @@ import Button from "@/components/Button";
 import Table from "@/components/Table";
 import { SortTrigger, ariaSortFor } from "@/components/SortableHeaderCell";
 import ColumnFilter from "@/components/ColumnFilter";
+import HiddenColumnControls from "@/components/HiddenColumnControls";
 import { useSortState, type SortableColumns } from "@/hooks/useTableSort";
+import { cellClass, type ResponsiveColumn } from "@/lib/table-columns";
 import Pagination from "@/components/Pagination";
 import TextInput from "@/components/TextInput";
 import Textarea from "@/components/Textarea";
@@ -55,25 +57,22 @@ const RATING_OPTIONS = [
   { key: "5", label: "5 ⭐" },
 ];
 
-interface ColumnDef {
-  key: ColumnKey;
-  label: string;
-  responsiveClass: string;
-  sortKey?: SortKey;
-}
+type ColumnDef = ResponsiveColumn<ColumnKey, SortKey>;
 
 const ALL_COLUMNS: ColumnDef[] = [
-  { key: "id", label: "Ticket ID", responsiveClass: "", sortKey: "id" },
-  { key: "username", label: "Username", responsiveClass: "hidden sm:table-cell" },
-  { key: "rating", label: "Rating", responsiveClass: "hidden md:table-cell", sortKey: "rating" },
-  {
-    key: "close_reason",
-    label: "Close Reason",
-    responsiveClass: "hidden lg:table-cell",
-    sortKey: "close_reason",
-  },
-  { key: "labels", label: "Labels", responsiveClass: "hidden lg:table-cell" },
+  { key: "id", label: "Ticket ID", sortKey: "id" },
+  { key: "username", label: "Username", breakpoint: "sm" },
+  { key: "rating", label: "Rating", breakpoint: "md", sortKey: "rating" },
+  { key: "close_reason", label: "Close Reason", breakpoint: "lg", sortKey: "close_reason" },
+  { key: "labels", label: "Labels", breakpoint: "lg" },
 ];
+
+const COLUMN_BY_KEY = Object.fromEntries(ALL_COLUMNS.map((col) => [col.key, col])) as Record<
+  ColumnKey,
+  ColumnDef
+>;
+
+const cellClassFor = (key: ColumnKey) => cellClass(COLUMN_BY_KEY[key].breakpoint);
 
 const DEFAULT_COLUMNS: ColumnKey[] = ["id", "username", "rating", "close_reason", "labels"];
 
@@ -397,26 +396,24 @@ const TranscriptsPage: FC = () => {
       <SortTrigger sort={sort} sortKey={col.sortKey} label={col.label} inheritText />
     ) : undefined;
 
-  const renderHeader = (col: ColumnDef) => {
+  const columnFilter = (col: ColumnDef): { active: boolean; body: ReactNode } | null => {
     switch (col.key) {
       case "id":
-        return (
-          <ColumnFilter label="Ticket ID" active={!!ticketId} labelSlot={sortTrigger(col)}>
+        return {
+          active: !!ticketId,
+          body: (
             <TextInput
               label="Ticket ID"
               placeholder="Ticket ID"
               value={ticketId}
               onChange={setTicketId}
             />
-          </ColumnFilter>
-        );
+          ),
+        };
       case "username":
-        return (
-          <ColumnFilter
-            label="Username"
-            active={!!username || !!userId}
-            labelSlot={sortTrigger(col)}
-          >
+        return {
+          active: !!username || !!userId,
+          body: (
             <div className="space-y-2">
               <TextInput
                 label="Username"
@@ -431,81 +428,94 @@ const TranscriptsPage: FC = () => {
                 onChange={setUserId}
               />
             </div>
-          </ColumnFilter>
-        );
+          ),
+        };
       case "rating":
-        return (
-          <ColumnFilter label="Rating" active={rating !== "0"} labelSlot={sortTrigger(col)}>
-            <span className="mb-2 block text-sm font-medium text-white">Rating</span>
-            <div className="flex flex-wrap gap-1.5">
-              {RATING_OPTIONS.map((opt) => {
-                const isActive = rating === opt.key;
-                return (
-                  <Button
-                    key={opt.key}
-                    type="button"
-                    size="sm"
-                    onClick={() => setRating(opt.key)}
-                    aria-pressed={isActive}
-                    className={`rounded-full border-2 font-medium whitespace-nowrap cursor-pointer ${
-                      isActive
-                        ? "border-blue-500 bg-blue-500/20"
-                        : "border-transparent bg-gray-600/50 opacity-60 hover:opacity-100"
-                    }`}
-                  >
-                    {opt.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </ColumnFilter>
-        );
+        return {
+          active: rating !== "0",
+          body: (
+            <>
+              <span className="mb-2 block text-sm font-medium text-white">Rating</span>
+              <div className="flex flex-wrap gap-1.5">
+                {RATING_OPTIONS.map((opt) => {
+                  const isActive = rating === opt.key;
+                  return (
+                    <Button
+                      key={opt.key}
+                      type="button"
+                      size="sm"
+                      onClick={() => setRating(opt.key)}
+                      aria-pressed={isActive}
+                      className={`rounded-full border-2 font-medium whitespace-nowrap cursor-pointer ${
+                        isActive
+                          ? "border-blue-500 bg-blue-500/20"
+                          : "border-transparent bg-gray-600/50 opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      {opt.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </>
+          ),
+        };
       case "close_reason":
-        return (
-          <ColumnFilter label="Close Reason" active={!!closeReason} labelSlot={sortTrigger(col)}>
+        return {
+          active: !!closeReason,
+          body: (
             <TextInput
               label="Close Reason"
               placeholder="Search close reason..."
               value={closeReason}
               onChange={setCloseReason}
             />
-          </ColumnFilter>
-        );
+          ),
+        };
       case "labels":
-        return labels.length === 0 ? (
-          <span>{col.label}</span>
-        ) : (
-          <ColumnFilter
-            label="Labels"
-            active={selectedLabelIds.length > 0}
-            labelSlot={sortTrigger(col)}
-          >
-            <div className="flex flex-wrap gap-1.5">
-              {labels.map((label) => {
-                const isActive = selectedLabelIds.includes(label.label_id);
-                const hex = intToColour(label.colour);
-                return (
-                  <Button
-                    key={label.label_id}
-                    type="button"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-opacity cursor-pointer border-2 text-white"
-                    style={{
-                      backgroundColor: `color-mix(in srgb, ${hex} 20%, transparent)`,
-                      opacity: isActive ? 1 : 0.5,
-                      borderColor: isActive ? "#3b82f6" : "transparent",
-                    }}
-                    onClick={() => toggleLabelFilter(label.label_id)}
-                    aria-pressed={isActive}
-                  >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: hex }} />
-                    {label.name}
-                  </Button>
-                );
-              })}
-            </div>
-          </ColumnFilter>
-        );
+        if (labels.length === 0) return null;
+        return {
+          active: selectedLabelIds.length > 0,
+          body: (
+            <>
+              <span className="mb-2 block text-sm font-medium text-white">Labels</span>
+              <div className="flex flex-wrap gap-1.5">
+                {labels.map((label) => {
+                  const isActive = selectedLabelIds.includes(label.label_id);
+                  const hex = intToColour(label.colour);
+                  return (
+                    <Button
+                      key={label.label_id}
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-opacity cursor-pointer border-2 text-white"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${hex} 20%, transparent)`,
+                        opacity: isActive ? 1 : 0.5,
+                        borderColor: isActive ? "#3b82f6" : "transparent",
+                      }}
+                      onClick={() => toggleLabelFilter(label.label_id)}
+                      aria-pressed={isActive}
+                    >
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: hex }} />
+                      {label.name}
+                    </Button>
+                  );
+                })}
+              </div>
+            </>
+          ),
+        };
     }
+  };
+
+  const renderHeader = (col: ColumnDef) => {
+    const filter = columnFilter(col);
+    if (!filter) return sortTrigger(col) ?? <span>{col.label}</span>;
+    return (
+      <ColumnFilter label={col.label} active={filter.active} labelSlot={sortTrigger(col)}>
+        {filter.body}
+      </ColumnFilter>
+    );
   };
   return (
     <MainLayout
@@ -558,6 +568,15 @@ const TranscriptsPage: FC = () => {
           </div>
         </div>
       </div>
+      <HiddenColumnControls
+        columns={ALL_COLUMNS}
+        selectedColumns={selectedColumns}
+        sort={sort}
+        renderFilter={(col) => columnFilter(col)?.body ?? null}
+        activeFilterCount={activeFilters.length}
+        title="Filters & sorting"
+      />
+
       {activeFilters.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {activeFilters.map((f) => (
@@ -600,7 +619,7 @@ const TranscriptsPage: FC = () => {
               <Table.HeaderCell
                 key={col.key}
                 aria-sort={col.sortKey ? ariaSortFor(sort, col.sortKey) : undefined}
-                className={`px-3 sm:px-6 py-3 ${col.responsiveClass}`}
+                className={`px-3 sm:px-6 py-3 ${cellClass(col.breakpoint)}`}
               >
                 {renderHeader(col)}
               </Table.HeaderCell>
@@ -613,7 +632,7 @@ const TranscriptsPage: FC = () => {
             Array.from({ length: 6 }).map((_, i) => (
               <Table.Row key={`skeleton-${i}`} className="border-b bg-gray-800 border-gray-700">
                 {visibleColumns.map((col) => (
-                  <Table.Cell key={col.key} className="px-6 py-4">
+                  <Table.Cell key={col.key} className={`px-6 py-4 ${cellClass(col.breakpoint)}`}>
                     <Skeleton height={16} />
                   </Table.Cell>
                 ))}
@@ -668,22 +687,22 @@ const TranscriptsPage: FC = () => {
                     </Table.HeaderCell>
                   )}
                   {selectedColumns.includes("username") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden sm:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("username")}`}>
                       {transcript.username}
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("rating") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden md:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("rating")}`}>
                       {transcript.rating ? `${transcript.rating} \u2B50` : "No rating"}
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("close_reason") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden lg:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("close_reason")}`}>
                       {transcript.close_reason ?? "No reason specified"}
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("labels") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden lg:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("labels")}`}>
                       <div className="flex flex-wrap gap-1 items-center">
                         {transcript.labels?.map((label) => (
                           <LabelBadge

@@ -25,6 +25,7 @@ import type { SortColumn } from "@/lib/table-sort";
 import type { StaffMemberStats } from "@/types";
 import Button from "@/components/Button";
 import Checkbox from "@/components/Checkbox";
+import PricingLink from "@/components/PricingLink";
 import Skeleton from "react-loading-skeleton";
 import {
   exportDateStamp,
@@ -334,12 +335,9 @@ export default function AnalyticsPage() {
             <p className="text-gray-400 text-sm mb-5">
               Track ticket volume, measure response times, and monitor staff performance over time.
             </p>
-            <Link
-              to="/premium/pricing"
-              className="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
-            >
+            <PricingLink className="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors">
               View Premium Plans
-            </Link>
+            </PricingLink>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[

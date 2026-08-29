@@ -4,6 +4,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { SkeletonTheme } from "react-loading-skeleton";
+import { WEBSITE_URL } from "@/lib/constants";
 import { usePublicKBInfo } from "@/hooks/queries/usePublicKB";
 import type { KBGuildInfo } from "@/types";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -151,7 +152,7 @@ const KBLayoutInner: FC = () => {
         <footer className="bg-(--kb-card) border-t border-white/10 py-4" role="contentinfo">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
             <a
-              href="https://tickets.bot"
+              href={WEBSITE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-(--kb-text)/50 text-sm hover:text-(--kb-text)/70 transition-colors"

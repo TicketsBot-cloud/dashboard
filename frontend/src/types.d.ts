@@ -573,6 +573,7 @@ export interface TicketViewResponse {
   panel_title?: string;
   messages: StrippedMessage[];
   content_restricted?: boolean;
+  channel_missing?: boolean;
 }
 
 export interface PolarSubscription {

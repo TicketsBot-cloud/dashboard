@@ -6,7 +6,7 @@ export default function NotFound() {
   const canGoBack = !!document.referrer && document.referrer.startsWith(window.location.origin);
 
   return (
-    <div className="relative flex items-center justify-center h-full px-4 pb-24 overflow-hidden">
+    <div className="relative flex items-center justify-center h-full px-4 pb-16 md:pb-24 overflow-hidden">
       {/* Ambient glow */}
       <div
         className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_40%_at_50%_35%,rgba(59,130,246,0.08)_0%,transparent_70%)]"

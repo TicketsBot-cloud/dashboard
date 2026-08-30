@@ -80,7 +80,7 @@ type panelBody struct {
 	AutoClose                 PanelAutoCloseBody                `json:"auto_close"`
 }
 
-func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
+func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) panelMessageData {
 	return panelMessageData{
 		ChannelId:      p.ChannelId,
 		Title:          p.Title,
@@ -93,7 +93,7 @@ func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelM
 		ButtonStyle:    p.ButtonStyle,
 		ButtonLabel:    p.ButtonLabel,
 		ButtonDisabled: p.Disabled,
-		IsPremium:      isPremium,
+		ShowBranding:   showBranding,
 	}
 }
 
@@ -209,7 +209,13 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
-	messageData := data.IntoPanelMessageData(customId, premiumTier > premium.None)
+	footer, err := footerPolicyForGuild(c, guildId, botContext)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+		return
+	}
+
+	messageData := data.IntoPanelMessageData(customId, footer.ShowBranding)
 	msgId, err := messageData.send(botContext)
 	if err != nil {
 		var unwrapped request.RestError

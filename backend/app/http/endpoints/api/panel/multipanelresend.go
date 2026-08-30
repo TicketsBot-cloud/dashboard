@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
-	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
@@ -14,7 +13,6 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 )
 
@@ -70,8 +68,7 @@ func MultiPanelResend(ctx *gin.Context) {
 		}
 	}
 
-	// get premium status
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
+	footer, err := footerPolicyForGuild(ctx, guildId, botContext)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
 		return
@@ -84,7 +81,7 @@ func MultiPanelResend(ctx *gin.Context) {
 	}
 
 	// send new message
-	messageData := multiPanelIntoMessageData(multiPanel, premiumTier > premium.None)
+	messageData := multiPanelIntoMessageData(multiPanel, footer)
 	messageId, err := messageData.send(botContext, panels)
 	if err != nil {
 		var unwrapped request.RestError

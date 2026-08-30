@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FC } from "react";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
-import { useGuildEmojis, useGuildPanels } from "@/hooks/queries/useGuild";
+import { useGuildEmojis, useGuildPanels, useGuildPremium } from "@/hooks/queries/useGuild";
 import { useParams, useNavigate } from "react-router";
 
 import { getGuildById } from "@/stores/auth";
@@ -18,8 +18,10 @@ import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
 import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
+import PremiumGate from "@/components/PremiumGate";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
@@ -90,6 +92,9 @@ const MultiPanelsPage: FC = () => {
   const [multiPanel, setMultiPanel] = useState<MultiPanel | null>(null);
   const { data: panels = [] } = useGuildPanels(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
+  const { data: premiumState = null } = useGuildPremium(guildId, false);
+  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
+  const showBrandingFooter = !brandingPremium?.premium;
 
   const getPanelById = (id: number) => panels.find((p) => p.panel_id === id);
 
@@ -437,44 +442,51 @@ const MultiPanelsPage: FC = () => {
               />
             </Collapsible>
             <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <Textarea
-                label="Footer Text"
-                placeholder="e.g. Powered by TicketBot"
-                value={multiPanel?.embed?.footer?.text || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            footer: { ...prev.embed?.footer, text: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-                max={EMBED_LIMITS.FOOTER_TEXT}
-              />
-              <TextInput
-                label="Footer Icon URL"
-                placeholder="e.g. https://example.com/footer-icon.png"
-                value={multiPanel?.embed?.footer?.icon_url || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            footer: { ...prev.embed?.footer, icon_url: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.URL}
-              />
+              <PremiumGate
+                isPremium={!!premiumState?.premium}
+                feature="custom-footer"
+                description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
+                variant="overlay"
+              >
+                <Textarea
+                  label="Footer Text"
+                  placeholder="e.g. Support hours: 9am-5pm UTC"
+                  value={multiPanel?.embed?.footer?.text || ""}
+                  onChange={(e) =>
+                    setMultiPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            embed: {
+                              ...prev.embed,
+                              footer: { ...prev.embed?.footer, text: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  max={EMBED_LIMITS.FOOTER_TEXT}
+                />
+                <TextInput
+                  label="Footer Icon URL"
+                  placeholder="e.g. https://example.com/footer-icon.png"
+                  value={multiPanel?.embed?.footer?.icon_url || ""}
+                  onChange={(e) =>
+                    setMultiPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            embed: {
+                              ...prev.embed,
+                              footer: { ...prev.embed?.footer, icon_url: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  maxLength={EMBED_LIMITS.URL}
+                />
+              </PremiumGate>
               <DateTimePicker
                 label="Footer Timestamp (Optional)"
                 value={parseEmbedTimestamp(multiPanel?.embed?.timestamp)}
@@ -499,6 +511,7 @@ const MultiPanelsPage: FC = () => {
               <PanelPreview
                 type="welcome"
                 data={{ panel: multiPanel, buttons: getPreviewButtons() }}
+                brandingFooter={showBrandingFooter}
               />
             )}
           </div>

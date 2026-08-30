@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
-	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
@@ -19,7 +18,6 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -138,8 +136,7 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
-	// get premium status
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+	footer, err := footerPolicyForGuild(c, guildId, botContext)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
@@ -157,7 +154,7 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
-	messageData := data.IntoMessageData(premiumTier > premium.None)
+	messageData := data.IntoMessageData(footer)
 	var messageId uint64
 
 	// Check if channel changed

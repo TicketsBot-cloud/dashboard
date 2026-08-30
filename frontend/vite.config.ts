@@ -25,7 +25,8 @@ export default defineConfig(({ mode }) => {
   // so this keeps them from pointing a viewer's browser at an arbitrary host.
   const imgSrcHosts = [
     // First-party and Discord
-    "https://image-cdn.tickets.bot",
+    "https://tickets.bot",
+    "https://cdn.tickets.bot",
     "https://cdn.discordapp.com",
     "https://media.discordapp.net",
     "https://dbl-static.b-cdn.net",

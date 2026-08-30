@@ -151,7 +151,7 @@ const PanelsPage: FC = () => {
       description: "Thank you for opening a ticket! A member of staff will be with you shortly.",
       colour: "#5865f2",
       footer: {
-        text: "Powered by Tickets.bot",
+        text: "Powered by tickets.bot",
       },
       author: {},
       fields: [],

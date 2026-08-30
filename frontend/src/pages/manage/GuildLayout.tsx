@@ -162,7 +162,7 @@ export default function GuildLayout() {
     const guildName = selectedGuild?.name ?? getGuildById(guildId ?? "")?.name;
 
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+      <div className="h-full bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center" role="status" aria-live="polite">
           <div
             className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"

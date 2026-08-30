@@ -23,7 +23,7 @@ const Logout = () => {
 
   return (
     <div
-      className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center"
+      className="h-full bg-gray-900 text-gray-100 flex items-center justify-center"
       role="status"
       aria-live="polite"
     >

@@ -205,7 +205,7 @@ function Setup() {
       )}
 
       {currentStep === 0 && (
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center">
           <WelcomeStep
             guildName={guild.name}
             guildIcon={guild.icon}
@@ -300,7 +300,7 @@ function Setup() {
       )}
 
       {currentStep === 5 && (
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center">
           <DoneStep
             guildId={guildId}
             teamsCreated={createdTeams.length}

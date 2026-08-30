@@ -22,11 +22,13 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import ColumnSelectorButton from "@/components/ColumnSelectorButton";
+import HiddenColumnControls from "@/components/HiddenColumnControls";
 import Button from "@/components/Button";
 import Table from "@/components/Table";
 import SortableHeaderCell from "@/components/SortableHeaderCell";
 import { useTableSort } from "@/hooks/useTableSort";
 import { toTime, type SortColumn, type SortDir } from "@/lib/table-sort";
+import { cellClass, type ResponsiveColumn } from "@/lib/table-columns";
 import TextInput from "@/components/TextInput";
 import NumberInput from "@/components/NumberInput";
 import Select from "@/components/Select";
@@ -112,38 +114,30 @@ type ColumnKey =
 
 type TicketSortKey = Exclude<ColumnKey, "labels"> | "unclaimed";
 
-interface ColumnDef {
-  key: ColumnKey;
-  label: string;
-  responsiveClass: string;
-  sortKey?: TicketSortKey;
-}
+type ColumnDef = ResponsiveColumn<ColumnKey, TicketSortKey>;
 
 const ALL_COLUMNS: ColumnDef[] = [
-  { key: "id", label: "ID", responsiveClass: "", sortKey: "id" },
-  { key: "panel", label: "Panel", responsiveClass: "hidden sm:table-cell", sortKey: "panel" },
-  { key: "user", label: "User", responsiveClass: "hidden sm:table-cell", sortKey: "user" },
-  { key: "opened", label: "Opened", responsiveClass: "hidden lg:table-cell", sortKey: "opened" },
-  {
-    key: "claimed_by",
-    label: "Claimed By",
-    responsiveClass: "hidden md:table-cell",
-    sortKey: "claimed_by",
-  },
-  {
-    key: "last_message",
-    label: "Last Message",
-    responsiveClass: "hidden lg:table-cell",
-    sortKey: "last_message",
-  },
+  { key: "id", label: "ID", sortKey: "id" },
+  { key: "panel", label: "Panel", breakpoint: "sm", sortKey: "panel" },
+  { key: "user", label: "User", breakpoint: "sm", sortKey: "user" },
+  { key: "opened", label: "Opened", breakpoint: "lg", sortKey: "opened" },
+  { key: "claimed_by", label: "Claimed By", breakpoint: "md", sortKey: "claimed_by" },
+  { key: "last_message", label: "Last Message", breakpoint: "lg", sortKey: "last_message" },
   {
     key: "awaiting_response",
     label: "Awaiting Response",
-    responsiveClass: "hidden lg:table-cell",
+    breakpoint: "lg",
     sortKey: "awaiting_response",
   },
-  { key: "labels", label: "Labels", responsiveClass: "hidden md:table-cell" },
+  { key: "labels", label: "Labels", breakpoint: "md" },
 ];
+
+const COLUMN_BY_KEY = Object.fromEntries(ALL_COLUMNS.map((col) => [col.key, col])) as Record<
+  ColumnKey,
+  ColumnDef
+>;
+
+const cellClassFor = (key: ColumnKey) => cellClass(COLUMN_BY_KEY[key].breakpoint);
 
 // `?sort=id_asc` predates the sort/dir split; map it once so existing links keep working.
 const LEGACY_SORT: Record<string, { key: TicketSortKey; dir: SortDir }> = {
@@ -696,13 +690,6 @@ const TicketsPage: FC = () => {
     [selectedColumns],
   );
 
-  // Responsive classes hide columns independently of the selector, so never clear the sort here.
-  const hiddenSortLabel = useMemo(() => {
-    if (sort.sortKey === "unclaimed") return null;
-    if (visibleColumns.some((col) => col.sortKey === sort.sortKey)) return null;
-    return ALL_COLUMNS.find((col) => col.sortKey === sort.sortKey)?.label ?? null;
-  }, [sort.sortKey, visibleColumns]);
-
   const toggleColumn = (key: ColumnKey) => {
     if (selectedColumns.includes(key)) {
       if (selectedColumns.length <= 1) return;
@@ -830,13 +817,15 @@ const TicketsPage: FC = () => {
         </div>
       </div>
 
+      <HiddenColumnControls
+        columns={ALL_COLUMNS}
+        selectedColumns={selectedColumns}
+        sort={sort}
+        title="Sorting"
+      />
+
       {/* Column selector (hidden on mobile where responsive classes handle visibility) */}
       <div className="hidden sm:flex justify-end items-center gap-3 mb-3">
-        {hiddenSortLabel && (
-          <span className="text-sm text-gray-400">
-            Sorted by {hiddenSortLabel} {sort.sortDir === "asc" ? "↑" : "↓"}
-          </span>
-        )}
         <ColumnSelectorButton
           columns={ALL_COLUMNS}
           isOpen={showColumnSelector}
@@ -871,12 +860,12 @@ const TicketsPage: FC = () => {
                   sort={sort}
                   sortKey={col.sortKey}
                   label={col.label}
-                  className={col.responsiveClass}
+                  className={cellClass(col.breakpoint)}
                 />
               ) : (
                 <Table.HeaderCell
                   key={col.key}
-                  className={`px-3 sm:px-6 py-3 ${col.responsiveClass}`}
+                  className={`px-3 sm:px-6 py-3 ${cellClass(col.breakpoint)}`}
                 >
                   {col.label}
                 </Table.HeaderCell>
@@ -893,7 +882,7 @@ const TicketsPage: FC = () => {
                   <Skeleton width={16} height={16} />
                 </Table.Cell>
                 {visibleColumns.map((col) => (
-                  <Table.Cell key={col.key} className="px-6 py-4">
+                  <Table.Cell key={col.key} className={`px-6 py-4 ${cellClass(col.breakpoint)}`}>
                     <Skeleton height={16} />
                   </Table.Cell>
                 ))}
@@ -935,22 +924,22 @@ const TicketsPage: FC = () => {
                     </Table.RowHeaderCell>
                   )}
                   {selectedColumns.includes("panel") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden sm:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("panel")}`}>
                       {getPanelTitle(ticket.panel_id)}
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("user") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden sm:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("user")}`}>
                       {getDisplayName(ticket.user_id)}
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("opened") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden lg:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("opened")}`}>
                       {ticket.opened_at ? getRelativeTime(new Date(ticket.opened_at)) : "Unknown"}
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("claimed_by") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden md:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("claimed_by")}`}>
                       {ticket.claimed_by ? (
                         getDisplayName(ticket.claimed_by)
                       ) : (
@@ -959,14 +948,16 @@ const TicketsPage: FC = () => {
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("last_message") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden lg:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("last_message")}`}>
                       {ticket.last_response_time
                         ? getRelativeTime(new Date(ticket.last_response_time))
                         : "Never"}
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("awaiting_response") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden lg:table-cell">
+                    <Table.Cell
+                      className={`px-3 sm:px-6 py-4 ${cellClassFor("awaiting_response")}`}
+                    >
                       {ticket.last_response_is_staff === false ? (
                         <span className="font-bold">Yes</span>
                       ) : (
@@ -975,7 +966,7 @@ const TicketsPage: FC = () => {
                     </Table.Cell>
                   )}
                   {selectedColumns.includes("labels") && (
-                    <Table.Cell className="px-3 sm:px-6 py-4 hidden md:table-cell">
+                    <Table.Cell className={`px-3 sm:px-6 py-4 ${cellClassFor("labels")}`}>
                       <div className="flex flex-wrap gap-1 items-center">
                         {assignedLabels.map((label) => (
                           <LabelBadge

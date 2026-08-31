@@ -9,6 +9,7 @@ import ColourSelect from "@/components/ColourSelect";
 import Collapsible from "@/components/Collapsible";
 import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
 import EmbedPreview from "@/components/EmbedPreview";
+import DiscordContent from "@/components/discord/DiscordContent";
 import DateTimePicker from "@/components/DateTimePicker";
 import { useKBArticles } from "@/hooks/queries/useKB";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
@@ -160,6 +161,9 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
   const hasContent = linkToKB ? kbArticleId != null : content || useEmbed;
 
   const linkedArticle = kbArticleId != null ? kbArticles?.find((a) => a.id === kbArticleId) : null;
+
+  const hasContentPreview = content.trim().length > 0;
+  const hasArticlePreview = !!linkedArticle?.content?.trim();
 
   const kbArticleOptions = (kbArticles ?? [])
     .filter((a) => a.published)
@@ -408,12 +412,13 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
             {linkToKB && linkedArticle ? (
               <div className="mt-4">
                 <p className="text-xs text-gray-300 mb-2">Showing linked KB article preview:</p>
-                {linkedArticle.content && (
-                  <p className="text-sm whitespace-pre-wrap bg-[#242429] rounded p-3 text-gray-200">
-                    {linkedArticle.content}
-                  </p>
+                {hasArticlePreview && (
+                  <DiscordContent
+                    content={linkedArticle.content ?? ""}
+                    className="text-sm bg-[#242429] rounded p-3"
+                  />
                 )}
-                {!linkedArticle.content && (
+                {!hasArticlePreview && (
                   <p className="text-gray-300 text-sm">
                     Article has no text content (may use an embed).
                   </p>
@@ -421,13 +426,14 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
               </div>
             ) : (
               <>
-                {content && (
-                  <p className="mt-4 text-sm whitespace-pre-wrap bg-[#242429] rounded p-3">
-                    {content}
-                  </p>
+                {hasContentPreview && (
+                  <DiscordContent
+                    content={content}
+                    className="mt-4 text-sm bg-[#242429] rounded p-3"
+                  />
                 )}
                 {useEmbed && <EmbedPreview embed={embed} />}
-                {!content && !useEmbed && (
+                {!hasContentPreview && !useEmbed && (
                   <p className="mt-4 text-gray-300 text-sm">
                     Add message content or enable an embed to see a preview.
                   </p>

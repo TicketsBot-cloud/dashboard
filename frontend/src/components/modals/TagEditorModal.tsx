@@ -14,6 +14,7 @@ import { useKBArticles } from "@/hooks/queries/useKB";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import type { Tag, TagEmbed } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
+import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 interface TagEditorModalProps {
@@ -355,7 +356,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                     <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
                       <Textarea
                         label="Footer Text"
-                        placeholder="e.g. Powered by Tickets.bot"
+                        placeholder={`e.g. ${BRANDING_FOOTER_TEXT}`}
                         value={embed.footer?.text || ""}
                         onChange={(v) =>
                           setEmbed((prev) => ({

@@ -42,7 +42,7 @@ const Textarea: FC<TextareaProps> = (props) => {
       <div className={`inline-flex items-center bg-gray-700 border rounded px-1 ${borderClass}`}>
         <textarea
           id={textareaId}
-          className="w-full bg-gray-700 p-3 rounded resize-y max-h-50 h-50 focus:outline-none"
+          className="w-full bg-gray-700 p-3 rounded resize-y h-50 focus:outline-none"
           value={safeValue}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}

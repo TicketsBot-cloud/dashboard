@@ -38,7 +38,7 @@ const EmbedFieldsEditor: FC<EmbedFieldsEditorProps> = ({ fields, onChange }) => 
       {fields.map((field, i) => (
         <div key={i} className="p-3 rounded bg-gray-800 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-2">
+            <div className="flex-1 flex flex-col gap-2">
               <TextInput
                 label="Field Name"
                 placeholder="Field name"

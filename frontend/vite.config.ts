@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => {
     // First-party and Discord
     "https://tickets.bot",
     "https://cdn.tickets.bot",
+    "https://image-cdn.tickets.bot",
     "https://cdn.discordapp.com",
     "https://media.discordapp.net",
     "https://dbl-static.b-cdn.net",

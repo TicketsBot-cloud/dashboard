@@ -3,6 +3,7 @@ import Button from "@/components/discord/container/Button";
 import SelectMenu from "@/components/discord/container/SelectMenu";
 import DiscordContent from "@/components/discord/DiscordContent";
 import type { Panel, MultiPanel, MultiPanelRequest } from "@/types";
+import { BRANDING_FOOTER_ICON, BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { formatEmbedTimestampForDisplay } from "@/lib/embed-timestamp";
 import { isSafeUrl } from "@/lib/url";
 import { previewAvatarUrl } from "@/lib/embed-avatar";
@@ -22,9 +23,10 @@ interface PanelPreviewProps {
     panel: Panel | MultiPanel | MultiPanelRequest | MultiPanelPreviewRequest;
     buttons?: Panel[];
   };
+  brandingFooter?: boolean;
 }
 
-const PanelPreview: FC<PanelPreviewProps> = ({ type, data }) => {
+const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => {
   const { panel, buttons } = data;
 
   if (type === "panel") {
@@ -116,6 +118,10 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data }) => {
   const footerIconUrl = resolveTicketAvatar(footerIconUrlRaw);
   const footerTimestamp = formatEmbedTimestampForDisplay(embedData?.timestamp);
 
+  // Timestamp survives branding, as it does bot-side.
+  const displayFooterText = brandingFooter ? BRANDING_FOOTER_TEXT : footerText;
+  const displayFooterIconUrl = brandingFooter ? BRANDING_FOOTER_ICON : footerIconUrl;
+
   const thumbnailUrl = resolveTicketAvatar(embedData?.thumbnail_url);
   const imageUrl = resolveTicketAvatar(embedData?.image_url);
   const authorIconUrl = resolveTicketAvatar(embedData?.author?.icon_url);
@@ -190,14 +196,14 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data }) => {
             <img src={imageUrl} alt="Embedded" className="w-full h-auto rounded-sm" />
           </div>
         )}
-        {(footerText || footerTimestamp) && (
+        {(displayFooterText || footerTimestamp) && (
           <div className="mt-3 flex items-center gap-2">
-            {footerIconUrl && (
-              <img src={footerIconUrl} alt="Footer Icon" className="w-5 h-5 rounded-full" />
+            {displayFooterIconUrl && (
+              <img src={displayFooterIconUrl} alt="Footer Icon" className="w-5 h-5 rounded-full" />
             )}
             <p className="text-xs text-[#dbdee1]">
-              {footerText}
-              {footerText && footerTimestamp ? " • " : ""}
+              {displayFooterText}
+              {displayFooterText && footerTimestamp ? " • " : ""}
               {footerTimestamp}
             </p>
           </div>

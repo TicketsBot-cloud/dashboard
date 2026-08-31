@@ -16,7 +16,7 @@ import (
 )
 
 type multiPanelMessageData struct {
-	IsPremium bool
+	Footer footerPolicy
 
 	ChannelId uint64
 
@@ -24,6 +24,14 @@ type multiPanelMessageData struct {
 	SelectMenuPlaceholder *string
 
 	Embed *embed.Embed
+}
+
+func (d *multiPanelMessageData) applyFooter() {
+	if d.Footer.ShowBranding {
+		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
+	} else if !d.Footer.AllowCustom {
+		d.Embed.Footer = nil
+	}
 }
 
 func multiPanelDiscordSubPanelError(action, detail string) string {
@@ -34,9 +42,9 @@ func multiPanelDiscordSubPanelError(action, detail string) string {
 	)
 }
 
-func multiPanelIntoMessageData(panel database.MultiPanel, isPremium bool) multiPanelMessageData {
+func multiPanelIntoMessageData(panel database.MultiPanel, footer footerPolicy) multiPanelMessageData {
 	return multiPanelMessageData{
-		IsPremium: isPremium,
+		Footer: footer,
 
 		ChannelId: panel.ChannelId,
 
@@ -85,9 +93,7 @@ func getEffectiveEmojiAnimated(panel database.Panel, customEmojiName *string, cu
 }
 
 func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
-	if !d.IsPremium {
-		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
-	}
+	d.applyFooter()
 
 	var components []component.Component
 	if d.SelectMenu {
@@ -178,9 +184,7 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 }
 
 func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint64, panels []database.PanelWithCustomization) error {
-	if !d.IsPremium {
-		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
-	}
+	d.applyFooter()
 
 	var components []component.Component
 	if d.SelectMenu {

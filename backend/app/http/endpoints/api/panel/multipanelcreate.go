@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
-	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
@@ -18,7 +17,6 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
@@ -48,9 +46,9 @@ type multiPanelCreateData struct {
 	Embed                 *types.CustomEmbed   `json:"embed" validate:"omitempty"`
 }
 
-func (d *multiPanelCreateData) IntoMessageData(isPremium bool) multiPanelMessageData {
+func (d *multiPanelCreateData) IntoMessageData(footer footerPolicy) multiPanelMessageData {
 	return multiPanelMessageData{
-		IsPremium:             isPremium,
+		Footer:                footer,
 		ChannelId:             d.ChannelId,
 		SelectMenu:            d.SelectMenu,
 		SelectMenuPlaceholder: d.SelectMenuPlaceholder,
@@ -125,8 +123,7 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
-	// get premium status
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+	footer, err := footerPolicyForGuild(c, guildId, botContext)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 		return
@@ -144,7 +141,7 @@ func MultiPanelCreate(c *gin.Context) {
 		}
 	}
 
-	messageData := data.IntoMessageData(premiumTier > premium.None)
+	messageData := data.IntoMessageData(footer)
 	messageId, err := messageData.send(botContext, panelsWithCustom)
 	if err != nil {
 		var unwrapped request.RestError

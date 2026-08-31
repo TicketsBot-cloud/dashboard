@@ -35,6 +35,7 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import TicketModeInfoModal from "@/components/modals/TicketModeInfoModal";
 import PremiumGate from "@/components/PremiumGate";
@@ -72,6 +73,8 @@ const PanelsPage: FC = () => {
   const queryClient = useQueryClient();
   const { data: forms = [] } = useGuildForms(guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
+  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
+  const showBrandingFooter = !brandingPremium?.premium;
   const { data: kbCategories = [] } = useKBCategories(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
   const [isLoadingClone, setIsLoadingClone] = useState(!!clonePanelId);
@@ -150,9 +153,7 @@ const PanelsPage: FC = () => {
     welcome_message: {
       description: "Thank you for opening a ticket! A member of staff will be with you shortly.",
       colour: "#5865f2",
-      footer: {
-        text: "Powered by tickets.bot",
-      },
+      footer: {},
       author: {},
       fields: [],
     },
@@ -719,44 +720,51 @@ const PanelsPage: FC = () => {
               />
             </Collapsible>
             <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <Textarea
-                label="Footer Text"
-                placeholder="e.g. Powered by TicketBot"
-                value={panel.welcome_message?.footer?.text || ""}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: {
-                            ...prev.welcome_message,
-                            footer: { ...prev.welcome_message?.footer, text: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-                max={EMBED_LIMITS.FOOTER_TEXT}
-              />
-              <TextInput
-                label="Footer Icon URL"
-                placeholder="e.g. https://example.com/footer-icon.png"
-                value={panel.welcome_message?.footer?.icon_url || ""}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: {
-                            ...prev.welcome_message,
-                            footer: { ...prev.welcome_message?.footer, icon_url: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.URL}
-              />
+              <PremiumGate
+                isPremium={!!premiumState?.premium}
+                feature="custom-footer"
+                description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
+                variant="overlay"
+              >
+                <Textarea
+                  label="Footer Text"
+                  placeholder="e.g. Support hours: 9am-5pm UTC"
+                  value={panel.welcome_message?.footer?.text || ""}
+                  onChange={(e) =>
+                    setPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            welcome_message: {
+                              ...prev.welcome_message,
+                              footer: { ...prev.welcome_message?.footer, text: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  max={EMBED_LIMITS.FOOTER_TEXT}
+                />
+                <TextInput
+                  label="Footer Icon URL"
+                  placeholder="e.g. https://example.com/footer-icon.png"
+                  value={panel.welcome_message?.footer?.icon_url || ""}
+                  onChange={(e) =>
+                    setPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            welcome_message: {
+                              ...prev.welcome_message,
+                              footer: { ...prev.welcome_message?.footer, icon_url: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  maxLength={EMBED_LIMITS.URL}
+                />
+              </PremiumGate>
               <DateTimePicker
                 label="Footer Timestamp (Optional)"
                 value={parseEmbedTimestamp(panel.welcome_message?.timestamp)}
@@ -790,7 +798,7 @@ const PanelsPage: FC = () => {
 
           <div>
             <span className="text-xl font-semibold">Welcome Message Preview</span>
-            <PanelPreview type="welcome" data={{ panel }} />
+            <PanelPreview type="welcome" data={{ panel }} brandingFooter={showBrandingFooter} />
           </div>
         </div>
       </Collapsible>

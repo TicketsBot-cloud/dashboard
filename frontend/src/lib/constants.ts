@@ -16,3 +16,6 @@ export const PATREON_URL = env.VITE_PATREON_URL || "https://www.patreon.com/tick
 export const WEBSITE_URL = env.VITE_WEBSITE_URL || "https://tickets.bot";
 export const KB_DOMAIN = env.VITE_KB_DOMAIN || "kb.tickets.bot";
 export const GROWTHBOOK_URL = env.VITE_GROWTHBOOK_URL || "http://growthbook.prod";
+export const POWERED_BY = env.VITE_POWERED_BY || "Tickets.bot";
+export const BRANDING_FOOTER_TEXT = `Powered by ${POWERED_BY}`;
+export const BRANDING_FOOTER_ICON = "https://tickets.bot/assets/img/logo.png";

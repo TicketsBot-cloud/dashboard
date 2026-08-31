@@ -89,6 +89,12 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	footer, err := footerPolicyForGuild(c, guildId, botContext)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
+	}
+
 	// TODO: Use proper context
 	channels, err := botContext.GetGuildChannels(context.Background(), guildId)
 	if err != nil {
@@ -160,7 +166,7 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	messageData := data.IntoPanelMessageData(existing.CustomId, premiumTier > premium.None)
+	messageData := data.IntoPanelMessageData(existing.CustomId, footer.ShowBranding)
 	var newMessageId uint64
 
 	// Check if channel changed
@@ -401,7 +407,7 @@ func UpdatePanel(c *gin.Context) {
 			return
 		}
 
-		messageData := multiPanelIntoMessageData(multiPanel, premiumTier > premium.None)
+		messageData := multiPanelIntoMessageData(multiPanel, footer)
 
 		// Try to edit message first
 		var messageId uint64

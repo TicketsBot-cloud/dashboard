@@ -47,16 +47,19 @@ const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({ embed, entities, classNa
       {embed.title && (
         <div className="mb-2">
           {embed.url && isSafeUrl(embed.url) ? (
-            <a
-              href={embed.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:underline font-semibold text-lg"
-            >
-              {embed.title}
+            <a href={embed.url} target="_blank" rel="noopener noreferrer">
+              <DiscordContent
+                content={embed.title}
+                entities={entities}
+                className="text-blue-400! hover:underline font-semibold text-lg"
+              />
             </a>
           ) : (
-            <h3 className="text-white font-semibold text-lg">{embed.title}</h3>
+            <DiscordContent
+              content={embed.title}
+              entities={entities}
+              className="text-white font-semibold text-lg"
+            />
           )}
         </div>
       )}
@@ -76,7 +79,11 @@ const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({ embed, entities, classNa
               key={index}
               className={field.inline ? "inline-block mr-4 mb-2 min-w-37.5 max-w-50" : "mb-2"}
             >
-              <div className="text-white font-semibold text-sm mb-1">{field.name}</div>
+              <DiscordContent
+                content={field.name}
+                entities={entities}
+                className="text-white font-semibold text-sm mb-1"
+              />
               <DiscordContent
                 content={field.value}
                 entities={entities}

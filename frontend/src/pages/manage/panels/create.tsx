@@ -115,6 +115,8 @@ const PanelsPage: FC = () => {
     emoji_name: "📩",
     mentions: [],
     kb_category_ids: [],
+    teams: [],
+    default_team: true,
     mention_behaviour: "none",
     use_custom_emoji: false,
     disabled: false,

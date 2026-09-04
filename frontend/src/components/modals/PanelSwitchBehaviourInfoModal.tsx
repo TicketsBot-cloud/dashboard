@@ -23,7 +23,7 @@ const PanelSwitchBehaviourInfoModal: FC<PanelSwitchBehaviourInfoModalProps> = ({
     >
       <div className="p-6 pr-12">
         <h2 id={titleId} className="text-xl font-semibold text-white mb-3">
-          Panel Switch Behaviour
+          Claim Behaviour on Panel Switch
         </h2>
         <p className="text-gray-300 text-sm mb-6 leading-relaxed">
           When a staff member moves a claimed ticket to another panel, these options control what

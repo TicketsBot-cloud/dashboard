@@ -30,12 +30,12 @@ const PanelSwitchSelect: FC<{ value: number; onChange: (v: number) => void }> = 
   return (
     <div className="flex flex-col">
       <div className="mb-1 flex items-center gap-1.5">
-        <span className="text-white">Panel Switch Behaviour</span>
+        <span className="text-white">Claim Behaviour on Panel Switch</span>
         <Button
           variant="ghost"
           size="icon"
           className="text-gray-400 hover:text-gray-200"
-          aria-label="Learn more about Panel Switch Behaviour"
+          aria-label="Learn more about Claim Behaviour on Panel Switch"
           onClick={() => setInfoOpen(true)}
         >
           <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" aria-hidden="true" />

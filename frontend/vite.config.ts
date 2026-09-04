@@ -18,6 +18,15 @@ export default defineConfig(({ mode }) => {
   const baseUrl = requiredEnv("VITE_BASE_URL", "http://localhost:5173");
   const wsUrl = requiredEnv("VITE_WS_URL", "ws://localhost:8081");
 
+  const iconOrigin = (() => {
+    const value = env.VITE_ICON_URL || "https://tickets.bot/assets/img/logo.png";
+    try {
+      return new URL(value).origin;
+    } catch {
+      throw new Error(`VITE_ICON_URL must be an absolute URL, got: ${value}`);
+    }
+  })();
+
   const connectSrcBase = `'self' https://cdn.discordapp.com https://sentry.tkts.bot ${apiUrl} ${wsUrl}`;
   const scriptSrcBase = "'self' https://cdn.jsdelivr.net";
 
@@ -25,6 +34,7 @@ export default defineConfig(({ mode }) => {
   // so this keeps them from pointing a viewer's browser at an arbitrary host.
   const imgSrcHosts = [
     // First-party and Discord
+    iconOrigin,
     "https://tickets.bot",
     "https://cdn.tickets.bot",
     "https://image-cdn.tickets.bot",
@@ -50,7 +60,9 @@ export default defineConfig(({ mode }) => {
     "https://c.tenor.com",
     "https://media.giphy.com",
     "https://i.giphy.com",
-  ].join(" ");
+  ];
+
+  const imgSrc = [...new Set(imgSrcHosts)].join(" ");
 
   const csp = [
     "default-src 'self'",
@@ -58,7 +70,7 @@ export default defineConfig(({ mode }) => {
     isDev ? `script-src ${scriptSrcBase} 'unsafe-inline'` : `script-src ${scriptSrcBase}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
-    `img-src 'self' data: blob: ${imgSrcHosts}`,
+    `img-src 'self' data: blob: ${imgSrc}`,
     isDev
       ? `connect-src ${connectSrcBase} ws://localhost:* http://localhost:*`
       : `connect-src ${connectSrcBase}`,

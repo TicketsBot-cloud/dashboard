@@ -4,7 +4,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { SkeletonTheme } from "react-loading-skeleton";
-import { WEBSITE_URL } from "@/lib/constants";
+import { BRANDING_FOOTER_TEXT, WEBSITE_URL } from "@/lib/constants";
 import { usePublicKBInfo } from "@/hooks/queries/usePublicKB";
 import type { KBGuildInfo } from "@/types";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -157,7 +157,7 @@ const KBLayoutInner: FC = () => {
               rel="noopener noreferrer"
               className="text-(--kb-text)/50 text-sm hover:text-(--kb-text)/70 transition-colors"
             >
-              Powered by Tickets.bot
+              {BRANDING_FOOTER_TEXT}
             </a>
           </div>
         </footer>

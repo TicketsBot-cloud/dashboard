@@ -46,7 +46,7 @@ import type { KBArticle, KBCategory, PremiumState } from "@/types";
 import { SortTrigger, ariaSortFor } from "@/components/SortableHeaderCell";
 import { useTableSort } from "@/hooks/useTableSort";
 import type { SortColumn } from "@/lib/table-sort";
-import { KB_DOMAIN } from "@/lib/constants";
+import { BRANDING_FOOTER_TEXT, KB_DOMAIN } from "@/lib/constants";
 import { usePreferencesStore } from "@/stores/preferences";
 import ActionDropdown from "@/components/ActionDropdown";
 import ColumnSelectorButton from "@/components/ColumnSelectorButton";
@@ -900,7 +900,7 @@ const KBPage: FC = () => {
                   <Slider
                     value={custHideBranding}
                     onChange={setCustHideBranding}
-                    label="Hide 'Powered by Tickets.bot' footer"
+                    label={`Hide '${BRANDING_FOOTER_TEXT}' footer`}
                   />
                 </div>
 

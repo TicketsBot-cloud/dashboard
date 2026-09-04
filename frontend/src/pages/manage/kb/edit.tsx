@@ -22,6 +22,7 @@ import TableSkeleton from "@/components/skeletons/TableSkeleton";
 import { useKBArticle, useKBCategories, useUpdateKBArticle } from "@/hooks/queries/useKB";
 import type { TagEmbed } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
+import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 const defaultEmbed: TagEmbed = {
@@ -407,7 +408,7 @@ const EditKBArticlePage: FC = () => {
                 <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
                   <Textarea
                     label="Footer Text"
-                    placeholder="e.g. Powered by Tickets.bot"
+                    placeholder={`e.g. ${BRANDING_FOOTER_TEXT}`}
                     value={embed.footer?.text || ""}
                     onChange={(v) =>
                       setEmbed((prev) => ({

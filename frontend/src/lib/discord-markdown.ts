@@ -125,8 +125,8 @@ const INLINE_RULES: Record<string, InlineRule[]> = {
   // The url group balances one paren level so `…/Foo_(bar)` survives.
   "[": [
     {
-      re: /\[((?:[^\][]|\[[^\]]*\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/y,
-      build: (m) => buildLink(m[2], m[0], m[1]),
+      re: /\[((?:[^\][]|\[[^\]]*\])+)\]\((?:<(https?:\/\/[^\s<>]+)>|((?:[^()\s]|\([^()\s]*\))+))\)/y,
+      build: (m) => buildLink(m[2] ?? m[3], m[0], m[1]),
     },
   ],
 

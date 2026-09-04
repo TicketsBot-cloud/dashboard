@@ -415,8 +415,7 @@ var (
 	reChannelMention = regexp.MustCompile(`^<#(\d+)>`)
 	reAngleLink      = regexp.MustCompile(`^<(https?://[^\s<>]+)>`)
 	reGlobalMention  = regexp.MustCompile(`^@(everyone|here)\b`)
-	// The url group balances one paren level so `…/Foo_(bar)` survives.
-	reMaskedLink = regexp.MustCompile(`^\[((?:[^\][]|\[[^\]]*\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)`)
+	reMaskedLink = regexp.MustCompile(`^\[((?:[^\][]|\[[^\]]*\])+)\]\((?:<(https?://[^\s<>]+)>|((?:[^()\s]|\([^()\s]*\))+))\)`)
 	// The final class excludes trailing punctuation, so `(https://example.com/x.)`
 	// keeps the `.)`.
 	reBareLink = regexp.MustCompile(`^https?://[^\s<]*[^<.,:;"')\]\s]`)
@@ -495,7 +494,11 @@ func matchMaskedLink(src string, at int) (mdNode, int, bool) {
 	if m == nil {
 		return mdNode{}, 0, false
 	}
-	return buildLink(m[2], m[0], &m[1]), at + len(m[0]), true
+	rawURL := m[2]
+	if rawURL == "" {
+		rawURL = m[3]
+	}
+	return buildLink(rawURL, m[0], &m[1]), at + len(m[0]), true
 }
 
 func matchBareLink(src string, at int) (mdNode, int, bool) {

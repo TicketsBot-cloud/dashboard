@@ -190,6 +190,19 @@ const FormInputRow: FC<FormInputRowProps> = ({
     onValidationChangeRef.current?.(hasValidationErrors);
   }, [hasValidationErrors]);
 
+  const optionCount = input.options?.length ?? 0;
+  const lengthCeiling = (() => {
+    if (input.type === 4) return 4000;
+    if (input.type === 22) return Math.min(10, optionCount || 10);
+    if (input.type === 3 && !isApiSelect) return Math.min(25, optionCount || 25);
+    return 25;
+  })();
+  const maxLength = Math.min(
+    lengthCeiling,
+    Math.max(1, input.max_length ?? (input.type === 4 ? 255 : 10)),
+  );
+  const minLength = Math.min(Math.max(0, input.min_length ?? 0), maxLength);
+
   const inputTypes = [
     { label: "Text Input", key: "4" },
     { label: "String Select", key: "3" },
@@ -351,8 +364,9 @@ const FormInputRow: FC<FormInputRowProps> = ({
           <RangeSlider
             label={input.type == 4 ? "Length Range" : "Items Range"}
             min={0}
-            max={input.type == 4 ? 4000 : 25}
-            value={[input.min_length || 0, input.max_length || (input.type == 4 ? 255 : 10)]}
+            max={lengthCeiling}
+            maxFloor={1}
+            value={[minLength, maxLength]}
             onChange={([min, max]) => {
               const updated = { ...input, min_length: min, max_length: max };
               setInput(updated);
@@ -361,6 +375,12 @@ const FormInputRow: FC<FormInputRowProps> = ({
             minLabel="Min"
             maxLabel="Max"
           />
+          {input.type === 3 && isApiSelect && (
+            <p className="text-xs text-gray-400 mt-1">
+              Discord caps the selection at however many options your API returns, so a range above
+              that count is trimmed when the form opens.
+            </p>
+          )}
         </div>
       )}
 

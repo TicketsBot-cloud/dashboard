@@ -10,13 +10,12 @@ import (
 	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
-	"github.com/TicketsBot-cloud/gdl/objects/interaction"
-	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/internal/tagalias"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
@@ -147,12 +146,7 @@ func CreateTag(ctx *gin.Context) {
 
 	var applicationCommandId *uint64
 	if data.UseGuildCommand {
-		cmd, err := botContext.CreateGuildCommand(ctx, guildId, rest.CreateCommandData{
-			Name:        data.Id,
-			Description: fmt.Sprintf("Alias for /tag %s", data.Id),
-			Options:     nil,
-			Type:        interaction.ApplicationCommandTypeChatInput,
-		})
+		cmd, err := botContext.CreateGuildCommand(ctx, guildId, tagalias.Command(data.Id))
 
 		if err != nil {
 			ctx.JSON(500, utils.ErrorStr("Failed to create tag. Please try again."))

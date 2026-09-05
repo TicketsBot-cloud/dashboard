@@ -2,7 +2,6 @@ package utilities
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	"github.com/ticketsbot-cloud/dashboard/backend/config"
 	"github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/internal/tagalias"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 )
 
@@ -66,7 +66,7 @@ func RecreateMainCommands() func(*gin.Context) {
 				return
 			}
 
-			adminCommands = append(adminCommands, tagAliasCommands(tags)...)
+			adminCommands = append(adminCommands, tagalias.Commands(tags)...)
 
 			existing, err := rest.GetGuildCommands(context.Background(), config.Conf.Bot.Token, botCtx.RateLimiter, config.Conf.Bot.Id, adminGuildId)
 			if err != nil {
@@ -99,25 +99,6 @@ func RecreateMainCommands() func(*gin.Context) {
 			"admin_skipped": adminSkipped,
 		})
 	}
-}
-
-// Must match what CreateTag registers when an alias is first enabled.
-func tagAliasCommands(tags map[string]dbmodel.Tag) []rest.CreateCommandData {
-	commands := make([]rest.CreateCommandData, 0, len(tags))
-	for _, tag := range tags {
-		if tag.ApplicationCommandId == nil {
-			continue
-		}
-
-		commands = append(commands, rest.CreateCommandData{
-			Name:        tag.Id,
-			Description: fmt.Sprintf("Alias for /tag %s", tag.Id),
-			Options:     nil,
-			Type:        interaction.ApplicationCommandTypeChatInput,
-		})
-	}
-
-	return commands
 }
 
 // Carries over commands this endpoint did not build, which the overwrite would otherwise delete.
@@ -158,15 +139,14 @@ func reconcileTagAliasIds(
 	tags map[string]dbmodel.Tag,
 	registered []interaction.ApplicationCommand,
 ) error {
-	query := `UPDATE tags SET "application_command_id" = $1 WHERE "guild_id" = $2 AND LOWER("tag_id") = LOWER($3);`
-
 	for _, cmd := range registered {
 		tag, ok := tags[strings.ToLower(cmd.Name)]
 		if !ok || tag.ApplicationCommandId == nil || *tag.ApplicationCommandId == cmd.Id {
 			continue
 		}
 
-		if _, err := database.Client.Tag.Exec(ctx, query, cmd.Id, guildId, tag.Id); err != nil {
+		commandId := cmd.Id
+		if _, err := tagalias.SetCommandId(ctx, guildId, tag.Id, &commandId); err != nil {
 			return err
 		}
 	}

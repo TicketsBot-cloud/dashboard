@@ -504,6 +504,23 @@ export interface Tag {
   kb_article_id?: number | null;
 }
 
+export interface TagAliasResyncStatus {
+  status: "idle" | "running" | "completed";
+  cooldown_until?: string;
+  total: number;
+  processed: number;
+  recreated: number;
+  removed: number;
+  rebound: number;
+  in_sync: number;
+  skipped: number;
+  failed: number;
+  started_at?: string;
+  finished_at?: string;
+  warnings: string[];
+  errors: { tag_id: string; error: string }[];
+}
+
 export interface WhitelabelBot {
   id: string;
   username: string;

@@ -193,7 +193,7 @@ export interface Panel {
   has_support_hours?: boolean;
   is_currently_active?: boolean;
   exit_survey_form_id?: number | null;
-  pending_category?: string;
+  pending_category?: string | null;
   mention_behaviour: string;
   transcript_channel_id?: string;
   use_threads: boolean;

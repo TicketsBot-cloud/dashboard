@@ -124,13 +124,13 @@ func CreatePanel(c *gin.Context) {
 	data.MessageId = 0
 
 	// Check panel quota
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
+	quotaTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
 		return
 	}
 
-	if premiumTier == premium.None {
+	if quotaTier == premium.None {
 		panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch existing panels"))
@@ -165,11 +165,21 @@ func CreatePanel(c *gin.Context) {
 		data.OverflowCategoryId = nil
 	}
 
+	// Voting premium unlocks fields but not quota, so the tier is looked up twice.
+	featureTier := quotaTier
+	if featureTier == premium.None {
+		featureTier, err = rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+			return
+		}
+	}
+
 	// Do custom validation
 	validationContext := PanelValidationContext{
 		Data:       data,
 		GuildId:    guildId,
-		IsPremium:  premiumTier > premium.None,
+		IsPremium:  featureTier > premium.None,
 		BotContext: botContext,
 		Channels:   channels,
 		Roles:      roles,

@@ -73,8 +73,8 @@ const PanelsPage: FC = () => {
   const queryClient = useQueryClient();
   const { data: forms = [] } = useGuildForms(guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
-  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
-  const showBrandingFooter = !brandingPremium?.premium;
+  const { data: premiumWithVoting = null } = useGuildPremium(guildId, true);
+  const showBrandingFooter = !premiumWithVoting?.premium;
   const { data: kbCategories = [] } = useKBCategories(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
   const [isLoadingClone, setIsLoadingClone] = useState(!!clonePanelId);
@@ -466,26 +466,33 @@ const PanelsPage: FC = () => {
             }
           />
 
-          <Select
-            label={
-              premiumState?.premium
-                ? "Awaiting Response Category"
-                : "Awaiting Response Category (Premium)"
-            }
-            disabled={!premiumState?.premium}
-            options={
-              selectedGuild?.channels
-                ?.filter((c) => c.type == 4)
-                .map((channel) => ({
-                  label: channel.name,
-                  key: channel.id,
-                })) || []
-            }
-            value={panel.pending_category || ""}
-            onChange={(e) =>
-              setPanel((prev) => (prev ? { ...prev, pending_category: e ?? undefined } : prev))
-            }
-          />
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-sm text-white">Awaiting Response Category</span>
+              {!premiumWithVoting?.premium && (
+                <span title="Move tickets to a separate category while they await a user reply. Requires Premium.">
+                  <FontAwesomeIcon icon={faCrown} className="text-amber-400 text-xs cursor-help" />
+                </span>
+              )}
+            </div>
+            <Select
+              label="Awaiting Response Category"
+              hideLabel
+              showNoneOption={true}
+              noneOptionLabel="No Awaiting Response Category"
+              options={
+                selectedGuild?.channels
+                  ?.filter((c) => c.type == 4)
+                  .map((channel) => ({
+                    label: channel.name,
+                    key: channel.id,
+                    disabled: !premiumWithVoting?.premium,
+                  })) || []
+              }
+              value={panel.pending_category ?? null}
+              onChange={(e) => setPanel((prev) => (prev ? { ...prev, pending_category: e } : prev))}
+            />
+          </div>
         </div>
         <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <Select

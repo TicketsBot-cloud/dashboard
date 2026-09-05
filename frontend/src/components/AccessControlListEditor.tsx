@@ -4,6 +4,7 @@ import Button from "@/components/Button";
 import Select from "@/components/Select";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faArrowDown, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { roleColour } from "@/lib/colour";
 
 interface AccessControlListEditorProps {
   guildId: string;
@@ -60,12 +61,18 @@ const AccessControlListEditor: FC<AccessControlListEditorProps> = ({
     return role ? role.name : "Deleted Role";
   };
 
+  const roleColours = new Map(roles.map((r) => [r.id, roleColour(r.color)]));
+
   return (
     <div className="flex flex-col gap-3">
       <Select
         label="Add Role"
         placeholder="Add another role..."
-        options={availableRoles.map((r) => ({ key: r.id, label: r.name }))}
+        options={availableRoles.map((r) => ({
+          key: r.id,
+          label: r.name,
+          color: roleColour(r.color),
+        }))}
         value=""
         onChange={addRole}
         disabled={acl.length >= MAX_ACL_SIZE}
@@ -100,7 +107,15 @@ const AccessControlListEditor: FC<AccessControlListEditorProps> = ({
                   <FontAwesomeIcon icon={faArrowDown} />
                 </Button>
               </div>
-              <span className="text-white">{getRoleName(subject.role_id)}</span>
+              <span className="flex items-center gap-2 text-white">
+                {roleColours.has(subject.role_id) && (
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0 ring-1 ring-white/15"
+                    style={{ backgroundColor: roleColours.get(subject.role_id) }}
+                  />
+                )}
+                {getRoleName(subject.role_id)}
+              </span>
               <div className="flex gap-1">
                 <Button
                   variant={subject.action === "allow" ? "success" : "danger"}

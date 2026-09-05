@@ -20,6 +20,7 @@ import type { GuildSettings } from "@/types";
 import PermissionWarningBanner from "@/components/PermissionWarningBanner";
 import PanelSwitchBehaviourInfoModal from "@/components/modals/PanelSwitchBehaviourInfoModal";
 import { PANEL_SWITCH_OPTIONS } from "@/constants/panelSwitchBehaviour";
+import { intToColour } from "@/lib/colour";
 
 const PanelSwitchSelect: FC<{ value: number; onChange: (v: number) => void }> = ({
   value,
@@ -209,6 +210,7 @@ const GuildSettings: FC = () => {
               ...panels.map((p) => ({
                 key: p.panel_id.toString(),
                 label: p.title,
+                color: intToColour(p.colour),
               })),
             ]}
           />

@@ -231,6 +231,7 @@ function Setup() {
               roles={(guild.roles ?? []).map((r) => ({
                 id: r.id,
                 name: r.name,
+                color: r.color,
               }))}
               existingTeams={createdTeams}
               onTeamsChange={setCreatedTeams}

@@ -21,11 +21,30 @@ const FORM_INPUT_TYPE_NAMES: Record<number, string> = {
   22: "Checkbox Group",
 };
 
-export const GALLERY_TYPE_BADGES: Record<string, { label: string; className: string }> = {
-  panel: { label: "Panel", className: "bg-purple-600/20 text-purple-400" },
-  tag: { label: "Tag", className: "bg-teal-600/20 text-teal-400" },
-  form: { label: "Form", className: "bg-orange-600/20 text-orange-400" },
+export const GALLERY_TYPE_BADGES: Record<
+  string,
+  { label: string; plural: string; className: string; dot: string }
+> = {
+  panel: {
+    label: "Panel",
+    plural: "Panels",
+    className: "bg-purple-600/20 text-purple-400",
+    dot: "#C27AFF",
+  },
+  tag: { label: "Tag", plural: "Tags", className: "bg-teal-600/20 text-teal-400", dot: "#00D5BE" },
+  form: {
+    label: "Form",
+    plural: "Forms",
+    className: "bg-orange-600/20 text-orange-400",
+    dot: "#FF8904",
+  },
 };
+
+export const GALLERY_TYPE_OPTIONS = Object.entries(GALLERY_TYPE_BADGES).map(([key, badge]) => ({
+  key,
+  label: badge.plural,
+  color: badge.dot,
+}));
 
 // Anything the parser leaves as plain text renders identically either way.
 function hasMarkdown(content: string | undefined): boolean {

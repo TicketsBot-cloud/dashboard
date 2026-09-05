@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api";
 import type { GalleryListing } from "@/types";
 import Button from "@/components/Button";
 import GalleryCard from "@/components/GalleryCard";
+import { GALLERY_TYPE_OPTIONS } from "@/components/gallery/GalleryListingPreview";
 import GalleryImportModal from "@/components/modals/GalleryImportModal";
 import GalleryImportTagModal from "@/components/modals/GalleryImportTagModal";
 import GalleryImportFormModal from "@/components/modals/GalleryImportFormModal";
@@ -24,12 +25,6 @@ const CATEGORY_OPTIONS = [
   { key: "feedback", label: "Feedback" },
   { key: "general", label: "General" },
   { key: "other", label: "Other" },
-];
-
-const TYPE_OPTIONS = [
-  { key: "panel", label: "Panels" },
-  { key: "tag", label: "Tags" },
-  { key: "form", label: "Forms" },
 ];
 
 const SORT_OPTIONS = [
@@ -125,7 +120,7 @@ const GalleryBrowsePage: FC = () => {
             setListingType(v ?? "all");
             setPage(1);
           }}
-          options={[{ key: "all", label: "All types" }, ...TYPE_OPTIONS]}
+          options={[{ key: "all", label: "All types" }, ...GALLERY_TYPE_OPTIONS]}
           placeholder="All types"
           hideSearch
           className="w-full sm:w-40"

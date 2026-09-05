@@ -13,6 +13,7 @@ import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
+import { intToColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -193,7 +194,7 @@ const MultiPanelsPage: FC = () => {
             options={panels?.map((panel) => ({
               label: panel.title,
               key: panel.panel_id.toString(),
-              color: panel.colour.toString(16).padStart(6, "0"),
+              color: intToColour(panel.colour),
             }))}
             onChange={(e) =>
               setMultiPanel((prev) => {

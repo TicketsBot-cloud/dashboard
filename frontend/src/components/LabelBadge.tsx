@@ -1,14 +1,11 @@
 import type { FC } from "react";
+import { intToColour } from "@/lib/colour";
 
 interface LabelBadgeProps {
   name: string;
   colour: number;
   removable?: boolean;
   onRemove?: () => void;
-}
-
-function intToColour(colour: number): string {
-  return `#${colour.toString(16).padStart(6, "0")}`;
 }
 
 const LabelBadge: FC<LabelBadgeProps> = ({ name, colour, removable, onRemove }) => {

@@ -4,6 +4,7 @@ import type { GalleryListing, GalleryTagSnapshot } from "@/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faStar } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router";
+import { GALLERY_TYPE_BADGES } from "@/components/gallery/GalleryListingPreview";
 
 interface GalleryCardProps {
   listing: GalleryListing;
@@ -12,12 +13,6 @@ interface GalleryCardProps {
   selected?: boolean;
   actionLabel?: string;
 }
-
-const TYPE_BADGES: Record<string, { label: string; className: string }> = {
-  panel: { label: "Panel", className: "bg-purple-600/20 text-purple-400" },
-  tag: { label: "Tag", className: "bg-teal-600/20 text-teal-400" },
-  form: { label: "Form", className: "bg-orange-600/20 text-orange-400" },
-};
 
 const BODY_CLASS =
   "group flex flex-col flex-1 p-4 text-left transition-colors hover:bg-gray-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset";
@@ -52,7 +47,7 @@ const GalleryCard: FC<GalleryCardProps> = ({
 }) => {
   const colourHex = getColourHex(listing);
   const type = listing.listing_type || "panel";
-  const badge = TYPE_BADGES[type];
+  const badge = GALLERY_TYPE_BADGES[type];
 
   const body = (
     <>

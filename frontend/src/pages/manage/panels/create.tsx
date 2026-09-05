@@ -21,6 +21,8 @@ import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import NumberInput from "@/components/NumberInput";
 import ColourSelect from "@/components/ColourSelect";
+import { BUTTON_STYLE_OPTIONS } from "@/constants/buttonStyles";
+import { roleColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import EmojiPicker from "@/components/EmojiPicker";
 import PanelPreview from "@/components/PanelPreview";
@@ -349,12 +351,11 @@ const PanelsPage: FC = () => {
               <Select
                 label="Button Colour"
                 value={panel.button_style?.toString() || "1"}
-                options={[
-                  { label: "Blue", key: "1" },
-                  { label: "Grey", key: "2" },
-                  { label: "Green", key: "3" },
-                  { label: "Red", key: "4" },
-                ]}
+                options={BUTTON_STYLE_OPTIONS.map(({ key, label, color }) => ({
+                  key,
+                  label,
+                  color,
+                }))}
                 onChange={(e) =>
                   setPanel((prev) =>
                     prev ? { ...prev, button_style: e ?? prev.button_style } : prev,
@@ -515,15 +516,15 @@ const PanelsPage: FC = () => {
             options={
               selectedGuild?.roles
                 ? [
-                    { label: "Ticket Opener", key: "user", color: "ffffff" },
-                    { label: "@here", key: "here", color: "ffffff" },
+                    { label: "Ticket Opener", key: "user", color: "#FFFFFF" },
+                    { label: "@here", key: "here", color: "#FFFFFF" },
                     ...(selectedGuild.roles.map((role) => ({
                       label: role.name,
                       key: role.id,
-                      color: role.color.toString(16),
-                    })) || [{ label: "@here", key: "here", color: "ffffff" }]),
+                      color: roleColour(role.color),
+                    })) || [{ label: "@here", key: "here", color: "#FFFFFF" }]),
                   ]
-                : [{ label: "@here", key: "here", color: "ffffff" }]
+                : [{ label: "@here", key: "here", color: "#FFFFFF" }]
             }
             onChange={(e) => setPanel((prev) => (prev ? { ...prev, mentions: e } : prev))}
           />

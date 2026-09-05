@@ -285,6 +285,11 @@ export interface MultiPanelEmbed {
   };
   colour: number;
   description?: string;
+  fields?: Array<{
+    name: string;
+    value: string;
+    inline?: boolean;
+  }>;
   footer: {
     text?: string;
     icon_url?: string;

@@ -270,6 +270,14 @@ const CreateKBArticlePage: FC = () => {
                   />
                 </div>
 
+                <TextInput
+                  label="Title URL"
+                  placeholder="e.g. https://example.com"
+                  value={embed.url || ""}
+                  onChange={(v) => setEmbed((prev) => ({ ...prev, url: v }))}
+                  maxLength={EMBED_LIMITS.URL}
+                />
+
                 <Textarea
                   label="Embed Description"
                   value={embed.description || ""}

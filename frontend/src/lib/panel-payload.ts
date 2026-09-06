@@ -1,5 +1,6 @@
 import type { Panel } from "@/types";
 import { normalizeEmbedTimestampForApi } from "@/lib/embed-timestamp";
+import { toApiComponents, type V2Component } from "@/lib/component-tree";
 
 export type PanelEmote =
   | string
@@ -47,6 +48,20 @@ export function panelEmoteName(emote?: Panel["emote"]): string {
   return typeof emote === "string" ? emote : emote.name;
 }
 
+/**
+ * `Panel.message_components`/`welcome_message_components` hold our editor's `V2Component[]`
+ * shape while a page is being edited, but the API expects Discord's raw `{type: number, ...}`
+ * shape. Discriminate on `type` being a string (ours) vs a number (raw, or already-converted) -
+ * an empty tree round-trips fine either way.
+ */
+function marshalComponentsField(value: Panel["message_components"]): Panel["message_components"] {
+  if (!value || typeof value === "string") return value ?? null;
+  if (value.length > 0 && typeof (value[0] as { type: unknown }).type === "string") {
+    return toApiComponents(value as unknown as V2Component[]) as Panel["message_components"];
+  }
+  return value;
+}
+
 function buildPanelEmote(panel: Panel): PanelEmote | null {
   if (panel.use_custom_emoji && panel.emoji_id && panel.emoji_name) {
     return {
@@ -87,6 +102,9 @@ export function preparePanelForApi(panel: Panel): Partial<Panel> {
       timestamp: normalizeEmbedTimestampForApi(panel.welcome_message.timestamp),
     };
   }
+
+  payload.message_components = marshalComponentsField(panel.message_components);
+  payload.welcome_message_components = marshalComponentsField(panel.welcome_message_components);
 
   setBlankStringsToNull(payload);
   return payload;

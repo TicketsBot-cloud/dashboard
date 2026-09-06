@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/common/premium"
@@ -169,8 +170,12 @@ func UpdatePanel(c *gin.Context) {
 	messageData := data.IntoPanelMessageData(existing.CustomId, footer.ShowBranding)
 	var newMessageId uint64
 
+	// Discord does not allow unsetting IS_COMPONENTS_V2 via edit, so a downgrade back to
+	// Classic must resend rather than edit in place (AC6), same as a channel change.
+	downgradingFromV2 := existing.MessageUsesComponentsV2 && !data.MessageUsesComponentsV2
+
 	// Check if channel changed
-	if existing.ChannelId != data.ChannelId {
+	if existing.ChannelId != data.ChannelId || downgradingFromV2 {
 		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
 		newMessageId, err = messageData.send(botContext)
 		if err != nil {
@@ -193,7 +198,7 @@ func UpdatePanel(c *gin.Context) {
 		}
 	} else {
 		// Try to edit existing message
-		err = messageData.edit(botContext, existing.MessageId)
+		err = messageData.edit(botContext, existing.MessageId, existing.MessageUsesComponentsV2)
 		if err != nil {
 			var unwrapped request.RestError
 			// Message is gone (404/10008), or was authored by a different bot — e.g. the
@@ -224,9 +229,25 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	// Update welcome message
+	// Update welcome message: exactly one of the relational embed row or the
+	// Components V2 JSONB column is ever populated for a given panel.
 	var welcomeMessageEmbed *int
-	if data.WelcomeMessage == nil {
+	var welcomeMessageComponents *string
+	if data.WelcomeMessageUsesComponentsV2 {
+		// Moving to (or staying in) V2: drop any orphaned relational embed row.
+		if existing.WelcomeMessageEmbed != nil {
+			if err := dbclient.Client.Embeds.Delete(c, *existing.WelcomeMessageEmbed); err != nil {
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+				return
+			}
+		}
+
+		welcomeMessageComponents, err = marshalComponents(data.WelcomeMessageComponents)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
+	} else if data.WelcomeMessage == nil {
 		if existing.WelcomeMessageEmbed != nil { // If welcome message wasn't null, but now is, delete the embed
 			if err := dbclient.Client.Embeds.Delete(c, *existing.WelcomeMessageEmbed); err != nil {
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
@@ -260,10 +281,22 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
+	var messageComponents *string
+	if data.MessageUsesComponentsV2 {
+		messageComponents, err = marshalComponents(data.MessageComponents)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
+	}
+
 	// If ticket limit is 0, treat it as use global setting
 	if data.TicketLimit != nil && *data.TicketLimit == 0 {
 		data.TicketLimit = nil
 	}
+
+	// Validated non-empty by validateName; trimmed here for consistent storage.
+	name := strings.TrimSpace(data.Name)
 
 	// Store in DB
 	panel := database.Panel{
@@ -271,6 +304,7 @@ func UpdatePanel(c *gin.Context) {
 		MessageId:                 newMessageId,
 		ChannelId:                 data.ChannelId,
 		GuildId:                   guildId,
+		Name:                      &name,
 		Title:                     data.Title,
 		Content:                   data.Content,
 		Colour:                    int32(data.Colour),
@@ -309,6 +343,11 @@ func UpdatePanel(c *gin.Context) {
 		FeedbackEnabled:           data.FeedbackEnabled,
 		SupportCanView:            data.SupportCanView,
 		SupportCanType:            data.SupportCanType,
+
+		MessageUsesComponentsV2:        data.MessageUsesComponentsV2,
+		MessageComponents:              messageComponents,
+		WelcomeMessageUsesComponentsV2: data.WelcomeMessageUsesComponentsV2,
+		WelcomeMessageComponents:       welcomeMessageComponents,
 	}
 
 	// insert mention data
@@ -411,7 +450,7 @@ func UpdatePanel(c *gin.Context) {
 
 		// Try to edit message first
 		var messageId uint64
-		err = messageData.edit(botContext, multiPanel.MessageId, panels)
+		err = messageData.edit(botContext, multiPanel.MessageId, panels, multiPanel.UsesComponentsV2)
 		if err != nil {
 			var unwrapped request.RestError
 			// Gone (404/10008), or authored by a different bot and so uneditable (50005):

@@ -8,8 +8,10 @@ import (
 
 func MultiPanelList(ctx *gin.Context) {
 	type multiPanelResponse struct {
-		Id    int     `json:"id"`
-		Title *string `json:"title"`
+		Id            int     `json:"id"`
+		Name          string  `json:"name"`
+		Title         *string `json:"title"`
+		ForceDisabled bool    `json:"force_disabled"`
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
@@ -25,11 +27,28 @@ func MultiPanelList(ctx *gin.Context) {
 		var title *string
 		if multiPanel.Embed != nil {
 			title = multiPanel.Embed.Title
+		} else if multiPanel.UsesComponentsV2 {
+			// A Components V2 message has no embed title to fall back on.
+			t := "Components V2 message"
+			title = &t
+		}
+
+		// Name is the dashboard-only label and takes priority; Title is the classic
+		// embed title, which doubled as the list label before Name existed, and
+		// still does for any multi-panel created before this field was introduced.
+		displayName := "Untitled multi-panel"
+		if title != nil && *title != "" {
+			displayName = *title
+		}
+		if multiPanel.Name != nil && *multiPanel.Name != "" {
+			displayName = *multiPanel.Name
 		}
 
 		data[i] = multiPanelResponse{
-			Id:    multiPanel.Id,
-			Title: title,
+			Id:            multiPanel.Id,
+			Name:          displayName,
+			Title:         title,
+			ForceDisabled: multiPanel.ForceDisabled,
 		}
 	}
 

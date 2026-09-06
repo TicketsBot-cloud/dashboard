@@ -19,12 +19,19 @@ import DateTimePicker from "@/components/DateTimePicker";
 import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import PremiumGate from "@/components/PremiumGate";
+import FeatureGate from "@/components/FeatureGate";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
-import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
+import { FEATURE_PANELS, COMPONENTS_V2_BUILDER_FLAG } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSave,
+  faExclamationTriangle,
+  faWandMagicSparkles,
+} from "@fortawesome/free-solid-svg-icons";
 import Slider from "@/components/Slider";
 import EmojiPicker from "@/components/EmojiPicker";
 import { sortGuildChannels } from "@/lib/guild-channels";
@@ -33,12 +40,36 @@ import MultiPanelInfoModal from "@/components/modals/MultiPanelInfoModal";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
+import MessageModeToggle from "@/components/component-builder/MessageModeToggle";
+import ComponentTreeBuilder from "@/components/component-builder/ComponentTreeBuilder";
+import BuildPreviewTabs from "@/components/component-builder/BuildPreviewTabs";
+import {
+  applyClassicConversion,
+  countBlocks,
+  fromApiComponents,
+  getPlacedPanelIds,
+  hasConvertibleClassicContent,
+  hasPanelSelectBlock,
+  multiPanelReserved,
+  removePanelSelectBlock,
+  toApiComponents,
+  type ClassicConversionSource,
+  type V2Component,
+} from "@/lib/component-tree";
 
 const defaultEmbed = {
   author: {},
   colour: 0x5865f2,
   footer: {},
 };
+
+// Mirrors the equivalent private helper in PanelPreview.tsx - a plain human-readable emoji
+// name, whether the panel's emote is a unicode string or a resolved custom guild emoji object.
+function resolveEmoteName(emote: string | { name: string } | undefined): string {
+  if (typeof emote === "string") return emote;
+  if (emote && typeof emote === "object") return emote.name;
+  return "";
+}
 
 const MultiPanelsPage: FC = () => {
   const navigate = useNavigate();
@@ -49,6 +80,12 @@ const MultiPanelsPage: FC = () => {
   const { selectGuild, selectedGuild } = useGuildStore();
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
+  // undefined while loading - only treated as "on" once it has actually resolved to true, so
+  // the placement UI never flashes on then off while the flag read is still in flight.
+  const { enabled: componentPlacementEnabled } = useFeatureFlag(
+    COMPONENTS_V2_BUILDER_FLAG,
+    guildId,
+  );
   const [forcedLock, setForcedLock] = useState(false);
   const handleApiError = useApiErrorHandler(
     "Panel management is temporarily unavailable. Please try again shortly.",
@@ -90,6 +127,12 @@ const MultiPanelsPage: FC = () => {
 
   const [multiPanelInfoOpen, setMultiPanelInfoOpen] = useState(false);
   const [multiPanel, setMultiPanel] = useState<MultiPanel | null>(null);
+  const [componentTree, setComponentTree] = useState<V2Component[]>([]);
+  const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
+  const [convertConfirmOpen, setConvertConfirmOpen] = useState(false);
+  // Captured once when the multi-panel first loads, so the resend-confirmation on save only
+  // ever compares against how it started this session, not against every toggle flip in between.
+  const originalV2Ref = useRef(false);
   const { data: panels = [] } = useGuildPanels(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
@@ -152,14 +195,139 @@ const MultiPanelsPage: FC = () => {
     const fetchMultiPanel = async () => {
       try {
         const res = await apiClient.multiPanels.getById(guildId, panelId);
-        setMultiPanel({ ...res.data.data, embed: res.data.data.embed ?? defaultEmbed });
+        const data = res.data.data;
+
+        if (data.force_disabled) {
+          toast.warning(
+            "This multi-panel is disabled because it requires premium. Reactivate premium to edit it.",
+          );
+          navigate(`/manage/${guildId}/panels`);
+          return;
+        }
+
+        setMultiPanel({ ...data, embed: data.embed ?? defaultEmbed });
+        originalV2Ref.current = data.uses_components_v2;
+        setComponentTree(fromApiComponents(data.components));
       } catch (error) {
         console.error("Failed to fetch multi panel:", error);
       }
     };
 
     fetchMultiPanel();
-  }, [guildId, panelId]);
+  }, [guildId, panelId, navigate]);
+
+  const saveMultiPanel = async () => {
+    if (!multiPanel) return;
+
+    if (!multiPanel.name?.trim()) {
+      toast.error("Enter a multi-panel name before saving.");
+      return;
+    }
+
+    try {
+      await apiClient.multiPanels.update(
+        guildId,
+        panelId,
+        {
+          ...multiPanel,
+          components: multiPanel.uses_components_v2 ? toApiComponents(componentTree) : null,
+        },
+        SKIP_ERROR_TOAST,
+      );
+      toast.success("Multi Panel Edited");
+      navigate(`/manage/${guildId}/panels`);
+    } catch (error) {
+      handleApiError(error, "Failed to save multi panel. Please try again.");
+      console.error("Failed to edit multi panel:", error);
+    }
+  };
+
+  // Only render the placement UI (and the props that drive it) once the flag has actually
+  // resolved to true - undefined-while-loading must never be treated as on.
+  const showPlacementUI = componentPlacementEnabled === true;
+
+  // Every selected panel, resolved to its effective (customisation-applied) label/emoji.
+  const resolvedPanels = getPreviewButtons();
+  const placedPanelIds = getPlacedPanelIds(componentTree);
+  const hasPlacedSelect = hasPanelSelectBlock(componentTree);
+  // Excludes whichever panels are already placed somewhere in the tree, matching what the
+  // backend will actually render in the auto-appended default row/dropdown.
+  const unplacedResolvedPanels = resolvedPanels.filter((p) => !placedPanelIds.has(p.panel_id));
+  // A placed panel_select binds every remaining unplaced panel into itself (its options are
+  // resolved from the unplaced set - see toPreviewComponents), so none of them are left over
+  // for the backend's auto-appended row. Confirmed against unplacedPanels() in the backend's
+  // multipanelmessagedata.go: it returns nil outright whenever the tree already has a
+  // panel_select, regardless of how many panels remain unplaced. The preview's default row
+  // must mirror that exactly, or it renders a second dropdown alongside the one in the tree.
+  const defaultRowPanels = hasPlacedSelect ? [] : unplacedResolvedPanels;
+
+  const toPickerPanel = (p: (typeof resolvedPanels)[number]) => ({
+    panel_id: p.panel_id,
+    label: p.button_label || "Open Ticket",
+    emoji: resolveEmoteName(p.emote) || undefined,
+  });
+  const availablePanelsForPicker = unplacedResolvedPanels.map(toPickerPanel);
+  const allPanelsForPicker = resolvedPanels.map(toPickerPanel);
+
+  // Per multiPanelReserved's own doc comment: netted against whatever the tree already accounts
+  // for itself, so the system-appended reservation and the tree's own budget never both charge
+  // for the same panel or the same dropdown. multiPanel can still be null here (not yet loaded),
+  // in which case there is nothing to reserve for yet. A placed panel_select absorbs every
+  // remaining panel (see defaultRowPanels above), so the backend appends nothing at all in that
+  // case - confirmed against unplacedPanels() in multipanelmessagedata.go, which returns nil
+  // outright once the tree has a panel_select, not "unplaced minus one". Deviates from a literal
+  // reading of multiPanelReserved's doc comment (which suggests "minus one further"): that
+  // reading was checked against the backend and does not match it, so panelCount is zeroed
+  // instead.
+  const reserved = multiPanelReserved({
+    selectMenu: hasPlacedSelect ? false : !!multiPanel?.select_menu,
+    panelCount: hasPlacedSelect
+      ? 0
+      : Math.max(0, (multiPanel?.panels.length ?? 0) - placedPanelIds.size),
+  });
+  const budgetReservedNote =
+    reserved.total === 0
+      ? undefined
+      : "Some space is also kept for the panel selection buttons or dropdown.";
+
+  const embedColourHex = `#${(multiPanel?.embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`;
+  const classicSource: ClassicConversionSource = {
+    title: multiPanel?.embed.title,
+    body: multiPanel?.embed.description,
+    colourHex: embedColourHex,
+    imageUrl: multiPanel?.embed.image_url,
+    thumbnailUrl: multiPanel?.embed.thumbnail_url,
+    authorName: multiPanel?.embed.author?.name,
+    authorUrl: multiPanel?.embed.author?.url,
+    footerText: multiPanel?.embed.footer?.text,
+  };
+  const hasClassicContent = hasConvertibleClassicContent(classicSource);
+  const nothingToLose = componentTree.length === 0;
+
+  const runConversion = () => {
+    const { converted, folded } = applyClassicConversion(
+      classicSource,
+      30 - reserved.total,
+      setComponentTree,
+    );
+    if (!converted) {
+      toast.warning(
+        "Nothing could be converted - check your classic content's image and thumbnail URLs.",
+      );
+      return;
+    }
+    if (folded) {
+      toast.warning("Some sections were merged to fit the block budget.");
+    }
+  };
+
+  const handleConvertClick = () => {
+    if (nothingToLose) {
+      runConversion();
+    } else {
+      setConvertConfirmOpen(true);
+    }
+  };
 
   return (
     <MainLayout
@@ -172,6 +340,20 @@ const MultiPanelsPage: FC = () => {
         featureLabel="Panel changes"
         existingLabel="panels"
       />
+      <div className="mb-4 bg-gray-800 rounded-xl p-4">
+        <TextInput
+          label="Multi-Panel Name"
+          placeholder="e.g. Support Categories"
+          value={multiPanel?.name || ""}
+          onChange={(e) => setMultiPanel((prev) => (prev ? { ...prev, name: e } : prev))}
+          maxLength={100}
+          showCount
+          error={!multiPanel?.name?.trim() ? "Multi-panel name is required" : undefined}
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Used to identify this multi-panel in the dashboard. It isn't shown in Discord.
+        </p>
+      </div>
       <Collapsible
         title="Ticket Settings"
         subtitle="Configure the channel and display options"
@@ -212,7 +394,13 @@ const MultiPanelsPage: FC = () => {
           <Slider
             label="Use Dropdown Menu"
             value={multiPanel?.select_menu ?? false}
-            onChange={(e) => setMultiPanel((prev) => (prev ? { ...prev, select_menu: e } : prev))}
+            onChange={(e) => {
+              setMultiPanel((prev) => (prev ? { ...prev, select_menu: e } : prev));
+              if (!e && hasPanelSelectBlock(componentTree)) {
+                setComponentTree((prev) => removePanelSelectBlock(prev));
+                toast.success("Removed the placed dropdown - dropdown mode is now off.");
+              }
+            }}
             onInfoClick={() => setMultiPanelInfoOpen(true)}
           />
           <TextInput
@@ -300,221 +488,296 @@ const MultiPanelsPage: FC = () => {
         defaultOpen={true}
       >
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
-          <div className="pb-2 mb-5">
-            <span className="text-xl font-semibold">Panel Properties</span>
-            <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
-              <TextInput
-                label="Title"
-                placeholder="e.g. Open a ticket"
-                value={multiPanel?.embed.title || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev ? { ...prev, embed: { ...prev.embed, title: e } } : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.TITLE}
-                showCount
-              />
-              <ColourSelect
-                label="Colour"
-                value={
-                  multiPanel?.embed?.colour
-                    ? `#${multiPanel.embed.colour.toString(16).padStart(6, "0")}`
-                    : "#5865f2"
-                }
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            colour: parseInt(e.replace("#", ""), 16),
-                          },
-                        }
-                      : prev,
-                  )
-                }
-              />
-            </div>
-            <div className="py-2">
-              <Textarea
-                label="Description"
-                value={multiPanel?.embed?.description || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev ? { ...prev, embed: { ...prev.embed, description: e } } : prev,
-                  )
-                }
-                max={EMBED_LIMITS.DESCRIPTION}
-              />
-            </div>
-
-            <Collapsible title="" subtitle="Author Settings" defaultOpen={false}>
-              <TextInput
-                label="Author Name"
-                placeholder="e.g. Support Team"
-                value={multiPanel?.embed?.author?.name || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            author: { ...prev.embed?.author, name: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.AUTHOR_NAME}
-                showCount
-              />
-              <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
-                <TextInput
-                  label="Author Icon URL"
-                  placeholder="e.g. https://example.com/icon.png"
-                  value={multiPanel?.embed?.author?.icon_url || ""}
-                  onChange={(e) =>
-                    setMultiPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            embed: {
-                              ...prev.embed,
-                              author: { ...prev.embed?.author, icon_url: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  maxLength={EMBED_LIMITS.URL}
-                />
-                <TextInput
-                  label="Author URL"
-                  placeholder="e.g. https://example.com"
-                  value={multiPanel?.embed?.author?.url || ""}
-                  onChange={(e) =>
-                    setMultiPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            embed: {
-                              ...prev.embed,
-                              author: { ...prev.embed?.author, url: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  maxLength={EMBED_LIMITS.URL}
-                />
-              </div>
-            </Collapsible>
-            <Collapsible title="" subtitle="Images" defaultOpen={false}>
-              <TextInput
-                label="Thumbnail URL"
-                placeholder="e.g. https://example.com/thumbnail.png"
-                value={multiPanel?.embed?.thumbnail_url || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: { ...prev.embed, thumbnail_url: e },
-                        }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.URL}
-              />
-              <TextInput
-                label="Image URL"
-                placeholder="e.g. https://example.com/image.png"
-                value={multiPanel?.embed?.image_url || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev ? { ...prev, embed: { ...prev.embed, image_url: e } } : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.URL}
-              />
-            </Collapsible>
-            <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <PremiumGate
+          <FeatureGate flag={COMPONENTS_V2_BUILDER_FLAG} guildId={guildId}>
+            <div className="md:col-span-2">
+              <MessageModeToggle
+                mode={multiPanel?.uses_components_v2 ? "components_v2" : "classic"}
                 isPremium={!!premiumState?.premium}
-                feature="custom-footer"
-                description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
-                variant="overlay"
-              >
-                <Textarea
-                  label="Footer Text"
-                  placeholder="e.g. Support hours: 9am-5pm UTC"
-                  value={multiPanel?.embed?.footer?.text || ""}
-                  onChange={(e) =>
-                    setMultiPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            embed: {
-                              ...prev.embed,
-                              footer: { ...prev.embed?.footer, text: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  max={EMBED_LIMITS.FOOTER_TEXT}
-                />
-                <TextInput
-                  label="Footer Icon URL"
-                  placeholder="e.g. https://example.com/footer-icon.png"
-                  value={multiPanel?.embed?.footer?.icon_url || ""}
-                  onChange={(e) =>
-                    setMultiPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            embed: {
-                              ...prev.embed,
-                              footer: { ...prev.embed?.footer, icon_url: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  maxLength={EMBED_LIMITS.URL}
-                />
-              </PremiumGate>
-              <DateTimePicker
-                label="Footer Timestamp (Optional)"
-                value={parseEmbedTimestamp(multiPanel?.embed?.timestamp)}
-                onChange={(date) =>
+                onChange={(mode) =>
                   setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: { ...prev.embed, timestamp: serializeEmbedTimestamp(date) },
-                        }
-                      : prev,
+                    prev ? { ...prev, uses_components_v2: mode === "components_v2" } : prev,
                   )
                 }
               />
-            </Collapsible>
-            <EmbedCharacterTotal embed={multiPanel?.embed} />
-          </div>
+            </div>
+          </FeatureGate>
 
-          <div>
-            <span className="text-xl font-semibold">Panel Preview</span>
-            {multiPanel && (
-              <PanelPreview
-                type="welcome"
-                data={{ panel: multiPanel, buttons: getPreviewButtons() }}
-                brandingFooter={showBrandingFooter}
-              />
-            )}
-          </div>
+          {multiPanel?.uses_components_v2 ? (
+            <BuildPreviewTabs
+              className="md:col-span-2 mb-1"
+              build={
+                <div className="pb-2 mb-5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl font-semibold">Panel Properties</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      visuallyDisabled={!hasClassicContent}
+                      aria-describedby={!hasClassicContent ? "convert-hint" : undefined}
+                      onClick={handleConvertClick}
+                    >
+                      <FontAwesomeIcon
+                        icon={faWandMagicSparkles}
+                        className="mr-1.5"
+                        aria-hidden="true"
+                      />
+                      Convert from classic
+                    </Button>
+                  </div>
+                  {!hasClassicContent && (
+                    <p id="convert-hint" className="text-xs text-gray-400 mt-1">
+                      Add a title, description or image in Classic mode first, then convert it here.
+                    </p>
+                  )}
+                  <div className="mt-2">
+                    <ComponentTreeBuilder
+                      components={componentTree}
+                      onChange={setComponentTree}
+                      guildEmojis={guildEmojis}
+                      budgetUsed={countBlocks(componentTree)}
+                      budgetMax={30 - reserved.total}
+                      topLevelMax={10 - reserved.topLevel}
+                      budgetReservedNote={budgetReservedNote}
+                      availablePanels={showPlacementUI ? availablePanelsForPicker : undefined}
+                      allPanels={showPlacementUI ? allPanelsForPicker : undefined}
+                      selectMenuModeOn={showPlacementUI ? multiPanel.select_menu : undefined}
+                    />
+                  </div>
+                </div>
+              }
+              preview={
+                <div>
+                  <span className="text-xl font-semibold">Panel Preview</span>
+                  <PanelPreview
+                    type="welcome"
+                    data={{ panel: multiPanel, buttons: defaultRowPanels }}
+                    brandingFooter={showBrandingFooter}
+                    messageMode="components_v2"
+                    componentTree={componentTree}
+                    panelsForPreview={resolvedPanels}
+                  />
+                </div>
+              }
+            />
+          ) : (
+            <>
+              <div className="pb-2 mb-5">
+                <span className="text-xl font-semibold">Panel Properties</span>
+                <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+                  <TextInput
+                    label="Title"
+                    placeholder="e.g. Open a ticket"
+                    value={multiPanel?.embed.title || ""}
+                    onChange={(e) =>
+                      setMultiPanel((prev) =>
+                        prev ? { ...prev, embed: { ...prev.embed, title: e } } : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.TITLE}
+                    showCount
+                  />
+                  <ColourSelect
+                    label="Colour"
+                    value={
+                      multiPanel?.embed?.colour
+                        ? `#${multiPanel.embed.colour.toString(16).padStart(6, "0")}`
+                        : "#5865f2"
+                    }
+                    onChange={(e) =>
+                      setMultiPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              embed: {
+                                ...prev.embed,
+                                colour: parseInt(e.replace("#", ""), 16),
+                              },
+                            }
+                          : prev,
+                      )
+                    }
+                  />
+                </div>
+                <div className="py-2">
+                  <Textarea
+                    label="Description"
+                    value={multiPanel?.embed?.description || ""}
+                    onChange={(e) =>
+                      setMultiPanel((prev) =>
+                        prev ? { ...prev, embed: { ...prev.embed, description: e } } : prev,
+                      )
+                    }
+                    max={EMBED_LIMITS.DESCRIPTION}
+                  />
+                </div>
+
+                <Collapsible title="" subtitle="Author Settings" defaultOpen={false}>
+                  <TextInput
+                    label="Author Name"
+                    placeholder="e.g. Support Team"
+                    value={multiPanel?.embed?.author?.name || ""}
+                    onChange={(e) =>
+                      setMultiPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              embed: {
+                                ...prev.embed,
+                                author: { ...prev.embed?.author, name: e },
+                              },
+                            }
+                          : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                    showCount
+                  />
+                  <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+                    <TextInput
+                      label="Author Icon URL"
+                      placeholder="e.g. https://example.com/icon.png"
+                      value={multiPanel?.embed?.author?.icon_url || ""}
+                      onChange={(e) =>
+                        setMultiPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                embed: {
+                                  ...prev.embed,
+                                  author: { ...prev.embed?.author, icon_url: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      maxLength={EMBED_LIMITS.URL}
+                    />
+                    <TextInput
+                      label="Author URL"
+                      placeholder="e.g. https://example.com"
+                      value={multiPanel?.embed?.author?.url || ""}
+                      onChange={(e) =>
+                        setMultiPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                embed: {
+                                  ...prev.embed,
+                                  author: { ...prev.embed?.author, url: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      maxLength={EMBED_LIMITS.URL}
+                    />
+                  </div>
+                </Collapsible>
+                <Collapsible title="" subtitle="Images" defaultOpen={false}>
+                  <TextInput
+                    label="Thumbnail URL"
+                    placeholder="e.g. https://example.com/thumbnail.png"
+                    value={multiPanel?.embed?.thumbnail_url || ""}
+                    onChange={(e) =>
+                      setMultiPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              embed: { ...prev.embed, thumbnail_url: e },
+                            }
+                          : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.URL}
+                  />
+                  <TextInput
+                    label="Image URL"
+                    placeholder="e.g. https://example.com/image.png"
+                    value={multiPanel?.embed?.image_url || ""}
+                    onChange={(e) =>
+                      setMultiPanel((prev) =>
+                        prev ? { ...prev, embed: { ...prev.embed, image_url: e } } : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.URL}
+                  />
+                </Collapsible>
+                <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
+                  <PremiumGate
+                    isPremium={!!premiumState?.premium}
+                    feature="custom-footer"
+                    description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
+                    variant="overlay"
+                  >
+                    <Textarea
+                      label="Footer Text"
+                      placeholder="e.g. Support hours: 9am-5pm UTC"
+                      value={multiPanel?.embed?.footer?.text || ""}
+                      onChange={(e) =>
+                        setMultiPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                embed: {
+                                  ...prev.embed,
+                                  footer: { ...prev.embed?.footer, text: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      max={EMBED_LIMITS.FOOTER_TEXT}
+                    />
+                    <TextInput
+                      label="Footer Icon URL"
+                      placeholder="e.g. https://example.com/footer-icon.png"
+                      value={multiPanel?.embed?.footer?.icon_url || ""}
+                      onChange={(e) =>
+                        setMultiPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                embed: {
+                                  ...prev.embed,
+                                  footer: { ...prev.embed?.footer, icon_url: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      maxLength={EMBED_LIMITS.URL}
+                    />
+                  </PremiumGate>
+                  <DateTimePicker
+                    label="Footer Timestamp (Optional)"
+                    value={parseEmbedTimestamp(multiPanel?.embed?.timestamp)}
+                    onChange={(date) =>
+                      setMultiPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              embed: { ...prev.embed, timestamp: serializeEmbedTimestamp(date) },
+                            }
+                          : prev,
+                      )
+                    }
+                  />
+                </Collapsible>
+                <EmbedCharacterTotal embed={multiPanel?.embed} />
+              </div>
+
+              <div>
+                <span className="text-xl font-semibold">Panel Preview</span>
+                {multiPanel && (
+                  <PanelPreview
+                    type="welcome"
+                    data={{ panel: multiPanel, buttons: getPreviewButtons() }}
+                    brandingFooter={showBrandingFooter}
+                  />
+                )}
+              </div>
+            </>
+          )}
         </div>
       </Collapsible>
       <Button
@@ -522,16 +785,14 @@ const MultiPanelsPage: FC = () => {
         className="mt-4 text-sm font-medium"
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
-        onClick={async () => {
+        onClick={() => {
           if (!multiPanel) return;
-          try {
-            await apiClient.multiPanels.update(guildId, panelId, multiPanel, SKIP_ERROR_TOAST);
-            toast.success("Multi Panel Edited");
-            navigate(`/manage/${guildId}/panels`);
-          } catch (error) {
-            handleApiError(error, "Failed to save multi panel. Please try again.");
-            console.error("Failed to edit multi panel:", error);
+          const downgradingFromV2 = originalV2Ref.current && !multiPanel.uses_components_v2;
+          if (downgradingFromV2) {
+            setDowngradeConfirmOpen(true);
+            return;
           }
+          saveMultiPanel();
         }}
       >
         <FontAwesomeIcon icon={faSave} className="mr-2" /> Save Changes
@@ -539,6 +800,48 @@ const MultiPanelsPage: FC = () => {
       <MultiPanelInfoModal
         isOpen={multiPanelInfoOpen}
         onClose={() => setMultiPanelInfoOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={downgradeConfirmOpen}
+        onConfirm={() => {
+          setDowngradeConfirmOpen(false);
+          saveMultiPanel();
+        }}
+        onCancel={() => setDowngradeConfirmOpen(false)}
+        title="Switch back to classic?"
+        message="Switching this multi-panel back to classic mode means we'll delete the current message and post a new one in its place. It'll lose its position in the channel, and any reactions or replies on it will be gone. Continue?"
+        confirmText="Switch and repost"
+        cancelText="Keep as is"
+        confirmVariant="danger"
+      />
+      <ConfirmModal
+        isOpen={convertConfirmOpen}
+        onConfirm={() => {
+          setConvertConfirmOpen(false);
+          runConversion();
+        }}
+        onCancel={() => setConvertConfirmOpen(false)}
+        title="Convert from classic?"
+        message={
+          <>
+            <p>
+              This replaces the current block layout with a fresh conversion of your classic
+              content. Continue?
+            </p>
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              {!!classicSource.authorName && <li>The author icon is dropped.</li>}
+              {!!classicSource.footerText && <li>The footer icon is dropped.</li>}
+              {!!multiPanel?.embed.timestamp && <li>The timestamp is dropped.</li>}
+              <li>
+                Any blocks you&apos;ve added manually in the builder that aren&apos;t part of the
+                classic content will be discarded.
+              </li>
+            </ul>
+          </>
+        }
+        confirmText="Convert and replace"
+        cancelText="Cancel"
+        confirmVariant="danger"
       />
     </MainLayout>
   );

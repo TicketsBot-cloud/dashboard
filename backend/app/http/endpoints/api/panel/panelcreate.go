@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
@@ -38,6 +39,7 @@ type PanelAutoCloseBody struct {
 type panelBody struct {
 	ChannelId                 uint64                            `json:"channel_id,string"`
 	MessageId                 uint64                            `json:"message_id,string"`
+	Name                      string                            `json:"name"`
 	Title                     string                            `json:"title"`
 	Content                   string                            `json:"content"`
 	Colour                    uint32                            `json:"colour"`
@@ -78,22 +80,29 @@ type panelBody struct {
 	SupportCanView            bool                              `json:"support_can_view"`
 	SupportCanType            bool                              `json:"support_can_type"`
 	AutoClose                 PanelAutoCloseBody                `json:"auto_close"`
+
+	MessageUsesComponentsV2        bool                  `json:"message_uses_components_v2"`
+	MessageComponents              []component.Component `json:"message_components"`
+	WelcomeMessageUsesComponentsV2 bool                  `json:"welcome_message_uses_components_v2"`
+	WelcomeMessageComponents       []component.Component `json:"welcome_message_components"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) panelMessageData {
 	return panelMessageData{
-		ChannelId:      p.ChannelId,
-		Title:          p.Title,
-		Content:        p.Content,
-		CustomId:       customId,
-		Colour:         int(p.Colour),
-		ImageUrl:       p.ImageUrl,
-		ThumbnailUrl:   p.ThumbnailUrl,
-		Emoji:          p.getEmoji(),
-		ButtonStyle:    p.ButtonStyle,
-		ButtonLabel:    p.ButtonLabel,
-		ButtonDisabled: p.Disabled,
-		ShowBranding:   showBranding,
+		ChannelId:        p.ChannelId,
+		Title:            p.Title,
+		Content:          p.Content,
+		CustomId:         customId,
+		Colour:           int(p.Colour),
+		ImageUrl:         p.ImageUrl,
+		ThumbnailUrl:     p.ThumbnailUrl,
+		Emoji:            p.getEmoji(),
+		ButtonStyle:      p.ButtonStyle,
+		ButtonLabel:      p.ButtonLabel,
+		ButtonDisabled:   p.Disabled,
+		ShowBranding:     showBranding,
+		UsesComponentsV2: p.MessageUsesComponentsV2,
+		Components:       p.MessageComponents,
 	}
 }
 
@@ -257,9 +266,17 @@ func CreatePanel(c *gin.Context) {
 		}
 	}
 
-	// Store welcome message embed first
+	// Store welcome message: exactly one of the relational embed row or the
+	// Components V2 JSONB column is ever populated for a given panel.
 	var welcomeMessageEmbed *int
-	if data.WelcomeMessage != nil {
+	var welcomeMessageComponents *string
+	if data.WelcomeMessageUsesComponentsV2 {
+		welcomeMessageComponents, err = marshalComponents(data.WelcomeMessageComponents)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message components to database"))
+			return
+		}
+	} else if data.WelcomeMessage != nil {
 		embed, fields := data.WelcomeMessage.IntoDatabaseStruct()
 		embed.GuildId = guildId
 
@@ -272,16 +289,29 @@ func CreatePanel(c *gin.Context) {
 		welcomeMessageEmbed = &id
 	}
 
+	var messageComponents *string
+	if data.MessageUsesComponentsV2 {
+		messageComponents, err = marshalComponents(data.MessageComponents)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel message components to database"))
+			return
+		}
+	}
+
 	// If ticket limit is 0, treat it as use global setting
 	if data.TicketLimit != nil && *data.TicketLimit == 0 {
 		data.TicketLimit = nil
 	}
+
+	// Validated non-empty by validateName; trimmed here for consistent storage.
+	name := strings.TrimSpace(data.Name)
 
 	// Store in DB
 	panel := database.Panel{
 		MessageId:                 msgId,
 		ChannelId:                 data.ChannelId,
 		GuildId:                   guildId,
+		Name:                      &name,
 		Title:                     data.Title,
 		Content:                   data.Content,
 		Colour:                    int32(data.Colour),
@@ -320,6 +350,11 @@ func CreatePanel(c *gin.Context) {
 		FeedbackEnabled:           data.FeedbackEnabled,
 		SupportCanView:            data.SupportCanView,
 		SupportCanType:            data.SupportCanType,
+
+		MessageUsesComponentsV2:        data.MessageUsesComponentsV2,
+		MessageComponents:              messageComponents,
+		WelcomeMessageUsesComponentsV2: data.WelcomeMessageUsesComponentsV2,
+		WelcomeMessageComponents:       welcomeMessageComponents,
 	}
 
 	createOptions := panelCreateOptions{

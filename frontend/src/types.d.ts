@@ -172,6 +172,13 @@ export interface Panel {
   message_id: Snowflake;
   channel_id: Snowflake;
   guild_id: Snowflake;
+  /**
+   * Dashboard-only label, never sent to Discord - distinct from `title`, which is the classic
+   * embed's Discord-facing title and does double duty as the dashboard list label only for
+   * panels that predate this field. Nullable on existing panels; the list view falls back to
+   * `title` when null.
+   */
+  name: string | null;
   title: string;
   content: string;
   colour: number;
@@ -248,6 +255,16 @@ export interface Panel {
   teams: Array<number>;
   kb_category_ids: number[];
   access_control_list: Array<ACL>;
+
+  message_uses_components_v2: boolean;
+  /**
+   * `GetPanel` returns this as a JSON-encoded string (the backend column is `*string`, storing
+   * the raw serialised tree), not a parsed array - use `fromApiComponents` from
+   * `@/lib/component-tree` rather than reading it directly. A save request sends a real array.
+   */
+  message_components: APIMessageTopLevelComponent[] | string | null;
+  welcome_message_uses_components_v2: boolean;
+  welcome_message_components: APIMessageTopLevelComponent[] | string | null;
 }
 
 export interface MultiPanelPanelEntry {
@@ -260,6 +277,8 @@ export interface MultiPanelPanelEntry {
 
 export interface MultiPanel {
   id: number;
+  /** Dashboard-only label, never sent to Discord - see the equivalent note on `Panel.name`. */
+  name: string | null;
   message_id: Snowflake;
   channel_id: Snowflake;
   guild_id: Snowflake;
@@ -267,14 +286,21 @@ export interface MultiPanel {
   select_menu_placeholder?: string;
   panels: Array<MultiPanelPanelEntry>;
   embed: MultiPanelEmbed;
+  uses_components_v2: boolean;
+  /** See the equivalent note on `Panel.message_components` - a JSON string on read, an array on write. */
+  components: APIMessageTopLevelComponent[] | string | null;
+  force_disabled: boolean;
 }
 
 export interface MultiPanelRequest {
+  name: string;
   channel_id: Snowflake;
   embed: MultiPanelEmbed;
   panels: Array<MultiPanelPanelEntry>;
   select_menu: boolean;
   select_menu_placeholder?: string;
+  uses_components_v2: boolean;
+  components: APIMessageTopLevelComponent[] | null;
 }
 
 export interface MultiPanelEmbed {

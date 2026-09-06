@@ -111,9 +111,16 @@ func ImportHandler(ctx *gin.Context) {
 		buttonStyle = int(*listing.ButtonStyle)
 	}
 
+	// The gallery listing's own Name is the human-facing label the submitter gave the
+	// whole template (e.g. "Basic Support Panel") - a better default for the dashboard-only
+	// panel Name than Title, which is the Discord-facing embed heading and often reads more
+	// like end-user copy (e.g. "Need help?").
+	panelName := listing.Name
+
 	panel := database.Panel{
 		ChannelId:                 0, // Will be set if we send a message
 		GuildId:                   guildId,
+		Name:                      &panelName,
 		Title:                     listing.Title,
 		Content:                   listing.Content,
 		Colour:                    listing.Colour,

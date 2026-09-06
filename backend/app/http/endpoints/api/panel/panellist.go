@@ -17,6 +17,7 @@ func ListPanels(c *gin.Context) {
 	type panelResponse struct {
 		PanelId           int     `json:"panel_id"`
 		ChannelId         uint64  `json:"channel_id,string"`
+		Name              string  `json:"name"`
 		Title             string  `json:"title"`
 		Colour            int32   `json:"colour"`
 		ButtonLabel       string  `json:"button_label"`
@@ -110,9 +111,19 @@ func ListPanels(c *gin.Context) {
 	wrapped := make([]panelResponse, len(panels))
 	for i, p := range panels {
 		hasSH := supportHoursSet[p.PanelId]
+
+		// Name is the dashboard-only label and takes priority; Title is the classic
+		// embed title, which doubled as the list label before Name existed, and
+		// still does for any panel created before this field was introduced.
+		displayName := p.Title
+		if p.Name != nil && *p.Name != "" {
+			displayName = *p.Name
+		}
+
 		wrapped[i] = panelResponse{
 			PanelId:           p.PanelId,
 			ChannelId:         p.ChannelId,
+			Name:              displayName,
 			Title:             p.Title,
 			Colour:            p.Colour,
 			ButtonLabel:       p.ButtonLabel,

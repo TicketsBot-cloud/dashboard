@@ -43,6 +43,7 @@ func MultiPanelGet(ctx *gin.Context) {
 
 	type multiPanelResponse struct {
 		Id                    int                  `json:"id"`
+		Name                  *string              `json:"name"`
 		MessageId             uint64               `json:"message_id,string"`
 		ChannelId             uint64               `json:"channel_id,string"`
 		GuildId               uint64               `json:"guild_id,string"`
@@ -50,6 +51,9 @@ func MultiPanelGet(ctx *gin.Context) {
 		SelectMenuPlaceholder *string              `json:"select_menu_placeholder"`
 		Embed                 *embedResponse       `json:"embed"`
 		Panels                []panelConfiguration `json:"panels"`
+		UsesComponentsV2      bool                 `json:"uses_components_v2"`
+		Components            *string              `json:"components"`
+		ForceDisabled         bool                 `json:"force_disabled"`
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
@@ -117,6 +121,7 @@ func MultiPanelGet(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{
 		"data": multiPanelResponse{
 			Id:                    multiPanel.Id,
+			Name:                  multiPanel.Name,
 			MessageId:             multiPanel.MessageId,
 			ChannelId:             multiPanel.ChannelId,
 			GuildId:               multiPanel.GuildId,
@@ -124,6 +129,9 @@ func MultiPanelGet(ctx *gin.Context) {
 			SelectMenuPlaceholder: multiPanel.SelectMenuPlaceholder,
 			Embed:                 transformedEmbed,
 			Panels:                configs,
+			UsesComponentsV2:      multiPanel.UsesComponentsV2,
+			Components:            multiPanel.Components,
+			ForceDisabled:         multiPanel.ForceDisabled,
 		},
 	})
 }

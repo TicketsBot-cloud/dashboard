@@ -7,6 +7,7 @@ import SelectMenu from "./container/SelectMenu";
 import MediaGallery from "./container/MediaGallery";
 import Container from "./container/Container";
 import Section from "./container/Section";
+import DiscordContent from "./DiscordContent";
 
 const DiscordComponents: FC<DiscordComponentsProps> = ({
   components,
@@ -110,6 +111,27 @@ const DiscordComponents: FC<DiscordComponentsProps> = ({
 
           case 12: // MediaGallery
             return <MediaGallery key={index} items={component.items} />;
+
+          case 10: // TextDisplay, as a top-level component rather than nested in a Container
+            return (
+              <DiscordContent key={index} content={component.content || ""} entities={entities} />
+            );
+
+          case 13: // File, as a top-level component rather than nested in a Container
+            return (
+              <div key={index} className="my-1">
+                <input
+                  type="file"
+                  disabled
+                  aria-label="File upload"
+                  title="File upload"
+                  className="opacity-50 cursor-not-allowed"
+                />
+              </div>
+            );
+
+          case 14: // Separator, as a top-level component rather than nested in a Container
+            return <div key={index} className="h-px w-full bg-gray-600/50 my-1 max-w-130" />;
 
           // Container component for complex layouts
           default:

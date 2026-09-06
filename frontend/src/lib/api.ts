@@ -282,9 +282,9 @@ export const apiClient = {
 
   multiPanels: {
     getByGuild: (guildId: string) =>
-      api.get<{ data: Array<{ id: number; title: string | null }> }>(
-        `/api/${guildId}/multi-panels`,
-      ),
+      api.get<{
+        data: Array<{ id: number; name: string; title: string | null; force_disabled: boolean }>;
+      }>(`/api/${guildId}/multi-panels`),
     getById: (guildId: string, id: string) =>
       api.get<{ data: MultiPanel }>(`/api/${guildId}/multi-panels/${id}`),
     create: (guildId: string, data: MultiPanelRequest, config?: AxiosRequestConfig) =>

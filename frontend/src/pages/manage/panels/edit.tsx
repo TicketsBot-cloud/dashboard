@@ -40,7 +40,12 @@ import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faTrash, faCrown } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSave,
+  faTrash,
+  faCrown,
+  faExclamationTriangle,
+} from "@fortawesome/free-solid-svg-icons";
 import { sortGuildChannels } from "@/lib/guild-channels";
 import {
   PANEL_MESSAGE_INFO,
@@ -186,6 +191,14 @@ const EditPanelsPage: FC = () => {
   const missingChannel = !panel.channel_id;
   const missingCategory = !panel.category_id;
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+  const welcomeMessage = panel.welcome_message;
+  const welcomeMessageEmpty =
+    !!welcomeMessage &&
+    !welcomeMessage.title?.trim() &&
+    !welcomeMessage.description?.trim() &&
+    !welcomeMessage.fields?.length &&
+    !welcomeMessage.image_url?.trim() &&
+    !welcomeMessage.thumbnail_url?.trim();
   const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
   const hasMissingRequired =
     missingChannel ||
@@ -195,7 +208,8 @@ const EditPanelsPage: FC = () => {
     stale(panel.channel_id) ||
     stale(panel.category_id) ||
     stale(panel.transcript_channel_id) ||
-    stale(panel.ticket_notification_channel);
+    stale(panel.ticket_notification_channel) ||
+    welcomeMessageEmpty;
 
   return (
     <MainLayout
@@ -521,6 +535,18 @@ const EditPanelsPage: FC = () => {
         subtitle="Configure the message sent on ticket open"
         defaultOpen={false}
       >
+        {welcomeMessageEmpty && (
+          <div
+            data-missing="true"
+            className="mx-4 mb-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm"
+          >
+            <FontAwesomeIcon icon={faExclamationTriangle} />
+            <span>
+              A welcome message needs a title, description, image, thumbnail or field. Discord
+              rejects an empty embed.
+            </span>
+          </div>
+        )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
           <div className="pb-2 mb-5">
             <span className="text-xl font-semibold">Welcome Message Properties</span>

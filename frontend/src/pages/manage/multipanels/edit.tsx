@@ -9,6 +9,7 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import type { MultiPanel, MultiPanelPanelEntry } from "@/types";
 import Collapsible from "@/components/Collapsible";
+import { prepareMultiPanelForApi } from "@/lib/panel-payload";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
@@ -159,6 +160,14 @@ const MultiPanelsPage: FC = () => {
   const staleChannel =
     channelsLoaded && !!multiPanel?.channel_id && !existingChannelIds.has(multiPanel.channel_id);
 
+  const embed = multiPanel?.embed;
+  const embedEmpty =
+    !!embed &&
+    !embed.title?.trim() &&
+    !embed.description?.trim() &&
+    !embed.image_url?.trim() &&
+    !embed.thumbnail_url?.trim();
+
   // Returns the message so the Save button can reuse the rules.
   const saveBlocker = () => {
     if (!multiPanel?.channel_id) return "Select a panel channel before saving the multi-panel.";
@@ -166,6 +175,7 @@ const MultiPanelsPage: FC = () => {
     if (tooFewPanels) return "Select at least two panels before saving the multi-panel.";
     if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
     if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
+    if (embedEmpty) return "The embed cannot be empty.";
     return null;
   };
 
@@ -317,6 +327,18 @@ const MultiPanelsPage: FC = () => {
         subtitle="Configure the embed's appearance"
         defaultOpen={true}
       >
+        {embedEmpty && (
+          <div
+            data-missing="true"
+            className="mx-4 mb-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm"
+          >
+            <FontAwesomeIcon icon={faExclamationTriangle} />
+            <span>
+              The embed needs a title, description, image or thumbnail. Discord rejects an empty
+              embed.
+            </span>
+          </div>
+        )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
           <div className="pb-2 mb-5">
             <span className="text-xl font-semibold">Panel Properties</span>
@@ -561,7 +583,12 @@ const MultiPanelsPage: FC = () => {
             return;
           }
           try {
-            await apiClient.multiPanels.update(guildId, panelId, multiPanel, SKIP_ERROR_TOAST);
+            await apiClient.multiPanels.update(
+              guildId,
+              panelId,
+              prepareMultiPanelForApi(multiPanel),
+              SKIP_ERROR_TOAST,
+            );
             toast.success("Multi Panel Edited");
             navigate(`/manage/${guildId}/panels`);
           } catch (error) {

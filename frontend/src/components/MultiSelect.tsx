@@ -95,7 +95,6 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
     option.label.toLowerCase().includes(searchText.toLowerCase()),
   );
 
-  // No default test: the one required use needs >= 2.
   const missing = !disabled && !!props.missing;
   const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
 
@@ -129,7 +128,8 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
         aria-label={label || "Multi-select"}
         aria-required={required || undefined}
         aria-invalid={error || undefined}
-        data-missing={missing || undefined}
+        data-missing={missing || error || undefined}
+        data-bloom={error || undefined}
       >
         <div className="w-full px-2 py-1.5 min-h-10 flex flex-wrap gap-1 items-center">
           {selectedOptions.length > 0 ? (

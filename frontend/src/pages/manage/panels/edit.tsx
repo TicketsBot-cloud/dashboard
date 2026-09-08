@@ -186,8 +186,16 @@ const EditPanelsPage: FC = () => {
   const missingChannel = !panel.channel_id;
   const missingCategory = !panel.category_id;
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+  const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
   const hasMissingRequired =
-    missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing;
+    missingChannel ||
+    missingCategory ||
+    missingThreadChannel ||
+    buttonIdentityMissing ||
+    stale(panel.channel_id) ||
+    stale(panel.category_id) ||
+    stale(panel.transcript_channel_id) ||
+    stale(panel.ticket_notification_channel);
 
   return (
     <MainLayout
@@ -241,7 +249,7 @@ const EditPanelsPage: FC = () => {
                 info={PANEL_MESSAGE_INFO}
                 required
                 error={
-                  channelsLoaded && !!panel.channel_id && !existingChannelIds.has(panel.channel_id)
+                  stale(panel.channel_id)
                 }
                 options={sortedChannels}
                 value={panel.channel_id || ""}
@@ -391,7 +399,7 @@ const EditPanelsPage: FC = () => {
             label="Ticket Category"
             required
             error={
-              channelsLoaded && !!panel.category_id && !existingChannelIds.has(panel.category_id)
+              stale(panel.category_id)
             }
             options={
               selectedGuild?.channels
@@ -439,11 +447,7 @@ const EditPanelsPage: FC = () => {
           <Select
             label="Transcript Channel"
             info={TRANSCRIPT_CHANNEL_INFO}
-            error={
-              channelsLoaded &&
-              !!panel.transcript_channel_id &&
-              !existingChannelIds.has(panel.transcript_channel_id)
-            }
+            error={stale(panel.transcript_channel_id)}
             showNoneOption={true}
             noneOptionLabel="No Transcript Channel"
             options={sortedChannels}
@@ -773,11 +777,7 @@ const EditPanelsPage: FC = () => {
             label="Thread Notification Channel"
             info={THREAD_NOTIFICATION_CHANNEL_INFO}
             required={panel.use_threads}
-            error={
-              channelsLoaded &&
-              !!panel.ticket_notification_channel &&
-              !existingChannelIds.has(panel.ticket_notification_channel)
-            }
+            error={stale(panel.ticket_notification_channel)}
             disabled={!panel.use_threads}
             options={
               selectedGuild?.channels

@@ -155,9 +155,19 @@ const MultiPanelsPage: FC = () => {
   const labellessPanelCount = (multiPanel?.panels ?? []).filter((entry) =>
     panelNeedsLabel(entry.panel_id),
   ).length;
-  const missingChannel = !multiPanel?.channel_id;
   const tooFewPanels = (multiPanel?.panels?.length ?? 0) < 2;
-  const hasMissingRequired = missingChannel || tooFewPanels || labellessPanelCount > 0;
+  const staleChannel =
+    channelsLoaded && !!multiPanel?.channel_id && !existingChannelIds.has(multiPanel.channel_id);
+
+  // Returns the message so the Save button can reuse the rules.
+  const saveBlocker = () => {
+    if (!multiPanel?.channel_id) return "Select a panel channel before saving the multi-panel.";
+    if (staleChannel) return "The selected panel channel no longer exists.";
+    if (tooFewPanels) return "Select at least two panels before saving the multi-panel.";
+    if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
+    if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
+    return null;
+  };
 
   useEffect(() => {
     const fetchMultiPanel = async () => {
@@ -193,11 +203,7 @@ const MultiPanelsPage: FC = () => {
             label="Panel Channel"
             info={PANEL_MESSAGE_INFO}
             required
-            error={
-              channelsLoaded &&
-              !!multiPanel?.channel_id &&
-              !existingChannelIds.has(multiPanel.channel_id)
-            }
+            error={staleChannel}
             value={multiPanel?.channel_id || ""}
             options={sortedChannels}
             onChange={(e) =>
@@ -542,16 +548,16 @@ const MultiPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
-        disabled={saveAttempted && hasMissingRequired}
+        disabled={saveAttempted && saveBlocker() !== null}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={async () => {
           if (!multiPanel) return;
-          if (hasMissingRequired) {
+          const blocker = saveBlocker();
+          if (blocker) {
             setSaveAttempted(true);
-            if (!scrollToFirstMissingField()) {
-              toast.error("Fill in the required fields before saving.");
-            }
+            scrollToFirstMissingField();
+            toast.error(blocker);
             return;
           }
           try {

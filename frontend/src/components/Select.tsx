@@ -143,7 +143,7 @@ const Select: FC<SelectProps> = (props) => {
         </div>
       )}
 
-      {/* aria-required/aria-invalid are unsupported on role=button. */}
+      {/* aria-required needs a role other than button. */}
       <button
         ref={triggerRef}
         type="button"
@@ -167,7 +167,8 @@ const Select: FC<SelectProps> = (props) => {
         title={label || "Select"}
         aria-required={required || undefined}
         aria-invalid={error || undefined}
-        data-missing={missing || undefined}
+        data-missing={missing || error || undefined}
+        data-bloom={error || undefined}
       >
         <div className="w-full p-2 min-h-10 flex items-center gap-2">
           {selectedOption ? (

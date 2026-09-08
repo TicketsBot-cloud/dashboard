@@ -262,8 +262,16 @@ const PanelsPage: FC = () => {
   const missingChannel = !panel.channel_id;
   const missingCategory = !panel.category_id;
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+  const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
   const hasMissingRequired =
-    missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing;
+    missingChannel ||
+    missingCategory ||
+    missingThreadChannel ||
+    buttonIdentityMissing ||
+    stale(panel.channel_id) ||
+    stale(panel.category_id) ||
+    stale(panel.transcript_channel_id) ||
+    stale(panel.ticket_notification_channel);
 
   return (
     <MainLayout
@@ -321,7 +329,7 @@ const PanelsPage: FC = () => {
                 info={PANEL_MESSAGE_INFO}
                 required
                 error={
-                  channelsLoaded && !!panel.channel_id && !existingChannelIds.has(panel.channel_id)
+                  stale(panel.channel_id)
                 }
                 options={
                   sortedChannels?.map((c) => ({
@@ -477,7 +485,7 @@ const PanelsPage: FC = () => {
             label="Ticket Category"
             required
             error={
-              channelsLoaded && !!panel.category_id && !existingChannelIds.has(panel.category_id)
+              stale(panel.category_id)
             }
             options={
               selectedGuild?.channels
@@ -524,6 +532,7 @@ const PanelsPage: FC = () => {
         <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <Select
             label="Transcript Channel"
+            error={stale(panel.transcript_channel_id)}
             info={TRANSCRIPT_CHANNEL_INFO}
             showNoneOption={true}
             noneOptionLabel="No Transcript Channel"
@@ -854,11 +863,7 @@ const PanelsPage: FC = () => {
             label="Thread Notification Channel"
             info={THREAD_NOTIFICATION_CHANNEL_INFO}
             required={panel.use_threads}
-            error={
-              channelsLoaded &&
-              !!panel.ticket_notification_channel &&
-              !existingChannelIds.has(panel.ticket_notification_channel)
-            }
+            error={stale(panel.ticket_notification_channel)}
             disabled={!panel.use_threads}
             options={
               selectedGuild?.channels

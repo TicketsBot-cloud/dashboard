@@ -159,7 +159,7 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
 
   const hasValue = !!selectedGuildEmoji || !!value;
 
-  // Raw props: hasValue resolves async and would flash red on load.
+  // Raw props: hasValue resolves async.
   const missing = !disabled && (props.missing ?? (required && !value && !guildEmojiId));
   const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
 
@@ -192,7 +192,8 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
         aria-label={label || "Emoji Picker"}
         aria-required={required || undefined}
         aria-invalid={error || undefined}
-        data-missing={missing || undefined}
+        data-missing={missing || error || undefined}
+        data-bloom={error || undefined}
       >
         <div className="w-full p-2 min-h-10 flex items-center justify-between">
           {selectedGuildEmoji ? (

@@ -81,7 +81,8 @@ const TextInput: FC<TextInputProps> = (props) => {
       )}
       <div
         className={`inline-flex bg-gray-700 border rounded overflow-hidden px-1 ${borderClass}`}
-        data-missing={missing || undefined}
+        data-missing={missing || !!error || undefined}
+        data-bloom={error ? true : undefined}
       >
         <input
           id={inputId}

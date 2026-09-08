@@ -57,7 +57,8 @@ const Textarea: FC<TextareaProps> = (props) => {
       )}
       <div
         className={`inline-flex items-center bg-gray-700 border rounded px-1 ${borderClass}`}
-        data-missing={missing || undefined}
+        data-missing={missing || !!error || undefined}
+        data-bloom={error ? true : undefined}
       >
         <textarea
           id={textareaId}

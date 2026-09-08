@@ -62,6 +62,7 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
     return [existing[0] || "", existing[1] || "", existing[2] || ""];
   });
   const [submitting, setSubmitting] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const typeLabel = TYPE_LABELS[itemType] || "template";
 
@@ -78,7 +79,10 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
   const missingCategory = !category;
 
   const handleSubmit = async () => {
-    if (missingName || missingDescription || missingCategory) scrollToFirstMissingField();
+    if (missingName || missingDescription || missingCategory) {
+      setSubmitAttempted(true);
+      scrollToFirstMissingField();
+    }
     if (!name.trim()) {
       toast.error("Please enter a name for your listing.");
       return;
@@ -227,6 +231,7 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
             variant="primary"
             onClick={handleSubmit}
             isLoading={submitting}
+            disabled={submitAttempted && (missingName || missingDescription || missingCategory)}
             className="font-medium"
           >
             {submitting ? "Submitting..." : isResubmit ? "Update & Re-submit" : "Submit for Review"}

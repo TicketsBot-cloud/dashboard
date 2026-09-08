@@ -87,6 +87,7 @@ const MultiPanelsPage: FC = () => {
   const sortedChannels = sortGuildChannels(selectedGuild?.channels || []);
 
   const [multiPanelInfoOpen, setMultiPanelInfoOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [multiPanel, setMultiPanel] = useState<MultiPanelDraft>({
     embed: {
       author: {},
@@ -147,30 +148,22 @@ const MultiPanelsPage: FC = () => {
   const labellessPanelCount = multiPanel.panels.filter((entry) =>
     panelNeedsLabel(entry.panel_id),
   ).length;
+  // Returned message, not a toast, so the Save button can read the same rules during render.
+  const saveBlocker = () => {
+    if (!multiPanel.channel_id) return "Select a panel channel before creating the multi-panel.";
+    if (multiPanel.panels.length < 2)
+      return "Select at least two panels before creating the multi-panel.";
+    if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
+    if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
+    return null;
+  };
+
   const validateMultiPanel = () => {
-    if (!multiPanel.channel_id) {
+    const blocker = saveBlocker();
+    // The channel_id term is for narrowing only; saveBlocker already rejects it when unset.
+    if (blocker || !multiPanel.channel_id) {
       scrollToFirstMissingField();
-      toast.error("Select a panel channel before creating the multi-panel.");
-      return null;
-    }
-
-    if (multiPanel.panels.length < 2) {
-      scrollToFirstMissingField();
-      toast.error("Select at least two panels before creating the multi-panel.");
-      return null;
-    }
-
-    if (multiPanel.panels.length > 15) {
-      toast.error("Multi-panels cannot contain more than 15 panels.");
-      return null;
-    }
-
-    if (
-      multiPanel.select_menu &&
-      multiPanel.panels.some((entry) => panelNeedsLabel(entry.panel_id))
-    ) {
-      scrollToFirstMissingField();
-      toast.error("Every dropdown panel needs a label.");
+      if (blocker) toast.error(blocker);
       return null;
     }
 
@@ -545,11 +538,15 @@ const MultiPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
+        disabled={saveAttempted && saveBlocker() !== null}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={async () => {
           const payload = validateMultiPanel();
-          if (!payload) return;
+          if (!payload) {
+            setSaveAttempted(true);
+            return;
+          }
 
           try {
             await apiClient.multiPanels.create(guildId, payload, SKIP_ERROR_TOAST);

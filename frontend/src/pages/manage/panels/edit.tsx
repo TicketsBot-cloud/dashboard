@@ -104,6 +104,7 @@ const EditPanelsPage: FC = () => {
 
   const [panel, setPanel] = useState<Panel | null>(null);
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
   const handleApiError = useApiErrorHandler(
@@ -185,6 +186,8 @@ const EditPanelsPage: FC = () => {
   const missingChannel = !panel.channel_id;
   const missingCategory = !panel.category_id;
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+  const hasMissingRequired =
+    missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing;
 
   return (
     <MainLayout
@@ -1191,10 +1194,12 @@ const EditPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
+        disabled={saveAttempted && hasMissingRequired}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={async () => {
-          if (missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing) {
+          if (hasMissingRequired) {
+            setSaveAttempted(true);
             if (!scrollToFirstMissingField()) {
               toast.error("Fill in the required fields before saving.");
             }

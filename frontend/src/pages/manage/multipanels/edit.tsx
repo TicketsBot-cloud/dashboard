@@ -92,6 +92,7 @@ const MultiPanelsPage: FC = () => {
   const channelsLoaded = (selectedGuild?.channels?.length ?? 0) > 0;
 
   const [multiPanelInfoOpen, setMultiPanelInfoOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [multiPanel, setMultiPanel] = useState<MultiPanel | null>(null);
   const { data: panels = [] } = useGuildPanels(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
@@ -156,6 +157,7 @@ const MultiPanelsPage: FC = () => {
   ).length;
   const missingChannel = !multiPanel?.channel_id;
   const tooFewPanels = (multiPanel?.panels?.length ?? 0) < 2;
+  const hasMissingRequired = missingChannel || tooFewPanels || labellessPanelCount > 0;
 
   useEffect(() => {
     const fetchMultiPanel = async () => {
@@ -540,11 +542,13 @@ const MultiPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
+        disabled={saveAttempted && hasMissingRequired}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={async () => {
           if (!multiPanel) return;
-          if (missingChannel || tooFewPanels || labellessPanelCount > 0) {
+          if (hasMissingRequired) {
+            setSaveAttempted(true);
             if (!scrollToFirstMissingField()) {
               toast.error("Fill in the required fields before saving.");
             }

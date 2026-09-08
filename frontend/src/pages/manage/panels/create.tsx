@@ -80,6 +80,7 @@ const PanelsPage: FC = () => {
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
   const [isLoadingClone, setIsLoadingClone] = useState(!!clonePanelId);
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [supportHours, setSupportHours] = useState<SupportHoursData | null>(null);
   const handleSupportHoursChange = useCallback((data: SupportHoursData | null) => {
     setSupportHours(data);
@@ -261,6 +262,8 @@ const PanelsPage: FC = () => {
   const missingChannel = !panel.channel_id;
   const missingCategory = !panel.category_id;
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+  const hasMissingRequired =
+    missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing;
 
   return (
     <MainLayout
@@ -1254,10 +1257,12 @@ const PanelsPage: FC = () => {
         variant="success"
         className="mt-4 text-sm font-medium"
         isLoading={isSubmitting}
+        disabled={saveAttempted && hasMissingRequired}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={() => {
-          if (missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing) {
+          if (hasMissingRequired) {
+            setSaveAttempted(true);
             if (!scrollToFirstMissingField()) {
               toast.error("Fill in the required fields before saving.");
             }

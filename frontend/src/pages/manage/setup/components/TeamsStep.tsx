@@ -104,6 +104,7 @@ const TeamsStep: FC<TeamsStepProps> = ({ guildId, roles, existingTeams, onTeamsC
           <div className="flex-1">
             <TextInput
               label="Team name"
+              required
               value={newTeamName}
               onChange={setNewTeamName}
               placeholder="e.g. Support, Billing, Moderators"

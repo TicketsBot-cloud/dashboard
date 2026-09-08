@@ -500,6 +500,7 @@ const BlacklistPage: FC = () => {
             options={roleOptions}
             label="Role"
             placeholder="Select a role..."
+            required
           />
 
           <div className="flex justify-end gap-3 mt-6">

@@ -824,6 +824,7 @@ const TranscriptsPage: FC = () => {
             <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
               <TextInput
                 label="Label Name"
+                required
                 placeholder="e.g. Bug, Feature, Urgent"
                 value={newLabelName}
                 onChange={setNewLabelName}

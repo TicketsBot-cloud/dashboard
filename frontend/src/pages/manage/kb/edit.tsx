@@ -264,6 +264,7 @@ const EditKBArticlePage: FC = () => {
           <section className="space-y-4" aria-label="Article details">
             <TextInput
               label="Title"
+              required
               placeholder="e.g. How to create a ticket"
               value={title}
               onChange={setTitle}

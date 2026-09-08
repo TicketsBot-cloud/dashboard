@@ -4,6 +4,8 @@ import ActionModal from "@/components/modal-primitives/ActionModal";
 import Button from "@/components/Button";
 import TextInput from "@/components/TextInput";
 import Select from "@/components/Select";
+import RequiredMark from "@/components/RequiredMark";
+import { IDLE_FIELD_CLASS, MISSING_FIELD_CLASS } from "@/lib/field-validity";
 import { apiClient } from "@/lib/api";
 import type { GallerySubmission } from "@/types";
 
@@ -69,6 +71,10 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
       return next;
     });
   };
+
+  const missingName = !name.trim();
+  const missingDescription = !description.trim();
+  const missingCategory = !category;
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -144,6 +150,7 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
         <div className="space-y-4">
           <TextInput
             label="Name"
+            required
             placeholder="e.g. Customer Support Panel"
             value={name}
             onChange={setName}
@@ -153,10 +160,11 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
           <div className="flex flex-col">
             <label htmlFor="gallery-submit-description" className="mb-1 text-white">
               Description
+              <RequiredMark />
             </label>
             <textarea
               id="gallery-submit-description"
-              className="bg-gray-700 border border-neutral-600 rounded p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className={`bg-gray-700 border rounded p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${missingDescription ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS}`}
               rows={3}
               maxLength={500}
               placeholder="Describe what this template is for and how it works..."
@@ -176,6 +184,7 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
 
           <Select
             label="Category"
+            required
             placeholder="Select a category..."
             value={category}
             onChange={setCategory}
@@ -215,6 +224,7 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
             variant="primary"
             onClick={handleSubmit}
             isLoading={submitting}
+            disabled={missingName || missingDescription || missingCategory}
             className="font-medium"
           >
             {submitting ? "Submitting..." : isResubmit ? "Update & Re-submit" : "Submit for Review"}

@@ -103,6 +103,8 @@ const PanelsPage: FC = () => {
   }, [guildId, selectGuild, selectedGuild]);
 
   const sortedChannels = sortGuildChannels(selectedGuild?.channels || []);
+  const existingChannelIds = new Set((selectedGuild?.channels ?? []).map((c) => c.id));
+  const channelsLoaded = (selectedGuild?.channels?.length ?? 0) > 0;
 
   // @ts-expect-error 2345 (Default to blank panel)
   const [panel, setPanel] = useState<Panel>({
@@ -249,6 +251,16 @@ const PanelsPage: FC = () => {
     );
   }
 
+  // Mirrors validateButtonLabelOrEmoji.
+  const hasButtonLabel = !!(panel.button_label ?? "").trim();
+  const hasButtonEmoji = panel.use_custom_emoji
+    ? !!(panel.emoji_id && panel.emoji_name?.trim())
+    : !!panelEmoteName(panel.emote).trim();
+  const buttonIdentityMissing = !hasButtonLabel && !hasButtonEmoji;
+  const missingChannel = !panel.channel_id;
+  const missingCategory = !panel.category_id;
+  const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+
   return (
     <MainLayout
       title={clonePanelId ? "Clone Panel" : "New Panel Creation"}
@@ -303,6 +315,10 @@ const PanelsPage: FC = () => {
               <Select
                 label="Panel Channel"
                 info={PANEL_MESSAGE_INFO}
+                required
+                error={
+                  channelsLoaded && !!panel.channel_id && !existingChannelIds.has(panel.channel_id)
+                }
                 options={
                   sortedChannels?.map((c) => ({
                     label: c.label,
@@ -341,7 +357,9 @@ const PanelsPage: FC = () => {
             </div>
             <div className="py-2 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
-                label="Button Text"
+                label="Button Text (or an emoji)"
+                required
+                missing={buttonIdentityMissing}
                 placeholder="e.g. Open Ticket"
                 value={panel.button_label || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, button_label: e } : prev))}
@@ -365,6 +383,7 @@ const PanelsPage: FC = () => {
 
               <EmojiPicker
                 label="Button Emoji"
+                missing={buttonIdentityMissing}
                 className="col-span-2"
                 value={panel.use_custom_emoji ? "" : panelEmoteName(panel.emote)}
                 guildEmojiId={panel.use_custom_emoji ? panel.emoji_id : undefined}
@@ -452,6 +471,10 @@ const PanelsPage: FC = () => {
 
           <Select
             label="Ticket Category"
+            required
+            error={
+              channelsLoaded && !!panel.category_id && !existingChannelIds.has(panel.category_id)
+            }
             options={
               selectedGuild?.channels
                 ?.filter((c) => c.type == 4)
@@ -775,7 +798,7 @@ const PanelsPage: FC = () => {
                 />
               </PremiumGate>
               <DateTimePicker
-                label="Footer Timestamp (Optional)"
+                label="Footer Timestamp"
                 value={parseEmbedTimestamp(panel.welcome_message?.timestamp)}
                 onChange={(date) =>
                   setPanel((prev) =>
@@ -826,6 +849,12 @@ const PanelsPage: FC = () => {
           <Select
             label="Thread Notification Channel"
             info={THREAD_NOTIFICATION_CHANNEL_INFO}
+            required={panel.use_threads}
+            error={
+              channelsLoaded &&
+              !!panel.ticket_notification_channel &&
+              !existingChannelIds.has(panel.ticket_notification_channel)
+            }
             disabled={!panel.use_threads}
             options={
               selectedGuild?.channels
@@ -1224,6 +1253,7 @@ const PanelsPage: FC = () => {
         variant="success"
         className="mt-4 text-sm font-medium"
         isLoading={isSubmitting}
+        disabled={missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={() => {

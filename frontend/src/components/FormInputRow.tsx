@@ -265,6 +265,7 @@ const FormInputRow: FC<FormInputRowProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <TextInput
           label="Label"
+          required
           placeholder="Enter field label"
           value={input.label || ""}
           onChange={(value) => handleChange("label", value)}
@@ -276,19 +277,15 @@ const FormInputRow: FC<FormInputRowProps> = ({
           onChange={(value) => handleChange("placeholder", value)}
         />
       </div>
-      {hasInvalidLabel && (
+      {!!input.label && input.label.length > 45 && (
         <ValidationWarning
-          message={
-            !input.label || input.label.trim().length === 0
-              ? "Label is required"
-              : `Label must be 45 characters or less (currently ${input.label.length})`
-          }
+          message={`Label must be 45 characters or less (currently ${input.label.length})`}
         />
       )}
 
       <div className="mt-3">
         <TextInput
-          label="Description (optional)"
+          label="Description"
           placeholder="Add a description to help users understand this field"
           value={input.description || ""}
           onChange={(value) => handleChange("description", value)}
@@ -388,7 +385,8 @@ const FormInputRow: FC<FormInputRowProps> = ({
         <div className="mt-3">
           <h4 className="text-sm font-medium text-gray-300 mb-2">API Configuration</h4>
           <TextInput
-            label="API Endpoint URL *"
+            label="API Endpoint URL"
+            required
             placeholder="https://api.example.com/options?user=%user_id%"
             value={input.api_config?.endpoint_url || ""}
             onChange={(value) =>
@@ -515,6 +513,7 @@ const FormInputRow: FC<FormInputRowProps> = ({
               >
                 <TextInput
                   label="Header Name"
+                  required
                   value={header.header_name}
                   onChange={(value) => {
                     const newHeaders = [...(input.api_config?.headers || [])];
@@ -554,6 +553,7 @@ const FormInputRow: FC<FormInputRowProps> = ({
                 ) : (
                   <TextInput
                     label="Header Value"
+                    required
                     value={header.header_value}
                     onChange={(value) => {
                       const newHeaders = [...(input.api_config?.headers || [])];
@@ -710,7 +710,8 @@ const FormInputRow: FC<FormInputRowProps> = ({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <TextInput
-                        label="Label *"
+                        label="Label"
+                        required
                         value={option.label}
                         onChange={(e) => {
                           const newOptions = [...(input.options || [])];
@@ -719,7 +720,8 @@ const FormInputRow: FC<FormInputRowProps> = ({
                         }}
                       />
                       <TextInput
-                        label="Value *"
+                        label="Value"
+                        required
                         value={option.value}
                         placeholder="Value"
                         onChange={(e) => {
@@ -731,7 +733,7 @@ const FormInputRow: FC<FormInputRowProps> = ({
                     </div>
                     <div className="mt-2">
                       <TextInput
-                        label="Description (optional)"
+                        label="Description"
                         value={option.description}
                         onChange={(e) => {
                           const newOptions = [...(input.options || [])];

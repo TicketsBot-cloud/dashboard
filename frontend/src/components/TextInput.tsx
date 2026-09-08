@@ -1,4 +1,11 @@
 import { useId, type FC, type KeyboardEvent } from "react";
+import RequiredMark from "./RequiredMark";
+import {
+  FAULT_FIELD_CLASS,
+  IDLE_INPUT_CLASS,
+  MISSING_FIELD_CLASS,
+  isBlank,
+} from "@/lib/field-validity";
 
 interface TextInputProps {
   value: string;
@@ -15,6 +22,8 @@ interface TextInputProps {
   onBlur?: () => void;
   autoFocus?: boolean;
   error?: string;
+  required?: boolean;
+  missing?: boolean;
   inputMode?: "none" | "text" | "decimal" | "numeric" | "tel" | "search" | "email" | "url";
   pattern?: string;
   descriptionId?: string;
@@ -25,6 +34,7 @@ const defaultProps = {
   disabled: false,
   className: "",
   label: undefined,
+  required: false,
 } as const;
 
 const TextInput: FC<TextInputProps> = (props) => {
@@ -46,6 +56,7 @@ const TextInput: FC<TextInputProps> = (props) => {
     inputMode,
     pattern,
     descriptionId,
+    required,
   } = {
     ...defaultProps,
     ...props,
@@ -54,12 +65,18 @@ const TextInput: FC<TextInputProps> = (props) => {
   const errorId = useId();
   const countId = useId();
   const withCount = showCount && maxLength !== undefined;
-  const borderClass = error ? "border-red-500" : "border-neutral-600 focus-within:border-blue-500";
+  const missing = !disabled && (props.missing ?? (required && isBlank(value)));
+  const borderClass = error
+    ? FAULT_FIELD_CLASS
+    : missing
+      ? MISSING_FIELD_CLASS
+      : IDLE_INPUT_CLASS;
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (
         <label htmlFor={inputId} className="mb-1 text-white">
           {label}
+          {required && <RequiredMark />}
         </label>
       )}
       <div className={`inline-flex bg-gray-700 border rounded overflow-hidden px-1 ${borderClass}`}>
@@ -84,6 +101,7 @@ const TextInput: FC<TextInputProps> = (props) => {
               .join(" ") || undefined
           }
           aria-invalid={error ? true : undefined}
+          aria-required={required || undefined}
         />
       </div>
       {(error || withCount) && (

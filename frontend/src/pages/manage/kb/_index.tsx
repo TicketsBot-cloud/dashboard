@@ -582,6 +582,7 @@ const KBPage: FC = () => {
               />
               <TextInput
                 label="New Category Name"
+                required
                 placeholder="e.g. Getting Started"
                 value={newCategoryName}
                 onChange={setNewCategoryName}
@@ -647,6 +648,7 @@ const KBPage: FC = () => {
                               setEditingCategory((prev) => (prev ? { ...prev, name: v } : prev))
                             }
                             maxLength={50}
+                            required
                           />
                           <Button
                             variant="ghost"

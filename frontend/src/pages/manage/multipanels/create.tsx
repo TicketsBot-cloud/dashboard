@@ -143,6 +143,9 @@ const MultiPanelsPage: FC = () => {
     const entry = multiPanel.panels.find((p) => p.panel_id === panelId);
     return !entry?.custom_label?.trim() && !panel?.button_label;
   };
+  const labellessPanelCount = multiPanel.panels.filter((entry) =>
+    panelNeedsLabel(entry.panel_id),
+  ).length;
   const validateMultiPanel = () => {
     if (!multiPanel.channel_id) {
       toast.error("Select a panel channel before creating the multi-panel.");
@@ -195,6 +198,7 @@ const MultiPanelsPage: FC = () => {
           <Select
             label="Panel Channel"
             info={PANEL_MESSAGE_INFO}
+            required
             value={multiPanel.channel_id || ""}
             options={sortedChannels}
             onChange={(e) =>
@@ -203,6 +207,8 @@ const MultiPanelsPage: FC = () => {
           />
           <MultiSelect
             label="Panels"
+            required
+            missing={(multiPanel.panels?.length ?? 0) < 2}
             value={multiPanel.panels?.map((p) => p.panel_id.toString()) || []}
             options={panels?.map((panel) => ({
               label: panel.title,
@@ -279,6 +285,8 @@ const MultiPanelsPage: FC = () => {
                   />
                   <TextInput
                     label="Custom Label"
+                    required={multiPanel.select_menu}
+                    missing={needsLabel}
                     placeholder={panel?.button_label || "Leave empty to use default"}
                     value={entry.custom_label || ""}
                     onChange={(v) => updatePanelCustomization(entry.panel_id, "custom_label", v)}
@@ -290,15 +298,6 @@ const MultiPanelsPage: FC = () => {
                       value={entry.description || ""}
                       onChange={(v) => updatePanelCustomization(entry.panel_id, "description", v)}
                     />
-                  )}
-                  {needsLabel && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm">
-                      <FontAwesomeIcon icon={faExclamationTriangle} />
-                      <span>
-                        This panel must have a label when using dropdown mode. Please add a custom
-                        label or ensure the panel has a button label.
-                      </span>
-                    </div>
                   )}
                 </div>
               );
@@ -502,7 +501,7 @@ const MultiPanelsPage: FC = () => {
                 />
               </PremiumGate>
               <DateTimePicker
-                label="Footer Timestamp (Optional)"
+                label="Footer Timestamp"
                 value={parseEmbedTimestamp(multiPanel.embed?.timestamp)}
                 onChange={(date) =>
                   setMultiPanel((prev) =>
@@ -529,6 +528,16 @@ const MultiPanelsPage: FC = () => {
           </div>
         </div>
       </Collapsible>
+      {labellessPanelCount > 0 && (
+        <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm">
+          <FontAwesomeIcon icon={faExclamationTriangle} />
+          <span>
+            {labellessPanelCount} panel{labellessPanelCount > 1 ? "s" : ""} still need
+            {labellessPanelCount > 1 ? "" : "s"} a label for dropdown mode. Add one under Panel
+            Customization.
+          </span>
+        </div>
+      )}
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"

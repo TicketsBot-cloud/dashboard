@@ -100,7 +100,7 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
   const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
 
   return (
-    <div className={`flex flex-col relative ${className}`} data-missing={missing || undefined}>
+    <div className={`flex flex-col relative ${className}`}>
       {label && (
         <label className="mb-1 text-white">
           {label}
@@ -129,6 +129,7 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
         aria-label={label || "Multi-select"}
         aria-required={required || undefined}
         aria-invalid={error || undefined}
+        data-missing={missing || undefined}
       >
         <div className="w-full px-2 py-1.5 min-h-10 flex flex-wrap gap-1 items-center">
           {selectedOptions.length > 0 ? (

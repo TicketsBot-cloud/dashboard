@@ -164,7 +164,7 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
   const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
 
   return (
-    <div className={`flex flex-col relative ${className}`} data-missing={missing || undefined}>
+    <div className={`flex flex-col relative ${className}`}>
       {label && (
         <label className="mb-1 text-white">
           {label}
@@ -192,6 +192,7 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
         aria-label={label || "Emoji Picker"}
         aria-required={required || undefined}
         aria-invalid={error || undefined}
+        data-missing={missing || undefined}
       >
         <div className="w-full p-2 min-h-10 flex items-center justify-between">
           {selectedGuildEmoji ? (

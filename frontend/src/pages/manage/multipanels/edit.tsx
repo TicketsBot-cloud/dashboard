@@ -545,8 +545,9 @@ const MultiPanelsPage: FC = () => {
         onClick={async () => {
           if (!multiPanel) return;
           if (missingChannel || tooFewPanels || labellessPanelCount > 0) {
-            scrollToFirstMissingField();
-            toast.error("Fill in the highlighted required fields before saving.");
+            if (!scrollToFirstMissingField()) {
+              toast.error("Fill in the required fields before saving.");
+            }
             return;
           }
           try {

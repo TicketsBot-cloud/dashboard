@@ -1195,8 +1195,9 @@ const EditPanelsPage: FC = () => {
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={async () => {
           if (missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing) {
-            scrollToFirstMissingField();
-            toast.error("Fill in the highlighted required fields before saving.");
+            if (!scrollToFirstMissingField()) {
+              toast.error("Fill in the required fields before saving.");
+            }
             return;
           }
           try {

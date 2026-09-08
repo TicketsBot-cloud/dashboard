@@ -48,14 +48,17 @@ const Textarea: FC<TextareaProps> = (props) => {
       : IDLE_INPUT_CLASS;
   const describedBy = [error ? errorId : null, countId].filter(Boolean).join(" ") || undefined;
   return (
-    <div className={`flex flex-col ${className}`} data-missing={missing || undefined}>
+    <div className={`flex flex-col ${className}`}>
       {label && (
         <label htmlFor={textareaId} className="mb-1 text-white">
           {label}
           {required && <RequiredMark />}
         </label>
       )}
-      <div className={`inline-flex items-center bg-gray-700 border rounded px-1 ${borderClass}`}>
+      <div
+        className={`inline-flex items-center bg-gray-700 border rounded px-1 ${borderClass}`}
+        data-missing={missing || undefined}
+      >
         <textarea
           id={textareaId}
           className="w-full bg-gray-700 p-3 rounded resize-y h-50 focus:outline-none"

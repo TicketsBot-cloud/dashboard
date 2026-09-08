@@ -330,6 +330,21 @@ code {
   animation: pulse-ring 1.5s cubic-bezier(0, 0, 0.2, 1) forwards;
 }
 
+/* Endpoints match MISSING_FIELD_CLASS so the swell starts and ends on the resting glow. */
+@keyframes field-breath {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+  }
+}
+
+.animate-field-breath {
+  animation: field-breath 1.1s ease-in-out 2;
+}
+
 .anim-delay-100 {
   animation-delay: 100ms;
 }

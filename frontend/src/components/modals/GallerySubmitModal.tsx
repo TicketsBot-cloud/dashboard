@@ -159,13 +159,14 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
             maxLength={100}
           />
 
-          <div className="flex flex-col" data-missing={missingDescription || undefined}>
+          <div className="flex flex-col">
             <label htmlFor="gallery-submit-description" className="mb-1 text-white">
               Description
               <RequiredMark />
             </label>
             <textarea
               id="gallery-submit-description"
+              data-missing={missingDescription || undefined}
               className={`bg-gray-700 border rounded p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${missingDescription ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS}`}
               rows={3}
               maxLength={500}

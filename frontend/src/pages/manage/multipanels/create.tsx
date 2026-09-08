@@ -9,6 +9,7 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import type { MultiPanelPanelEntry, MultiPanelRequest } from "@/types";
 import Collapsible from "@/components/Collapsible";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
@@ -148,11 +149,13 @@ const MultiPanelsPage: FC = () => {
   ).length;
   const validateMultiPanel = () => {
     if (!multiPanel.channel_id) {
+      scrollToFirstMissingField();
       toast.error("Select a panel channel before creating the multi-panel.");
       return null;
     }
 
     if (multiPanel.panels.length < 2) {
+      scrollToFirstMissingField();
       toast.error("Select at least two panels before creating the multi-panel.");
       return null;
     }
@@ -166,6 +169,7 @@ const MultiPanelsPage: FC = () => {
       multiPanel.select_menu &&
       multiPanel.panels.some((entry) => panelNeedsLabel(entry.panel_id))
     ) {
+      scrollToFirstMissingField();
       toast.error("Every dropdown panel needs a label.");
       return null;
     }

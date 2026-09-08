@@ -6,6 +6,7 @@ import TextInput from "@/components/TextInput";
 import Select from "@/components/Select";
 import RequiredMark from "@/components/RequiredMark";
 import { IDLE_FIELD_CLASS, MISSING_FIELD_CLASS } from "@/lib/field-validity";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import { apiClient } from "@/lib/api";
 import type { GallerySubmission } from "@/types";
 
@@ -77,6 +78,7 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
   const missingCategory = !category;
 
   const handleSubmit = async () => {
+    if (missingName || missingDescription || missingCategory) scrollToFirstMissingField();
     if (!name.trim()) {
       toast.error("Please enter a name for your listing.");
       return;
@@ -157,7 +159,7 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
             maxLength={100}
           />
 
-          <div className="flex flex-col">
+          <div className="flex flex-col" data-missing={missingDescription || undefined}>
             <label htmlFor="gallery-submit-description" className="mb-1 text-white">
               Description
               <RequiredMark />
@@ -224,7 +226,6 @@ const GallerySubmitModal: FC<GallerySubmitModalProps> = ({
             variant="primary"
             onClick={handleSubmit}
             isLoading={submitting}
-            disabled={missingName || missingDescription || missingCategory}
             className="font-medium"
           >
             {submitting ? "Submitting..." : isResubmit ? "Update & Re-submit" : "Submit for Review"}

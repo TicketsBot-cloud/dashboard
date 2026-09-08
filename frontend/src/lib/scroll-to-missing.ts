@@ -1,0 +1,16 @@
+export const FIELD_REVEAL_EVENT = "field-reveal";
+
+// Collapsible opens itself on this event; a closed section is inert.
+export function scrollToFirstMissingField(): boolean {
+  const field = document.querySelector<HTMLElement>('[data-missing="true"]');
+  if (!field) return false;
+
+  window.dispatchEvent(new CustomEvent<HTMLElement>(FIELD_REVEAL_EVENT, { detail: field }));
+  requestAnimationFrame(() => {
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+    field
+      .querySelector<HTMLElement>('input, textarea, [role="combobox"]')
+      ?.focus({ preventScroll: true });
+  });
+  return true;
+}

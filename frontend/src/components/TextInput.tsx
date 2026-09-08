@@ -72,7 +72,7 @@ const TextInput: FC<TextInputProps> = (props) => {
       ? MISSING_FIELD_CLASS
       : IDLE_INPUT_CLASS;
   return (
-    <div className={`flex flex-col ${className}`}>
+    <div className={`flex flex-col ${className}`} data-missing={missing || undefined}>
       {label && (
         <label htmlFor={inputId} className="mb-1 text-white">
           {label}

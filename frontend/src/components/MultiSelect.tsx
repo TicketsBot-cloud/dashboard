@@ -100,7 +100,7 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
   const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
 
   return (
-    <div className={`flex flex-col relative ${className}`}>
+    <div className={`flex flex-col relative ${className}`} data-missing={missing || undefined}>
       {label && (
         <label className="mb-1 text-white">
           {label}

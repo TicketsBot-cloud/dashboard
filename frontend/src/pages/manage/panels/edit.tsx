@@ -35,6 +35,7 @@ import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
@@ -1190,10 +1191,14 @@ const EditPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
-        disabled={missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={async () => {
+          if (missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing) {
+            scrollToFirstMissingField();
+            toast.error("Fill in the highlighted required fields before saving.");
+            return;
+          }
           try {
             await apiClient.panels.update(
               guildId,

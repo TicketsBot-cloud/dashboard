@@ -48,7 +48,7 @@ const Textarea: FC<TextareaProps> = (props) => {
       : IDLE_INPUT_CLASS;
   const describedBy = [error ? errorId : null, countId].filter(Boolean).join(" ") || undefined;
   return (
-    <div className={`flex flex-col ${className}`}>
+    <div className={`flex flex-col ${className}`} data-missing={missing || undefined}>
       {label && (
         <label htmlFor={textareaId} className="mb-1 text-white">
           {label}

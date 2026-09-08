@@ -34,6 +34,7 @@ import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -1253,10 +1254,14 @@ const PanelsPage: FC = () => {
         variant="success"
         className="mt-4 text-sm font-medium"
         isLoading={isSubmitting}
-        disabled={missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={() => {
+          if (missingChannel || missingCategory || missingThreadChannel || buttonIdentityMissing) {
+            scrollToFirstMissingField();
+            toast.error("Fill in the highlighted required fields before saving.");
+            return;
+          }
           guard(async () => {
             try {
               const res = await apiClient.panels.create(

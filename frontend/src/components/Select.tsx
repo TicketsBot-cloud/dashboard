@@ -122,7 +122,7 @@ const Select: FC<SelectProps> = (props) => {
   const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
 
   return (
-    <div className={`flex flex-col relative ${className}`}>
+    <div className={`flex flex-col relative ${className}`} data-missing={missing || undefined}>
       {label && hideLabel && <label className="sr-only">{label}</label>}
       {label && !hideLabel && (
         <div className="mb-1 flex items-center gap-1.5">

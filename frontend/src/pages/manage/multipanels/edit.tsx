@@ -9,6 +9,7 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import type { MultiPanel, MultiPanelPanelEntry } from "@/types";
 import Collapsible from "@/components/Collapsible";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
@@ -539,11 +540,15 @@ const MultiPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
-        disabled={missingChannel || tooFewPanels || labellessPanelCount > 0}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={async () => {
           if (!multiPanel) return;
+          if (missingChannel || tooFewPanels || labellessPanelCount > 0) {
+            scrollToFirstMissingField();
+            toast.error("Fill in the highlighted required fields before saving.");
+            return;
+          }
           try {
             await apiClient.multiPanels.update(guildId, panelId, multiPanel, SKIP_ERROR_TOAST);
             toast.success("Multi Panel Edited");

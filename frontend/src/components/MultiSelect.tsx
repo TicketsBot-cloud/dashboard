@@ -130,7 +130,7 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
         aria-required={required || undefined}
         aria-invalid={error || undefined}
       >
-        <div className="w-full p-2 min-h-10 flex flex-wrap gap-1 items-center">
+        <div className="w-full px-2 py-1.5 min-h-10 flex flex-wrap gap-1 items-center">
           {selectedOptions.length > 0 ? (
             selectedOptions.map((selectedOption) => {
               const fadedBgStyle = selectedOption.color

@@ -337,9 +337,7 @@ const PanelsPage: FC = () => {
                 label="Panel Channel"
                 info={PANEL_MESSAGE_INFO}
                 required
-                error={
-                  stale(panel.channel_id)
-                }
+                error={stale(panel.channel_id)}
                 options={
                   sortedChannels?.map((c) => ({
                     label: c.label,
@@ -493,9 +491,7 @@ const PanelsPage: FC = () => {
           <Select
             label="Ticket Category"
             required
-            error={
-              stale(panel.category_id)
-            }
+            error={stale(panel.category_id)}
             options={
               selectedGuild?.channels
                 ?.filter((c) => c.type == 4)

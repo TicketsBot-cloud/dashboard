@@ -41,11 +41,7 @@ const Textarea: FC<TextareaProps> = (props) => {
   const { onBlur, error } = props;
   const safeValue = value ?? "";
   const missing = !disabled && (props.missing ?? (required && isBlank(safeValue)));
-  const borderClass = error
-    ? FAULT_FIELD_CLASS
-    : missing
-      ? MISSING_FIELD_CLASS
-      : IDLE_INPUT_CLASS;
+  const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_INPUT_CLASS;
   const describedBy = [error ? errorId : null, countId].filter(Boolean).join(" ") || undefined;
   return (
     <div className={`flex flex-col ${className}`}>

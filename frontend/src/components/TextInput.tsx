@@ -66,11 +66,7 @@ const TextInput: FC<TextInputProps> = (props) => {
   const countId = useId();
   const withCount = showCount && maxLength !== undefined;
   const missing = !disabled && (props.missing ?? (required && isBlank(value)));
-  const borderClass = error
-    ? FAULT_FIELD_CLASS
-    : missing
-      ? MISSING_FIELD_CLASS
-      : IDLE_INPUT_CLASS;
+  const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_INPUT_CLASS;
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (

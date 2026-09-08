@@ -40,12 +40,7 @@ import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSave,
-  faTrash,
-  faCrown,
-  faExclamationTriangle,
-} from "@fortawesome/free-solid-svg-icons";
+import { faSave, faTrash, faCrown, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { sortGuildChannels } from "@/lib/guild-channels";
 import {
   PANEL_MESSAGE_INFO,
@@ -262,9 +257,7 @@ const EditPanelsPage: FC = () => {
                 label="Panel Channel"
                 info={PANEL_MESSAGE_INFO}
                 required
-                error={
-                  stale(panel.channel_id)
-                }
+                error={stale(panel.channel_id)}
                 options={sortedChannels}
                 value={panel.channel_id || ""}
                 onChange={(e) =>
@@ -412,9 +405,7 @@ const EditPanelsPage: FC = () => {
           <Select
             label="Ticket Category"
             required
-            error={
-              stale(panel.category_id)
-            }
+            error={stale(panel.category_id)}
             options={
               selectedGuild?.channels
                 ?.filter((c) => c.type == 4)

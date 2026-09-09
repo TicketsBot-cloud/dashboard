@@ -12,7 +12,8 @@ export const sortGuildChannels = (channels: GuildChannel[]) => {
   const toOption = (channel: GuildChannel) => ({
     key: String(channel.id),
     label: `${channel.type == 2 ? "🔈" : "#"} ${channel.name}`,
-    disabled: channel.type !== 0,
+    // Type 5 = announcement, which the API accepts.
+    disabled: channel.type !== 0 && channel.type !== 5,
   });
 
   return sorted.reduce(

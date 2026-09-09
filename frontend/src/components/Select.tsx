@@ -6,6 +6,7 @@ import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import ChannelInfoModal from "@/components/modals/ChannelInfoModal";
 import type { SelectInfo } from "@/constants/panelChannelInfo";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
+import { normaliseColour } from "@/lib/colour";
 
 interface SelectOption {
   key: string | null;
@@ -156,8 +157,8 @@ const Select: FC<SelectProps> = (props) => {
             <>
               {selectedOption.color && (
                 <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: selectedOption.color }}
+                  className="w-3 h-3 rounded-full shrink-0 ring-1 ring-white/15"
+                  style={{ backgroundColor: normaliseColour(selectedOption.color) }}
                 />
               )}
               <span className="text-white">{selectedOption.label}</span>
@@ -279,8 +280,8 @@ const Select: FC<SelectProps> = (props) => {
                         </div>
                         {option.color && (
                           <div
-                            className="w-3 h-3 rounded-full mr-2 shrink-0"
-                            style={{ backgroundColor: option.color }}
+                            className="w-3 h-3 rounded-full mr-2 shrink-0 ring-1 ring-white/15"
+                            style={{ backgroundColor: normaliseColour(option.color) }}
                           />
                         )}
                         <span className="text-white">{option.label}</span>

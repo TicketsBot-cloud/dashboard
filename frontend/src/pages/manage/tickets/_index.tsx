@@ -39,6 +39,7 @@ import Textarea from "@/components/Textarea";
 import LabelBadge from "@/components/LabelBadge";
 import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
+import { colourToInt, intToColour } from "@/lib/colour";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import DismissibleModal from "@/components/modal-primitives/DismissibleModal";
 import EmptyState from "@/components/EmptyState";
@@ -61,14 +62,6 @@ function getRelativeTime(date: Date): string {
   if (hours > 0) return rtf.format(-hours, "hour");
   if (minutes > 0) return rtf.format(-minutes, "minute");
   return rtf.format(-seconds, "second");
-}
-
-function intToColour(colour: number): string {
-  return `#${colour.toString(16).padStart(6, "0")}`;
-}
-
-function colourToInt(hex: string): number {
-  return parseInt(hex.replace("#", ""), 16);
 }
 
 // --- Types ---
@@ -738,6 +731,7 @@ const TicketsPage: FC = () => {
                 ...panels.map((p) => ({
                   key: p.panel_id.toString(),
                   label: p.title,
+                  color: intToColour(p.colour),
                 })),
               ]}
             />

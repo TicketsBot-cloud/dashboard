@@ -10,7 +10,10 @@ import GalleryPreviewModal from "@/components/modals/GalleryPreviewModal";
 import Select from "@/components/Select";
 import Slider from "@/components/Slider";
 import Tabs from "@/components/Tabs";
-import { GALLERY_TYPE_BADGES } from "@/components/gallery/GalleryListingPreview";
+import {
+  GALLERY_TYPE_BADGES,
+  GALLERY_TYPE_OPTIONS,
+} from "@/components/gallery/GalleryListingPreview";
 import Textarea from "@/components/Textarea";
 import SearchInput from "@/components/SearchInput";
 import { useUrlSearch } from "@/hooks/useUrlSearch";
@@ -27,12 +30,6 @@ const STATUS_BADGE: Record<TabStatus, string> = {
   approved: "bg-green-600/20 text-green-400",
   rejected: "bg-red-600/20 text-red-400",
 };
-
-const TYPE_OPTIONS = [
-  { key: "panel", label: "Panels" },
-  { key: "tag", label: "Tags" },
-  { key: "form", label: "Forms" },
-];
 
 const AdminGalleryPage: FC = () => {
   const { user } = useAuthStore();
@@ -173,7 +170,7 @@ const AdminGalleryPage: FC = () => {
           label="Type"
           value={listingType}
           onChange={(v) => setListingType(v ?? "all")}
-          options={[{ key: "all", label: "All types" }, ...TYPE_OPTIONS]}
+          options={[{ key: "all", label: "All types" }, ...GALLERY_TYPE_OPTIONS]}
           placeholder="All types"
           hideSearch
           className="w-full sm:w-48"

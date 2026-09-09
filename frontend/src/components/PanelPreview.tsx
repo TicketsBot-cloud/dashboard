@@ -14,6 +14,8 @@ function resolveEmoteName(emote: Panel["emote"] | undefined): string {
   return "";
 }
 
+type PreviewField = { name: string; value: string; inline?: boolean };
+
 type MultiPanelPreviewRequest = Omit<MultiPanelRequest, "channel_id"> &
   Partial<Pick<MultiPanelRequest, "channel_id">>;
 
@@ -122,6 +124,30 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
   const displayFooterText = brandingFooter ? BRANDING_FOOTER_TEXT : footerText;
   const displayFooterIconUrl = brandingFooter ? BRANDING_FOOTER_ICON : footerIconUrl;
 
+  // Discord packs at most 3 inline fields per row.
+  const fieldRows: PreviewField[][] = [];
+  if (embedData?.fields?.length) {
+    let currentRow: PreviewField[] = [];
+    for (const field of embedData.fields) {
+      if (field.inline) {
+        currentRow.push(field);
+        if (currentRow.length === 3) {
+          fieldRows.push(currentRow);
+          currentRow = [];
+        }
+      } else {
+        if (currentRow.length > 0) {
+          fieldRows.push(currentRow);
+          currentRow = [];
+        }
+        fieldRows.push([field]);
+      }
+    }
+    if (currentRow.length > 0) {
+      fieldRows.push(currentRow);
+    }
+  }
+
   const thumbnailUrl = resolveTicketAvatar(embedData?.thumbnail_url);
   const imageUrl = resolveTicketAvatar(embedData?.image_url);
   const authorIconUrl = resolveTicketAvatar(embedData?.author?.icon_url);
@@ -179,6 +205,29 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
                 content={embedData.description}
                 className="text-sm mt-1 text-[#dbdee1] leading-snug"
               />
+            )}
+            {fieldRows.length > 0 && (
+              <div className="mt-2 flex flex-col gap-2">
+                {fieldRows.map((row, ri) => (
+                  <div
+                    key={ri}
+                    className="grid gap-2"
+                    style={{
+                      gridTemplateColumns: row.length > 1 ? `repeat(${row.length}, 1fr)` : "1fr",
+                    }}
+                  >
+                    {row.map((field, fi) => (
+                      <div key={fi} className="min-w-0">
+                        <DiscordContent
+                          content={field.name}
+                          className="text-xs font-semibold text-white"
+                        />
+                        <DiscordContent content={field.value} className="text-xs text-[#dbdee1]" />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           {thumbnailUrl && (

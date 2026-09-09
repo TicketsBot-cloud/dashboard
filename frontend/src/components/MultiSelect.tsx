@@ -2,6 +2,7 @@ import type { FC } from "react";
 import { useState, useRef, useEffect, useId, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
+import { normaliseColour } from "@/lib/colour";
 
 interface MultiSelectOption {
   key: string;
@@ -115,8 +116,9 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
         <div className="w-full p-2 min-h-10 flex flex-wrap gap-1 items-center">
           {selectedOptions.length > 0 ? (
             selectedOptions.map((selectedOption) => {
-              const fadedBgStyle = selectedOption.color
-                ? { backgroundColor: `${selectedOption.color}20` }
+              const swatch = selectedOption.color && normaliseColour(selectedOption.color);
+              const fadedBgStyle = swatch
+                ? { backgroundColor: `color-mix(in srgb, ${swatch} 20%, transparent)` }
                 : {};
 
               return (
@@ -126,10 +128,10 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
                   style={fadedBgStyle}
                   title={selectedOption.label}
                 >
-                  {selectedOption.color && (
+                  {swatch && (
                     <div
-                      className="w-3 h-3 rounded-full mr-1 shrink-0"
-                      style={{ backgroundColor: `#${selectedOption.color}` }}
+                      className="w-3 h-3 rounded-full mr-1 shrink-0 ring-1 ring-white/15"
+                      style={{ backgroundColor: swatch }}
                     />
                   )}
                   <span className="min-w-0 truncate">{selectedOption.label}</span>
@@ -242,8 +244,8 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
                     </div>
                     {option.color && (
                       <div
-                        className="w-3 h-3 mt-1.5 shrink-0 rounded-full mr-2"
-                        style={{ backgroundColor: `#${option.color}` }}
+                        className="w-3 h-3 mt-1.5 shrink-0 rounded-full mr-2 ring-1 ring-white/15"
+                        style={{ backgroundColor: normaliseColour(option.color) }}
                       />
                     )}
                     <span className="min-w-0 flex-1 break-words text-white">{option.label}</span>

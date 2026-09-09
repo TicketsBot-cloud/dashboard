@@ -22,6 +22,12 @@ const TIER_BADGE_STYLES: Record<string, string> = {
   helper: "bg-gray-600/20 text-gray-400",
 };
 
+const TIER_DOTS: Record<string, string> = {
+  owner: "#C27AFF",
+  admin: "#51A2FF",
+  helper: "#99A1AF",
+};
+
 const staffRank = (member: BotStaffMember): number => {
   if (member.tier === "owner") return 0;
   if (member.tier === "admin") return member.global_view ? 1 : 2;
@@ -46,12 +52,12 @@ export default function BotStaffPage() {
   const tierOptions = useMemo(() => {
     if (isOwner) {
       return [
-        { key: "admin", label: "Admin" },
-        { key: "helper", label: "Helper" },
+        { key: "admin", label: "Admin", color: TIER_DOTS.admin },
+        { key: "helper", label: "Helper", color: TIER_DOTS.helper },
       ];
     }
     // Admins can only add helpers
-    return [{ key: "helper", label: "Helper" }];
+    return [{ key: "helper", label: "Helper", color: TIER_DOTS.helper }];
   }, [isOwner]);
 
   const fetchStaff = useCallback(async () => {

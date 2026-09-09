@@ -7,6 +7,7 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
+import { roleColour } from "@/lib/colour";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import UserSearchSelect, { type UserOption } from "@/components/UserSearchSelect";
@@ -249,7 +250,7 @@ const BlacklistPage: FC = () => {
   const roleOptions = roles.map((role) => ({
     key: role.id,
     label: role.name,
-    color: `#${role.color.toString(16).padStart(6, "0")}`,
+    color: roleColour(role.color),
   }));
 
   const getRoleName = (roleId: string) => {

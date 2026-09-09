@@ -7,6 +7,7 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
+import { roleColour } from "@/lib/colour";
 import TextInput from "@/components/TextInput";
 import Slider from "@/components/Slider";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -396,7 +397,7 @@ const TeamsPage: FC = () => {
   const roleOptions = roles.map((role) => ({
     key: role.id,
     label: role.name,
-    color: `#${role.color.toString(16).padStart(6, "0")}`,
+    color: roleColour(role.color),
   }));
 
   const teamOptions = teams.map((team) => ({

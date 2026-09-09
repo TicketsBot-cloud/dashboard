@@ -1,4 +1,4 @@
-import { useId, type FC, type ChangeEvent } from "react";
+import { useId, useState, type FC, type ChangeEvent } from "react";
 
 interface NumberInputProps {
   value: number;
@@ -29,6 +29,8 @@ const NumberInput: FC<NumberInputProps> = (props) => {
     ...props,
   };
 
+  const [draft, setDraft] = useState<string | null>(null);
+
   const handleDecrement = () => {
     if (disabled) return;
     if (value - 1 < min) return;
@@ -42,17 +44,26 @@ const NumberInput: FC<NumberInputProps> = (props) => {
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    let val = parseInt(e.target.value, 10);
-    if (isNaN(val)) {
-      val = min;
+    const raw = e.target.value;
+    if (raw === "") {
+      setDraft("");
+      return;
     }
-    val = Math.max(min, Math.min(max, val));
-    onChange(val);
+    const val = parseInt(raw, 10);
+    if (isNaN(val)) return;
+    setDraft(null);
+    onChange(Math.max(min, Math.min(max, val)));
   };
 
   const inputId = useId();
   const errorId = useId();
   const { onBlur, error } = props;
+
+  const handleBlur = () => {
+    setDraft(null);
+    onBlur?.();
+  };
+
   const borderClass = error ? "border-red-500" : "border-neutral-600 focus-within:border-blue-500";
   return (
     <div className={`flex flex-col ${className}`}>
@@ -81,9 +92,9 @@ const NumberInput: FC<NumberInputProps> = (props) => {
           aria-valuemax={max}
           aria-valuenow={value}
           className="text-center w-full bg-transparent text-white focus:outline-none py-2"
-          value={value}
+          value={draft ?? value}
           onChange={handleChange}
-          onBlur={onBlur}
+          onBlur={handleBlur}
           disabled={disabled}
           placeholder={placeholder || "Enter number"}
           aria-invalid={error ? true : undefined}

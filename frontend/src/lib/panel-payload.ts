@@ -77,6 +77,10 @@ export function preparePanelForApi(panel: Panel): Partial<Panel> {
 
   payload.emote = buildPanelEmote(panel) as Panel["emote"];
 
+  if (!panel.overflow_enabled) {
+    delete payload.overflow_category_id;
+  }
+
   if (panel.welcome_message) {
     payload.welcome_message = {
       ...panel.welcome_message,

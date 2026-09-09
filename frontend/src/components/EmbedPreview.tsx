@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { isSafeUrl } from "@/lib/url";
 import { formatEmbedTimestampForDisplay } from "@/lib/embed-timestamp";
-import DiscordContent from "@/components/discord/DiscordContent";
+import DiscordText from "@/components/discord/DiscordText";
 import { previewAvatarUrl } from "@/lib/embed-avatar";
 
 interface EmbedField {
@@ -25,9 +25,10 @@ interface EmbedPreviewData {
 
 interface EmbedPreviewProps {
   embed: EmbedPreviewData;
+  raw?: boolean;
 }
 
-const EmbedPreview: FC<EmbedPreviewProps> = ({ embed }) => {
+const EmbedPreview: FC<EmbedPreviewProps> = ({ embed, raw = false }) => {
   const borderColor = `#${(embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`;
   const footerTimestamp = formatEmbedTimestampForDisplay(embed.timestamp);
   const thumbnailUrl = previewAvatarUrl(embed.thumbnail_url);
@@ -35,6 +36,7 @@ const EmbedPreview: FC<EmbedPreviewProps> = ({ embed }) => {
   const authorIconUrl = previewAvatarUrl(embed.author?.icon_url);
   const authorUrl = previewAvatarUrl(embed.author?.url);
   const footerIconUrl = previewAvatarUrl(embed.footer?.icon_url);
+  const titleUrl = previewAvatarUrl(embed.url);
 
   // Group fields into rows: inline fields share a row (max 3), non-inline get their own
   const fieldRows: EmbedField[][] = [];
@@ -89,9 +91,19 @@ const EmbedPreview: FC<EmbedPreviewProps> = ({ embed }) => {
               <span className="text-sm font-semibold">{embed.author.name}</span>
             </div>
           ) : null}
-          <DiscordContent content={embed.title || ""} className="text-sm font-bold" />
+          {titleUrl && isSafeUrl(titleUrl) && embed.title ? (
+            <a href={titleUrl} target="_blank" rel="noopener noreferrer">
+              <DiscordText
+                raw={raw}
+                content={embed.title}
+                className="text-sm font-bold text-[#00a8fc] hover:underline"
+              />
+            </a>
+          ) : (
+            <DiscordText raw={raw} content={embed.title || ""} className="text-sm font-bold" />
+          )}
           {embed.description && (
-            <DiscordContent content={embed.description} className="text-sm pt-2" />
+            <DiscordText raw={raw} content={embed.description} className="text-sm pt-2" />
           )}
           {fieldRows.length > 0 && (
             <div className="mt-2 flex flex-col gap-2">
@@ -105,8 +117,16 @@ const EmbedPreview: FC<EmbedPreviewProps> = ({ embed }) => {
                 >
                   {row.map((field, fi) => (
                     <div key={fi} className="min-w-0">
-                      <DiscordContent content={field.name} className="text-xs font-semibold" />
-                      <DiscordContent content={field.value} className="text-xs text-gray-300" />
+                      <DiscordText
+                        raw={raw}
+                        content={field.name}
+                        className="text-xs font-semibold"
+                      />
+                      <DiscordText
+                        raw={raw}
+                        content={field.value}
+                        className="text-xs text-gray-300"
+                      />
                     </div>
                   ))}
                 </div>

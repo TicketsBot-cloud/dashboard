@@ -51,7 +51,7 @@ export default function Collapsible(props: CollapsibleProps) {
         aria-hidden={!isOpen}
         {...(!isOpen ? { inert: true } : {})}
       >
-        <div className="overflow-hidden min-h-0">
+        <div className="relative overflow-hidden min-h-0">
           {isOpen && <hr className="text-gray-700" />}
           <div className="p-4">{props.children}</div>
         </div>

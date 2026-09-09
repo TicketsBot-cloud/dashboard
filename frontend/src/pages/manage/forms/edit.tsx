@@ -14,17 +14,11 @@ import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_FORMS } from "@/lib/feature-flags";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faFloppyDisk } from "@fortawesome/free-solid-svg-icons";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 interface ExtendedFormInput extends FormInput {
   is_new?: boolean;
   placeholder?: string;
-}
-
-/** Extracts the status and API-supplied message from an Axios error, for the 503 lock check. */
-function readApiError(error: unknown): { status?: number; message?: string } {
-  const status = (error as { response?: { status?: number } })?.response?.status;
-  const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-  return { status, message };
 }
 
 const EditFormPage: FC = () => {
@@ -42,6 +36,10 @@ const EditFormPage: FC = () => {
   const [inputValidationErrors, setInputValidationErrors] = useState<Record<number, boolean>>({});
   const { locked: polledLock } = useFeatureLock(FEATURE_FORMS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Form management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // This page is a long-lived editor rather than a form the user navigates away
@@ -113,17 +111,7 @@ const EditFormPage: FC = () => {
       setEditingTitle(false);
       toast.success("Form title updated");
     } catch (error) {
-      const { status, message } = readApiError(error);
-      if (status === 503) {
-        toast.warning(
-          message ?? "Form management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-        // status, not just 503, so every other failure needs its own here.
-        toast.error(message ?? "Failed to update form title. Please try again.");
-      }
+      handleApiError(error, "Failed to update form title. Please try again.");
       console.error("Failed to update form title:", error);
     }
   };
@@ -255,17 +243,7 @@ const EditFormPage: FC = () => {
       toast.success("Form updated successfully");
       navigate(`/manage/${guildId}/forms`);
     } catch (error) {
-      const { status, message } = readApiError(error);
-      if (status === 503) {
-        toast.warning(
-          message ?? "Form management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-        // status, not just 503, so every other failure needs its own here.
-        toast.error(message ?? "Failed to save form fields. Please try again.");
-      }
+      handleApiError(error, "Failed to save form fields. Please try again.");
       console.error("Failed to save inputs:", error);
     } finally {
       setIsSaving(false);
@@ -286,17 +264,7 @@ const EditFormPage: FC = () => {
       toast.success("Form deleted successfully");
       navigate(`/manage/${guildId}/forms`);
     } catch (error) {
-      const { status, message } = readApiError(error);
-      if (status === 503) {
-        toast.warning(
-          message ?? "Form management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-        // status, not just 503, so every other failure needs its own here.
-        toast.error(message ?? "Failed to delete form. Please try again.");
-      }
+      handleApiError(error, "Failed to delete form. Please try again.");
       console.error("Failed to delete form:", error);
     }
   };

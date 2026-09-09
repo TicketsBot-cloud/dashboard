@@ -118,7 +118,7 @@ func SendMessage(ctx *gin.Context) {
 	}
 
 	if errStr := SendMessageToTicket(ctx, botContext, ticket, processedContent, settings.AnonymiseDashboardResponses, sender); errStr != "" {
-		ctx.JSON(500, utils.ErrorStr(errStr))
+		ctx.JSON(500, utils.ErrorStr("%s", errStr))
 		return
 	}
 

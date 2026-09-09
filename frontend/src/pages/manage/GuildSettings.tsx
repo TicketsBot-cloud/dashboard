@@ -20,6 +20,7 @@ import type { GuildSettings } from "@/types";
 import PermissionWarningBanner from "@/components/PermissionWarningBanner";
 import PanelSwitchBehaviourInfoModal from "@/components/modals/PanelSwitchBehaviourInfoModal";
 import { PANEL_SWITCH_OPTIONS } from "@/constants/panelSwitchBehaviour";
+import { intToColour } from "@/lib/colour";
 
 const PanelSwitchSelect: FC<{ value: number; onChange: (v: number) => void }> = ({
   value,
@@ -30,12 +31,12 @@ const PanelSwitchSelect: FC<{ value: number; onChange: (v: number) => void }> = 
   return (
     <div className="flex flex-col">
       <div className="mb-1 flex items-center gap-1.5">
-        <span className="text-white">Panel Switch Behaviour</span>
+        <span className="text-white">Claim Behaviour on Panel Switch</span>
         <Button
           variant="ghost"
           size="icon"
           className="text-gray-400 hover:text-gray-200"
-          aria-label="Learn more about Panel Switch Behaviour"
+          aria-label="Learn more about Claim Behaviour on Panel Switch"
           onClick={() => setInfoOpen(true)}
         >
           <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" aria-hidden="true" />
@@ -209,6 +210,7 @@ const GuildSettings: FC = () => {
               ...panels.map((p) => ({
                 key: p.panel_id.toString(),
                 label: p.title,
+                color: intToColour(p.colour),
               })),
             ]}
           />

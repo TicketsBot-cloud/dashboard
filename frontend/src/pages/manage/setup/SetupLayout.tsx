@@ -67,6 +67,13 @@ function SetupLayoutContent() {
       return;
     }
 
+    if ((g.permission_level ?? 0) < 2) {
+      selectGuild(null);
+      toast.warning("You need administrator permissions to access the setup wizard.");
+      navigate("/", { replace: true });
+      return;
+    }
+
     setVerified(false);
 
     const verifyAndLoad = async () => {
@@ -122,7 +129,7 @@ function SetupLayoutContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+      <div className="min-h-dvh bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center" role="status" aria-live="polite">
           <div
             className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"
@@ -137,7 +144,7 @@ function SetupLayoutContent() {
 
   if (needsAuth) {
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+      <div className="min-h-dvh bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Tickets</h1>
           <p className="text-gray-400 mb-8">Log in to set up your server.</p>
@@ -157,7 +164,7 @@ function SetupLayoutContent() {
 
   if (flagLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+      <div className="min-h-dvh bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center" role="status" aria-live="polite">
           <div
             className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"
@@ -172,7 +179,7 @@ function SetupLayoutContent() {
 
   if (!verified) {
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
+      <div className="min-h-dvh bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center" role="status" aria-live="polite">
           <div
             className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"
@@ -188,10 +195,10 @@ function SetupLayoutContent() {
   return (
     <SkeletonTheme baseColor="#374151" highlightColor="#4B5563">
       <SkipLinks />
-      <div className="h-screen overflow-y-auto bg-gray-900 text-gray-100">
+      <div className="h-dvh overflow-y-auto bg-gray-900 text-gray-100">
         <main
           id="main-content"
-          className="mx-auto flex min-h-screen max-w-4xl flex-col px-4 py-8"
+          className="mx-auto flex min-h-dvh max-w-4xl flex-col px-4 py-8"
           role="main"
         >
           <GuildContext.Provider value={selectedGuild == undefined ? null : selectedGuild}>

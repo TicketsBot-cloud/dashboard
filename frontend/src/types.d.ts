@@ -193,7 +193,7 @@ export interface Panel {
   has_support_hours?: boolean;
   is_currently_active?: boolean;
   exit_survey_form_id?: number | null;
-  pending_category?: string;
+  pending_category?: string | null;
   mention_behaviour: string;
   transcript_channel_id?: string;
   use_threads: boolean;
@@ -285,6 +285,11 @@ export interface MultiPanelEmbed {
   };
   colour: number;
   description?: string;
+  fields?: Array<{
+    name: string;
+    value: string;
+    inline?: boolean;
+  }>;
   footer: {
     text?: string;
     icon_url?: string;
@@ -573,6 +578,7 @@ export interface TicketViewResponse {
   panel_title?: string;
   messages: StrippedMessage[];
   content_restricted?: boolean;
+  channel_missing?: boolean;
 }
 
 export interface PolarSubscription {

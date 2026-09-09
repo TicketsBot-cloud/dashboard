@@ -983,6 +983,7 @@ export default function FeatureFlagsPage() {
             value={newDescription}
             onChange={setNewDescription}
             placeholder="What does this flag control?"
+            max={1000}
           />
 
           <Select

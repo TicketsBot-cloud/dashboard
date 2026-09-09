@@ -42,16 +42,10 @@ import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { useTableSort } from "@/hooks/useTableSort";
 import type { SortColumn } from "@/lib/table-sort";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 type PanelSortKey = "channel" | "title" | "status";
 type GallerySortKey = "name" | "category" | "status" | "imports";
-
-/** Extracts the status and API-supplied message from an Axios error, for the 503 lock check. */
-function readApiError(error: unknown): { status?: number; message?: string } {
-  const status = (error as { response?: { status?: number } })?.response?.status;
-  const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-  return { status, message };
-}
 
 // Ranked by severity so the status column sorts by meaning, not by rendered label.
 function statusRank(panel: Panel): number {
@@ -133,6 +127,10 @@ const PanelsPage: FC = () => {
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Panel management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // This page is a long-lived list rather than a form the user navigates away
@@ -174,20 +172,10 @@ const PanelsPage: FC = () => {
         toast.success("Multi-panel deleted successfully");
       }
     } catch (error) {
-      const { status, message } = readApiError(error);
-      if (status === 503) {
-        toast.warning(
-          message ??
-            `${isPanel ? "Panel" : "Multi-panel"} management is temporarily unavailable. Please try again shortly.`,
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-        // status, not just 503, so every other failure needs its own here.
-        toast.error(
-          message ?? `Failed to delete ${isPanel ? "panel" : "multi-panel"}. Please try again.`,
-        );
-      }
+      handleApiError(
+        error,
+        `Failed to delete ${isPanel ? "panel" : "multi-panel"}. Please try again.`,
+      );
       console.error("Failed to delete:", error);
     }
 
@@ -343,18 +331,10 @@ const PanelsPage: FC = () => {
                                     .resend(guildId, panel.panel_id.toString(), SKIP_ERROR_TOAST)
                                     .then(() => toast.success("Successfully re-sent panel"))
                                     .catch((error) => {
-                                      const { status, message } = readApiError(error);
-                                      if (status === 503) {
-                                        toast.warning(
-                                          message ??
-                                            "Panel management is temporarily unavailable. Please try again shortly.",
-                                        );
-                                        setForcedLock(true);
-                                      } else {
-                                        toast.error(
-                                          message ?? "Failed to re-send panel. Please try again.",
-                                        );
-                                      }
+                                      handleApiError(
+                                        error,
+                                        "Failed to re-send panel. Please try again.",
+                                      );
                                       console.error("Failed to re-send panel:", error);
                                     }),
                               },
@@ -460,19 +440,10 @@ const PanelsPage: FC = () => {
                                     .resend(guildId, panel.id.toString(), SKIP_ERROR_TOAST)
                                     .then(() => toast.success("Successfully re-sent multi panel"))
                                     .catch((error) => {
-                                      const { status, message } = readApiError(error);
-                                      if (status === 503) {
-                                        toast.warning(
-                                          message ??
-                                            "Panel management is temporarily unavailable. Please try again shortly.",
-                                        );
-                                        setForcedLock(true);
-                                      } else {
-                                        toast.error(
-                                          message ??
-                                            "Failed to re-send multi panel. Please try again.",
-                                        );
-                                      }
+                                      handleApiError(
+                                        error,
+                                        "Failed to re-send multi panel. Please try again.",
+                                      );
                                       console.error("Failed to re-send multi panel:", error);
                                     }),
                               },

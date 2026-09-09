@@ -12,6 +12,7 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_INTEGRATIONS } from "@/lib/feature-flags";
 import type { Integration } from "@/types";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const ConfigureIntegrationPage: FC = () => {
   let { guildId, integration: integrationId } = useParams();
@@ -76,20 +77,10 @@ const ConfigureIntegrationPage: FC = () => {
     (Object.keys(secretValues).length === integration.secrets.length &&
       Object.values(secretValues).every((v) => v.length > 0));
 
-  const handleApiError = (error: unknown, fallbackMessage: string) => {
-    const status = (error as { response?: { status?: number } })?.response?.status;
-    const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-    if (status === 503) {
-      toast.warning(
-        apiError ?? "Integration management is temporarily unavailable. Please try again shortly.",
-      );
-      setForcedLock(true);
-    } else {
-      // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status,
-      // not just 503, so every other failure needs its own here.
-      toast.error(apiError ?? fallbackMessage);
-    }
-  };
+  const handleApiError = useApiErrorHandler(
+    "Integration management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
 
   const handleSave = async () => {
     try {

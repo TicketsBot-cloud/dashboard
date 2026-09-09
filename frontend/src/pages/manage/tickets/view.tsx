@@ -27,7 +27,10 @@ import NumberInput from "@/components/NumberInput";
 import TextInput from "@/components/TextInput";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import PremiumGate from "@/components/PremiumGate";
-import { faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faEyeSlash, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
+import Skeleton from "react-loading-skeleton";
+import { showApiErrorToast } from "@/lib/api-error";
+import { useGuildPremium } from "@/hooks/queries/useGuild";
 
 function authorToUser(author: StrippedMessage["author"]): User {
   return {
@@ -139,6 +142,9 @@ const TicketViewPage: FC = () => {
 
   const isAdmin = (getGuildById(guildId)?.permission_level ?? 0) >= 2;
 
+  const premiumQuery = useGuildPremium(guildId, true);
+  const isPremium = premiumQuery.data?.premium ?? false;
+
   const [ticket, setTicket] = useState<TicketViewData | null>(null);
   const [panelTitle, setPanelTitle] = useState<string | null>(null);
   const [entities, setEntities] = useState<Transcript["entities"]>({
@@ -149,7 +155,6 @@ const TicketViewPage: FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
   const [tags, setTags] = useState<Record<string, Tag>>({});
   const [closeReason, setCloseReason] = useState("");
   const [closing, setClosing] = useState(false);
@@ -165,6 +170,7 @@ const TicketViewPage: FC = () => {
   const [selectedTag, setSelectedTag] = useState("");
   const [ticketMembers, setTicketMembers] = useState<TicketMember[]>([]);
   const [contentRestricted, setContentRestricted] = useState(false);
+  const [channelMissing, setChannelMissing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -182,6 +188,15 @@ const TicketViewPage: FC = () => {
       const response = await apiClient.tickets.getById(guildId, ticketId);
       setTicket(response.data.ticket);
       setPanelTitle(response.data.panel_title ?? null);
+
+      const missing = response.data.channel_missing ?? false;
+      setChannelMissing(missing);
+      if (missing) {
+        setMessages([]);
+        messageCountRef.current = 0;
+        return;
+      }
+
       const { entities: ent, messages: msgs } = transformMessages(response.data.messages);
       setEntities((prev) => ({ ...prev, users: { ...prev.users, ...ent.users } }));
       setMessages(msgs);
@@ -206,11 +221,10 @@ const TicketViewPage: FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // allSettled, not all: a 403 from premium/roles must not be mistaken for an
+        // allSettled, not all: a 403 from roles must not be mistaken for an
         // unavailable ticket, and neither should be able to blank out the whole page.
-        const [ticketRes, premiumRes, rolesRes] = await Promise.allSettled([
+        const [ticketRes, rolesRes] = await Promise.allSettled([
           apiClient.tickets.getById(guildId, ticketId),
-          apiClient.guilds.getPremium(guildId, true),
           apiClient.guilds.getRoles(guildId),
         ]);
 
@@ -218,8 +232,7 @@ const TicketViewPage: FC = () => {
           if (isTicketUnavailable(ticketRes.reason)) {
             setUnavailable(true);
           } else {
-            console.error("Failed to fetch the ticket:", ticketRes.reason);
-            toast.error("Failed to load the ticket.");
+            showApiErrorToast(ticketRes.reason, "Failed to load the ticket.");
           }
           return;
         }
@@ -230,7 +243,10 @@ const TicketViewPage: FC = () => {
         const restricted = ticketRes.value.data.content_restricted ?? false;
         setContentRestricted(restricted);
 
-        if (restricted) {
+        const missing = ticketRes.value.data.channel_missing ?? false;
+        setChannelMissing(missing);
+
+        if (restricted || missing) {
           return;
         }
 
@@ -247,46 +263,6 @@ const TicketViewPage: FC = () => {
         setEntities(ent);
         setMessages(msgs);
         messageCountRef.current = msgs.length;
-
-        const premium = premiumRes.status === "fulfilled" && premiumRes.value.data.premium;
-        setIsPremium(premium);
-
-        if (premium) {
-          try {
-            const tagsRes = await apiClient.tags.getByGuild(guildId);
-            setTags(tagsRes.data || {});
-          } catch {
-            // Tags are non-critical - don't block the page
-          }
-
-          try {
-            const membersRes = await apiClient.tickets.getMembers(guildId, ticketId);
-            const fetchedMembers = membersRes.data.members ?? [];
-            setTicketMembers(fetchedMembers);
-
-            // Merge into entities so DiscordContent can render mention display names
-            setEntities((prev) => ({
-              ...prev,
-              users: {
-                ...prev.users,
-                ...Object.fromEntries(
-                  fetchedMembers.map((m) => [
-                    m.id,
-                    {
-                      id: m.id,
-                      username: m.username,
-                      avatar: m.avatar,
-                      bot: false,
-                      admin_tier: "" as const,
-                    },
-                  ]),
-                ),
-              },
-            }));
-          } catch {
-            // Members are non-critical - mention autocomplete just won't work
-          }
-        }
       } catch (error) {
         console.error("Failed to load the ticket page:", error);
       } finally {
@@ -297,9 +273,52 @@ const TicketViewPage: FC = () => {
     fetchData();
   }, [guildId, ticketId]);
 
-  // Connect WebSocket when premium (skip when content is restricted)
   useEffect(() => {
-    if (!isPremium || loading || !token || contentRestricted) return;
+    if (!isPremium || loading || contentRestricted || channelMissing) return;
+
+    const fetchComposerData = async () => {
+      try {
+        const tagsRes = await apiClient.tags.getByGuild(guildId);
+        setTags(tagsRes.data || {});
+      } catch {
+        // Tags are non-critical - don't block the page
+      }
+
+      try {
+        const membersRes = await apiClient.tickets.getMembers(guildId, ticketId);
+        const fetchedMembers = membersRes.data.members ?? [];
+        setTicketMembers(fetchedMembers);
+
+        // Merge into entities so DiscordContent can render mention display names
+        setEntities((prev) => ({
+          ...prev,
+          users: {
+            ...prev.users,
+            ...Object.fromEntries(
+              fetchedMembers.map((m) => [
+                m.id,
+                {
+                  id: m.id,
+                  username: m.username,
+                  avatar: m.avatar,
+                  bot: false,
+                  admin_tier: "" as const,
+                },
+              ]),
+            ),
+          },
+        }));
+      } catch {
+        // Members are non-critical - mention autocomplete just won't work
+      }
+    };
+
+    void fetchComposerData();
+  }, [isPremium, loading, contentRestricted, channelMissing, guildId, ticketId]);
+
+  // Connect WebSocket when premium
+  useEffect(() => {
+    if (!isPremium || loading || !token || contentRestricted || channelMissing) return;
 
     const ws = new WebSocket(`${WS_URL}/api/${guildId}/tickets/${ticketId}/live-chat`);
     wsRef.current = ws;
@@ -346,12 +365,12 @@ const TicketViewPage: FC = () => {
       ws.close();
       wsRef.current = null;
     };
-  }, [isPremium, loading, token, guildId, ticketId, contentRestricted]);
+  }, [isPremium, loading, token, guildId, ticketId, contentRestricted, channelMissing]);
 
   // Poll only when live chat WebSocket is unavailable (non-premium or disconnected)
   useEffect(() => {
     if (loading) return;
-    if (contentRestricted || (isPremium && wsConnected)) {
+    if (contentRestricted || channelMissing || (isPremium && wsConnected)) {
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
         refreshTimerRef.current = null;
@@ -362,7 +381,7 @@ const TicketViewPage: FC = () => {
     return () => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
     };
-  }, [loading, isPremium, wsConnected, contentRestricted, startRefreshTimer]);
+  }, [loading, isPremium, wsConnected, contentRestricted, channelMissing, startRefreshTimer]);
 
   // Toast once when the ticket turns out to be unviewable - the render below redirects
   useEffect(() => {
@@ -514,6 +533,10 @@ const TicketViewPage: FC = () => {
 
   const tagKeys = Object.keys(tags);
 
+  const showComposerSlot = !contentRestricted && !channelMissing && ticket !== null;
+  // Only a lookup holding no data may hide the gate - a failed refetch still has some.
+  const composerLoading = loading || premiumQuery.isPending;
+
   // Closed, deleted or not ours - send the user back to the list rather than render a dead page
   if (unavailable) {
     return (
@@ -553,94 +576,99 @@ const TicketViewPage: FC = () => {
       {/* Actions */}
       {ticket && (
         <Collapsible title="Actions">
-          <Collapsible title="" subtitle="Claim & Transfer" defaultOpen={true}>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <p className="text-gray-400 text-sm flex-1">
-                {ticket.claimer == null
-                  ? "This ticket is unclaimed."
-                  : ticket.claimer.id === currentUser?.id
-                    ? "You have claimed this ticket."
-                    : `Claimed by ${ticket.claimer.username}.`}
-              </p>
-              <div className="flex gap-2">
-                {ticket.claimer == null && (
+          {!channelMissing && (
+            <>
+              <Collapsible title="" subtitle="Claim & Transfer" defaultOpen={true}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <p className="text-gray-400 text-sm flex-1">
+                    {ticket.claimer == null
+                      ? "This ticket is unclaimed."
+                      : ticket.claimer.id === currentUser?.id
+                        ? "You have claimed this ticket."
+                        : `Claimed by ${ticket.claimer.username}.`}
+                  </p>
+                  <div className="flex gap-2">
+                    {ticket.claimer == null && (
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={handleClaim}
+                        disabled={claimLoading}
+                        className="w-full sm:w-auto rounded-lg font-medium"
+                      >
+                        {claimLoading ? "Claiming..." : "Claim"}
+                      </Button>
+                    )}
+                    {ticket.claimer != null &&
+                      (ticket.claimer.id === currentUser?.id || isAdmin) && (
+                        <Button
+                          variant="secondary"
+                          type="button"
+                          onClick={handleUnclaim}
+                          disabled={claimLoading}
+                          className="w-full sm:w-auto rounded-lg font-medium"
+                        >
+                          {claimLoading ? "Unclaiming..." : "Unclaim"}
+                        </Button>
+                      )}
+                  </div>
+                </div>
+
+                {/* Transfer to another staff member */}
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-end gap-2">
+                  <div className="flex-1">
+                    <UserSearchSelect
+                      value={transferTarget}
+                      onChange={setTransferTarget}
+                      loadOptions={loadStaffOptions}
+                      label="Transfer to"
+                      placeholder="Search for a staff member..."
+                    />
+                  </div>
                   <Button
                     variant="secondary"
                     type="button"
-                    onClick={handleClaim}
-                    disabled={claimLoading}
+                    onClick={handleTransfer}
+                    disabled={transferLoading || !transferTarget}
                     className="w-full sm:w-auto rounded-lg font-medium"
                   >
-                    {claimLoading ? "Claiming..." : "Claim"}
+                    {transferLoading ? "Transferring..." : "Transfer"}
                   </Button>
-                )}
-                {ticket.claimer != null && (ticket.claimer.id === currentUser?.id || isAdmin) && (
+                </div>
+              </Collapsible>
+
+              <Collapsible title="" subtitle="Send Close Request" defaultOpen={true}>
+                <p className="text-gray-400 text-sm mb-3">
+                  Ask the ticket opener to confirm the ticket can be closed. They will see Accept
+                  &amp; Deny buttons in Discord.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <TextInput
+                    label="Reason"
+                    placeholder="Reason (optional)"
+                    value={closeRequestReason}
+                    onChange={setCloseRequestReason}
+                    className="flex-1"
+                  />
+                  <NumberInput
+                    label="Auto-close delay (hours)"
+                    value={closeRequestDelay}
+                    onChange={setCloseRequestDelay}
+                    min={0}
+                    className="w-full sm:w-64"
+                  />
                   <Button
                     variant="secondary"
-                    type="button"
-                    onClick={handleUnclaim}
-                    disabled={claimLoading}
-                    className="w-full sm:w-auto rounded-lg font-medium"
+                    onClick={handleCloseRequest}
+                    disabled={sendingCloseRequest}
+                    className="self-end w-full sm:w-auto rounded-lg font-medium bg-yellow-600 hover:bg-yellow-700"
                   >
-                    {claimLoading ? "Unclaiming..." : "Unclaim"}
+                    {sendingCloseRequest ? "Sending..." : "Send Request"}
                   </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Transfer to another staff member */}
-            <div className="mt-3 flex flex-col sm:flex-row sm:items-end gap-2">
-              <div className="flex-1">
-                <UserSearchSelect
-                  value={transferTarget}
-                  onChange={setTransferTarget}
-                  loadOptions={loadStaffOptions}
-                  label="Transfer to"
-                  placeholder="Search for a staff member..."
-                />
-              </div>
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={handleTransfer}
-                disabled={transferLoading || !transferTarget}
-                className="w-full sm:w-auto rounded-lg font-medium"
-              >
-                {transferLoading ? "Transferring..." : "Transfer"}
-              </Button>
-            </div>
-          </Collapsible>
-
-          <Collapsible title="" subtitle="Send Close Request" defaultOpen={true}>
-            <p className="text-gray-400 text-sm mb-3">
-              Ask the ticket opener to confirm the ticket can be closed. They will see Accept &amp;
-              Deny buttons in Discord.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <TextInput
-                label="Reason"
-                placeholder="Reason (optional)"
-                value={closeRequestReason}
-                onChange={setCloseRequestReason}
-                className="flex-1"
-              />
-              <NumberInput
-                label="Auto-close delay (hours)"
-                value={closeRequestDelay}
-                onChange={setCloseRequestDelay}
-                min={0}
-                className="w-full sm:w-64"
-              />
-              <Button
-                variant="secondary"
-                onClick={handleCloseRequest}
-                disabled={sendingCloseRequest}
-                className="self-end w-full sm:w-auto rounded-lg font-medium bg-yellow-600 hover:bg-yellow-700"
-              >
-                {sendingCloseRequest ? "Sending..." : "Send Request"}
-              </Button>
-            </div>
-          </Collapsible>
+                </div>
+              </Collapsible>
+            </>
+          )}
 
           <Collapsible title="" subtitle="Close Ticket" defaultOpen={true}>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -676,6 +704,13 @@ const TicketViewPage: FC = () => {
             description="Your access level does not include viewing ticket message content. Ticket metadata, status, and actions remain available above."
             headingLevel="h4"
           />
+        ) : channelMissing ? (
+          <EmptyState
+            icon={faLinkSlash}
+            title="Channel no longer exists"
+            description="This ticket's Discord channel has been deleted, so its messages can't be loaded. You can still close the ticket above."
+            headingLevel="h4"
+          />
         ) : messages.length === 0 ? (
           <p className="text-gray-400">No messages found.</p>
         ) : (
@@ -694,47 +729,53 @@ const TicketViewPage: FC = () => {
           </div>
         )}
 
-        {/* Send Message (hidden when content is restricted) */}
-        {!contentRestricted && (
-          <PremiumGate
-            isPremium={isPremium}
-            feature="dashboard-messaging"
-            description="Reply to tickets directly from the dashboard."
-            variant="inline"
-          >
+        {/* Send Message */}
+        {showComposerSlot &&
+          (composerLoading ? (
             <div className="flex items-end gap-2 mt-4 pt-4 border-t border-gray-600">
-              <MentionTextarea
-                placeholder="Type your message here. Use @ to mention users."
-                value={messageContent}
-                onChange={setMessageContent}
-                members={ticketMembers}
-                disabled={!isPremium}
-                rows={3}
-                className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed resize-none"
-                onSubmit={handleSendMessage}
-              />
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="primary"
-                  type="button"
-                  onClick={handleSendMessage}
-                  disabled={sending || !messageContent.trim()}
-                  className="rounded-lg font-medium"
-                >
-                  {sending ? "Sending..." : "Send"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setTagModalOpen(true)}
-                  disabled={tagKeys.length === 0}
-                  className="rounded-lg font-medium"
-                >
-                  Select Tag
-                </Button>
-              </div>
+              <Skeleton height={76} containerClassName="flex-1" />
+              <Skeleton height={76} width={104} />
             </div>
-          </PremiumGate>
-        )}
+          ) : premiumQuery.isLoadingError ? null : (
+            <PremiumGate
+              isPremium={isPremium}
+              feature="dashboard-messaging"
+              description="Reply to tickets directly from the dashboard."
+              variant="inline"
+            >
+              <div className="flex items-end gap-2 mt-4 pt-4 border-t border-gray-600">
+                <MentionTextarea
+                  placeholder="Type your message here. Use @ to mention users."
+                  value={messageContent}
+                  onChange={setMessageContent}
+                  members={ticketMembers}
+                  disabled={!isPremium}
+                  rows={3}
+                  className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                  onSubmit={handleSendMessage}
+                />
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="primary"
+                    type="button"
+                    onClick={handleSendMessage}
+                    disabled={sending || !messageContent.trim()}
+                    className="rounded-lg font-medium"
+                  >
+                    {sending ? "Sending..." : "Send"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setTagModalOpen(true)}
+                    disabled={tagKeys.length === 0}
+                    className="rounded-lg font-medium"
+                  >
+                    Select Tag
+                  </Button>
+                </div>
+              </div>
+            </PremiumGate>
+          ))}
       </div>
 
       {!contentRestricted && (

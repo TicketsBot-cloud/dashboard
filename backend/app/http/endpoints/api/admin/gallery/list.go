@@ -1,8 +1,10 @@
 package gallery
 
 import (
+	stdjson "encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/TicketsBot-cloud/database"
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
@@ -17,6 +19,72 @@ type adminUserData struct {
 	Id        uint64 `json:"id,string"`
 	Username  string `json:"username"`
 	AvatarUrl string `json:"avatar_url,omitempty"`
+}
+
+// Embedding database.GalleryListing instead would marshal its []byte columns as base64.
+type adminListingResponse struct {
+	Id             int                `json:"id"`
+	ListingType    string             `json:"listing_type"`
+	SubmittedUser  adminUserData      `json:"submitted_user"`
+	SourceGuildId  uint64             `json:"source_guild_id,string"`
+	Name           string             `json:"name"`
+	Description    string             `json:"description"`
+	Category       string             `json:"category"`
+	Status         string             `json:"status"`
+	ReviewNote     *string            `json:"review_note"`
+	ReviewedBy     *uint64            `json:"reviewed_by,string"`
+	ReviewedAt     *time.Time         `json:"reviewed_at"`
+	ImportCount    int                `json:"import_count"`
+	Featured       bool               `json:"featured"`
+	SnapshotData   stdjson.RawMessage `json:"snapshot_data,omitempty"`
+	Title          string             `json:"title"`
+	Content        string             `json:"content"`
+	Colour         int32              `json:"colour"`
+	ImageUrl       *string            `json:"image_url"`
+	ThumbnailUrl   *string            `json:"thumbnail_url"`
+	ButtonStyle    *int16             `json:"button_style"`
+	ButtonLabel    string             `json:"button_label"`
+	EmojiName      *string            `json:"emoji_name"`
+	WelcomeMessage stdjson.RawMessage `json:"welcome_message,omitempty"`
+	Tags           []string           `json:"tags"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+}
+
+func toAdminListingResponse(l database.GalleryListing, tags []string, user adminUserData) adminListingResponse {
+	listingType := l.ListingType
+	if listingType == "" {
+		listingType = database.GalleryListingTypePanel
+	}
+
+	return adminListingResponse{
+		Id:             l.Id,
+		ListingType:    listingType,
+		SubmittedUser:  user,
+		SourceGuildId:  l.SourceGuildId,
+		Name:           l.Name,
+		Description:    l.Description,
+		Category:       l.Category,
+		Status:         string(l.Status),
+		ReviewNote:     l.ReviewNote,
+		ReviewedBy:     l.ReviewedBy,
+		ReviewedAt:     l.ReviewedAt,
+		ImportCount:    l.ImportCount,
+		Featured:       l.Featured,
+		SnapshotData:   stdjson.RawMessage(l.SnapshotData),
+		Title:          l.Title,
+		Content:        l.Content,
+		Colour:         l.Colour,
+		ImageUrl:       l.ImageUrl,
+		ThumbnailUrl:   l.ThumbnailUrl,
+		ButtonStyle:    l.ButtonStyle,
+		ButtonLabel:    l.ButtonLabel,
+		EmojiName:      l.EmojiName,
+		WelcomeMessage: stdjson.RawMessage(l.WelcomeMessage),
+		Tags:           tags,
+		CreatedAt:      l.CreatedAt,
+		UpdatedAt:      l.UpdatedAt,
+	}
 }
 
 var allowedStatuses = map[string]database.GalleryListingStatus{
@@ -95,6 +163,17 @@ func ListHandler(ctx *gin.Context) {
 		listings = filtered
 	}
 
+	listingIds := make([]int, len(listings))
+	for i, l := range listings {
+		listingIds[i] = l.Id
+	}
+
+	tagsMap, err := dbclient.Client.GalleryListingTags.GetByListings(ctx, listingIds)
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch gallery listing tags"))
+		return
+	}
+
 	// Resolve submitter user data from cache
 	userIdSet := make(map[uint64]struct{})
 	for _, l := range listings {
@@ -115,17 +194,13 @@ func ListHandler(ctx *gin.Context) {
 		}
 	}
 
-	type listingWithUser struct {
-		database.GalleryListing
-		SubmittedUser adminUserData `json:"submitted_user"`
-	}
-
-	response := make([]listingWithUser, len(listings))
+	response := make([]adminListingResponse, len(listings))
 	for i, l := range listings {
-		response[i] = listingWithUser{
-			GalleryListing: l,
-			SubmittedUser:  resolvedUsers[l.SubmitterUserId],
+		tags := tagsMap[l.Id]
+		if tags == nil {
+			tags = make([]string, 0)
 		}
+		response[i] = toAdminListingResponse(l, tags, resolvedUsers[l.SubmitterUserId])
 	}
 
 	ctx.JSON(http.StatusOK, response)

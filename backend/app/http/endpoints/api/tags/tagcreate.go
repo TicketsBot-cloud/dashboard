@@ -27,7 +27,7 @@ type tag struct {
 	UseGuildCommand bool               `json:"use_guild_command"`
 	Content         *string            `json:"content" validate:"omitempty,min=1,max=2000"`
 	UseEmbed        bool               `json:"use_embed"`
-	Embed           *types.CustomEmbed `json:"embed" validate:"omitempty,dive"`
+	Embed           *types.CustomEmbed `json:"embed" validate:"omitempty"`
 	KBArticleId     *int               `json:"kb_article_id"`
 }
 
@@ -101,8 +101,8 @@ func CreateTag(ctx *gin.Context) {
 	// Validate total embed character count
 	if data.Embed != nil {
 		totalChars := data.Embed.TotalCharacterCount()
-		if totalChars > 6000 {
-			formatted := fmt.Sprintf("Total embed characters (%d) exceeds Discord's 6000 character limit", totalChars)
+		if totalChars > types.EmbedTotalCharacterLimit {
+			formatted := fmt.Sprintf("Total embed characters (%d) exceeds Discord's %d character limit", totalChars, types.EmbedTotalCharacterLimit)
 			ctx.JSON(400, utils.ErrorStr("%s", formatted))
 			return
 		}

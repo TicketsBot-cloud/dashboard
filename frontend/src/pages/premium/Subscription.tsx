@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { guildIconUrl } from "@/lib/discord-cdn";
-import { Link } from "react-router";
 import { MainLayout } from "@/pages/layout/Main";
 import Button from "@/components/Button";
+import PricingLink from "@/components/PricingLink";
 import Table from "@/components/Table";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { apiClient } from "@/lib/api";
@@ -226,12 +226,9 @@ export default function Subscription() {
         {!hasEntitlements && (
           <div className="bg-gray-800 rounded-xl p-8 text-center">
             <p className="text-gray-400 mb-4">You don't have any active subscriptions.</p>
-            <Link
-              to="/premium/pricing"
-              className="inline-block bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
-            >
+            <PricingLink className="inline-block bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors">
               View Plans
-            </Link>
+            </PricingLink>
           </div>
         )}
 
@@ -304,12 +301,9 @@ export default function Subscription() {
                         </Button>
                       ) : (
                         <>
-                          <Link
-                            to="/premium/pricing"
-                            className="border border-blue-500 text-blue-400 hover:bg-blue-500/10 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-                          >
+                          <PricingLink className="border border-blue-500 text-blue-400 hover:bg-blue-500/10 px-4 py-2 rounded-lg font-medium transition-colors text-sm">
                             Change Plan
-                          </Link>
+                          </PricingLink>
                           <Button
                             variant="outline"
                             onClick={() => {

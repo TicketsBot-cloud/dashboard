@@ -11,6 +11,7 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_INTEGRATIONS } from "@/lib/feature-flags";
 import type { Integration } from "@/types";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const ActivateIntegrationPage: FC = () => {
   let { guildId, integration: integrationId } = useParams();
@@ -24,6 +25,10 @@ const ActivateIntegrationPage: FC = () => {
   const [secretValues, setSecretValues] = useState<Record<string, string>>({});
   const { locked: polledLock } = useFeatureLock(FEATURE_INTEGRATIONS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Integration management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // Announce the lock lifting mid-session (e.g. a flag re-enabled while this page
@@ -73,20 +78,7 @@ const ActivateIntegrationPage: FC = () => {
       );
       navigate(`/manage/${guildId}/integrations?added=true`);
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ??
-            "Integration management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status,
-        // not just 503, so every other failure needs its own here.
-        toast.error(apiError ?? "Failed to add integration. Please try again.");
-      }
+      handleApiError(error, "Failed to add integration. Please try again.");
       console.error("Failed to activate integration:", error);
     }
   };

@@ -16,7 +16,7 @@ import (
 )
 
 type multiPanelMessageData struct {
-	IsPremium bool
+	Footer footerPolicy
 
 	ChannelId uint64
 
@@ -24,6 +24,14 @@ type multiPanelMessageData struct {
 	SelectMenuPlaceholder *string
 
 	Embed *embed.Embed
+}
+
+func (d *multiPanelMessageData) applyFooter() {
+	if d.Footer.ShowBranding {
+		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
+	} else if !d.Footer.AllowCustom {
+		d.Embed.Footer = nil
+	}
 }
 
 func multiPanelDiscordSubPanelError(action, detail string) string {
@@ -34,15 +42,20 @@ func multiPanelDiscordSubPanelError(action, detail string) string {
 	)
 }
 
-func multiPanelIntoMessageData(panel database.MultiPanel, isPremium bool) multiPanelMessageData {
+func multiPanelIntoMessageData(panel database.MultiPanel, footer footerPolicy) multiPanelMessageData {
+	custom := &types.CustomEmbed{Colour: 0x5865f2}
+	if panel.Embed != nil && panel.Embed.CustomEmbed != nil {
+		custom = types.NewCustomEmbed(panel.Embed.CustomEmbed, panel.Embed.Fields)
+	}
+
 	return multiPanelMessageData{
-		IsPremium: isPremium,
+		Footer: footer,
 
 		ChannelId: panel.ChannelId,
 
 		SelectMenu:            panel.SelectMenu,
 		SelectMenuPlaceholder: panel.SelectMenuPlaceholder,
-		Embed:                 types.NewCustomEmbed(panel.Embed.CustomEmbed, panel.Embed.Fields).IntoDiscordEmbed(),
+		Embed:                 custom.IntoDiscordEmbed(),
 	}
 }
 
@@ -85,9 +98,7 @@ func getEffectiveEmojiAnimated(panel database.Panel, customEmojiName *string, cu
 }
 
 func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
-	if !d.IsPremium {
-		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
-	}
+	d.applyFooter()
 
 	var components []component.Component
 	if d.SelectMenu {
@@ -178,9 +189,7 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 }
 
 func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint64, panels []database.PanelWithCustomization) error {
-	if !d.IsPremium {
-		d.Embed.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
-	}
+	d.applyFooter()
 
 	var components []component.Component
 	if d.SelectMenu {

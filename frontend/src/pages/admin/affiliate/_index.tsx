@@ -36,6 +36,12 @@ const FLAGGED_SORT_COLUMNS: Record<FlaggedSortKey, SortColumn<AdminFlaggedReferr
   created_at: { value: (r) => toTime(r.created_at) },
 };
 
+const AFFILIATE_STATUS_DOTS: Record<string, string> = {
+  pending: "#E17100",
+  active: "#00A63E",
+  revoked: "#E7000B",
+};
+
 function AffiliateStatusBadge({ status }: { status: string }) {
   const colours: Record<string, string> = {
     pending: "bg-amber-600",
@@ -541,9 +547,9 @@ export default function AdminAffiliatePage() {
                 value={statusFilter}
                 options={[
                   { key: "all", label: "All statuses" },
-                  { key: "pending", label: "Pending" },
-                  { key: "active", label: "Active" },
-                  { key: "revoked", label: "Revoked" },
+                  { key: "pending", label: "Pending", color: AFFILIATE_STATUS_DOTS.pending },
+                  { key: "active", label: "Active", color: AFFILIATE_STATUS_DOTS.active },
+                  { key: "revoked", label: "Revoked", color: AFFILIATE_STATUS_DOTS.revoked },
                 ]}
                 onChange={(v) => {
                   setStatusFilter(v ?? "all");

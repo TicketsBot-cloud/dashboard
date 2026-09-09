@@ -1,6 +1,7 @@
-import { Link } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
+
+import PricingLink from "@/components/PricingLink";
 
 interface PremiumGateProps {
   isPremium: boolean;
@@ -29,12 +30,9 @@ export default function PremiumGate({
           <p className="text-white font-medium text-sm">Premium feature</p>
         </div>
         <p className="text-gray-400 text-sm mb-4">{description}</p>
-        <Link
-          to="/premium/pricing"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
-        >
+        <PricingLink className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors">
           View Premium Plans
-        </Link>
+        </PricingLink>
       </div>
     );
   }
@@ -44,12 +42,9 @@ export default function PremiumGate({
       <div className="absolute inset-0 bg-gray-800/80 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center z-10 p-6">
         <FontAwesomeIcon icon={faLock} className="text-gray-400 text-2xl mb-3" aria-hidden="true" />
         <p className="text-white font-medium mb-3 text-center">{description}</p>
-        <Link
-          to="/premium/pricing"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
-        >
+        <PricingLink className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors">
           View Premium Plans
-        </Link>
+        </PricingLink>
       </div>
       <div className="opacity-30 pointer-events-none" aria-hidden="true">
         {children}

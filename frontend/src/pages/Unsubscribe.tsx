@@ -39,7 +39,7 @@ const Unsubscribe = () => {
   }, [searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-900 px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-gray-900 px-4">
       <div className="w-full max-w-md rounded-xl border border-gray-700 bg-gray-800 p-8 text-center">
         {status === "loading" && (
           <>

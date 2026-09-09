@@ -94,6 +94,12 @@ func DeletePanel(c *gin.Context) {
 		return
 	}
 
+	footer, err := footerPolicyForGuild(c, guildId, botContext)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete panel"))
+		return
+	}
+
 	// Re-enforce the free tier panel limit after deletion.
 	if premiumTier == premium.None {
 		if err := database.Client.Panel.ForceDisableSome(c, guildId, freePanelLimit); err != nil {
@@ -115,7 +121,7 @@ func DeletePanel(c *gin.Context) {
 			return
 		}
 
-		messageData := multiPanelIntoMessageData(multiPanel, premiumTier > premium.None)
+		messageData := multiPanelIntoMessageData(multiPanel, footer)
 		messageId, err := messageData.send(botContext, panels)
 		if err != nil {
 			var unwrapped request.RestError

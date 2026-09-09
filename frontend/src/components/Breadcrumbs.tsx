@@ -1,4 +1,6 @@
+import { useContext } from "react";
 import { Link, useLocation, useParams } from "react-router";
+import { GuildContext } from "@/state/context";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 
@@ -34,6 +36,9 @@ const segmentLabels: Record<string, string> = {
 export default function Breadcrumbs() {
   const location = useLocation();
   const { guildId } = useParams();
+  const guild = useContext(GuildContext);
+
+  const hasGuildAccess = !guildId || (guild?.permission_level ?? 0) >= 1;
 
   const segments = location.pathname.split("/").filter(Boolean);
 
@@ -48,7 +53,7 @@ export default function Breadcrumbs() {
     if (segment === "manage" || segment === guildId) continue;
 
     const label = segmentLabels[segment];
-    if (label) {
+    if (label && hasGuildAccess) {
       crumbs.push({ label, to: pathSoFar });
     }
   }

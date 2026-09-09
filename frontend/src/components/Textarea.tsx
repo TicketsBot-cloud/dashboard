@@ -4,7 +4,7 @@ interface TextareaProps {
   value: string;
   onChange: (value: string) => void;
   min?: number;
-  max?: number;
+  max: number;
   disabled?: boolean;
   className?: string;
   label?: string;
@@ -15,7 +15,6 @@ interface TextareaProps {
 
 const defaultProps = {
   min: 0,
-  max: 1000,
   disabled: false,
   className: "",
   label: undefined,
@@ -43,7 +42,7 @@ const Textarea: FC<TextareaProps> = (props) => {
       <div className={`inline-flex items-center bg-gray-700 border rounded px-1 ${borderClass}`}>
         <textarea
           id={textareaId}
-          className="w-full bg-gray-700 p-3 rounded resize-y max-h-50 h-50 focus:outline-none"
+          className="w-full bg-gray-700 p-3 rounded resize-y h-50 focus:outline-none"
           value={safeValue}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -64,7 +63,7 @@ const Textarea: FC<TextareaProps> = (props) => {
           <span />
         )}
         <span id={countId} className="text-xs mt-1">
-          {safeValue.length}/{max}
+          {[...safeValue].length}/{max}
         </span>
       </div>
     </div>

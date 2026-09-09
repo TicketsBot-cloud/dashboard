@@ -10,6 +10,7 @@ import GalleryCard from "@/components/GalleryCard";
 import CardGridSkeleton from "@/components/skeletons/CardGridSkeleton";
 import Tabs from "@/components/Tabs";
 import type { GalleryListing } from "@/types";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
 
 interface PanelsStepProps {
   guildId: string;
@@ -262,7 +263,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
             value={content}
             onChange={setContent}
             placeholder="Click the button below to open a support ticket."
-            max={1024}
+            max={EMBED_LIMITS.DESCRIPTION}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select

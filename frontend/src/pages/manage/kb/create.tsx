@@ -20,6 +20,9 @@ import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
 import EmbedPreview from "@/components/EmbedPreview";
 import { useKBCategories, useCreateKBArticle } from "@/hooks/queries/useKB";
 import type { TagEmbed } from "@/types";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
+import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
+import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 const defaultEmbed: TagEmbed = {
   colour: 0x5865f2,
@@ -252,6 +255,8 @@ const CreateKBArticlePage: FC = () => {
                     placeholder="Embed title"
                     value={embed.title || ""}
                     onChange={(v) => setEmbed((prev) => ({ ...prev, title: v }))}
+                    maxLength={EMBED_LIMITS.TITLE}
+                    showCount
                   />
                   <ColourSelect
                     label="Colour"
@@ -265,11 +270,19 @@ const CreateKBArticlePage: FC = () => {
                   />
                 </div>
 
+                <TextInput
+                  label="Title URL"
+                  placeholder="e.g. https://example.com"
+                  value={embed.url || ""}
+                  onChange={(v) => setEmbed((prev) => ({ ...prev, url: v }))}
+                  maxLength={EMBED_LIMITS.URL}
+                />
+
                 <Textarea
                   label="Embed Description"
                   value={embed.description || ""}
                   onChange={(v) => setEmbed((prev) => ({ ...prev, description: v }))}
-                  max={4096}
+                  max={EMBED_LIMITS.DESCRIPTION}
                 />
 
                 <Collapsible title="" subtitle="Author Settings" defaultOpen={false}>
@@ -283,6 +296,8 @@ const CreateKBArticlePage: FC = () => {
                         author: { ...prev.author, name: v },
                       }))
                     }
+                    maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                    showCount
                   />
                   <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
                     <TextInput
@@ -295,6 +310,7 @@ const CreateKBArticlePage: FC = () => {
                           author: { ...prev.author, icon_url: v },
                         }))
                       }
+                      maxLength={EMBED_LIMITS.URL}
                     />
                     <TextInput
                       label="Author URL"
@@ -306,6 +322,7 @@ const CreateKBArticlePage: FC = () => {
                           author: { ...prev.author, url: v },
                         }))
                       }
+                      maxLength={EMBED_LIMITS.URL}
                     />
                   </div>
                 </Collapsible>
@@ -316,19 +333,21 @@ const CreateKBArticlePage: FC = () => {
                     placeholder="https://example.com/thumbnail.png"
                     value={embed.thumbnail_url || ""}
                     onChange={(v) => setEmbed((prev) => ({ ...prev, thumbnail_url: v }))}
+                    maxLength={EMBED_LIMITS.URL}
                   />
                   <TextInput
                     label="Image URL"
                     placeholder="https://example.com/image.png"
                     value={embed.image_url || ""}
                     onChange={(v) => setEmbed((prev) => ({ ...prev, image_url: v }))}
+                    maxLength={EMBED_LIMITS.URL}
                   />
                 </Collapsible>
 
                 <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-                  <TextInput
+                  <Textarea
                     label="Footer Text"
-                    placeholder="e.g. Powered by Tickets.bot"
+                    placeholder={`e.g. ${BRANDING_FOOTER_TEXT}`}
                     value={embed.footer?.text || ""}
                     onChange={(v) =>
                       setEmbed((prev) => ({
@@ -336,6 +355,7 @@ const CreateKBArticlePage: FC = () => {
                         footer: { ...prev.footer, text: v },
                       }))
                     }
+                    max={EMBED_LIMITS.FOOTER_TEXT}
                   />
                   <TextInput
                     label="Footer Icon URL"
@@ -347,6 +367,7 @@ const CreateKBArticlePage: FC = () => {
                         footer: { ...prev.footer, icon_url: v },
                       }))
                     }
+                    maxLength={EMBED_LIMITS.URL}
                   />
                 </Collapsible>
 
@@ -356,6 +377,7 @@ const CreateKBArticlePage: FC = () => {
                     onChange={(fields) => setEmbed((prev) => ({ ...prev, fields }))}
                   />
                 </Collapsible>
+                <EmbedCharacterTotal embed={embed} />
               </div>
             )}
 

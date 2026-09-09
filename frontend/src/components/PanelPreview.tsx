@@ -3,6 +3,7 @@ import Button from "@/components/discord/container/Button";
 import SelectMenu from "@/components/discord/container/SelectMenu";
 import DiscordContent from "@/components/discord/DiscordContent";
 import type { Panel, MultiPanel, MultiPanelRequest } from "@/types";
+import { BRANDING_FOOTER_ICON, BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { formatEmbedTimestampForDisplay } from "@/lib/embed-timestamp";
 import { isSafeUrl } from "@/lib/url";
 import { previewAvatarUrl } from "@/lib/embed-avatar";
@@ -13,6 +14,8 @@ function resolveEmoteName(emote: Panel["emote"] | undefined): string {
   return "";
 }
 
+type PreviewField = { name: string; value: string; inline?: boolean };
+
 type MultiPanelPreviewRequest = Omit<MultiPanelRequest, "channel_id"> &
   Partial<Pick<MultiPanelRequest, "channel_id">>;
 
@@ -22,9 +25,10 @@ interface PanelPreviewProps {
     panel: Panel | MultiPanel | MultiPanelRequest | MultiPanelPreviewRequest;
     buttons?: Panel[];
   };
+  brandingFooter?: boolean;
 }
 
-const PanelPreview: FC<PanelPreviewProps> = ({ type, data }) => {
+const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => {
   const { panel, buttons } = data;
 
   if (type === "panel") {
@@ -116,6 +120,34 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data }) => {
   const footerIconUrl = resolveTicketAvatar(footerIconUrlRaw);
   const footerTimestamp = formatEmbedTimestampForDisplay(embedData?.timestamp);
 
+  // Timestamp survives branding, as it does bot-side.
+  const displayFooterText = brandingFooter ? BRANDING_FOOTER_TEXT : footerText;
+  const displayFooterIconUrl = brandingFooter ? BRANDING_FOOTER_ICON : footerIconUrl;
+
+  // Discord packs at most 3 inline fields per row.
+  const fieldRows: PreviewField[][] = [];
+  if (embedData?.fields?.length) {
+    let currentRow: PreviewField[] = [];
+    for (const field of embedData.fields) {
+      if (field.inline) {
+        currentRow.push(field);
+        if (currentRow.length === 3) {
+          fieldRows.push(currentRow);
+          currentRow = [];
+        }
+      } else {
+        if (currentRow.length > 0) {
+          fieldRows.push(currentRow);
+          currentRow = [];
+        }
+        fieldRows.push([field]);
+      }
+    }
+    if (currentRow.length > 0) {
+      fieldRows.push(currentRow);
+    }
+  }
+
   const thumbnailUrl = resolveTicketAvatar(embedData?.thumbnail_url);
   const imageUrl = resolveTicketAvatar(embedData?.image_url);
   const authorIconUrl = resolveTicketAvatar(embedData?.author?.icon_url);
@@ -174,6 +206,29 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data }) => {
                 className="text-sm mt-1 text-[#dbdee1] leading-snug"
               />
             )}
+            {fieldRows.length > 0 && (
+              <div className="mt-2 flex flex-col gap-2">
+                {fieldRows.map((row, ri) => (
+                  <div
+                    key={ri}
+                    className="grid gap-2"
+                    style={{
+                      gridTemplateColumns: row.length > 1 ? `repeat(${row.length}, 1fr)` : "1fr",
+                    }}
+                  >
+                    {row.map((field, fi) => (
+                      <div key={fi} className="min-w-0">
+                        <DiscordContent
+                          content={field.name}
+                          className="text-xs font-semibold text-white"
+                        />
+                        <DiscordContent content={field.value} className="text-xs text-[#dbdee1]" />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {thumbnailUrl && (
             <div className="ml-4 shrink-0">
@@ -190,14 +245,14 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data }) => {
             <img src={imageUrl} alt="Embedded" className="w-full h-auto rounded-sm" />
           </div>
         )}
-        {(footerText || footerTimestamp) && (
+        {(displayFooterText || footerTimestamp) && (
           <div className="mt-3 flex items-center gap-2">
-            {footerIconUrl && (
-              <img src={footerIconUrl} alt="Footer Icon" className="w-5 h-5 rounded-full" />
+            {displayFooterIconUrl && (
+              <img src={displayFooterIconUrl} alt="Footer Icon" className="w-5 h-5 rounded-full" />
             )}
             <p className="text-xs text-[#dbdee1]">
-              {footerText}
-              {footerText && footerTimestamp ? " • " : ""}
+              {displayFooterText}
+              {displayFooterText && footerTimestamp ? " • " : ""}
               {footerTimestamp}
             </p>
           </div>

@@ -4,6 +4,7 @@ export interface ErrorDetails {
   status?: number;
   message: string;
   apiError?: string;
+  internalError?: string;
   requestUrl?: string;
   requestMethod?: string;
 }

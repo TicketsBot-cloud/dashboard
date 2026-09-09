@@ -43,7 +43,7 @@ type panelBody struct {
 	Colour                    uint32                            `json:"colour"`
 	CategoryId                uint64                            `json:"category_id,string"`
 	Emoji                     types.Emoji                       `json:"emote"`
-	WelcomeMessage            *types.CustomEmbed                `json:"welcome_message" validate:"omitempty,dive"`
+	WelcomeMessage            *types.CustomEmbed                `json:"welcome_message" validate:"omitempty"`
 	Mentions                  []string                          `json:"mentions"`
 	WithDefaultTeam           bool                              `json:"default_team"`
 	Teams                     []int                             `json:"teams"`
@@ -80,7 +80,7 @@ type panelBody struct {
 	AutoClose                 PanelAutoCloseBody                `json:"auto_close"`
 }
 
-func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelMessageData {
+func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) panelMessageData {
 	return panelMessageData{
 		ChannelId:      p.ChannelId,
 		Title:          p.Title,
@@ -93,7 +93,7 @@ func (p *panelBody) IntoPanelMessageData(customId string, isPremium bool) panelM
 		ButtonStyle:    p.ButtonStyle,
 		ButtonLabel:    p.ButtonLabel,
 		ButtonDisabled: p.Disabled,
-		IsPremium:      isPremium,
+		ShowBranding:   showBranding,
 	}
 }
 
@@ -124,13 +124,13 @@ func CreatePanel(c *gin.Context) {
 	data.MessageId = 0
 
 	// Check panel quota
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
+	quotaTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
 		return
 	}
 
-	if premiumTier == premium.None {
+	if quotaTier == premium.None {
 		panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch existing panels"))
@@ -161,11 +161,25 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
+	if !data.OverflowEnabled {
+		data.OverflowCategoryId = nil
+	}
+
+	// Voting premium unlocks fields but not quota, so the tier is looked up twice.
+	featureTier := quotaTier
+	if featureTier == premium.None {
+		featureTier, err = rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+			return
+		}
+	}
+
 	// Do custom validation
 	validationContext := PanelValidationContext{
 		Data:       data,
 		GuildId:    guildId,
-		IsPremium:  premiumTier > premium.None,
+		IsPremium:  featureTier > premium.None,
 		BotContext: botContext,
 		Channels:   channels,
 		Roles:      roles,
@@ -205,7 +219,13 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
-	messageData := data.IntoPanelMessageData(customId, premiumTier > premium.None)
+	footer, err := footerPolicyForGuild(c, guildId, botContext)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+		return
+	}
+
+	messageData := data.IntoPanelMessageData(customId, footer.ShowBranding)
 	msgId, err := messageData.send(botContext)
 	if err != nil {
 		var unwrapped request.RestError

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"unicode/utf8"
+
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
@@ -23,12 +25,12 @@ type CustomEmbed struct {
 	Description  *string        `json:"description" validate:"omitempty,min=1,max=4096"`
 	Url          *string        `json:"url" validate:"omitempty,max=255"`
 	Colour       Colour         `json:"colour" validate:"gte=0,lte=16777215"`
-	Author       Author         `json:"author" validate:"dive"`
+	Author       Author         `json:"author"`
 	ImageUrl     *string        `json:"image_url" validate:"omitempty,max=255"`
 	ThumbnailUrl *string        `json:"thumbnail_url" validate:"omitempty,max=255"`
-	Footer       Footer         `json:"footer" validate:"dive"`
+	Footer       Footer         `json:"footer"`
 	Timestamp    *DateTimeLocal `json:"timestamp" validate:"omitempty"`
-	Fields       []Field        `json:"fields" validate:"dive,max=25"`
+	Fields       []Field        `json:"fields" validate:"max=25,dive"` // after dive, tags apply per-element
 }
 
 type Author struct {
@@ -152,29 +154,31 @@ func (c *CustomEmbed) IntoDiscordEmbed() *embed.Embed {
 	return e
 }
 
+const EmbedTotalCharacterLimit = 6000
+
 // TotalCharacterCount returns the total number of characters in the embed
 func (c *CustomEmbed) TotalCharacterCount() int {
 	total := 0
 
 	if c.Title != nil {
-		total += len(*c.Title)
+		total += utf8.RuneCountInString(*c.Title)
 	}
 
 	if c.Description != nil {
-		total += len(*c.Description)
+		total += utf8.RuneCountInString(*c.Description)
 	}
 
 	if c.Author.Name != nil {
-		total += len(*c.Author.Name)
+		total += utf8.RuneCountInString(*c.Author.Name)
 	}
 
 	if c.Footer.Text != nil {
-		total += len(*c.Footer.Text)
+		total += utf8.RuneCountInString(*c.Footer.Text)
 	}
 
 	for _, field := range c.Fields {
-		total += len(field.Name)
-		total += len(field.Value)
+		total += utf8.RuneCountInString(field.Name)
+		total += utf8.RuneCountInString(field.Value)
 	}
 
 	return total

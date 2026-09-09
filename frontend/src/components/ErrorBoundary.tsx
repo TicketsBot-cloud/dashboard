@@ -33,7 +33,7 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-4">
+        <div className="min-h-dvh bg-gray-900 text-gray-100 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-gray-800 rounded-lg p-6 text-center">
             <div className="mb-4">
               <FontAwesomeIcon icon="exclamation-triangle" className="text-red-500 text-4xl mb-4" />

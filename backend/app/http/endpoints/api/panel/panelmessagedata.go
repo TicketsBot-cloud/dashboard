@@ -24,10 +24,10 @@ type panelMessageData struct {
 	ButtonStyle              component.ButtonStyle
 	ButtonLabel              string
 	ButtonDisabled           bool
-	IsPremium                bool
+	ShowBranding             bool
 }
 
-func panelIntoMessageData(panel database.Panel, isPremium bool) panelMessageData {
+func panelIntoMessageData(panel database.Panel, showBranding bool) panelMessageData {
 	var emote *emoji.Emoji
 	if panel.EmojiName != nil { // No emoji = nil
 		if panel.EmojiId == nil { // Unicode emoji
@@ -54,7 +54,7 @@ func panelIntoMessageData(panel database.Panel, isPremium bool) panelMessageData
 		ButtonStyle:    component.ButtonStyle(panel.ButtonStyle),
 		ButtonLabel:    panel.ButtonLabel,
 		ButtonDisabled: panel.Disabled,
-		IsPremium:      isPremium,
+		ShowBranding:   showBranding,
 	}
 }
 
@@ -72,7 +72,7 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 		e.SetThumbnail(*p.ThumbnailUrl)
 	}
 
-	if !p.IsPremium {
+	if p.ShowBranding {
 		e.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
 	}
 
@@ -115,7 +115,7 @@ func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) erro
 		e.SetThumbnail(*p.ThumbnailUrl)
 	}
 
-	if !p.IsPremium {
+	if p.ShowBranding {
 		e.SetFooter(fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy), config.Conf.Bot.IconUrl)
 	}
 

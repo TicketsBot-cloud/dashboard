@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FC } from "react";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
-import { useGuildEmojis, useGuildPanels } from "@/hooks/queries/useGuild";
+import { useGuildEmojis, useGuildPanels, useGuildPremium } from "@/hooks/queries/useGuild";
 import { useParams, useNavigate } from "react-router";
 
 import { getGuildById } from "@/stores/auth";
@@ -13,13 +13,16 @@ import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
+import { intToColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
 import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
+import PremiumGate from "@/components/PremiumGate";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
@@ -28,6 +31,10 @@ import EmojiPicker from "@/components/EmojiPicker";
 import { sortGuildChannels } from "@/lib/guild-channels";
 import { PANEL_MESSAGE_INFO } from "@/constants/panelChannelInfo";
 import MultiPanelInfoModal from "@/components/modals/MultiPanelInfoModal";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
+import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
+import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 type MultiPanelDraft = Omit<MultiPanelRequest, "channel_id"> & {
   channel_id?: MultiPanelRequest["channel_id"];
@@ -42,6 +49,10 @@ const MultiPanelsPage: FC = () => {
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Panel management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // Announce the lock lifting mid-session (e.g. a flag re-enabled while this page
@@ -82,6 +93,7 @@ const MultiPanelsPage: FC = () => {
       author: {},
       colour: 0x5865f2,
       description: "",
+      fields: [],
       footer: {},
     },
     panels: [] as MultiPanelPanelEntry[],
@@ -162,6 +174,9 @@ const MultiPanelsPage: FC = () => {
   };
   const { data: panels = [] } = useGuildPanels(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
+  const { data: premiumState = null } = useGuildPremium(guildId, false);
+  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
+  const showBrandingFooter = !brandingPremium?.premium;
 
   return (
     <MainLayout
@@ -195,7 +210,7 @@ const MultiPanelsPage: FC = () => {
             options={panels?.map((panel) => ({
               label: panel.title,
               key: panel.panel_id.toString(),
-              color: panel.colour.toString(16).padStart(6, "0"),
+              color: intToColour(panel.colour),
             }))}
             onChange={(e) =>
               setMultiPanel((prev) => {
@@ -314,6 +329,8 @@ const MultiPanelsPage: FC = () => {
                     prev ? { ...prev, embed: { ...prev.embed, title: e } } : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.TITLE}
+                showCount
               />
               <ColourSelect
                 label="Colour"
@@ -338,6 +355,19 @@ const MultiPanelsPage: FC = () => {
               />
             </div>
             <div className="py-2">
+              <TextInput
+                label="Title URL"
+                placeholder="e.g. https://example.com"
+                value={multiPanel.embed?.url || ""}
+                onChange={(e) =>
+                  setMultiPanel((prev) =>
+                    prev ? { ...prev, embed: { ...prev.embed, url: e } } : prev,
+                  )
+                }
+                maxLength={EMBED_LIMITS.URL}
+              />
+            </div>
+            <div className="py-2">
               <Textarea
                 label="Description"
                 value={multiPanel.embed?.description || ""}
@@ -346,7 +376,7 @@ const MultiPanelsPage: FC = () => {
                     prev ? { ...prev, embed: { ...prev.embed, description: e } } : prev,
                   )
                 }
-                max={1000}
+                max={EMBED_LIMITS.DESCRIPTION}
               />
             </div>
 
@@ -368,6 +398,8 @@ const MultiPanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                showCount
               />
               <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
                 <TextInput
@@ -387,6 +419,7 @@ const MultiPanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
                 <TextInput
                   label="Author URL"
@@ -405,6 +438,7 @@ const MultiPanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
               </div>
             </Collapsible>
@@ -423,6 +457,7 @@ const MultiPanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
               <TextInput
                 label="Image URL"
@@ -433,45 +468,55 @@ const MultiPanelsPage: FC = () => {
                     prev ? { ...prev, embed: { ...prev.embed, image_url: e } } : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
             </Collapsible>
             <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <TextInput
-                label="Footer Text"
-                placeholder="e.g. Powered by TicketBot"
-                value={multiPanel.embed?.footer?.text || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            footer: { ...prev.embed?.footer, text: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-              />
-              <TextInput
-                label="Footer Icon URL"
-                placeholder="e.g. https://example.com/footer-icon.png"
-                value={multiPanel.embed?.footer?.icon_url || ""}
-                onChange={(e) =>
-                  setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            footer: { ...prev.embed?.footer, icon_url: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-              />
+              <PremiumGate
+                isPremium={!!premiumState?.premium}
+                feature="custom-footer"
+                description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
+                variant="overlay"
+              >
+                <Textarea
+                  label="Footer Text"
+                  placeholder="e.g. Support hours: 9am-5pm UTC"
+                  value={multiPanel.embed?.footer?.text || ""}
+                  onChange={(e) =>
+                    setMultiPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            embed: {
+                              ...prev.embed,
+                              footer: { ...prev.embed?.footer, text: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  max={EMBED_LIMITS.FOOTER_TEXT}
+                />
+                <TextInput
+                  label="Footer Icon URL"
+                  placeholder="e.g. https://example.com/footer-icon.png"
+                  value={multiPanel.embed?.footer?.icon_url || ""}
+                  onChange={(e) =>
+                    setMultiPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            embed: {
+                              ...prev.embed,
+                              footer: { ...prev.embed?.footer, icon_url: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  maxLength={EMBED_LIMITS.URL}
+                />
+              </PremiumGate>
               <DateTimePicker
                 label="Footer Timestamp (Optional)"
                 value={parseEmbedTimestamp(multiPanel.embed?.timestamp)}
@@ -487,6 +532,17 @@ const MultiPanelsPage: FC = () => {
                 }
               />
             </Collapsible>
+            <Collapsible title="" subtitle="Embed Fields" defaultOpen={false}>
+              <EmbedFieldsEditor
+                fields={multiPanel.embed?.fields || []}
+                onChange={(fields) =>
+                  setMultiPanel((prev) =>
+                    prev ? { ...prev, embed: { ...prev.embed, fields } } : prev,
+                  )
+                }
+              />
+            </Collapsible>
+            <EmbedCharacterTotal embed={multiPanel.embed} />
           </div>
 
           <div>
@@ -494,6 +550,7 @@ const MultiPanelsPage: FC = () => {
             <PanelPreview
               type="welcome"
               data={{ panel: multiPanel, buttons: getPreviewButtons() }}
+              brandingFooter={showBrandingFooter}
             />
           </div>
         </div>
@@ -512,20 +569,7 @@ const MultiPanelsPage: FC = () => {
             toast.success("Multi Panel Created");
             navigate(`/manage/${guildId}/panels`);
           } catch (error) {
-            const status = (error as { response?: { status?: number } })?.response?.status;
-            const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-              ?.error;
-            if (status === 503) {
-              toast.warning(
-                apiError ??
-                  "Panel management is temporarily unavailable. Please try again shortly.",
-              );
-              setForcedLock(true);
-            } else {
-              // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-              // status, not just 503, so every other failure needs its own here.
-              toast.error(apiError ?? "Failed to create multi panel. Please try again.");
-            }
+            handleApiError(error, "Failed to create multi panel. Please try again.");
             console.error("Failed to create multi panel:", error);
           }
         }}

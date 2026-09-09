@@ -8,6 +8,7 @@ interface TextInputProps {
   className?: string;
   label?: string;
   maxLength?: number;
+  showCount?: boolean;
   type?: "text" | "email" | "url" | "tel" | "search" | "date";
   autoComplete?: string;
   onKeyDown?: (e: KeyboardEvent<HTMLInputElement>) => void;
@@ -35,6 +36,7 @@ const TextInput: FC<TextInputProps> = (props) => {
     className,
     label,
     maxLength,
+    showCount,
     type,
     autoComplete,
     onKeyDown,
@@ -50,6 +52,8 @@ const TextInput: FC<TextInputProps> = (props) => {
   };
   const inputId = useId();
   const errorId = useId();
+  const countId = useId();
+  const withCount = showCount && maxLength !== undefined;
   const borderClass = error ? "border-red-500" : "border-neutral-600 focus-within:border-blue-500";
   return (
     <div className={`flex flex-col ${className}`}>
@@ -75,15 +79,28 @@ const TextInput: FC<TextInputProps> = (props) => {
           inputMode={inputMode}
           pattern={pattern}
           aria-describedby={
-            [descriptionId, error ? errorId : null].filter(Boolean).join(" ") || undefined
+            [descriptionId, error ? errorId : null, withCount ? countId : null]
+              .filter(Boolean)
+              .join(" ") || undefined
           }
           aria-invalid={error ? true : undefined}
         />
       </div>
-      {error && (
-        <p id={errorId} className="mt-1 text-red-400 text-xs" aria-live="polite">
-          {error}
-        </p>
+      {(error || withCount) && (
+        <div className="flex items-center justify-between">
+          {error ? (
+            <p id={errorId} className="mt-1 text-red-400 text-xs" aria-live="polite">
+              {error}
+            </p>
+          ) : (
+            <span />
+          )}
+          {withCount && (
+            <span id={countId} className="text-xs mt-1">
+              {[...value].length}/{maxLength}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

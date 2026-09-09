@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/TicketsBot-cloud/gdl/objects/user"
 	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
@@ -123,35 +125,54 @@ func GetTicket(c *gin.Context) {
 		Claimer:  claimer,
 	}
 
-	if !hasContentPermission {
+	respond := func(messages []StrippedMessage, contentRestricted, channelMissing bool) {
+		if messages == nil {
+			messages = []StrippedMessage{}
+		}
+
 		c.JSON(200, gin.H{
 			"success":            true,
 			"ticket":             ticketData,
 			"panel_title":        panelTitle,
-			"messages":           []StrippedMessage{},
-			"content_restricted": true,
+			"messages":           messages,
+			"content_restricted": contentRestricted,
+			"channel_missing":    channelMissing,
 		})
+	}
+
+	if !hasContentPermission {
+		respond(nil, true, false)
 		return
 	}
 
+	// 200 with a flag, not an error: the metadata stays usable so the ticket can still be closed.
 	if ticket.ChannelId == nil {
-		c.JSON(http.StatusNotFound, utils.ErrorStr("Ticket #%d has no associated Discord channel", ticketId))
+		respond(nil, false, true)
 		return
 	}
 
 	messages, err := fetchMessages(c.Request.Context(), botContext, ticket)
 	if err != nil {
+		if isUnknownChannel(err) {
+			respond(nil, false, true)
+			return
+		}
+
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, fmt.Sprintf("Failed to fetch messages for ticket #%d from Discord", ticketId)))
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"success":            true,
-		"ticket":             ticketData,
-		"panel_title":        panelTitle,
-		"messages":           messages,
-		"content_restricted": false,
-	})
+	respond(messages, false, false)
+}
+
+// 403/50001 is excluded: that channel exists, the bot just cannot read it.
+func isUnknownChannel(err error) bool {
+	var restErr request.RestError
+	if !errors.As(err, &restErr) {
+		return false
+	}
+
+	return restErr.StatusCode == http.StatusNotFound || restErr.ApiError.Code == 10003
 }
 
 type StrippedMessage struct {

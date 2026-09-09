@@ -33,7 +33,7 @@ import {
   ViewIntegrationPage,
 } from "@/router/lazy-pages";
 import { LegacyEditMultiPanelRedirect, SiblingRouteRedirect } from "@/router/redirects/components";
-import { guildPage } from "@/router/wrap";
+import { guildPage, lazyPage } from "@/router/wrap";
 
 /** Child routes under `/manage/:guildId`. */
 export const guildRoutes: RouteObject[] = [
@@ -44,7 +44,7 @@ export const guildRoutes: RouteObject[] = [
     path: "transcripts",
     children: [
       { path: "", element: guildPage(1, <TranscriptsIndex />) },
-      { path: "view/:id", element: guildPage(1, <TranscriptsView />) },
+      { path: "view/:id", element: lazyPage(<TranscriptsView />) },
     ],
   },
   {
@@ -75,13 +75,13 @@ export const guildRoutes: RouteObject[] = [
     ],
   },
   { path: "teams", element: guildPage(2, <TeamsPage />) },
-  { path: "tags", element: guildPage(2, <TagsPage />) },
+  { path: "tags", element: guildPage(1, <TagsPage />) },
   {
     path: "kb",
     children: [
-      { path: "", element: guildPage(2, <KBPage />) },
-      { path: "create", element: guildPage(2, <CreateKBArticlePage />) },
-      { path: "edit/:articleId", element: guildPage(2, <EditKBArticlePage />) },
+      { path: "", element: guildPage(1, <KBPage />) },
+      { path: "create", element: guildPage(1, <CreateKBArticlePage />) },
+      { path: "edit/:articleId", element: guildPage(1, <EditKBArticlePage />) },
     ],
   },
   { path: "blacklist", element: guildPage(1, <BlacklistPage />) },

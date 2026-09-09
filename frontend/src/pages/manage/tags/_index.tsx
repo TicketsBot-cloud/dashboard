@@ -31,6 +31,7 @@ import GallerySubmitModal from "@/components/modals/GallerySubmitModal";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_TAGS } from "@/lib/feature-flags";
 import type { Tag } from "@/types";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const TAG_SORT_COLUMNS: Record<"id" | "type", SortColumn<Tag>> = {
   id: { value: (t) => t.id, defaultDir: "asc" },
@@ -50,6 +51,8 @@ const TagsPage: FC = () => {
   const [cloningTag, setCloningTag] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; tagId: string } | null>(null);
   const [gallerySubmitTag, setGallerySubmitTag] = useState<Tag | null>(null);
+
+  const canPublishToGallery = (getGuildById(guildId)?.permission_level ?? 0) >= 2;
 
   const { locked: polledLock } = useFeatureLock(FEATURE_TAGS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -86,20 +89,10 @@ const TagsPage: FC = () => {
     }
   }, [guildId, selectGuild, selectedGuild]);
 
-  // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status, not
-  // just 503, so every other failure needs its own toast here.
-  const handleLockableError = (error: unknown, fallbackMessage: string) => {
-    const status = (error as { response?: { status?: number } })?.response?.status;
-    const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-    if (status === 503) {
-      toast.warning(
-        apiError ?? "Tag management is temporarily unavailable. Please try again shortly.",
-      );
-      setForcedLock(true);
-    } else {
-      toast.error(apiError ?? fallbackMessage);
-    }
-  };
+  const handleLockableError = useApiErrorHandler(
+    "Tag management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
 
   const handleSave = async (tag: Tag, originalId?: string) => {
     try {
@@ -241,11 +234,15 @@ const TagsPage: FC = () => {
                               setEditorOpen(true);
                             },
                           },
-                          {
-                            label: "Publish to Gallery",
-                            icon: faShareNodes,
-                            onClick: () => setGallerySubmitTag(tag),
-                          },
+                          ...(canPublishToGallery
+                            ? [
+                                {
+                                  label: "Publish to Gallery",
+                                  icon: faShareNodes,
+                                  onClick: () => setGallerySubmitTag(tag),
+                                },
+                              ]
+                            : []),
                           {
                             label: "Remove",
                             icon: faTrash,

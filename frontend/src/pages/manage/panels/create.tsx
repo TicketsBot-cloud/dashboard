@@ -21,6 +21,8 @@ import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import NumberInput from "@/components/NumberInput";
 import ColourSelect from "@/components/ColourSelect";
+import { BUTTON_STYLE_OPTIONS } from "@/constants/buttonStyles";
+import { roleColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import EmojiPicker from "@/components/EmojiPicker";
 import PanelPreview from "@/components/PanelPreview";
@@ -35,6 +37,7 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import TicketModeInfoModal from "@/components/modals/TicketModeInfoModal";
 import PremiumGate from "@/components/PremiumGate";
@@ -49,6 +52,9 @@ import {
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
+import { EMBED_LIMITS } from "@/constants/embedLimits";
+import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const PRESET_NAMING_SCHEMES = [
   "ticket-%id%",
@@ -69,6 +75,8 @@ const PanelsPage: FC = () => {
   const queryClient = useQueryClient();
   const { data: forms = [] } = useGuildForms(guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
+  const { data: premiumWithVoting = null } = useGuildPremium(guildId, true);
+  const showBrandingFooter = !premiumWithVoting?.premium;
   const { data: kbCategories = [] } = useKBCategories(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
   const [isLoadingClone, setIsLoadingClone] = useState(!!clonePanelId);
@@ -109,6 +117,8 @@ const PanelsPage: FC = () => {
     emoji_name: "📩",
     mentions: [],
     kb_category_ids: [],
+    teams: [],
+    default_team: true,
     mention_behaviour: "none",
     use_custom_emoji: false,
     disabled: false,
@@ -147,9 +157,7 @@ const PanelsPage: FC = () => {
     welcome_message: {
       description: "Thank you for opening a ticket! A member of staff will be with you shortly.",
       colour: "#5865f2",
-      footer: {
-        text: "Powered by Tickets.bot.bot",
-      },
+      footer: {},
       author: {},
       fields: [],
     },
@@ -169,6 +177,10 @@ const PanelsPage: FC = () => {
   const { isSubmitting, guard } = useMutationGuard();
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Panel management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // Announce the lock lifting mid-session (e.g. a flag re-enabled while this page
@@ -268,6 +280,8 @@ const PanelsPage: FC = () => {
                 placeholder="e.g. Open a ticket"
                 value={panel.title || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
+                maxLength={80}
+                showCount
               />
               <ColourSelect
                 label="Panel Colour"
@@ -284,7 +298,7 @@ const PanelsPage: FC = () => {
                 label="Panel Content"
                 value={panel.content || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, content: e } : prev))}
-                max={1000}
+                max={EMBED_LIMITS.DESCRIPTION}
               />
             </div>
             <div className="py-2">
@@ -317,12 +331,14 @@ const PanelsPage: FC = () => {
                 placeholder="e.g. https://example.com/thumbnail.png"
                 value={panel.thumbnail_url || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, thumbnail_url: e } : prev))}
+                maxLength={EMBED_LIMITS.URL}
               />
               <TextInput
                 label="Image URL"
                 placeholder="e.g. https://example.com/image.png"
                 value={panel.image_url || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, image_url: e } : prev))}
+                maxLength={EMBED_LIMITS.URL}
               />
             </div>
             <div className="py-2 grid gap-2 grid-cols-1 md:grid-cols-2">
@@ -335,12 +351,11 @@ const PanelsPage: FC = () => {
               <Select
                 label="Button Colour"
                 value={panel.button_style?.toString() || "1"}
-                options={[
-                  { label: "Blue", key: "1" },
-                  { label: "Grey", key: "2" },
-                  { label: "Green", key: "3" },
-                  { label: "Red", key: "4" },
-                ]}
+                options={BUTTON_STYLE_OPTIONS.map(({ key, label, color }) => ({
+                  key,
+                  label,
+                  color,
+                }))}
                 onChange={(e) =>
                   setPanel((prev) =>
                     prev ? { ...prev, button_style: e ?? prev.button_style } : prev,
@@ -452,26 +467,33 @@ const PanelsPage: FC = () => {
             }
           />
 
-          <Select
-            label={
-              premiumState?.premium
-                ? "Awaiting Response Category"
-                : "Awaiting Response Category (Premium)"
-            }
-            disabled={!premiumState?.premium}
-            options={
-              selectedGuild?.channels
-                ?.filter((c) => c.type == 4)
-                .map((channel) => ({
-                  label: channel.name,
-                  key: channel.id,
-                })) || []
-            }
-            value={panel.pending_category || ""}
-            onChange={(e) =>
-              setPanel((prev) => (prev ? { ...prev, pending_category: e ?? undefined } : prev))
-            }
-          />
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-sm text-white">Awaiting Response Category</span>
+              {!premiumWithVoting?.premium && (
+                <span title="Move tickets to a separate category while they await a user reply. Requires Premium.">
+                  <FontAwesomeIcon icon={faCrown} className="text-amber-400 text-xs cursor-help" />
+                </span>
+              )}
+            </div>
+            <Select
+              label="Awaiting Response Category"
+              hideLabel
+              showNoneOption={true}
+              noneOptionLabel="No Awaiting Response Category"
+              options={
+                selectedGuild?.channels
+                  ?.filter((c) => c.type == 4)
+                  .map((channel) => ({
+                    label: channel.name,
+                    key: channel.id,
+                    disabled: !premiumWithVoting?.premium,
+                  })) || []
+              }
+              value={panel.pending_category ?? null}
+              onChange={(e) => setPanel((prev) => (prev ? { ...prev, pending_category: e } : prev))}
+            />
+          </div>
         </div>
         <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <Select
@@ -494,15 +516,15 @@ const PanelsPage: FC = () => {
             options={
               selectedGuild?.roles
                 ? [
-                    { label: "Ticket Opener", key: "user", color: "ffffff" },
-                    { label: "@here", key: "here", color: "ffffff" },
+                    { label: "Ticket Opener", key: "user", color: "#FFFFFF" },
+                    { label: "@here", key: "here", color: "#FFFFFF" },
                     ...(selectedGuild.roles.map((role) => ({
                       label: role.name,
                       key: role.id,
-                      color: role.color.toString(16),
-                    })) || [{ label: "@here", key: "here", color: "ffffff" }]),
+                      color: roleColour(role.color),
+                    })) || [{ label: "@here", key: "here", color: "#FFFFFF" }]),
                   ]
-                : [{ label: "@here", key: "here", color: "ffffff" }]
+                : [{ label: "@here", key: "here", color: "#FFFFFF" }]
             }
             onChange={(e) => setPanel((prev) => (prev ? { ...prev, mentions: e } : prev))}
           />
@@ -565,6 +587,8 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.TITLE}
+                showCount
               />
               <ColourSelect
                 label="Colour"
@@ -594,6 +618,7 @@ const PanelsPage: FC = () => {
                     prev ? { ...prev, welcome_message: { ...prev.welcome_message, url: e } } : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
             </div>
             <div className="py-2">
@@ -607,7 +632,7 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
-                max={1000}
+                max={EMBED_LIMITS.DESCRIPTION}
               />
             </div>
 
@@ -629,6 +654,8 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                showCount
               />
               <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
                 <TextInput
@@ -648,6 +675,7 @@ const PanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
                 <TextInput
                   label="Author URL"
@@ -666,6 +694,7 @@ const PanelsPage: FC = () => {
                         : prev,
                     )
                   }
+                  maxLength={EMBED_LIMITS.URL}
                 />
               </div>
             </Collapsible>
@@ -684,6 +713,7 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
               <TextInput
                 label="Image URL"
@@ -696,45 +726,55 @@ const PanelsPage: FC = () => {
                       : prev,
                   )
                 }
+                maxLength={EMBED_LIMITS.URL}
               />
             </Collapsible>
             <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <TextInput
-                label="Footer Text"
-                placeholder="e.g. Powered by TicketBot"
-                value={panel.welcome_message?.footer?.text || ""}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: {
-                            ...prev.welcome_message,
-                            footer: { ...prev.welcome_message?.footer, text: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-              />
-              <TextInput
-                label="Footer Icon URL"
-                placeholder="e.g. https://example.com/footer-icon.png"
-                value={panel.welcome_message?.footer?.icon_url || ""}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: {
-                            ...prev.welcome_message,
-                            footer: { ...prev.welcome_message?.footer, icon_url: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-              />
+              <PremiumGate
+                isPremium={!!premiumState?.premium}
+                feature="custom-footer"
+                description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
+                variant="overlay"
+              >
+                <Textarea
+                  label="Footer Text"
+                  placeholder="e.g. Support hours: 9am-5pm UTC"
+                  value={panel.welcome_message?.footer?.text || ""}
+                  onChange={(e) =>
+                    setPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            welcome_message: {
+                              ...prev.welcome_message,
+                              footer: { ...prev.welcome_message?.footer, text: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  max={EMBED_LIMITS.FOOTER_TEXT}
+                />
+                <TextInput
+                  label="Footer Icon URL"
+                  placeholder="e.g. https://example.com/footer-icon.png"
+                  value={panel.welcome_message?.footer?.icon_url || ""}
+                  onChange={(e) =>
+                    setPanel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            welcome_message: {
+                              ...prev.welcome_message,
+                              footer: { ...prev.welcome_message?.footer, icon_url: e },
+                            },
+                          }
+                        : prev,
+                    )
+                  }
+                  maxLength={EMBED_LIMITS.URL}
+                />
+              </PremiumGate>
               <DateTimePicker
                 label="Footer Timestamp (Optional)"
                 value={parseEmbedTimestamp(panel.welcome_message?.timestamp)}
@@ -763,11 +803,12 @@ const PanelsPage: FC = () => {
                 }
               />
             </Collapsible>
+            <EmbedCharacterTotal embed={panel.welcome_message} />
           </div>
 
           <div>
             <span className="text-xl font-semibold">Welcome Message Preview</span>
-            <PanelPreview type="welcome" data={{ panel }} />
+            <PanelPreview type="welcome" data={{ panel }} brandingFooter={showBrandingFooter} />
           </div>
         </div>
       </Collapsible>
@@ -1114,33 +1155,33 @@ const PanelsPage: FC = () => {
         subtitle="Automatically close tickets based on inactivity"
         defaultOpen={false}
       >
+        <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <Slider
+            label="Enable Auto Close"
+            value={panel.auto_close.enabled}
+            onChange={(e) =>
+              setPanel((prev) =>
+                prev ? { ...prev, auto_close: { ...prev.auto_close, enabled: e } } : prev,
+              )
+            }
+          />
+          <Slider
+            label="Close on User Leave"
+            value={panel.auto_close.on_user_leave}
+            disabled={!panel.auto_close.enabled}
+            onChange={(e) =>
+              setPanel((prev) =>
+                prev ? { ...prev, auto_close: { ...prev.auto_close, on_user_leave: e } } : prev,
+              )
+            }
+          />
+        </div>
         <PremiumGate
           isPremium={!!premiumState?.premium}
           feature="auto-close"
           description="Auto-close inactive tickets after a set period."
           variant="overlay"
         >
-          <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            <Slider
-              label="Enable Auto Close"
-              value={panel.auto_close.enabled}
-              onChange={(e) =>
-                setPanel((prev) =>
-                  prev ? { ...prev, auto_close: { ...prev.auto_close, enabled: e } } : prev,
-                )
-              }
-            />
-            <Slider
-              label="Close on User Leave"
-              value={panel.auto_close.on_user_leave}
-              disabled={!panel.auto_close.enabled}
-              onChange={(e) =>
-                setPanel((prev) =>
-                  prev ? { ...prev, auto_close: { ...prev.auto_close, on_user_leave: e } } : prev,
-                )
-              }
-            />
-          </div>
           <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
             <DurationPicker
               label="Since Open with No Response"
@@ -1218,20 +1259,7 @@ const PanelsPage: FC = () => {
               toast.success("Panel Created");
               navigate(`/manage/${guildId}/panels`);
             } catch (error) {
-              const status = (error as { response?: { status?: number } })?.response?.status;
-              const apiError = (error as { response?: { data?: { error?: string } } })?.response
-                ?.data?.error;
-              if (status === 503) {
-                toast.warning(
-                  apiError ??
-                    "Panel management is temporarily unavailable. Please try again shortly.",
-                );
-                setForcedLock(true);
-              } else {
-                // SKIP_ERROR_TOAST opts out of the interceptor's toast for every
-                // status, not just 503, so every other failure needs its own here.
-                toast.error(apiError ?? "Failed to create panel. Please try again.");
-              }
+              handleApiError(error, "Failed to create panel. Please try again.");
               console.error("Failed to create panel:", error);
             }
           });

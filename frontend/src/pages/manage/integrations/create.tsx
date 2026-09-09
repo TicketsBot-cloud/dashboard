@@ -20,6 +20,7 @@ import type {
 } from "@/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 function buildExampleJson(placeholders: IntegrationPlaceholder[]): string {
   try {
@@ -68,6 +69,10 @@ const CreateIntegrationPage: FC = () => {
 
   const { locked: polledLock } = useFeatureLock(FEATURE_INTEGRATIONS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Integration management is temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // Announce the lock lifting mid-session (e.g. a flag re-enabled while this page
@@ -169,20 +174,7 @@ const CreateIntegrationPage: FC = () => {
       const res = await apiClient.integrations.create(payload, SKIP_ERROR_TOAST);
       navigate(`/manage/${guildId}/integrations/view/${res.data.id}?created=true`);
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ??
-            "Integration management is temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status,
-        // not just 503, so every other failure needs its own here.
-        toast.error(apiError ?? "Failed to create integration. Please try again.");
-      }
+      handleApiError(error, "Failed to create integration. Please try again.");
       console.error("Failed to create integration:", error);
     }
   };

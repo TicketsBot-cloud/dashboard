@@ -1,6 +1,7 @@
 package kb
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
@@ -116,18 +118,9 @@ func CreateArticleHandler(ctx *gin.Context) {
 		}
 	}
 
-	// Clean embed fields
-	if body.Embed != nil {
-		cleanEmbedFields(body.Embed)
-	}
-
-	// Validate embed character count
-	if body.Embed != nil {
-		totalChars := body.Embed.TotalCharacterCount()
-		if totalChars > 6000 {
-			ctx.JSON(400, utils.ErrorStr("Total embed characters (%d) exceeds Discord's 6000 character limit", totalChars))
-			return
-		}
+	if err := cleanAndValidateEmbed(body.Embed); err != nil {
+		ctx.JSON(400, utils.ErrorStr("%s", err.Error()))
+		return
 	}
 
 	slug := generateSlug(body.Title)
@@ -238,18 +231,9 @@ func UpdateArticleHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Clean embed fields
-	if body.Embed != nil {
-		cleanEmbedFields(body.Embed)
-	}
-
-	// Validate embed character count
-	if body.Embed != nil {
-		totalChars := body.Embed.TotalCharacterCount()
-		if totalChars > 6000 {
-			ctx.JSON(400, utils.ErrorStr("Total embed characters (%d) exceeds Discord's 6000 character limit", totalChars))
-			return
-		}
+	if err := cleanAndValidateEmbed(body.Embed); err != nil {
+		ctx.JSON(400, utils.ErrorStr("%s", err.Error()))
+		return
 	}
 
 	slug := generateSlug(body.Title)
@@ -463,6 +447,32 @@ func generateSlug(title string) string {
 	}
 
 	return slug
+}
+
+var validate = validator.New()
+
+// Cleans first so the min=1 tags do not reject fields submitted as "".
+func cleanAndValidateEmbed(embed *types.CustomEmbed) error {
+	if embed == nil {
+		return nil
+	}
+
+	cleanEmbedFields(embed)
+
+	if err := validate.Struct(embed); err != nil {
+		var validationErrors validator.ValidationErrors
+		if !errors.As(err, &validationErrors) {
+			return err
+		}
+
+		return fmt.Errorf("your embed contained the following errors:\n%s", utils.FormatValidationErrors(validationErrors))
+	}
+
+	if total := embed.TotalCharacterCount(); total > types.EmbedTotalCharacterLimit {
+		return fmt.Errorf("total embed characters (%d) exceeds Discord's %d character limit", total, types.EmbedTotalCharacterLimit)
+	}
+
+	return nil
 }
 
 // cleanEmbedFields converts empty strings to nil for optional embed fields.

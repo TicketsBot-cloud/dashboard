@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_WHITELABEL } from "@/lib/feature-flags";
 import type { WhitelabelBot, WhitelabelError } from "@/types";
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const statusTypeOptions = [
   { key: "0", label: "Playing" },
@@ -41,6 +42,10 @@ export default function Whitelabel() {
   // of dashboard users, and the environment toggle can ever match here.
   const { locked: polledLock } = useFeatureLock(FEATURE_WHITELABEL);
   const [forcedLock, setForcedLock] = useState(false);
+  const handleApiError = useApiErrorHandler(
+    "Whitelabel changes are temporarily unavailable. Please try again shortly.",
+    setForcedLock,
+  );
   const isLocked = forcedLock || polledLock === true;
 
   // This page is a long-lived settings screen rather than a form the user
@@ -123,21 +128,10 @@ export default function Whitelabel() {
         );
       }
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Whitelabel changes are temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        // SKIP_ERROR_TOAST opts out of the interceptor's toast for every status,
-        // not just 503, so every other failure needs its own here.
-        toast.error(
-          apiError ?? "Failed to start whitelabel. Please check your bot token and try again.",
-        );
-      }
+      handleApiError(
+        error,
+        "Failed to start whitelabel. Please check your bot token and try again.",
+      );
       console.error("Failed to start whitelabel:", error);
     }
   };
@@ -169,17 +163,7 @@ export default function Whitelabel() {
         console.error("Failed to refresh server count after resync:", reloadError);
       }
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Whitelabel changes are temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to resync bot. Please try again.");
-      }
+      handleApiError(error, "Failed to resync bot. Please try again.");
       console.error("Failed to resync bot:", error);
     } finally {
       setIsResyncing(false);
@@ -193,17 +177,7 @@ export default function Whitelabel() {
       setActive(false);
       toast.success("Whitelabel has been disabled");
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Whitelabel changes are temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to disable whitelabel. Please try again.");
-      }
+      handleApiError(error, "Failed to disable whitelabel. Please try again.");
       console.error("Failed to disable whitelabel:", error);
     }
   };
@@ -214,17 +188,7 @@ export default function Whitelabel() {
       setFetchedStatus(bot.status);
       toast.success("Updated status successfully");
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Whitelabel changes are temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to update status. Please try again.");
-      }
+      handleApiError(error, "Failed to update status. Please try again.");
       console.error("Failed to update status:", error);
     }
   };
@@ -236,17 +200,7 @@ export default function Whitelabel() {
       setFetchedStatus("");
       toast.success("Deleted status successfully");
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error;
-      if (status === 503) {
-        toast.warning(
-          apiError ?? "Whitelabel changes are temporarily unavailable. Please try again shortly.",
-        );
-        setForcedLock(true);
-      } else {
-        toast.error(apiError ?? "Failed to delete status. Please try again.");
-      }
+      handleApiError(error, "Failed to delete status. Please try again.");
       console.error("Failed to delete status:", error);
     }
   };

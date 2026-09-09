@@ -628,11 +628,13 @@ export const apiClient = {
   },
 
   onboarding: {
-    get: (guildId: string) => api.get<OnboardingState>(`/api/${guildId}/onboarding`),
+    get: (guildId: string) =>
+      api.get<OnboardingState>(`/api/${guildId}/onboarding`, SKIP_ERROR_TOAST),
     update: (
       guildId: string,
       body: { current_step?: number; completed?: boolean; skipped?: boolean },
-    ) => api.post<{ success: boolean }>(`/api/${guildId}/onboarding`, body),
+      config?: AxiosRequestConfig,
+    ) => api.post<{ success: boolean }>(`/api/${guildId}/onboarding`, body, config),
     getFeaturedListings: (guildId: string) =>
       api.get<GalleryListing[]>(`/api/${guildId}/gallery/featured`),
   },

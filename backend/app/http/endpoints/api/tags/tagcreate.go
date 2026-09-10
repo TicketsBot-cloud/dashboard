@@ -12,6 +12,7 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
@@ -47,8 +48,7 @@ func CreateTag(ctx *gin.Context) {
 	// Max of 200 tags
 	count, err := dbclient.Client.Tag.GetTagCount(ctx, guildId)
 	if err != nil {
-		formatted := fmt.Sprintf("Failed to fetch tag count from database: %v", err)
-		ctx.JSON(500, utils.ErrorStr("%s", formatted))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch tag count from database"))
 		return
 	}
 
@@ -78,7 +78,7 @@ func CreateTag(ctx *gin.Context) {
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
 		if ok := errors.As(err, &validationErrors); !ok {
-			ctx.JSON(500, utils.ErrorStr("An error occurred while validating the integration"))
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "An error occurred while validating the tag"))
 			return
 		}
 
@@ -118,14 +118,14 @@ func CreateTag(ctx *gin.Context) {
 
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	if data.UseGuildCommand {
 		premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, true, botContext.Token, botContext.RateLimiter)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to verify premium status. Please try again."))
 			return
 		}
 
@@ -149,7 +149,7 @@ func CreateTag(ctx *gin.Context) {
 		cmd, err := botContext.CreateGuildCommand(ctx, guildId, tagalias.Command(data.Id))
 
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to create tag. Please try again."))
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create tag. Please try again."))
 			return
 		}
 
@@ -166,7 +166,7 @@ func CreateTag(ctx *gin.Context) {
 	}
 
 	if err := dbclient.Client.Tag.Set(ctx, wrapped); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to create tag. Please try again."))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create tag. Please try again."))
 		return
 	}
 

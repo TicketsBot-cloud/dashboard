@@ -295,6 +295,6 @@ func MultiPanelUpdate(c *gin.Context) {
 	})
 	c.JSON(200, gin.H{
 		"success": true,
-		"data":    multiPanel,
+		"data":    updated,
 	})
 }

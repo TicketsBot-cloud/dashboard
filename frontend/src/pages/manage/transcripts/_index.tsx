@@ -28,6 +28,7 @@ import Select from "@/components/Select";
 import LabelBadge from "@/components/LabelBadge";
 import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
+import { colourToInt, intToColour } from "@/lib/colour";
 import ActionDropdown from "@/components/ActionDropdown";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import DismissibleModal from "@/components/modal-primitives/DismissibleModal";
@@ -75,14 +76,6 @@ const COLUMN_BY_KEY = Object.fromEntries(ALL_COLUMNS.map((col) => [col.key, col]
 const cellClassFor = (key: ColumnKey) => cellClass(COLUMN_BY_KEY[key].breakpoint);
 
 const DEFAULT_COLUMNS: ColumnKey[] = ["id", "username", "rating", "close_reason", "labels"];
-
-function intToColour(colour: number): string {
-  return `#${colour.toString(16).padStart(6, "0")}`;
-}
-
-function colourToInt(hex: string): number {
-  return parseInt(hex.replace("#", ""), 16);
-}
 
 const TranscriptsPage: FC = () => {
   let { guildId } = useParams();
@@ -548,6 +541,7 @@ const TranscriptsPage: FC = () => {
                 ...panels.map((p) => ({
                   key: p.panel_id.toString(),
                   label: p.title,
+                  color: intToColour(p.colour),
                 })),
               ]}
             />

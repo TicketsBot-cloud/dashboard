@@ -15,6 +15,7 @@ import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
+import { intToColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -34,11 +35,13 @@ import { PANEL_MESSAGE_INFO } from "@/constants/panelChannelInfo";
 import MultiPanelInfoModal from "@/components/modals/MultiPanelInfoModal";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
+import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const defaultEmbed = {
   author: {},
   colour: 0x5865f2,
+  fields: [],
   footer: {},
 };
 
@@ -228,7 +231,7 @@ const MultiPanelsPage: FC = () => {
             options={panels?.map((panel) => ({
               label: panel.title,
               key: panel.panel_id.toString(),
-              color: panel.colour.toString(16).padStart(6, "0"),
+              color: intToColour(panel.colour),
             }))}
             onChange={(e) =>
               setMultiPanel((prev) => {
@@ -375,6 +378,19 @@ const MultiPanelsPage: FC = () => {
                       : prev,
                   )
                 }
+              />
+            </div>
+            <div className="py-2">
+              <TextInput
+                label="Title URL"
+                placeholder="e.g. https://example.com"
+                value={multiPanel?.embed?.url || ""}
+                onChange={(e) =>
+                  setMultiPanel((prev) =>
+                    prev ? { ...prev, embed: { ...prev.embed, url: e } } : prev,
+                  )
+                }
+                maxLength={EMBED_LIMITS.URL}
               />
             </div>
             <div className="py-2">
@@ -538,6 +554,16 @@ const MultiPanelsPage: FC = () => {
                           embed: { ...prev.embed, timestamp: serializeEmbedTimestamp(date) },
                         }
                       : prev,
+                  )
+                }
+              />
+            </Collapsible>
+            <Collapsible title="" subtitle="Embed Fields" defaultOpen={false}>
+              <EmbedFieldsEditor
+                fields={multiPanel?.embed?.fields || []}
+                onChange={(fields) =>
+                  setMultiPanel((prev) =>
+                    prev ? { ...prev, embed: { ...prev.embed, fields } } : prev,
                   )
                 }
               />

@@ -260,7 +260,7 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	// If ticket limit is 0, treat it as use global setting
+	// If ticket limit is 0, this panel has no limit of its own
 	if data.TicketLimit != nil && *data.TicketLimit == 0 {
 		data.TicketLimit = nil
 	}

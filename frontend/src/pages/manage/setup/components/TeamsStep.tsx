@@ -4,10 +4,11 @@ import { toast } from "sonner";
 import TextInput from "@/components/TextInput";
 import Button from "@/components/Button";
 import MultiSelect from "@/components/MultiSelect";
+import { roleColour } from "@/lib/colour";
 
 interface TeamsStepProps {
   guildId: string;
-  roles: Array<{ id: string; name: string }>;
+  roles: Array<{ id: string; name: string; color: number }>;
   existingTeams: Array<{ id: number; name: string }>;
   onTeamsChange: (teams: Array<{ id: number; name: string }>) => void;
 }
@@ -23,7 +24,11 @@ const TeamsStep: FC<TeamsStepProps> = ({ guildId, roles, existingTeams, onTeamsC
   const [newTeamName, setNewTeamName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const roleOptions = roles.map((r) => ({ key: r.id, label: r.name }));
+  const roleOptions = roles.map((r) => ({
+    key: r.id,
+    label: r.name,
+    color: roleColour(r.color),
+  }));
 
   const handleCreateTeam = async () => {
     const trimmed = newTeamName.trim();

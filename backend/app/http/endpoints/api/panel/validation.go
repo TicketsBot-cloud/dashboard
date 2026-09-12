@@ -451,6 +451,11 @@ func validateEmbed(e *types.CustomEmbed) error {
 		return validation.NewInvalidInputError("Your embed message does not contain any content")
 	}
 
+	if err := e.ValidateUrls(); err != nil {
+		return validation.NewInvalidInputError(err.Error())
+	}
+
+	// urlRegex additionally constrains host shape here; ValidateUrls is scheme-only.
 	for _, url := range []*string{e.ImageUrl, e.ThumbnailUrl} {
 		if url == nil || *url == types.AvatarUrlPlaceholder {
 			continue

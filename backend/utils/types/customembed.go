@@ -1,6 +1,9 @@
 package types
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/TicketsBot-cloud/database"
@@ -48,6 +51,44 @@ type Field struct {
 	Name   string `json:"name" validate:"min=1,max=256"`
 	Value  string `json:"value" validate:"min=1,max=1024"`
 	Inline bool   `json:"inline"`
+}
+
+func IsValidEmbedUrl(rawUrl string) bool {
+	return rawUrl == AvatarUrlPlaceholder || utils.ValidateHttpUrl(rawUrl) == nil
+}
+
+// Keys are the dashboard's field labels, so a rejection names the box the user sees.
+func (c *CustomEmbed) urlFields() map[string]*string {
+	if c == nil {
+		return nil
+	}
+
+	return map[string]*string{
+		"Title URL":       c.Url,
+		"Author Icon URL": c.Author.IconUrl,
+		"Author URL":      c.Author.Url,
+		"Thumbnail URL":   c.ThumbnailUrl,
+		"Image URL":       c.ImageUrl,
+		"Footer Icon URL": c.Footer.IconUrl,
+	}
+}
+
+func (c *CustomEmbed) ValidateUrls() error {
+	var invalid []string
+	for label, value := range c.urlFields() {
+		if value == nil || *value == "" || IsValidEmbedUrl(*value) {
+			continue
+		}
+
+		invalid = append(invalid, label)
+	}
+
+	if len(invalid) == 0 {
+		return nil
+	}
+
+	sort.Strings(invalid) // map iteration order is random; the message must be stable
+	return fmt.Errorf("the following must be valid http:// or https:// URLs: %s", strings.Join(invalid, ", "))
 }
 
 func NewCustomEmbed(c *database.CustomEmbed, fields []database.EmbedField) *CustomEmbed {

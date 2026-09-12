@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FC } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { guildKeys, useGuildPremium, useGuildTags } from "@/hooks/queries/useGuild";
@@ -14,8 +14,10 @@ import TagEditorModal from "@/components/modals/TagEditorModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCopy,
+  faCrown,
   faEdit,
   faPlus,
+  faRotateRight,
   faShareNodes,
   faTag,
   faTrash,
@@ -30,8 +32,41 @@ import TableSkeleton from "@/components/skeletons/TableSkeleton";
 import GallerySubmitModal from "@/components/modals/GallerySubmitModal";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_TAGS } from "@/lib/feature-flags";
-import type { Tag } from "@/types";
+import { HoverTooltip } from "@/components/HoverTooltip";
+import type { Tag, TagAliasResyncStatus } from "@/types";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
+
+const RESYNC_TOOLTIP =
+  "Use this if a tag's slash command is missing in Discord, still showing after you deleted it, or not responding.";
+
+function resyncButtonLabel(cooldownLeft: number): string {
+  if (cooldownLeft <= 0) return "Resync Command Aliases";
+
+  const mins = Math.floor(cooldownLeft / 60);
+  return `Discord cooldown — ${mins > 0 ? `${mins}m` : `${cooldownLeft}s`}`;
+}
+
+function resyncSummary(status: TagAliasResyncStatus): string {
+  const changes = [
+    [status.recreated, "recreated"],
+    [status.rebound, "relinked"],
+    [status.removed, "removed"],
+    [status.skipped, "skipped"],
+    [status.failed, "failed"],
+  ] as const;
+
+  const parts = changes.filter(([count]) => count > 0).map(([count, label]) => `${count} ${label}`);
+  if (parts.length === 0) {
+    return status.in_sync > 0
+      ? `All ${status.in_sync} command aliases are already in sync.`
+      : "There are no command aliases to resync.";
+  }
+
+  const first = status.errors[0];
+  const cause = first ? ` First failure: ${first.tag_id} — ${first.error}.` : "";
+
+  return `Command aliases resynced: ${parts.join(", ")}.${cause} Discord may take a few minutes to show the changes.`;
+}
 
 const TAG_SORT_COLUMNS: Record<"id" | "type", SortColumn<Tag>> = {
   id: { value: (t) => t.id, defaultDir: "asc" },
@@ -46,11 +81,15 @@ const TagsPage: FC = () => {
   const queryClient = useQueryClient();
   const { data: tags = {}, isLoading: loading } = useGuildTags(guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
+  const { data: premiumWithVoting = null } = useGuildPremium(guildId, true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [cloningTag, setCloningTag] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; tagId: string } | null>(null);
   const [gallerySubmitTag, setGallerySubmitTag] = useState<Tag | null>(null);
+  const [resyncStatus, setResyncStatus] = useState<TagAliasResyncStatus | null>(null);
+  const [isStartingResync, setIsStartingResync] = useState(false);
+  const resyncToastRef = useRef<string | number | null>(null);
 
   const canPublishToGallery = (getGuildById(guildId)?.permission_level ?? 0) >= 2;
 
@@ -93,6 +132,137 @@ const TagsPage: FC = () => {
     "Tag management is temporarily unavailable. Please try again shortly.",
     setForcedLock,
   );
+
+  const canResync = premiumWithVoting?.premium ?? false;
+  const isResyncRunning = resyncStatus?.status === "running";
+  const isResyncing = isResyncRunning || isStartingResync;
+
+  // Ticked locally so the button re-enables without polling
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+  const cooldownUntil = resyncStatus?.cooldown_until;
+
+  useEffect(() => {
+    if (!cooldownUntil) {
+      setCooldownLeft(0);
+      return;
+    }
+
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((Date.parse(cooldownUntil) - Date.now()) / 1000));
+      setCooldownLeft(left);
+      return left;
+    };
+
+    if (tick() === 0) return;
+    const id = setInterval(() => {
+      if (tick() === 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldownUntil]);
+
+  const pollResync = useCallback(async () => {
+    try {
+      const { data } = await apiClient.tags.aliasResyncStatus(guildId);
+      setResyncStatus(data);
+      return data;
+    } catch {
+      return null; // the next tick retries
+    }
+  }, [guildId]);
+
+  // Re-attach to a job left running by an earlier visit
+  useEffect(() => {
+    if (!canResync) return;
+
+    let cancelled = false;
+    void pollResync().then((status) => {
+      if (!cancelled && status?.status === "running" && resyncToastRef.current === null) {
+        resyncToastRef.current = toast.loading("Resyncing command aliases…", {
+          duration: Infinity,
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canResync, pollResync]);
+
+  useEffect(() => {
+    if (!isResyncRunning) return;
+    const id = setInterval(() => void pollResync(), 2000);
+    return () => clearInterval(id);
+  }, [isResyncRunning, pollResync]);
+
+  // Reusing the id replaces the toast in place
+  useEffect(() => {
+    const toastId = resyncToastRef.current;
+    if (!resyncStatus || toastId === null) return;
+
+    if (resyncStatus.status === "running") {
+      const progress =
+        resyncStatus.total > 0 ? ` ${resyncStatus.processed}/${resyncStatus.total}` : "";
+      toast.loading(`Resyncing command aliases…${progress}`, {
+        id: toastId,
+        duration: Infinity,
+      });
+      return;
+    }
+
+    if (resyncStatus.status === "completed") {
+      const summary = resyncSummary(resyncStatus);
+      if (resyncStatus.failed > 0) {
+        toast.error(summary, { id: toastId, duration: 8000 });
+      } else {
+        toast.success(summary, { id: toastId, duration: 6000 });
+      }
+
+      resyncStatus.warnings.forEach((warning) => toast.warning(warning, { duration: 10000 }));
+      resyncToastRef.current = null;
+    }
+  }, [resyncStatus]);
+
+  // Never leave a spinner behind on a page the user has left.
+  useEffect(
+    () => () => {
+      if (resyncToastRef.current !== null) {
+        toast.dismiss(resyncToastRef.current);
+        resyncToastRef.current = null;
+      }
+    },
+    [],
+  );
+
+  const handleResync = async () => {
+    setIsStartingResync(true);
+    try {
+      const { status, data } = await apiClient.tags.resyncAliases(guildId);
+      if (status === 429) {
+        toast.warning(data.error ?? "Please wait before resyncing again.");
+        if (data.retry_after) {
+          setCooldownLeft(data.retry_after);
+        }
+        return;
+      }
+
+      if (status === 409) {
+        toast.info("An alias resync is already running for this server.");
+      }
+
+      // Track the run even on 409, when something else started it
+      if (resyncToastRef.current === null) {
+        resyncToastRef.current = toast.loading("Resyncing command aliases…", {
+          duration: Infinity,
+        });
+      }
+
+      await pollResync();
+    } catch (error) {
+      console.error("Failed to start alias resync:", error);
+      handleLockableError(error, "Failed to start the resync. Please try again.");
+    } finally {
+      setIsStartingResync(false);
+    }
+  };
 
   const handleSave = async (tag: Tag, originalId?: string) => {
     try {
@@ -163,7 +333,38 @@ const TagsPage: FC = () => {
         existingLabel="tags"
       />
       <div className="space-y-6">
-        <div className="flex justify-end">
+        <div className="flex justify-end items-center gap-3">
+          <HoverTooltip
+            label={
+              <span className="block max-w-xs whitespace-normal">
+                {cooldownLeft > 0
+                  ? "Discord is rate limiting this server's commands. Run this again once it clears and it picks up where it stopped."
+                  : RESYNC_TOOLTIP}
+                {!canResync && " Requires Premium."}
+              </span>
+            }
+            placement="bottom"
+            className="flex"
+          >
+            <Button
+              variant="secondary"
+              className="text-sm font-medium"
+              visuallyDisabled={!canResync || isLocked || cooldownLeft > 0}
+              disabled={isResyncRunning || isStartingResync}
+              aria-describedby={isLocked ? "tag-lock-banner" : undefined}
+              onClick={handleResync}
+            >
+              {/* Button's isLoading adds a second spinner and resizes the button */}
+              <FontAwesomeIcon
+                icon={faRotateRight}
+                className={`mr-2 ${isResyncing ? "animate-spin" : ""}`}
+              />
+              {resyncButtonLabel(cooldownLeft)}
+              {!canResync && (
+                <FontAwesomeIcon icon={faCrown} className="ml-2 text-amber-400 text-xs" />
+              )}
+            </Button>
+          </HoverTooltip>
           <Button
             variant="success"
             className="text-sm font-medium"

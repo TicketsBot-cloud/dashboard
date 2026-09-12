@@ -1,12 +1,12 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
 	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	"github.com/ticketsbot-cloud/dashboard/backend/database"
@@ -41,30 +41,33 @@ func DeleteTag(ctx *gin.Context) {
 	// Fetch tag to see if we need to delete a guild command
 	tag, exists, err := database.Client.Tag.Get(ctx, guildId, body.TagId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch tag from database"))
 		return
 	}
 
 	if !exists {
-		ctx.JSON(404, utils.ErrorStr(fmt.Sprintf("Tag not found: %s", body.TagId)))
+		ctx.JSON(404, utils.ErrorStr("Tag not found: %s", body.TagId))
 		return
 	}
 
 	if tag.ApplicationCommandId != nil {
 		botContext, err := botcontext.ContextForGuild(guildId)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Unable to connect to Discord. Please try again later."))
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 			return
 		}
 
 		if err := botContext.DeleteGuildCommand(ctx, guildId, *tag.ApplicationCommandId); err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to delete tag. Please try again."))
-			return
+			// The command may already be gone; that must not strand the tag.
+			if restError, ok := discordError(err); !ok || restError.StatusCode != http.StatusNotFound {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete tag. Please try again."))
+				return
+			}
 		}
 	}
 
-	if err := database.Client.Tag.Delete(ctx, guildId, body.TagId); err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to delete tag. Please try again."))
+	if err := database.Client.Tag.Delete(ctx, guildId, tag.Id); err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete tag. Please try again."))
 		return
 	}
 
@@ -73,7 +76,7 @@ func DeleteTag(ctx *gin.Context) {
 		UserId:       userId,
 		ActionType:   dbmodel.AuditActionTagDelete,
 		ResourceType: dbmodel.AuditResourceTag,
-		ResourceId:   audit.StringPtr(body.TagId),
+		ResourceId:   audit.StringPtr(tag.Id),
 		OldData:      tag,
 	})
 	ctx.Status(204)

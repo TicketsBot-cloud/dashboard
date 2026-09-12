@@ -23,6 +23,7 @@ const ACTION_TYPE_LABELS: Record<number, string> = {
 
   50: "Tag Create",
   51: "Tag Delete",
+  52: "Tag Alias Resync",
 
   60: "Team Create",
   61: "Team Delete",

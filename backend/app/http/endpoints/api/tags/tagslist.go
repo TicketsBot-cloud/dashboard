@@ -1,11 +1,11 @@
 package api
 
 import (
-	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 )
 
@@ -14,7 +14,7 @@ func TagsListHandler(ctx *gin.Context) {
 
 	tags, err := database.Client.Tag.GetByGuild(ctx, guildId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr(fmt.Sprintf("Failed to fetch tag from database: %v", err)))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch tags from database"))
 		return
 	}
 

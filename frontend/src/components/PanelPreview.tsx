@@ -103,11 +103,7 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
   const resolveTicketAvatar = (url: string | null | undefined) =>
     isMultiPanelRequest ? url : previewAvatarUrl(url);
 
-  const borderColor = isMultiPanelRequest
-    ? `#${((panel as MultiPanelRequest).embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`
-    : typeof embedData?.colour === "number"
-      ? `#${embedData.colour.toString(16).padStart(6, "0")}`
-      : embedData?.colour || "#5865f2";
+  const borderColor = embedData?.colour || "#5865f2";
 
   const footerText = embedData?.footer
     ? typeof embedData.footer === "string"

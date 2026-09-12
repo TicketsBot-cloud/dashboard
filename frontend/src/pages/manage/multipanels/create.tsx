@@ -104,6 +104,10 @@ const MultiPanelsPage: FC = () => {
     panels: [] as MultiPanelPanelEntry[],
     select_menu: false,
   });
+  const { data: panels = [] } = useGuildPanels(guildId);
+  const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
+  const { data: premiumState = null } = useGuildPremium(guildId, false);
+  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
 
   const getPanelById = (id: number) => panels.find((p) => p.panel_id === id);
 
@@ -188,10 +192,6 @@ const MultiPanelsPage: FC = () => {
       channel_id: multiPanel.channel_id,
     }) satisfies MultiPanelRequest;
   };
-  const { data: panels = [] } = useGuildPanels(guildId);
-  const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
-  const { data: premiumState = null } = useGuildPremium(guildId, false);
-  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
   const showBrandingFooter = !brandingPremium?.premium;
 
   return (

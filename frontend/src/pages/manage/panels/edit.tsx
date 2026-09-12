@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FC } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
+import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
 import {
   guildKeys,
   useGuildEmojis,
@@ -197,6 +198,7 @@ const EditPanelsPage: FC = () => {
     !welcomeMessage.image_url?.trim() &&
     !welcomeMessage.thumbnail_url?.trim();
   const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
+  const invalidWelcomeMessageUrls = collectEmbedUrlErrors(panel.welcome_message);
   const hasMissingRequired =
     missingChannel ||
     missingCategory ||
@@ -206,7 +208,8 @@ const EditPanelsPage: FC = () => {
     stale(panel.category_id) ||
     stale(panel.transcript_channel_id) ||
     stale(panel.ticket_notification_channel) ||
-    welcomeMessageEmpty;
+    welcomeMessageEmpty ||
+    invalidWelcomeMessageUrls.length > 0;
 
   return (
     <MainLayout
@@ -580,6 +583,7 @@ const EditPanelsPage: FC = () => {
                 label="Title URL"
                 placeholder="e.g. https://example.com"
                 value={panel.welcome_message?.url || ""}
+                error={embedUrlError(panel.welcome_message?.url)}
                 onChange={(e) =>
                   setPanel((prev) =>
                     prev ? { ...prev, welcome_message: { ...prev.welcome_message, url: e } } : prev,
@@ -629,6 +633,7 @@ const EditPanelsPage: FC = () => {
                   label="Author Icon URL"
                   placeholder="e.g. https://example.com/icon.png"
                   value={panel.welcome_message?.author?.icon_url || ""}
+                  error={embedUrlError(panel.welcome_message?.author?.icon_url)}
                   onChange={(e) =>
                     setPanel((prev) =>
                       prev
@@ -648,6 +653,7 @@ const EditPanelsPage: FC = () => {
                   label="Author URL"
                   placeholder="e.g. https://example.com"
                   value={panel.welcome_message?.author?.url || ""}
+                  error={embedUrlError(panel.welcome_message?.author?.url)}
                   onChange={(e) =>
                     setPanel((prev) =>
                       prev
@@ -670,6 +676,7 @@ const EditPanelsPage: FC = () => {
                 label="Thumbnail URL"
                 placeholder="e.g. https://example.com/thumbnail.png"
                 value={panel.welcome_message?.thumbnail_url || ""}
+                error={embedUrlError(panel.welcome_message?.thumbnail_url)}
                 onChange={(e) =>
                   setPanel((prev) =>
                     prev
@@ -686,6 +693,7 @@ const EditPanelsPage: FC = () => {
                 label="Image URL"
                 placeholder="e.g. https://example.com/image.png"
                 value={panel.welcome_message?.image_url || ""}
+                error={embedUrlError(panel.welcome_message?.image_url)}
                 onChange={(e) =>
                   setPanel((prev) =>
                     prev
@@ -726,6 +734,7 @@ const EditPanelsPage: FC = () => {
                   label="Footer Icon URL"
                   placeholder="e.g. https://example.com/footer-icon.png"
                   value={panel.welcome_message?.footer?.icon_url || ""}
+                  error={embedUrlError(panel.welcome_message?.footer?.icon_url)}
                   onChange={(e) =>
                     setPanel((prev) =>
                       prev

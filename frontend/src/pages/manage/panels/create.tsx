@@ -36,13 +36,14 @@ import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import TicketModeInfoModal from "@/components/modals/TicketModeInfoModal";
 import PremiumGate from "@/components/PremiumGate";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faCrown } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faCrown, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { sortGuildChannels } from "@/lib/guild-channels";
 import {
   PANEL_MESSAGE_INFO,
@@ -81,6 +82,7 @@ const PanelsPage: FC = () => {
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
   const [isLoadingClone, setIsLoadingClone] = useState(!!clonePanelId);
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [supportHours, setSupportHours] = useState<SupportHoursData | null>(null);
   const handleSupportHoursChange = useCallback((data: SupportHoursData | null) => {
     setSupportHours(data);
@@ -105,6 +107,8 @@ const PanelsPage: FC = () => {
   }, [guildId, selectGuild, selectedGuild]);
 
   const sortedChannels = sortGuildChannels(selectedGuild?.channels || []);
+  const existingChannelIds = new Set((selectedGuild?.channels ?? []).map((c) => c.id));
+  const channelsLoaded = (selectedGuild?.channels?.length ?? 0) > 0;
 
   // @ts-expect-error 2345 (Default to blank panel)
   const [panel, setPanel] = useState<Panel>({
@@ -251,6 +255,35 @@ const PanelsPage: FC = () => {
     );
   }
 
+  // Mirrors validateButtonLabelOrEmoji.
+  const hasButtonLabel = !!(panel.button_label ?? "").trim();
+  const hasButtonEmoji = panel.use_custom_emoji
+    ? !!(panel.emoji_id && panel.emoji_name?.trim())
+    : !!panelEmoteName(panel.emote).trim();
+  const buttonIdentityMissing = !hasButtonLabel && !hasButtonEmoji;
+  const missingChannel = !panel.channel_id;
+  const missingCategory = !panel.category_id;
+  const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+  const welcomeMessage = panel.welcome_message;
+  const welcomeMessageEmpty =
+    !!welcomeMessage &&
+    !welcomeMessage.title?.trim() &&
+    !welcomeMessage.description?.trim() &&
+    !welcomeMessage.fields?.length &&
+    !welcomeMessage.image_url?.trim() &&
+    !welcomeMessage.thumbnail_url?.trim();
+  const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
+  const hasMissingRequired =
+    missingChannel ||
+    missingCategory ||
+    missingThreadChannel ||
+    buttonIdentityMissing ||
+    stale(panel.channel_id) ||
+    stale(panel.category_id) ||
+    stale(panel.transcript_channel_id) ||
+    stale(panel.ticket_notification_channel) ||
+    welcomeMessageEmpty;
+
   return (
     <MainLayout
       title={clonePanelId ? "Clone Panel" : "New Panel Creation"}
@@ -305,6 +338,8 @@ const PanelsPage: FC = () => {
               <Select
                 label="Panel Channel"
                 info={PANEL_MESSAGE_INFO}
+                required
+                error={stale(panel.channel_id)}
                 options={
                   sortedChannels?.map((c) => ({
                     label: c.label,
@@ -343,7 +378,9 @@ const PanelsPage: FC = () => {
             </div>
             <div className="py-2 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
-                label="Button Text"
+                label="Button Text (or an emoji)"
+                required
+                missing={buttonIdentityMissing}
                 placeholder="e.g. Open Ticket"
                 value={panel.button_label || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, button_label: e } : prev))}
@@ -366,6 +403,7 @@ const PanelsPage: FC = () => {
 
               <EmojiPicker
                 label="Button Emoji"
+                missing={buttonIdentityMissing}
                 className="col-span-2"
                 value={panel.use_custom_emoji ? "" : panelEmoteName(panel.emote)}
                 guildEmojiId={panel.use_custom_emoji ? panel.emoji_id : undefined}
@@ -453,6 +491,8 @@ const PanelsPage: FC = () => {
 
           <Select
             label="Ticket Category"
+            required
+            error={stale(panel.category_id)}
             options={
               selectedGuild?.channels
                 ?.filter((c) => c.type == 4)
@@ -498,6 +538,7 @@ const PanelsPage: FC = () => {
         <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <Select
             label="Transcript Channel"
+            error={stale(panel.transcript_channel_id)}
             info={TRANSCRIPT_CHANNEL_INFO}
             showNoneOption={true}
             noneOptionLabel="No Transcript Channel"
@@ -572,6 +613,18 @@ const PanelsPage: FC = () => {
         subtitle="Configure the message sent on ticket open"
         defaultOpen={false}
       >
+        {welcomeMessageEmpty && (
+          <div
+            data-missing="true"
+            className="mx-4 mb-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm"
+          >
+            <FontAwesomeIcon icon={faExclamationTriangle} />
+            <span>
+              A welcome message needs a title, description, image, thumbnail or field. Discord
+              rejects an empty embed.
+            </span>
+          </div>
+        )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
           <div className="pb-2 mb-5">
             <span className="text-xl font-semibold">Welcome Message Properties</span>
@@ -776,7 +829,7 @@ const PanelsPage: FC = () => {
                 />
               </PremiumGate>
               <DateTimePicker
-                label="Footer Timestamp (Optional)"
+                label="Footer Timestamp"
                 value={parseEmbedTimestamp(panel.welcome_message?.timestamp)}
                 onChange={(date) =>
                   setPanel((prev) =>
@@ -827,6 +880,8 @@ const PanelsPage: FC = () => {
           <Select
             label="Thread Notification Channel"
             info={THREAD_NOTIFICATION_CHANNEL_INFO}
+            required={panel.use_threads}
+            error={stale(panel.ticket_notification_channel)}
             disabled={!panel.use_threads}
             options={
               selectedGuild?.channels
@@ -1225,9 +1280,17 @@ const PanelsPage: FC = () => {
         variant="success"
         className="mt-4 text-sm font-medium"
         isLoading={isSubmitting}
+        disabled={saveAttempted && hasMissingRequired}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={() => {
+          if (hasMissingRequired) {
+            setSaveAttempted(true);
+            if (!scrollToFirstMissingField()) {
+              toast.error("Fill in the required fields before saving.");
+            }
+            return;
+          }
           guard(async () => {
             try {
               const res = await apiClient.panels.create(

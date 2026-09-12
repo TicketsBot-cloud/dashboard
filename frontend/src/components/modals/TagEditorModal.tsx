@@ -189,6 +189,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
           <div className="space-y-4">
             <TextInput
               label="Tag ID"
+              required
               placeholder="e.g. greeting"
               value={id}
               onChange={(v) => {
@@ -230,6 +231,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                   <div className="mt-3">
                     <Select
                       label="Knowledge Base Article"
+                      required
                       value={kbArticleId != null ? String(kbArticleId) : null}
                       options={kbArticleOptions}
                       onChange={(v) => setKbArticleId(v != null ? parseInt(v) : null)}
@@ -391,7 +393,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         maxLength={EMBED_LIMITS.URL}
                       />
                       <DateTimePicker
-                        label="Footer Timestamp (Optional)"
+                        label="Footer Timestamp"
                         value={parseEmbedTimestamp(embed.timestamp)}
                         onChange={(date) =>
                           setEmbed((prev) => ({

@@ -67,6 +67,13 @@ function buildPanelEmote(panel: Panel): PanelEmote | null {
   return null;
 }
 
+// Blanks must go as null: omitempty skips only a nil pointer, so "" hits min=1.
+export function prepareMultiPanelForApi<T>(multiPanel: T): T {
+  const payload = structuredClone(multiPanel);
+  setBlankStringsToNull(payload);
+  return payload;
+}
+
 /** Shape panel state for PATCH/POST. */
 export function preparePanelForApi(panel: Panel): Partial<Panel> {
   const payload = { ...panel } as Partial<Panel> & Record<string, unknown>;

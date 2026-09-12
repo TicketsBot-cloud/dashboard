@@ -440,7 +440,12 @@ const TeamsPage: FC = () => {
             <h2 className="text-2xl font-bold mb-4">Create Team</h2>
             <form onSubmit={createTeam} className="flex gap-4 items-end">
               <div className="flex-1 max-w-md">
-                <TextInput value={createName} onChange={setCreateName} placeholder="Team Name" />
+                <TextInput
+                  value={createName}
+                  onChange={setCreateName}
+                  placeholder="Team Name"
+                  required
+                />
               </div>
               <Button
                 type="submit"
@@ -564,6 +569,7 @@ const TeamsPage: FC = () => {
                       onChange={(v) => setSelectedRole(v ?? "")}
                       options={roleOptions}
                       placeholder="Select a role..."
+                      required
                     />
                   </div>
                   <Button

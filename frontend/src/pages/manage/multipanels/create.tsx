@@ -15,6 +15,8 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import type { MultiPanelPanelEntry, MultiPanelRequest } from "@/types";
 import Collapsible from "@/components/Collapsible";
+import { prepareMultiPanelForApi } from "@/lib/panel-payload";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
@@ -93,8 +95,11 @@ const MultiPanelsPage: FC = () => {
   }, [guildId, selectGuild, selectedGuild]);
 
   const sortedChannels = sortGuildChannels(selectedGuild?.channels || []);
+  const existingChannelIds = new Set((selectedGuild?.channels ?? []).map((c) => c.id));
+  const channelsLoaded = (selectedGuild?.channels?.length ?? 0) > 0;
 
   const [multiPanelInfoOpen, setMultiPanelInfoOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [multiPanel, setMultiPanel] = useState<MultiPanelDraft>({
     embed: {
       author: {},
@@ -153,31 +158,42 @@ const MultiPanelsPage: FC = () => {
     const entry = multiPanel.panels.find((p) => p.panel_id === panelId);
     return !entry?.custom_label?.trim() && !panel?.button_label;
   };
+  const labellessPanelCount = multiPanel.panels.filter((entry) =>
+    panelNeedsLabel(entry.panel_id),
+  ).length;
+  const staleChannel =
+    channelsLoaded && !!multiPanel.channel_id && !existingChannelIds.has(multiPanel.channel_id);
+
+  const embedEmpty =
+    !multiPanel.embed.title?.trim() &&
+    !multiPanel.embed.description?.trim() &&
+    !multiPanel.embed.image_url?.trim() &&
+    !multiPanel.embed.thumbnail_url?.trim();
+
+  // Returns the message so the Save button can reuse the rules.
+  const saveBlocker = () => {
+    if (!multiPanel.channel_id) return "Select a panel channel before creating the multi-panel.";
+    if (staleChannel) return "The selected panel channel no longer exists.";
+    if (multiPanel.panels.length < 2)
+      return "Select at least two panels before creating the multi-panel.";
+    if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
+    if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
+    if (embedEmpty) return "The embed cannot be empty.";
+    return null;
+  };
+
   const validateMultiPanel = () => {
-    if (!multiPanel.channel_id) {
-      toast.error("Select a panel channel before creating the multi-panel.");
+    const blocker = saveBlocker();
+    if (blocker || !multiPanel.channel_id) {
+      scrollToFirstMissingField();
+      if (blocker) toast.error(blocker);
       return null;
     }
 
-    if (multiPanel.panels.length < 2) {
-      toast.error("Select at least two panels before creating the multi-panel.");
-      return null;
-    }
-
-    if (multiPanel.panels.length > 15) {
-      toast.error("Multi-panels cannot contain more than 15 panels.");
-      return null;
-    }
-
-    if (
-      multiPanel.select_menu &&
-      multiPanel.panels.some((entry) => panelNeedsLabel(entry.panel_id))
-    ) {
-      toast.error("Every dropdown panel needs a label.");
-      return null;
-    }
-
-    return { ...multiPanel, channel_id: multiPanel.channel_id } satisfies MultiPanelRequest;
+    return prepareMultiPanelForApi({
+      ...multiPanel,
+      channel_id: multiPanel.channel_id,
+    }) satisfies MultiPanelRequest;
   };
   const { data: panels = [] } = useGuildPanels(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
@@ -205,6 +221,8 @@ const MultiPanelsPage: FC = () => {
           <Select
             label="Panel Channel"
             info={PANEL_MESSAGE_INFO}
+            required
+            error={staleChannel}
             value={multiPanel.channel_id || ""}
             options={sortedChannels}
             onChange={(e) =>
@@ -213,6 +231,8 @@ const MultiPanelsPage: FC = () => {
           />
           <MultiSelect
             label="Panels"
+            required
+            missing={(multiPanel.panels?.length ?? 0) < 2}
             value={multiPanel.panels?.map((p) => p.panel_id.toString()) || []}
             options={panels?.map((panel) => ({
               label: panel.title,
@@ -289,6 +309,8 @@ const MultiPanelsPage: FC = () => {
                   />
                   <TextInput
                     label="Custom Label"
+                    required={multiPanel.select_menu}
+                    missing={needsLabel}
                     placeholder={panel?.button_label || "Leave empty to use default"}
                     value={entry.custom_label || ""}
                     onChange={(v) => updatePanelCustomization(entry.panel_id, "custom_label", v)}
@@ -300,15 +322,6 @@ const MultiPanelsPage: FC = () => {
                       value={entry.description || ""}
                       onChange={(v) => updatePanelCustomization(entry.panel_id, "description", v)}
                     />
-                  )}
-                  {needsLabel && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm">
-                      <FontAwesomeIcon icon={faExclamationTriangle} />
-                      <span>
-                        This panel must have a label when using dropdown mode. Please add a custom
-                        label or ensure the panel has a button label.
-                      </span>
-                    </div>
                   )}
                 </div>
               );
@@ -323,6 +336,18 @@ const MultiPanelsPage: FC = () => {
         subtitle="Configure the embed's appearance"
         defaultOpen={true}
       >
+        {embedEmpty && (
+          <div
+            data-missing="true"
+            className="mx-4 mb-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm"
+          >
+            <FontAwesomeIcon icon={faExclamationTriangle} />
+            <span>
+              The embed needs a title, description, image or thumbnail. Discord rejects an empty
+              embed.
+            </span>
+          </div>
+        )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
           <div className="pb-2 mb-5">
             <span className="text-xl font-semibold">Panel Properties</span>
@@ -525,7 +550,7 @@ const MultiPanelsPage: FC = () => {
                 />
               </PremiumGate>
               <DateTimePicker
-                label="Footer Timestamp (Optional)"
+                label="Footer Timestamp"
                 value={parseEmbedTimestamp(multiPanel.embed?.timestamp)}
                 onChange={(date) =>
                   setMultiPanel((prev) =>
@@ -562,14 +587,28 @@ const MultiPanelsPage: FC = () => {
           </div>
         </div>
       </Collapsible>
+      {labellessPanelCount > 0 && (
+        <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm">
+          <FontAwesomeIcon icon={faExclamationTriangle} />
+          <span>
+            {labellessPanelCount} panel{labellessPanelCount > 1 ? "s" : ""} still need
+            {labellessPanelCount > 1 ? "" : "s"} a label for dropdown mode. Add one under Panel
+            Customization.
+          </span>
+        </div>
+      )}
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
+        disabled={saveAttempted && saveBlocker() !== null}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={async () => {
           const payload = validateMultiPanel();
-          if (!payload) return;
+          if (!payload) {
+            setSaveAttempted(true);
+            return;
+          }
 
           try {
             await apiClient.multiPanels.create(guildId, payload, SKIP_ERROR_TOAST);

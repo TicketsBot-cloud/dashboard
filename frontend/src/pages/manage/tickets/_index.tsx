@@ -1076,7 +1076,7 @@ const TicketsPage: FC = () => {
         </div>
         <div className="p-5 flex flex-col gap-4">
           <TextInput
-            label="Close reason (optional)"
+            label="Close reason"
             value={bulkCloseReason}
             onChange={(v) => setBulkCloseReason(v)}
             placeholder="Enter a reason..."
@@ -1122,6 +1122,7 @@ const TicketsPage: FC = () => {
         <div className="p-5 flex flex-col gap-4">
           <Select
             label="Tag"
+            required
             value={selectedTagId}
             onChange={(v) => setSelectedTagId(v ?? "")}
             placeholder="Select a tag..."
@@ -1169,6 +1170,7 @@ const TicketsPage: FC = () => {
         <div className="p-5 flex flex-col gap-4">
           <Textarea
             label="Message"
+            required
             placeholder="Message to send to all selected tickets..."
             value={bulkMessageContent}
             onChange={setBulkMessageContent}
@@ -1216,7 +1218,7 @@ const TicketsPage: FC = () => {
         </div>
         <div className="p-5 flex flex-col gap-4">
           <TextInput
-            label="Reason (optional)"
+            label="Reason"
             value={bulkCloseRequestReason}
             onChange={(v) => setBulkCloseRequestReason(v)}
             placeholder="Reason (optional)"
@@ -1302,6 +1304,7 @@ const TicketsPage: FC = () => {
             <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
               <TextInput
                 label="Label Name"
+                required
                 placeholder="e.g. Bug, Feature, Urgent"
                 value={newLabelName}
                 onChange={setNewLabelName}

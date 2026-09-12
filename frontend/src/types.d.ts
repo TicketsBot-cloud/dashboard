@@ -97,6 +97,7 @@ export interface GuildChannel {
 }
 
 export interface GuildSettings {
+  ticket_limit: number;
   context_menu_permission_level: string;
   context_menu_add_sender: boolean;
   context_menu_panel?: number;

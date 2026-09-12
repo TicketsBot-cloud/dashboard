@@ -192,18 +192,20 @@ code {
   outline-offset: 2px;
 }
 
-/* High contrast focus for interactive elements */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-[role="button"]:focus-visible,
-[role="link"]:focus-visible,
-[tabindex]:focus-visible {
-  outline: 3px solid #60a5fa;
-  outline-offset: 2px;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+/* Layered so Tailwind shadow utilities win; see the `label` rule above. */
+@layer base {
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [role="link"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+  }
 }
 
 @layer base {
@@ -326,6 +328,35 @@ textarea:focus-visible,
 
 .animate-pulse-ring {
   animation: pulse-ring 1.5s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+/* Endpoints match MISSING_FIELD_CLASS. */
+@keyframes field-breath {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+  }
+}
+
+.animate-field-breath {
+  animation: field-breath 1.1s ease-in-out 2;
+}
+
+@keyframes field-breath-bloom {
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 44px rgba(239, 68, 68, 0.8);
+  }
+}
+
+.animate-field-breath-bloom {
+  animation: field-breath-bloom 1.1s ease-in-out 2;
 }
 
 .anim-delay-100 {

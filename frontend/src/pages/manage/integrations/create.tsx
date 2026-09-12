@@ -230,6 +230,7 @@ const CreateIntegrationPage: FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextInput
                 label="Name"
+                required
                 placeholder="My Integration"
                 value={(data.name ?? "").slice(0, 32)}
                 onChange={(v) => updateField("name", v.slice(0, 32))}
@@ -251,6 +252,7 @@ const CreateIntegrationPage: FC = () => {
             </div>
             <Textarea
               label="Description"
+              required
               placeholder="Let people know what your integration does"
               value={(data.description ?? "").slice(0, 255)}
               onChange={(v) => updateField("description", v.slice(0, 255))}
@@ -291,6 +293,7 @@ const CreateIntegrationPage: FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <Select
                     label="Method"
+                    required
                     value={data.http_method ?? "GET"}
                     onChange={(v) => updateField("http_method", v ?? "")}
                     options={[
@@ -302,6 +305,7 @@ const CreateIntegrationPage: FC = () => {
                   <div className="sm:col-span-3">
                     <TextInput
                       label="Request URL"
+                      required
                       placeholder="https://api.example.com/users/find?discord=%user_id%"
                       value={data.webhook_url ?? ""}
                       onChange={(v) => updateField("webhook_url", v)}
@@ -328,6 +332,7 @@ const CreateIntegrationPage: FC = () => {
                         <div className="flex-1">
                           <TextInput
                             label={i === 0 ? "Secret Name" : undefined}
+                            required
                             placeholder="api_key"
                             value={secret.name}
                             onChange={(v) => updateSecret(i, "name", v)}
@@ -403,6 +408,7 @@ const CreateIntegrationPage: FC = () => {
                       <div className="flex-1">
                         <TextInput
                           label={i === 0 ? "Header Name" : undefined}
+                          required
                           placeholder="x-auth-key"
                           value={header.name}
                           onChange={(v) => updateHeader(i, "name", v)}
@@ -411,6 +417,7 @@ const CreateIntegrationPage: FC = () => {
                       <div className="flex-1">
                         <TextInput
                           label={i === 0 ? "Header Value" : undefined}
+                          required
                           placeholder="super secret key"
                           value={header.value}
                           onChange={(v) => updateHeader(i, "value", v)}
@@ -475,6 +482,7 @@ const CreateIntegrationPage: FC = () => {
                     <div className="flex-1">
                       <TextInput
                         label={i === 0 ? "Placeholder" : undefined}
+                        required
                         placeholder="ingame_username"
                         value={placeholder.name}
                         onChange={(v) => updatePlaceholder(i, "name", v)}
@@ -483,6 +491,7 @@ const CreateIntegrationPage: FC = () => {
                     <div className="flex-1">
                       <TextInput
                         label={i === 0 ? "JSON Path" : undefined}
+                        required
                         placeholder="user.username"
                         value={placeholder.json_path}
                         onChange={(v) => updatePlaceholder(i, "json_path", v)}

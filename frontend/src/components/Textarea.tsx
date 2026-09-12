@@ -1,4 +1,11 @@
 import { useId, type FC } from "react";
+import RequiredMark from "./RequiredMark";
+import {
+  FAULT_FIELD_CLASS,
+  IDLE_INPUT_CLASS,
+  MISSING_FIELD_CLASS,
+  isBlank,
+} from "@/lib/field-validity";
 
 interface TextareaProps {
   value: string;
@@ -11,6 +18,8 @@ interface TextareaProps {
   placeholder?: string;
   onBlur?: () => void;
   error?: string;
+  required?: boolean;
+  missing?: boolean;
 }
 
 const defaultProps = {
@@ -18,10 +27,11 @@ const defaultProps = {
   disabled: false,
   className: "",
   label: undefined,
+  required: false,
 } as const;
 
 const Textarea: FC<TextareaProps> = (props) => {
-  const { value, onChange, min, max, disabled, className, label, placeholder } = {
+  const { value, onChange, min, max, disabled, className, label, placeholder, required } = {
     ...defaultProps,
     ...props,
   };
@@ -30,16 +40,22 @@ const Textarea: FC<TextareaProps> = (props) => {
   const countId = useId();
   const { onBlur, error } = props;
   const safeValue = value ?? "";
-  const borderClass = error ? "border-red-500" : "border-neutral-600 focus-within:border-blue-500";
+  const missing = !disabled && (props.missing ?? (required && isBlank(safeValue)));
+  const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_INPUT_CLASS;
   const describedBy = [error ? errorId : null, countId].filter(Boolean).join(" ") || undefined;
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (
         <label htmlFor={textareaId} className="mb-1 text-white">
           {label}
+          {required && <RequiredMark />}
         </label>
       )}
-      <div className={`inline-flex items-center bg-gray-700 border rounded px-1 ${borderClass}`}>
+      <div
+        className={`inline-flex items-center bg-gray-700 border rounded px-1 ${borderClass}`}
+        data-missing={missing || !!error || undefined}
+        data-bloom={error ? true : undefined}
+      >
         <textarea
           id={textareaId}
           className="w-full bg-gray-700 p-3 rounded resize-y h-50 focus:outline-none"
@@ -51,6 +67,7 @@ const Textarea: FC<TextareaProps> = (props) => {
           maxLength={max}
           placeholder={placeholder || ""}
           aria-invalid={error ? true : undefined}
+          aria-required={required || undefined}
           aria-describedby={describedBy}
         />
       </div>

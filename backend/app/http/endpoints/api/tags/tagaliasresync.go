@@ -38,10 +38,6 @@ const (
 	discordUnknownCommand   = 10063
 
 	discordCooldownFallback = 5 * time.Minute
-
-	// action_type is an unconstrained INT2, so this inserts fine until go.mod picks up
-	// AuditActionTagAliasResync.
-	auditActionTagAliasResync = dbmodel.AuditActionType(52)
 )
 
 func aliasResyncStatusKey(guildId uint64) string {
@@ -208,7 +204,7 @@ func ResyncTagAliases(ctx *gin.Context) {
 	audit.Log(audit.LogEntry{
 		GuildId:      audit.Uint64Ptr(guildId),
 		UserId:       userId,
-		ActionType:   auditActionTagAliasResync,
+		ActionType:   dbmodel.AuditActionTagAliasResync,
 		ResourceType: dbmodel.AuditResourceTag,
 		Metadata: gin.H{
 			"recreate": len(plan.Create),

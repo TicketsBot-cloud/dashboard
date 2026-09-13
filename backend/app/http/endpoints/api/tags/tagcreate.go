@@ -98,8 +98,12 @@ func CreateTag(ctx *gin.Context) {
 		return
 	}
 
-	// Validate total embed character count
 	if data.Embed != nil {
+		if err := data.Embed.ValidateUrls(); err != nil {
+			ctx.JSON(400, utils.ErrorStr("%s", err.Error()))
+			return
+		}
+
 		totalChars := data.Embed.TotalCharacterCount()
 		if totalChars > types.EmbedTotalCharacterLimit {
 			formatted := fmt.Sprintf("Total embed characters (%d) exceeds Discord's %d character limit", totalChars, types.EmbedTotalCharacterLimit)

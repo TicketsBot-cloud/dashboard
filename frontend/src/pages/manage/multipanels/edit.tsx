@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FC } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
+import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
 import {
   guildKeys,
   useGuildEmojis,
@@ -186,6 +187,12 @@ const MultiPanelsPage: FC = () => {
     if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
     if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
     if (embedEmpty) return "The embed cannot be empty.";
+
+    const invalidUrls = collectEmbedUrlErrors(multiPanel?.embed);
+    if (invalidUrls.length > 0) {
+      return `Fix these embed URLs before saving: ${invalidUrls.join(", ")}.`;
+    }
+
     return null;
   };
 
@@ -380,6 +387,7 @@ const MultiPanelsPage: FC = () => {
                 label="Title URL"
                 placeholder="e.g. https://example.com"
                 value={multiPanel?.embed?.url || ""}
+                error={embedUrlError(multiPanel?.embed?.url)}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev ? { ...prev, embed: { ...prev.embed, url: e } } : prev,
@@ -427,6 +435,7 @@ const MultiPanelsPage: FC = () => {
                   label="Author Icon URL"
                   placeholder="e.g. https://example.com/icon.png"
                   value={multiPanel?.embed?.author?.icon_url || ""}
+                  error={embedUrlError(multiPanel?.embed?.author?.icon_url)}
                   onChange={(e) =>
                     setMultiPanel((prev) =>
                       prev
@@ -446,6 +455,7 @@ const MultiPanelsPage: FC = () => {
                   label="Author URL"
                   placeholder="e.g. https://example.com"
                   value={multiPanel?.embed?.author?.url || ""}
+                  error={embedUrlError(multiPanel?.embed?.author?.url)}
                   onChange={(e) =>
                     setMultiPanel((prev) =>
                       prev
@@ -468,6 +478,7 @@ const MultiPanelsPage: FC = () => {
                 label="Thumbnail URL"
                 placeholder="e.g. https://example.com/thumbnail.png"
                 value={multiPanel?.embed?.thumbnail_url || ""}
+                error={embedUrlError(multiPanel?.embed?.thumbnail_url)}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev
@@ -484,6 +495,7 @@ const MultiPanelsPage: FC = () => {
                 label="Image URL"
                 placeholder="e.g. https://example.com/image.png"
                 value={multiPanel?.embed?.image_url || ""}
+                error={embedUrlError(multiPanel?.embed?.image_url)}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev ? { ...prev, embed: { ...prev.embed, image_url: e } } : prev,
@@ -522,6 +534,7 @@ const MultiPanelsPage: FC = () => {
                   label="Footer Icon URL"
                   placeholder="e.g. https://example.com/footer-icon.png"
                   value={multiPanel?.embed?.footer?.icon_url || ""}
+                  error={embedUrlError(multiPanel?.embed?.footer?.icon_url)}
                   onChange={(e) =>
                     setMultiPanel((prev) =>
                       prev

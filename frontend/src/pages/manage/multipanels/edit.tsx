@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState, type FC } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
-import { useGuildEmojis, useGuildPanels, useGuildPremium } from "@/hooks/queries/useGuild";
+import {
+  guildKeys,
+  useGuildEmojis,
+  useGuildPanels,
+  useGuildPremium,
+} from "@/hooks/queries/useGuild";
 import { useParams, useNavigate } from "react-router";
 
 import { getGuildById } from "@/stores/auth";
@@ -41,7 +47,7 @@ import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const defaultEmbed = {
   author: {},
-  colour: 0x5865f2,
+  colour: "#5865f2",
   fields: [],
   footer: {},
 };
@@ -53,6 +59,7 @@ const MultiPanelsPage: FC = () => {
   panelId = panelId!;
 
   const { selectGuild, selectedGuild } = useGuildStore();
+  const queryClient = useQueryClient();
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -367,22 +374,10 @@ const MultiPanelsPage: FC = () => {
               />
               <ColourSelect
                 label="Colour"
-                value={
-                  multiPanel?.embed?.colour
-                    ? `#${multiPanel.embed.colour.toString(16).padStart(6, "0")}`
-                    : "#5865f2"
-                }
+                value={multiPanel?.embed?.colour || "#5865f2"}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            colour: parseInt(e.replace("#", ""), 16),
-                          },
-                        }
-                      : prev,
+                    prev ? { ...prev, embed: { ...prev.embed, colour: e } } : prev,
                   )
                 }
               />
@@ -628,6 +623,7 @@ const MultiPanelsPage: FC = () => {
               prepareMultiPanelForApi(multiPanel),
               SKIP_ERROR_TOAST,
             );
+            await queryClient.invalidateQueries({ queryKey: guildKeys.multiPanels(guildId) });
             toast.success("Multi Panel Edited");
             navigate(`/manage/${guildId}/panels`);
           } catch (error) {

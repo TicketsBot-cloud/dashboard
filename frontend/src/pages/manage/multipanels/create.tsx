@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState, type FC } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
-import { useGuildEmojis, useGuildPanels, useGuildPremium } from "@/hooks/queries/useGuild";
+import {
+  guildKeys,
+  useGuildEmojis,
+  useGuildPanels,
+  useGuildPremium,
+} from "@/hooks/queries/useGuild";
 import { useParams, useNavigate } from "react-router";
 
 import { getGuildById } from "@/stores/auth";
@@ -49,6 +55,7 @@ const MultiPanelsPage: FC = () => {
   guildId = guildId!;
 
   const { selectGuild, selectedGuild } = useGuildStore();
+  const queryClient = useQueryClient();
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -97,7 +104,7 @@ const MultiPanelsPage: FC = () => {
   const [multiPanel, setMultiPanel] = useState<MultiPanelDraft>({
     embed: {
       author: {},
-      colour: 0x5865f2,
+      colour: "#5865f2",
       description: "",
       fields: [],
       footer: {},
@@ -105,6 +112,10 @@ const MultiPanelsPage: FC = () => {
     panels: [] as MultiPanelPanelEntry[],
     select_menu: false,
   });
+  const { data: panels = [] } = useGuildPanels(guildId);
+  const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
+  const { data: premiumState = null } = useGuildPremium(guildId, false);
+  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
 
   const getPanelById = (id: number) => panels.find((p) => p.panel_id === id);
 
@@ -195,10 +206,6 @@ const MultiPanelsPage: FC = () => {
       channel_id: multiPanel.channel_id,
     }) satisfies MultiPanelRequest;
   };
-  const { data: panels = [] } = useGuildPanels(guildId);
-  const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
-  const { data: premiumState = null } = useGuildPremium(guildId, false);
-  const { data: brandingPremium = null } = useGuildPremium(guildId, true);
   const showBrandingFooter = !brandingPremium?.premium;
 
   return (
@@ -366,22 +373,10 @@ const MultiPanelsPage: FC = () => {
               />
               <ColourSelect
                 label="Colour"
-                value={
-                  multiPanel.embed?.colour
-                    ? `#${multiPanel.embed.colour.toString(16).padStart(6, "0")}`
-                    : "#5865f2"
-                }
+                value={multiPanel.embed?.colour || "#5865f2"}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            colour: parseInt(e.replace("#", ""), 16),
-                          },
-                        }
-                      : prev,
+                    prev ? { ...prev, embed: { ...prev.embed, colour: e } } : prev,
                   )
                 }
               />
@@ -618,6 +613,7 @@ const MultiPanelsPage: FC = () => {
 
           try {
             await apiClient.multiPanels.create(guildId, payload, SKIP_ERROR_TOAST);
+            await queryClient.invalidateQueries({ queryKey: guildKeys.multiPanels(guildId) });
             toast.success("Multi Panel Created");
             navigate(`/manage/${guildId}/panels`);
           } catch (error) {

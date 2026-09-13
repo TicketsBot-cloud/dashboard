@@ -284,7 +284,7 @@ export interface MultiPanelEmbed {
     icon_url?: string;
     url?: string;
   };
-  colour: number;
+  colour: string;
   description?: string;
   fields?: Array<{
     name: string;

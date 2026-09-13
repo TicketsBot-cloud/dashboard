@@ -293,6 +293,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/tags", api_tags.TagsListHandler)
 		guildAuthApiSupport.PUT("/tags", api_tags.CreateTag)
 		guildAuthApiSupport.DELETE("/tags", api_tags.DeleteTag)
+		guildAuthApiSupport.POST("/tags/aliases/resync", rl(middleware.RateLimitTypeGuild, 10, time.Minute), api_tags.ResyncTagAliases)
+		guildAuthApiSupport.GET("/tags/aliases/resync/status", api_tags.TagAliasResyncStatusHandler)
 
 		guildAuthApiAdmin.GET("/team", api_team.GetTeams)
 		guildAuthApiAdmin.GET("/team/:teamid", rl(middleware.RateLimitTypeUser, 10, time.Second*30), api_team.GetMembers)

@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type FC } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
-import { useGuildEmojis, useGuildPanels, useGuildPremium } from "@/hooks/queries/useGuild";
+import {
+  guildKeys,
+  useGuildEmojis,
+  useGuildPanels,
+  useGuildPremium,
+} from "@/hooks/queries/useGuild";
 import { useParams, useNavigate } from "react-router";
 
 import { getGuildById } from "@/stores/auth";
@@ -48,6 +54,7 @@ const MultiPanelsPage: FC = () => {
   guildId = guildId!;
 
   const { selectGuild, selectedGuild } = useGuildStore();
+  const queryClient = useQueryClient();
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -605,6 +612,7 @@ const MultiPanelsPage: FC = () => {
 
           try {
             await apiClient.multiPanels.create(guildId, payload, SKIP_ERROR_TOAST);
+            await queryClient.invalidateQueries({ queryKey: guildKeys.multiPanels(guildId) });
             toast.success("Multi Panel Created");
             navigate(`/manage/${guildId}/panels`);
           } catch (error) {

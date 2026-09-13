@@ -46,7 +46,7 @@ import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const defaultEmbed = {
   author: {},
-  colour: 0x5865f2,
+  colour: "#5865f2",
   fields: [],
   footer: {},
 };
@@ -367,22 +367,10 @@ const MultiPanelsPage: FC = () => {
               />
               <ColourSelect
                 label="Colour"
-                value={
-                  multiPanel?.embed?.colour
-                    ? `#${multiPanel.embed.colour.toString(16).padStart(6, "0")}`
-                    : "#5865f2"
-                }
+                value={multiPanel?.embed?.colour || "#5865f2"}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            colour: parseInt(e.replace("#", ""), 16),
-                          },
-                        }
-                      : prev,
+                    prev ? { ...prev, embed: { ...prev.embed, colour: e } } : prev,
                   )
                 }
               />

@@ -95,6 +95,11 @@ export function preparePanelForApi(panel: Panel): Partial<Panel> {
     };
   }
 
+  // Omitting leaves the stored rules alone; sending [] is a destructive request the API rejects.
+  if (!panel.access_control_list?.length) {
+    delete payload.access_control_list;
+  }
+
   setBlankStringsToNull(payload);
   return payload;
 }

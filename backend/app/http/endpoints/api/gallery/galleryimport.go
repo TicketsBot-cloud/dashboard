@@ -218,7 +218,14 @@ func ImportHandler(ctx *gin.Context) {
 	if err := dbclient.Client.Panel.BeginFunc(ctx, func(tx pgx.Tx) error {
 		var err error
 		panelId, err = dbclient.Client.Panel.CreateWithTx(ctx, tx, panel)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// guildId is the importing guild, not the source guild the listing came from.
+		return dbclient.Client.PanelAccessControlRules.ReplaceWithTx(
+			ctx, tx, panelId, utils.DefaultAccessControlList(guildId),
+		)
 	}); err != nil {
 		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel to database"))
 		return

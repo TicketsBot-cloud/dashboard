@@ -63,8 +63,12 @@ const AccessControlListEditor: FC<AccessControlListEditorProps> = ({
 
   const roleColours = new Map(roles.map((r) => [r.id, roleColour(r.color)]));
 
-  // Must match EvaluateAccessControl in the worker.
-  const everyoneElseAllowed = acl.every((r) => r.action === "deny");
+  // An @everyone rule matches every member, so it decides this and the worker never reaches
+  // its blocklist fall-through.
+  const everyoneRule = acl.find((r) => r.role_id === guildId);
+  const everyoneElseAllowed = everyoneRule
+    ? everyoneRule.action === "allow"
+    : acl.every((r) => r.action === "deny");
 
   return (
     <div className="flex flex-col gap-3">

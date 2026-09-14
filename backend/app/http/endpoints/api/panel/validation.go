@@ -403,17 +403,14 @@ func validateWelcomeMessage(ctx PanelValidationContext) validation.ValidationFun
 
 func validateAccessControlList(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		// Absent means "leave the stored rules alone". Create fills in a default before
-		// validation runs, so nil only reaches here from update.
+		// Absent means "leave the stored rules alone"; an empty list means "no restrictions"
+		// and clears the rules. Create fills in a default before validation runs, so nil only
+		// reaches here from update.
 		if ctx.Data.AccessControlList == nil {
 			return nil
 		}
 
 		acl := *ctx.Data.AccessControlList
-
-		if len(acl) == 0 {
-			return validation.NewInvalidInputError("Access control list is empty")
-		}
 
 		if len(acl) > 10 {
 			return validation.NewInvalidInputError("Access control list cannot have more than 10 roles")

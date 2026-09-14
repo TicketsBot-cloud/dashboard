@@ -36,48 +36,48 @@ type PanelAutoCloseBody struct {
 }
 
 type panelBody struct {
-	ChannelId                 uint64                            `json:"channel_id,string"`
-	MessageId                 uint64                            `json:"message_id,string"`
-	Title                     string                            `json:"title"`
-	Content                   string                            `json:"content"`
-	Colour                    uint32                            `json:"colour"`
-	CategoryId                uint64                            `json:"category_id,string"`
-	Emoji                     types.Emoji                       `json:"emote"`
-	WelcomeMessage            *types.CustomEmbed                `json:"welcome_message" validate:"omitempty"`
-	Mentions                  []string                          `json:"mentions"`
-	WithDefaultTeam           bool                              `json:"default_team"`
-	Teams                     []int                             `json:"teams"`
-	KBCategoryIds             []int                             `json:"kb_category_ids"`
-	ImageUrl                  *string                           `json:"image_url,omitempty"`
-	ThumbnailUrl              *string                           `json:"thumbnail_url,omitempty"`
-	ButtonStyle               component.ButtonStyle             `json:"button_style,string"`
-	ButtonLabel               string                            `json:"button_label"`
-	FormId                    *int                              `json:"form_id"`
-	NamingScheme              *string                           `json:"naming_scheme"`
-	Disabled                  bool                              `json:"disabled"`
-	ExitSurveyFormId          *int                              `json:"exit_survey_form_id"`
-	AccessControlList         []database.PanelAccessControlRule `json:"access_control_list"`
-	PendingCategory           *uint64                           `json:"pending_category,string"`
-	MentionBehaviour          string                            `json:"mention_behaviour"`
-	TranscriptChannelId       *uint64                           `json:"transcript_channel_id,string"`
-	UseThreads                bool                              `json:"use_threads"`
-	TicketNotificationChannel *uint64                           `json:"ticket_notification_channel,string"`
-	CooldownSeconds           int                               `json:"cooldown_seconds"`
-	TicketLimit               *uint8                            `json:"ticket_limit"`
-	HideCloseButton           bool                              `json:"hide_close_button"`
-	HideCloseWithReasonButton bool                              `json:"hide_close_with_reason_button"`
-	HideClaimButton           bool                              `json:"hide_claim_button"`
-	ShowInOpenCommand         bool                              `json:"show_in_open_command"`
-	TicketPermissions         database.TicketPermissions        `json:"ticket_permissions"`
-	StoreTranscripts          bool                              `json:"store_transcripts"`
-	OverflowEnabled           bool                              `json:"overflow_enabled"`
-	OverflowCategoryId        *uint64                           `json:"overflow_category_id,string"`
-	UsersCanClose             bool                              `json:"users_can_close"`
-	CloseConfirmation         bool                              `json:"close_confirmation"`
-	FeedbackEnabled           bool                              `json:"feedback_enabled"`
-	SupportCanView            bool                              `json:"support_can_view"`
-	SupportCanType            bool                              `json:"support_can_type"`
-	AutoClose                 PanelAutoCloseBody                `json:"auto_close"`
+	ChannelId                 uint64                             `json:"channel_id,string"`
+	MessageId                 uint64                             `json:"message_id,string"`
+	Title                     string                             `json:"title"`
+	Content                   string                             `json:"content"`
+	Colour                    uint32                             `json:"colour"`
+	CategoryId                uint64                             `json:"category_id,string"`
+	Emoji                     types.Emoji                        `json:"emote"`
+	WelcomeMessage            *types.CustomEmbed                 `json:"welcome_message" validate:"omitempty"`
+	Mentions                  []string                           `json:"mentions"`
+	WithDefaultTeam           bool                               `json:"default_team"`
+	Teams                     []int                              `json:"teams"`
+	KBCategoryIds             []int                              `json:"kb_category_ids"`
+	ImageUrl                  *string                            `json:"image_url,omitempty"`
+	ThumbnailUrl              *string                            `json:"thumbnail_url,omitempty"`
+	ButtonStyle               component.ButtonStyle              `json:"button_style,string"`
+	ButtonLabel               string                             `json:"button_label"`
+	FormId                    *int                               `json:"form_id"`
+	NamingScheme              *string                            `json:"naming_scheme"`
+	Disabled                  bool                               `json:"disabled"`
+	ExitSurveyFormId          *int                               `json:"exit_survey_form_id"`
+	AccessControlList         *[]database.PanelAccessControlRule `json:"access_control_list"`
+	PendingCategory           *uint64                            `json:"pending_category,string"`
+	MentionBehaviour          string                             `json:"mention_behaviour"`
+	TranscriptChannelId       *uint64                            `json:"transcript_channel_id,string"`
+	UseThreads                bool                               `json:"use_threads"`
+	TicketNotificationChannel *uint64                            `json:"ticket_notification_channel,string"`
+	CooldownSeconds           int                                `json:"cooldown_seconds"`
+	TicketLimit               *uint8                             `json:"ticket_limit"`
+	HideCloseButton           bool                               `json:"hide_close_button"`
+	HideCloseWithReasonButton bool                               `json:"hide_close_with_reason_button"`
+	HideClaimButton           bool                               `json:"hide_claim_button"`
+	ShowInOpenCommand         bool                               `json:"show_in_open_command"`
+	TicketPermissions         database.TicketPermissions         `json:"ticket_permissions"`
+	StoreTranscripts          bool                               `json:"store_transcripts"`
+	OverflowEnabled           bool                               `json:"overflow_enabled"`
+	OverflowCategoryId        *uint64                            `json:"overflow_category_id,string"`
+	UsersCanClose             bool                               `json:"users_can_close"`
+	CloseConfirmation         bool                               `json:"close_confirmation"`
+	FeedbackEnabled           bool                               `json:"feedback_enabled"`
+	SupportCanView            bool                               `json:"support_can_view"`
+	SupportCanType            bool                               `json:"support_can_type"`
+	AutoClose                 PanelAutoCloseBody                 `json:"auto_close"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) panelMessageData {
@@ -145,6 +145,12 @@ func CreatePanel(c *gin.Context) {
 
 	// Apply defaults
 	ApplyPanelDefaults(&data)
+
+	// Not in DefaultApplicators: that also runs on update, where an empty list means "delete
+	// every rule" rather than "unconfigured".
+	if data.AccessControlList == nil || len(*data.AccessControlList) == 0 {
+		data.AccessControlList = utils.Ptr(utils.DefaultAccessControlList(guildId))
+	}
 
 	ctx, cancel := app.DefaultContext()
 	defer cancel()
@@ -323,9 +329,9 @@ func CreatePanel(c *gin.Context) {
 	}
 
 	createOptions := panelCreateOptions{
-		TeamIds:            data.Teams,             // Already validated
-		AccessControlRules: data.AccessControlList, // Already validated
-		KBCategoryIds:      data.KBCategoryIds,     // Already validated
+		TeamIds:            data.Teams,              // Already validated
+		AccessControlRules: *data.AccessControlList, // Already validated
+		KBCategoryIds:      data.KBCategoryIds,      // Already validated
 	}
 
 	// insert role mention data

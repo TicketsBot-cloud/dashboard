@@ -14,7 +14,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260905165836-38e4090764a4
-	github.com/TicketsBot-cloud/database v0.0.0-20260909063631-6804baaaa52b
+	github.com/TicketsBot-cloud/database v0.0.0-20260913165941-c2ecc7191b02
 	github.com/TicketsBot-cloud/gdl v0.0.0-20260612070331-a3947b410d3e
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
 	github.com/TicketsBot-cloud/worker v0.0.0-20260827073646-455b39e53841

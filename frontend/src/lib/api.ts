@@ -73,6 +73,7 @@ import type {
   NotificationPreference,
   UserSettings,
   WhitelabelRecreateStatus,
+  TagAliasResyncStatus,
 } from "@/types";
 
 type FormInputMutation = Omit<Partial<FormInput>, "options"> & {
@@ -87,6 +88,8 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 const DISCORD_HEAVY_TIMEOUT_MS = 20_000;
 /** Above the analytics handlers' own 10s deadline, so theirs is what fires. */
 const ANALYTICS_TIMEOUT_MS = 20_000;
+/** Kick-offs that read from Discord before returning. The job they start is polled, not awaited. */
+const LONG_TIMEOUT_MS = 60_000;
 
 const MAX_CONCURRENT_REQUESTS = 4;
 let activeRequests = 0;
@@ -404,6 +407,14 @@ export const apiClient = {
       api.put<Tag>(`/api/${guildId}/tags`, tag, config),
     delete: (guildId: string, tagId: string, config?: AxiosRequestConfig) =>
       api.delete(`/api/${guildId}/tags`, { ...config, data: { tag_id: tagId } }),
+    resyncAliases: (guildId: string) =>
+      api.post<{ started?: boolean; error?: string; retry_after?: number }>(
+        `/api/${guildId}/tags/aliases/resync`,
+        {},
+        { timeout: LONG_TIMEOUT_MS, validateStatus: (s) => s === 202 || s === 409 || s === 429 },
+      ),
+    aliasResyncStatus: (guildId: string) =>
+      api.get<TagAliasResyncStatus>(`/api/${guildId}/tags/aliases/resync/status`, SKIP_ERROR_TOAST),
   },
 
   blacklist: {

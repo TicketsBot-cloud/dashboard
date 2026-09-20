@@ -20,10 +20,9 @@ func Logging(logger *zap.Logger) gin.HandlerFunc {
 
 		statusCode := c.Writer.Status()
 
+		// ErrorHandler owns the 5xx report; this has the status but never the cause.
 		level := zapcore.InfoLevel
-		if statusCode >= 500 {
-			level = zapcore.ErrorLevel
-		} else if statusCode >= 400 {
+		if statusCode >= 400 {
 			level = zapcore.WarnLevel
 		}
 

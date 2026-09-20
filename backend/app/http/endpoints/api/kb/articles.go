@@ -468,6 +468,10 @@ func cleanAndValidateEmbed(embed *types.CustomEmbed) error {
 		return fmt.Errorf("your embed contained the following errors:\n%s", utils.FormatValidationErrors(validationErrors))
 	}
 
+	if err := embed.ValidateUrls(); err != nil {
+		return err
+	}
+
 	if total := embed.TotalCharacterCount(); total > types.EmbedTotalCharacterLimit {
 		return fmt.Errorf("total embed characters (%d) exceeds Discord's %d character limit", total, types.EmbedTotalCharacterLimit)
 	}

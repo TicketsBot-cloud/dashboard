@@ -97,6 +97,13 @@ func ImportTagHandler(ctx *gin.Context) {
 		return
 	}
 
+	if snapshot.Embed != nil {
+		if err := validateListingUrls(snapshot.Embed.CustomEmbed); err != nil {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("%s", err.Error()))
+			return
+		}
+	}
+
 	// Build the tag struct from the snapshot
 	tag := database.Tag{
 		Id:      body.TagId,

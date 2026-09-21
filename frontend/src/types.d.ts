@@ -284,7 +284,7 @@ export interface MultiPanelEmbed {
     icon_url?: string;
     url?: string;
   };
-  colour: number;
+  colour: string;
   description?: string;
   fields?: Array<{
     name: string;
@@ -508,6 +508,23 @@ export interface Tag {
   use_embed: boolean;
   embed?: TagEmbed;
   kb_article_id?: number | null;
+}
+
+export interface TagAliasResyncStatus {
+  status: "idle" | "running" | "completed";
+  cooldown_until?: string;
+  total: number;
+  processed: number;
+  recreated: number;
+  removed: number;
+  rebound: number;
+  in_sync: number;
+  skipped: number;
+  failed: number;
+  started_at?: string;
+  finished_at?: string;
+  warnings: string[];
+  errors: { tag_id: string; error: string }[];
 }
 
 export interface WhitelabelBot {

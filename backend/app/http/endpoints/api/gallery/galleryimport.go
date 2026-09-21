@@ -92,6 +92,19 @@ func ImportHandler(ctx *gin.Context) {
 		return
 	}
 
+	var welcomeMessage *database.CustomEmbed
+	if len(listing.WelcomeMessage) > 0 {
+		var parsed database.CustomEmbed
+		if err := stdjson.Unmarshal(listing.WelcomeMessage, &parsed); err == nil {
+			welcomeMessage = &parsed
+		}
+	}
+
+	if err := validateListingUrls(welcomeMessage, listing.ImageUrl, listing.ThumbnailUrl); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("%s", err.Error()))
+		return
+	}
+
 	// Generate a unique custom ID for the new panel
 	customId, err := utils.RandString(30)
 	if err != nil {
@@ -139,18 +152,15 @@ func ImportHandler(ctx *gin.Context) {
 		HideClaimButton:           false,
 	}
 
-	// Store the welcome message embed if one exists in the listing
-	if len(listing.WelcomeMessage) > 0 {
-		var customEmbed database.CustomEmbed
-		if err := stdjson.Unmarshal(listing.WelcomeMessage, &customEmbed); err == nil {
-			customEmbed.GuildId = guildId
-			embedId, err := dbclient.Client.Embeds.CreateWithFields(ctx, &customEmbed, nil)
-			if err != nil {
-				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message embed"))
-				return
-			}
-			panel.WelcomeMessageEmbed = &embedId
+	if welcomeMessage != nil {
+		welcomeMessage.GuildId = guildId
+		embedId, err := dbclient.Client.Embeds.CreateWithFields(ctx, welcomeMessage, nil)
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message embed"))
+			return
 		}
+
+		panel.WelcomeMessageEmbed = &embedId
 	}
 
 	// If a channel ID is provided, send the panel message to Discord

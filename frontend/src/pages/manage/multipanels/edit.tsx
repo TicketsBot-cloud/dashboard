@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, type FC } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
-import { useGuildEmojis, useGuildPanels, useGuildPremium } from "@/hooks/queries/useGuild";
+import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
+import {
+  guildKeys,
+  useGuildEmojis,
+  useGuildPanels,
+  useGuildPremium,
+} from "@/hooks/queries/useGuild";
 import { useParams, useNavigate } from "react-router";
 
 import { getGuildById } from "@/stores/auth";
@@ -40,7 +47,7 @@ import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 const defaultEmbed = {
   author: {},
-  colour: 0x5865f2,
+  colour: "#5865f2",
   fields: [],
   footer: {},
 };
@@ -52,6 +59,7 @@ const MultiPanelsPage: FC = () => {
   panelId = panelId!;
 
   const { selectGuild, selectedGuild } = useGuildStore();
+  const queryClient = useQueryClient();
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -179,6 +187,12 @@ const MultiPanelsPage: FC = () => {
     if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
     if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
     if (embedEmpty) return "The embed cannot be empty.";
+
+    const invalidUrls = collectEmbedUrlErrors(multiPanel?.embed);
+    if (invalidUrls.length > 0) {
+      return `Fix these embed URLs before saving: ${invalidUrls.join(", ")}.`;
+    }
+
     return null;
   };
 
@@ -360,22 +374,10 @@ const MultiPanelsPage: FC = () => {
               />
               <ColourSelect
                 label="Colour"
-                value={
-                  multiPanel?.embed?.colour
-                    ? `#${multiPanel.embed.colour.toString(16).padStart(6, "0")}`
-                    : "#5865f2"
-                }
+                value={multiPanel?.embed?.colour || "#5865f2"}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          embed: {
-                            ...prev.embed,
-                            colour: parseInt(e.replace("#", ""), 16),
-                          },
-                        }
-                      : prev,
+                    prev ? { ...prev, embed: { ...prev.embed, colour: e } } : prev,
                   )
                 }
               />
@@ -385,6 +387,7 @@ const MultiPanelsPage: FC = () => {
                 label="Title URL"
                 placeholder="e.g. https://example.com"
                 value={multiPanel?.embed?.url || ""}
+                error={embedUrlError(multiPanel?.embed?.url)}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev ? { ...prev, embed: { ...prev.embed, url: e } } : prev,
@@ -432,6 +435,7 @@ const MultiPanelsPage: FC = () => {
                   label="Author Icon URL"
                   placeholder="e.g. https://example.com/icon.png"
                   value={multiPanel?.embed?.author?.icon_url || ""}
+                  error={embedUrlError(multiPanel?.embed?.author?.icon_url)}
                   onChange={(e) =>
                     setMultiPanel((prev) =>
                       prev
@@ -451,6 +455,7 @@ const MultiPanelsPage: FC = () => {
                   label="Author URL"
                   placeholder="e.g. https://example.com"
                   value={multiPanel?.embed?.author?.url || ""}
+                  error={embedUrlError(multiPanel?.embed?.author?.url)}
                   onChange={(e) =>
                     setMultiPanel((prev) =>
                       prev
@@ -473,6 +478,7 @@ const MultiPanelsPage: FC = () => {
                 label="Thumbnail URL"
                 placeholder="e.g. https://example.com/thumbnail.png"
                 value={multiPanel?.embed?.thumbnail_url || ""}
+                error={embedUrlError(multiPanel?.embed?.thumbnail_url)}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev
@@ -489,6 +495,7 @@ const MultiPanelsPage: FC = () => {
                 label="Image URL"
                 placeholder="e.g. https://example.com/image.png"
                 value={multiPanel?.embed?.image_url || ""}
+                error={embedUrlError(multiPanel?.embed?.image_url)}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev ? { ...prev, embed: { ...prev.embed, image_url: e } } : prev,
@@ -527,6 +534,7 @@ const MultiPanelsPage: FC = () => {
                   label="Footer Icon URL"
                   placeholder="e.g. https://example.com/footer-icon.png"
                   value={multiPanel?.embed?.footer?.icon_url || ""}
+                  error={embedUrlError(multiPanel?.embed?.footer?.icon_url)}
                   onChange={(e) =>
                     setMultiPanel((prev) =>
                       prev
@@ -615,6 +623,7 @@ const MultiPanelsPage: FC = () => {
               prepareMultiPanelForApi(multiPanel),
               SKIP_ERROR_TOAST,
             );
+            await queryClient.invalidateQueries({ queryKey: guildKeys.multiPanels(guildId) });
             toast.success("Multi Panel Edited");
             navigate(`/manage/${guildId}/panels`);
           } catch (error) {

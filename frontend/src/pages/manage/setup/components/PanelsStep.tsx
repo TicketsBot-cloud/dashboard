@@ -164,6 +164,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
         form_id: formId ? parseInt(formId) : null,
         button_style: "1",
         button_label: "Open a Ticket",
+        access_control_list: [{ action: "allow", role_id: guildId }],
       } as Record<string, unknown>);
       toast.success("Panel created");
       onPanelCreated();

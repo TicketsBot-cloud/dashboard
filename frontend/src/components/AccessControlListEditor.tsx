@@ -63,6 +63,13 @@ const AccessControlListEditor: FC<AccessControlListEditorProps> = ({
 
   const roleColours = new Map(roles.map((r) => [r.id, roleColour(r.color)]));
 
+  // An @everyone rule matches every member, so it decides this and the worker never reaches
+  // its blocklist fall-through.
+  const everyoneRule = acl.find((r) => r.role_id === guildId);
+  const everyoneElseAllowed = everyoneRule
+    ? everyoneRule.action === "allow"
+    : acl.every((r) => r.action === "deny");
+
   return (
     <div className="flex flex-col gap-3">
       <Select
@@ -79,6 +86,16 @@ const AccessControlListEditor: FC<AccessControlListEditorProps> = ({
       />
 
       <div className="flex flex-col gap-1 p-3 rounded bg-gray-900">
+        {acl.length === 0 && (
+          <div className="flex flex-col items-start gap-2 px-4 py-3 rounded bg-gray-700">
+            <span className="text-sm text-gray-300">
+              No rules configured — everyone can open tickets with this panel.
+            </span>
+            <Button variant="secondary" size="sm" onClick={() => addRole(guildId)}>
+              Add an @everyone rule
+            </Button>
+          </div>
+        )}
         {acl.map((subject, i) => (
           <div
             key={subject.role_id}
@@ -140,6 +157,16 @@ const AccessControlListEditor: FC<AccessControlListEditorProps> = ({
             )}
           </div>
         ))}
+        <div className="flex items-center justify-between px-4 py-2 mt-1 rounded border border-dashed border-gray-600">
+          <span className="text-sm text-gray-400">Everyone else</span>
+          <span
+            className={`text-sm font-medium ${
+              everyoneElseAllowed ? "text-green-400" : "text-red-400"
+            }`}
+          >
+            {everyoneElseAllowed ? "Allow" : "Deny"}
+          </span>
+        </div>
       </div>
     </div>
   );

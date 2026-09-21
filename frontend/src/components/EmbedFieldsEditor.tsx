@@ -41,6 +41,7 @@ const EmbedFieldsEditor: FC<EmbedFieldsEditorProps> = ({ fields, onChange }) => 
             <div className="flex-1 flex flex-col gap-2">
               <TextInput
                 label="Field Name"
+                required
                 placeholder="Field name"
                 value={field.name}
                 onChange={(v) => updateField(i, { name: v })}
@@ -49,6 +50,7 @@ const EmbedFieldsEditor: FC<EmbedFieldsEditorProps> = ({ fields, onChange }) => 
               />
               <Textarea
                 label="Field Value"
+                required
                 value={field.value}
                 onChange={(v) => updateField(i, { value: v })}
                 max={EMBED_LIMITS.FIELD_VALUE}

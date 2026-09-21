@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { getEmojisGroupedBy, type BaseEmoji, type GroupedBy } from "unicode-emoji";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
 import type { GuildEmoji } from "@/types";
+import RequiredMark from "./RequiredMark";
+import { FAULT_FIELD_CLASS, IDLE_FIELD_CLASS, MISSING_FIELD_CLASS } from "@/lib/field-validity";
 
 interface EmojiPickerProps {
   value: string;
@@ -15,6 +17,9 @@ interface EmojiPickerProps {
   className?: string;
   label?: string;
   placeholder?: string;
+  error?: boolean;
+  required?: boolean;
+  missing?: boolean;
 }
 
 const defaultProps = {
@@ -24,6 +29,8 @@ const defaultProps = {
   placeholder: "Select an emoji...",
   guildEmojis: [] as GuildEmoji[],
   guildEmojiId: undefined,
+  error: false,
+  required: false,
 } as const;
 
 const groupDisplayNames: Record<string, string> = {
@@ -45,7 +52,18 @@ function guildEmojiUrl(emoji: GuildEmoji) {
 }
 
 const EmojiPicker: FC<EmojiPickerProps> = (props) => {
-  const { value, guildEmojiId, onChange, guildEmojis, disabled, className, label, placeholder } = {
+  const {
+    value,
+    guildEmojiId,
+    onChange,
+    guildEmojis,
+    disabled,
+    className,
+    label,
+    placeholder,
+    error,
+    required,
+  } = {
     ...defaultProps,
     ...props,
   };
@@ -141,15 +159,24 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
 
   const hasValue = !!selectedGuildEmoji || !!value;
 
+  // Raw props: hasValue resolves async.
+  const missing = !disabled && (props.missing ?? (required && !value && !guildEmojiId));
+  const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
+
   return (
     <div className={`flex flex-col relative ${className}`}>
-      {label && <label className="mb-1 text-white">{label}</label>}
+      {label && (
+        <label className="mb-1 text-white">
+          {label}
+          {required && <RequiredMark />}
+        </label>
+      )}
 
       <div
         ref={triggerRef}
         role="combobox"
         tabIndex={disabled ? -1 : 0}
-        className={`inline-flex items-center bg-gray-700 border border-neutral-600 rounded overflow-hidden px-1 cursor-pointer w-full text-left ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`inline-flex items-center bg-gray-700 border rounded overflow-hidden px-1 cursor-pointer w-full text-left ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${borderClass}`}
         onClick={() => {
           if (!disabled) setIsOpen(!isOpen);
         }}
@@ -163,6 +190,10 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
         aria-controls={isOpen ? dialogId : undefined}
         aria-haspopup="dialog"
         aria-label={label || "Emoji Picker"}
+        aria-required={required || undefined}
+        aria-invalid={error || undefined}
+        data-missing={missing || error || undefined}
+        data-bloom={error || undefined}
       >
         <div className="w-full p-2 min-h-10 flex items-center justify-between">
           {selectedGuildEmoji ? (

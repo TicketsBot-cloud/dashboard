@@ -313,6 +313,7 @@ export default function UserSettings() {
                   <div className="w-full sm:w-auto sm:max-w-45">
                     <TextInput
                       label="Verification code"
+                      required
                       value={verificationCode}
                       onChange={setVerificationCode}
                       placeholder="6-digit code"
@@ -348,6 +349,7 @@ export default function UserSettings() {
                 <div className="flex-1 w-full sm:w-auto">
                   <TextInput
                     label={hasEmail ? "Change email address" : "Add email address"}
+                    required
                     value={emailInput}
                     onChange={setEmailInput}
                     placeholder="you@example.com"

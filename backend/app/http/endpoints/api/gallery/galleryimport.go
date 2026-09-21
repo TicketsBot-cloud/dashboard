@@ -92,6 +92,19 @@ func ImportHandler(ctx *gin.Context) {
 		return
 	}
 
+	var welcomeMessage *database.CustomEmbed
+	if len(listing.WelcomeMessage) > 0 {
+		var parsed database.CustomEmbed
+		if err := stdjson.Unmarshal(listing.WelcomeMessage, &parsed); err == nil {
+			welcomeMessage = &parsed
+		}
+	}
+
+	if err := validateListingUrls(welcomeMessage, listing.ImageUrl, listing.ThumbnailUrl); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("%s", err.Error()))
+		return
+	}
+
 	// Generate a unique custom ID for the new panel
 	customId, err := utils.RandString(30)
 	if err != nil {
@@ -146,18 +159,15 @@ func ImportHandler(ctx *gin.Context) {
 		HideClaimButton:           false,
 	}
 
-	// Store the welcome message embed if one exists in the listing
-	if len(listing.WelcomeMessage) > 0 {
-		var customEmbed database.CustomEmbed
-		if err := stdjson.Unmarshal(listing.WelcomeMessage, &customEmbed); err == nil {
-			customEmbed.GuildId = guildId
-			embedId, err := dbclient.Client.Embeds.CreateWithFields(ctx, &customEmbed, nil)
-			if err != nil {
-				_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message embed"))
-				return
-			}
-			panel.WelcomeMessageEmbed = &embedId
+	if welcomeMessage != nil {
+		welcomeMessage.GuildId = guildId
+		embedId, err := dbclient.Client.Embeds.CreateWithFields(ctx, welcomeMessage, nil)
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message embed"))
+			return
 		}
+
+		panel.WelcomeMessageEmbed = &embedId
 	}
 
 	// If a channel ID is provided, send the panel message to Discord
@@ -225,7 +235,14 @@ func ImportHandler(ctx *gin.Context) {
 	if err := dbclient.Client.Panel.BeginFunc(ctx, func(tx pgx.Tx) error {
 		var err error
 		panelId, err = dbclient.Client.Panel.CreateWithTx(ctx, tx, panel)
-		return err
+		if err != nil {
+			return err
+		}
+
+		// guildId is the importing guild, not the source guild the listing came from.
+		return dbclient.Client.PanelAccessControlRules.ReplaceWithTx(
+			ctx, tx, panelId, utils.DefaultAccessControlList(guildId),
+		)
 	}); err != nil {
 		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel to database"))
 		return

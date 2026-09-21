@@ -261,6 +261,7 @@ const FormsStep = forwardRef<FormsStepRef, FormsStepProps>(
             <div className="flex-1">
               <TextInput
                 label="Form title"
+                required
                 value={newFormTitle}
                 onChange={setNewFormTitle}
                 placeholder="e.g. Support Request"

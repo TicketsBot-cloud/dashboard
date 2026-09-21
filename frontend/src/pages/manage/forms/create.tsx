@@ -100,6 +100,7 @@ const CreateFormPage: FC = () => {
             <div className="flex-1">
               <TextInput
                 label=""
+                required
                 placeholder="Form Title"
                 value={newTitle}
                 onChange={setNewTitle}

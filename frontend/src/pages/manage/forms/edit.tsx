@@ -301,6 +301,7 @@ const EditFormPage: FC = () => {
                 <div className="flex-1">
                   <TextInput
                     label="Form Title"
+                    required
                     placeholder="Form Title"
                     value={renamedTitle}
                     onChange={setRenamedTitle}

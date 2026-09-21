@@ -582,6 +582,7 @@ const KBPage: FC = () => {
               />
               <TextInput
                 label="New Category Name"
+                required
                 placeholder="e.g. Getting Started"
                 value={newCategoryName}
                 onChange={setNewCategoryName}
@@ -647,6 +648,7 @@ const KBPage: FC = () => {
                               setEditingCategory((prev) => (prev ? { ...prev, name: v } : prev))
                             }
                             maxLength={50}
+                            required
                           />
                           <Button
                             variant="ghost"
@@ -1006,24 +1008,32 @@ const KBPage: FC = () => {
                     )}
                     {selectedKBColumns.includes("categories") && (
                       <Table.HeaderCell className="p-4 text-sm font-semibold text-gray-300">
-                        <ColumnFilter label="Categories" active={categoryFilter.length > 0}>
-                          <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                            {sortedCategories.map((cat) => (
-                              <Checkbox
-                                key={cat.id}
-                                checked={categoryFilter.includes(cat.id)}
-                                onChange={() => toggleCategoryFilterItem(cat.id)}
-                                label={`${cat.emoji ? `${cat.emoji} ` : ""}${cat.name}`}
-                                className="text-sm text-gray-200 hover:text-white"
-                              />
-                            ))}
-                          </div>
-                          {categoryFilter.length > 0 && (
-                            <Button variant="ghost" size="sm" onClick={() => setCategoryFilter([])}>
-                              Clear
-                            </Button>
-                          )}
-                        </ColumnFilter>
+                        {sortedCategories.length === 0 && categoryFilter.length === 0 ? (
+                          "Categories"
+                        ) : (
+                          <ColumnFilter label="Categories" active={categoryFilter.length > 0}>
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                              {sortedCategories.map((cat) => (
+                                <Checkbox
+                                  key={cat.id}
+                                  checked={categoryFilter.includes(cat.id)}
+                                  onChange={() => toggleCategoryFilterItem(cat.id)}
+                                  label={`${cat.emoji ? `${cat.emoji} ` : ""}${cat.name}`}
+                                  className="text-sm text-gray-200 hover:text-white"
+                                />
+                              ))}
+                            </div>
+                            {categoryFilter.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCategoryFilter([])}
+                              >
+                                Clear
+                              </Button>
+                            )}
+                          </ColumnFilter>
+                        )}
                       </Table.HeaderCell>
                     )}
                     {selectedKBColumns.includes("keywords") && (

@@ -106,6 +106,10 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 		}
 	}
 
+	if s.TicketLimit > 10 {
+		return errors.New("Ticket limit must be between 0 and 10")
+	}
+
 	// Validate colours
 	if len(s.Colours) > len(activeColours) {
 		return errors.New("Invalid colour")

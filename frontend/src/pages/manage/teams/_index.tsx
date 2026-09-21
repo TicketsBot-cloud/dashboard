@@ -7,6 +7,7 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
+import { roleColour } from "@/lib/colour";
 import TextInput from "@/components/TextInput";
 import Slider from "@/components/Slider";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -396,7 +397,7 @@ const TeamsPage: FC = () => {
   const roleOptions = roles.map((role) => ({
     key: role.id,
     label: role.name,
-    color: `#${role.color.toString(16).padStart(6, "0")}`,
+    color: roleColour(role.color),
   }));
 
   const teamOptions = teams.map((team) => ({
@@ -439,7 +440,12 @@ const TeamsPage: FC = () => {
             <h2 className="text-2xl font-bold mb-4">Create Team</h2>
             <form onSubmit={createTeam} className="flex gap-4 items-end">
               <div className="flex-1 max-w-md">
-                <TextInput value={createName} onChange={setCreateName} placeholder="Team Name" />
+                <TextInput
+                  value={createName}
+                  onChange={setCreateName}
+                  placeholder="Team Name"
+                  required
+                />
               </div>
               <Button
                 type="submit"
@@ -563,6 +569,7 @@ const TeamsPage: FC = () => {
                       onChange={(v) => setSelectedRole(v ?? "")}
                       options={roleOptions}
                       placeholder="Select a role..."
+                      required
                     />
                   </div>
                   <Button

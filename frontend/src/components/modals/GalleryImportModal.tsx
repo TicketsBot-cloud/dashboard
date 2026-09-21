@@ -93,6 +93,7 @@ const GalleryImportModal: FC<GalleryImportModalProps> = ({ listing, open, onClos
         <div className="space-y-4">
           <Select
             label="Server"
+            required
             placeholder="Select a server..."
             value={selectedGuildId}
             onChange={(v) => setSelectedGuildId(v)}
@@ -110,6 +111,7 @@ const GalleryImportModal: FC<GalleryImportModalProps> = ({ listing, open, onClos
                 <>
                   <Select
                     label="Panel Channel"
+                    required
                     placeholder="Select a channel..."
                     value={selectedChannelId}
                     onChange={(v) => setSelectedChannelId(v)}
@@ -117,6 +119,7 @@ const GalleryImportModal: FC<GalleryImportModalProps> = ({ listing, open, onClos
                   />
                   <Select
                     label="Ticket Category"
+                    required
                     placeholder="Select a category..."
                     value={selectedCategoryId}
                     onChange={(v) => setSelectedCategoryId(v)}

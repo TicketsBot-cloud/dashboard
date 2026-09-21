@@ -22,6 +22,7 @@ import { useKBCategories, useCreateKBArticle } from "@/hooks/queries/useKB";
 import type { TagEmbed } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
+import { embedUrlError } from "@/lib/embed-url";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 const defaultEmbed: TagEmbed = {
@@ -195,6 +196,7 @@ const CreateKBArticlePage: FC = () => {
           <section className="space-y-4" aria-label="Article details">
             <TextInput
               label="Title"
+              required
               placeholder="e.g. How to create a ticket"
               value={title}
               onChange={setTitle}
@@ -270,6 +272,15 @@ const CreateKBArticlePage: FC = () => {
                   />
                 </div>
 
+                <TextInput
+                  label="Title URL"
+                  placeholder="e.g. https://example.com"
+                  value={embed.url || ""}
+                  error={embedUrlError(embed.url)}
+                  onChange={(v) => setEmbed((prev) => ({ ...prev, url: v }))}
+                  maxLength={EMBED_LIMITS.URL}
+                />
+
                 <Textarea
                   label="Embed Description"
                   value={embed.description || ""}
@@ -296,6 +307,7 @@ const CreateKBArticlePage: FC = () => {
                       label="Author Icon URL"
                       placeholder="https://example.com/icon.png"
                       value={embed.author?.icon_url || ""}
+                      error={embedUrlError(embed.author?.icon_url)}
                       onChange={(v) =>
                         setEmbed((prev) => ({
                           ...prev,
@@ -308,6 +320,7 @@ const CreateKBArticlePage: FC = () => {
                       label="Author URL"
                       placeholder="https://example.com"
                       value={embed.author?.url || ""}
+                      error={embedUrlError(embed.author?.url)}
                       onChange={(v) =>
                         setEmbed((prev) => ({
                           ...prev,
@@ -324,6 +337,7 @@ const CreateKBArticlePage: FC = () => {
                     label="Thumbnail URL"
                     placeholder="https://example.com/thumbnail.png"
                     value={embed.thumbnail_url || ""}
+                    error={embedUrlError(embed.thumbnail_url)}
                     onChange={(v) => setEmbed((prev) => ({ ...prev, thumbnail_url: v }))}
                     maxLength={EMBED_LIMITS.URL}
                   />
@@ -331,6 +345,7 @@ const CreateKBArticlePage: FC = () => {
                     label="Image URL"
                     placeholder="https://example.com/image.png"
                     value={embed.image_url || ""}
+                    error={embedUrlError(embed.image_url)}
                     onChange={(v) => setEmbed((prev) => ({ ...prev, image_url: v }))}
                     maxLength={EMBED_LIMITS.URL}
                   />
@@ -353,6 +368,7 @@ const CreateKBArticlePage: FC = () => {
                     label="Footer Icon URL"
                     placeholder="https://example.com/footer-icon.png"
                     value={embed.footer?.icon_url || ""}
+                    error={embedUrlError(embed.footer?.icon_url)}
                     onChange={(v) =>
                       setEmbed((prev) => ({
                         ...prev,

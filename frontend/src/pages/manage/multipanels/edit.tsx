@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, type FC } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
-import { useGuildEmojis, useGuildPanels, useGuildPremium } from "@/hooks/queries/useGuild";
+import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
+import {
+  guildKeys,
+  useGuildEmojis,
+  useGuildPanels,
+  useGuildPremium,
+} from "@/hooks/queries/useGuild";
 import { useParams, useNavigate } from "react-router";
 
 import { getGuildById } from "@/stores/auth";
@@ -9,10 +16,13 @@ import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import type { MultiPanel, MultiPanelPanelEntry } from "@/types";
 import Collapsible from "@/components/Collapsible";
+import { prepareMultiPanelForApi } from "@/lib/panel-payload";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
+import { intToColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -39,6 +49,7 @@ import { PANEL_MESSAGE_INFO } from "@/constants/panelChannelInfo";
 import MultiPanelInfoModal from "@/components/modals/MultiPanelInfoModal";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
+import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 import MessageModeToggle from "@/components/component-builder/MessageModeToggle";
 import ComponentTreeBuilder from "@/components/component-builder/ComponentTreeBuilder";
@@ -59,7 +70,8 @@ import {
 
 const defaultEmbed = {
   author: {},
-  colour: 0x5865f2,
+  colour: "#5865f2",
+  fields: [],
   footer: {},
 };
 
@@ -78,6 +90,7 @@ const MultiPanelsPage: FC = () => {
   panelId = panelId!;
 
   const { selectGuild, selectedGuild } = useGuildStore();
+  const queryClient = useQueryClient();
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   // undefined while loading - only treated as "on" once it has actually resolved to true, so
@@ -124,8 +137,11 @@ const MultiPanelsPage: FC = () => {
   }, [guildId, selectGuild, selectedGuild]);
 
   const sortedChannels = sortGuildChannels(selectedGuild?.channels || []);
+  const existingChannelIds = new Set((selectedGuild?.channels ?? []).map((c) => c.id));
+  const channelsLoaded = (selectedGuild?.channels?.length ?? 0) > 0;
 
   const [multiPanelInfoOpen, setMultiPanelInfoOpen] = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [multiPanel, setMultiPanel] = useState<MultiPanel | null>(null);
   const [componentTree, setComponentTree] = useState<V2Component[]>([]);
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
@@ -191,6 +207,38 @@ const MultiPanelsPage: FC = () => {
     return !entry?.custom_label?.trim() && !panel?.button_label;
   };
 
+  const labellessPanelCount = (multiPanel?.panels ?? []).filter((entry) =>
+    panelNeedsLabel(entry.panel_id),
+  ).length;
+  const tooFewPanels = (multiPanel?.panels?.length ?? 0) < 2;
+  const staleChannel =
+    channelsLoaded && !!multiPanel?.channel_id && !existingChannelIds.has(multiPanel.channel_id);
+
+  const embed = multiPanel?.embed;
+  const embedEmpty =
+    !!embed &&
+    !embed.title?.trim() &&
+    !embed.description?.trim() &&
+    !embed.image_url?.trim() &&
+    !embed.thumbnail_url?.trim();
+
+  // Returns the message so the Save button can reuse the rules.
+  const saveBlocker = () => {
+    if (!multiPanel?.channel_id) return "Select a panel channel before saving the multi-panel.";
+    if (staleChannel) return "The selected panel channel no longer exists.";
+    if (tooFewPanels) return "Select at least two panels before saving the multi-panel.";
+    if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
+    if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
+    if (embedEmpty) return "The embed cannot be empty.";
+
+    const invalidUrls = collectEmbedUrlErrors(multiPanel?.embed);
+    if (invalidUrls.length > 0) {
+      return `Fix these embed URLs before saving: ${invalidUrls.join(", ")}.`;
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     const fetchMultiPanel = async () => {
       try {
@@ -228,12 +276,13 @@ const MultiPanelsPage: FC = () => {
       await apiClient.multiPanels.update(
         guildId,
         panelId,
-        {
+        prepareMultiPanelForApi({
           ...multiPanel,
           components: multiPanel.uses_components_v2 ? toApiComponents(componentTree) : null,
-        },
+        }),
         SKIP_ERROR_TOAST,
       );
+      await queryClient.invalidateQueries({ queryKey: guildKeys.multiPanels(guildId) });
       toast.success("Multi Panel Edited");
       navigate(`/manage/${guildId}/panels`);
     } catch (error) {
@@ -363,6 +412,8 @@ const MultiPanelsPage: FC = () => {
           <Select
             label="Panel Channel"
             info={PANEL_MESSAGE_INFO}
+            required
+            error={staleChannel}
             value={multiPanel?.channel_id || ""}
             options={sortedChannels}
             onChange={(e) =>
@@ -371,11 +422,13 @@ const MultiPanelsPage: FC = () => {
           />
           <MultiSelect
             label="Panels"
+            required
+            missing={tooFewPanels}
             value={multiPanel?.panels?.map((p) => p.panel_id.toString()) || []}
             options={panels?.map((panel) => ({
               label: panel.title,
               key: panel.panel_id.toString(),
-              color: panel.colour.toString(16).padStart(6, "0"),
+              color: intToColour(panel.colour),
             }))}
             onChange={(e) =>
               setMultiPanel((prev) => {
@@ -453,6 +506,8 @@ const MultiPanelsPage: FC = () => {
                   />
                   <TextInput
                     label="Custom Label"
+                    required={multiPanel.select_menu}
+                    missing={needsLabel}
                     placeholder={panel?.button_label || "Leave empty to use default"}
                     value={entry.custom_label || ""}
                     onChange={(v) => updatePanelCustomization(entry.panel_id, "custom_label", v)}
@@ -464,15 +519,6 @@ const MultiPanelsPage: FC = () => {
                       value={entry.description || ""}
                       onChange={(v) => updatePanelCustomization(entry.panel_id, "description", v)}
                     />
-                  )}
-                  {needsLabel && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm">
-                      <FontAwesomeIcon icon={faExclamationTriangle} />
-                      <span>
-                        This panel must have a label when using dropdown mode. Please add a custom
-                        label or ensure the panel has a button label.
-                      </span>
-                    </div>
                   )}
                 </div>
               );
@@ -487,6 +533,18 @@ const MultiPanelsPage: FC = () => {
         subtitle="Configure the embed's appearance"
         defaultOpen={true}
       >
+        {embedEmpty && (
+          <div
+            data-missing="true"
+            className="mx-4 mb-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm"
+          >
+            <FontAwesomeIcon icon={faExclamationTriangle} />
+            <span>
+              The embed needs a title, description, image or thumbnail. Discord rejects an empty
+              embed.
+            </span>
+          </div>
+        )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
           <FeatureGate flag={COMPONENTS_V2_BUILDER_FLAG} guildId={guildId}>
             <div className="md:col-span-2">
@@ -599,6 +657,20 @@ const MultiPanelsPage: FC = () => {
                   />
                 </div>
                 <div className="py-2">
+                  <TextInput
+                    label="Title URL"
+                    placeholder="e.g. https://example.com"
+                    value={multiPanel?.embed?.url || ""}
+                    error={embedUrlError(multiPanel?.embed?.url)}
+                    onChange={(e) =>
+                      setMultiPanel((prev) =>
+                        prev ? { ...prev, embed: { ...prev.embed, url: e } } : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.URL}
+                  />
+                </div>
+                <div className="py-2">
                   <Textarea
                     label="Description"
                     value={multiPanel?.embed?.description || ""}
@@ -637,6 +709,7 @@ const MultiPanelsPage: FC = () => {
                       label="Author Icon URL"
                       placeholder="e.g. https://example.com/icon.png"
                       value={multiPanel?.embed?.author?.icon_url || ""}
+                      error={embedUrlError(multiPanel?.embed?.author?.icon_url)}
                       onChange={(e) =>
                         setMultiPanel((prev) =>
                           prev
@@ -656,6 +729,7 @@ const MultiPanelsPage: FC = () => {
                       label="Author URL"
                       placeholder="e.g. https://example.com"
                       value={multiPanel?.embed?.author?.url || ""}
+                      error={embedUrlError(multiPanel?.embed?.author?.url)}
                       onChange={(e) =>
                         setMultiPanel((prev) =>
                           prev
@@ -678,6 +752,7 @@ const MultiPanelsPage: FC = () => {
                     label="Thumbnail URL"
                     placeholder="e.g. https://example.com/thumbnail.png"
                     value={multiPanel?.embed?.thumbnail_url || ""}
+                    error={embedUrlError(multiPanel?.embed?.thumbnail_url)}
                     onChange={(e) =>
                       setMultiPanel((prev) =>
                         prev
@@ -694,6 +769,7 @@ const MultiPanelsPage: FC = () => {
                     label="Image URL"
                     placeholder="e.g. https://example.com/image.png"
                     value={multiPanel?.embed?.image_url || ""}
+                    error={embedUrlError(multiPanel?.embed?.image_url)}
                     onChange={(e) =>
                       setMultiPanel((prev) =>
                         prev ? { ...prev, embed: { ...prev.embed, image_url: e } } : prev,
@@ -732,6 +808,7 @@ const MultiPanelsPage: FC = () => {
                       label="Footer Icon URL"
                       placeholder="e.g. https://example.com/footer-icon.png"
                       value={multiPanel?.embed?.footer?.icon_url || ""}
+                      error={embedUrlError(multiPanel?.embed?.footer?.icon_url)}
                       onChange={(e) =>
                         setMultiPanel((prev) =>
                           prev
@@ -763,6 +840,16 @@ const MultiPanelsPage: FC = () => {
                     }
                   />
                 </Collapsible>
+                <Collapsible title="" subtitle="Embed Fields" defaultOpen={false}>
+                  <EmbedFieldsEditor
+                    fields={multiPanel?.embed?.fields || []}
+                    onChange={(fields) =>
+                      setMultiPanel((prev) =>
+                        prev ? { ...prev, embed: { ...prev.embed, fields } } : prev,
+                      )
+                    }
+                  />
+                </Collapsible>
                 <EmbedCharacterTotal embed={multiPanel?.embed} />
               </div>
 
@@ -780,13 +867,33 @@ const MultiPanelsPage: FC = () => {
           )}
         </div>
       </Collapsible>
+      {labellessPanelCount > 0 && (
+        <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm">
+          <FontAwesomeIcon icon={faExclamationTriangle} />
+          <span>
+            {labellessPanelCount} panel{labellessPanelCount > 1 ? "s" : ""} still need
+            {labellessPanelCount > 1 ? "" : "s"} a label for dropdown mode. Add one under Panel
+            Customization.
+          </span>
+        </div>
+      )}
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
+        disabled={saveAttempted && saveBlocker() !== null}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={() => {
           if (!multiPanel) return;
+
+          const blocker = saveBlocker();
+          if (blocker) {
+            setSaveAttempted(true);
+            scrollToFirstMissingField();
+            toast.error(blocker);
+            return;
+          }
+
           const downgradingFromV2 = originalV2Ref.current && !multiPanel.uses_components_v2;
           if (downgradingFromV2) {
             setDowngradeConfirmOpen(true);

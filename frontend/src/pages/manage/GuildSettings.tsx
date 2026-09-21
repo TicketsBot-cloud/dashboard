@@ -9,6 +9,7 @@ import Collapsible from "@/components/Collapsible";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
 import Slider from "@/components/Slider";
+import NumberInput from "@/components/NumberInput";
 import { useGuildStore } from "@/stores/guild";
 import { getGuildById } from "@/stores/auth";
 import ColourSelect from "@/components/ColourSelect";
@@ -20,6 +21,7 @@ import type { GuildSettings } from "@/types";
 import PermissionWarningBanner from "@/components/PermissionWarningBanner";
 import PanelSwitchBehaviourInfoModal from "@/components/modals/PanelSwitchBehaviourInfoModal";
 import { PANEL_SWITCH_OPTIONS } from "@/constants/panelSwitchBehaviour";
+import { intToColour } from "@/lib/colour";
 
 const PanelSwitchSelect: FC<{ value: number; onChange: (v: number) => void }> = ({
   value,
@@ -83,6 +85,7 @@ const GuildSettings: FC = () => {
 
   const initialForm: GuildSettings = {
     language: "en",
+    ticket_limit: 10,
     anonymise_dashboard_responses: false,
     context_menu_permission_level: "0",
     context_menu_add_sender: false,
@@ -190,6 +193,14 @@ const GuildSettings: FC = () => {
             onChange={(v) => updateField("anonymise_dashboard_responses", v)}
             label="Anonymise Dashboard Responses"
           />
+
+          <NumberInput
+            label="Simultaneous Ticket Limit"
+            value={form.ticket_limit}
+            min={0}
+            max={10}
+            onChange={(v) => updateField("ticket_limit", v)}
+          />
         </div>
       </Collapsible>
 
@@ -209,6 +220,7 @@ const GuildSettings: FC = () => {
               ...panels.map((p) => ({
                 key: p.panel_id.toString(),
                 label: p.title,
+                color: intToColour(p.colour),
               })),
             ]}
           />

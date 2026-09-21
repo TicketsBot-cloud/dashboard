@@ -39,6 +39,7 @@ import Textarea from "@/components/Textarea";
 import LabelBadge from "@/components/LabelBadge";
 import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
+import { colourToInt, intToColour } from "@/lib/colour";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import DismissibleModal from "@/components/modal-primitives/DismissibleModal";
 import EmptyState from "@/components/EmptyState";
@@ -61,14 +62,6 @@ function getRelativeTime(date: Date): string {
   if (hours > 0) return rtf.format(-hours, "hour");
   if (minutes > 0) return rtf.format(-minutes, "minute");
   return rtf.format(-seconds, "second");
-}
-
-function intToColour(colour: number): string {
-  return `#${colour.toString(16).padStart(6, "0")}`;
-}
-
-function colourToInt(hex: string): number {
-  return parseInt(hex.replace("#", ""), 16);
 }
 
 // --- Types ---
@@ -738,6 +731,7 @@ const TicketsPage: FC = () => {
                 ...panels.map((p) => ({
                   key: p.panel_id.toString(),
                   label: p.title,
+                  color: intToColour(p.colour),
                 })),
               ]}
             />
@@ -1082,7 +1076,7 @@ const TicketsPage: FC = () => {
         </div>
         <div className="p-5 flex flex-col gap-4">
           <TextInput
-            label="Close reason (optional)"
+            label="Close reason"
             value={bulkCloseReason}
             onChange={(v) => setBulkCloseReason(v)}
             placeholder="Enter a reason..."
@@ -1128,6 +1122,7 @@ const TicketsPage: FC = () => {
         <div className="p-5 flex flex-col gap-4">
           <Select
             label="Tag"
+            required
             value={selectedTagId}
             onChange={(v) => setSelectedTagId(v ?? "")}
             placeholder="Select a tag..."
@@ -1175,6 +1170,7 @@ const TicketsPage: FC = () => {
         <div className="p-5 flex flex-col gap-4">
           <Textarea
             label="Message"
+            required
             placeholder="Message to send to all selected tickets..."
             value={bulkMessageContent}
             onChange={setBulkMessageContent}
@@ -1222,7 +1218,7 @@ const TicketsPage: FC = () => {
         </div>
         <div className="p-5 flex flex-col gap-4">
           <TextInput
-            label="Reason (optional)"
+            label="Reason"
             value={bulkCloseRequestReason}
             onChange={(v) => setBulkCloseRequestReason(v)}
             placeholder="Reason (optional)"
@@ -1308,6 +1304,7 @@ const TicketsPage: FC = () => {
             <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
               <TextInput
                 label="Label Name"
+                required
                 placeholder="e.g. Bug, Feature, Urgent"
                 value={newLabelName}
                 onChange={setNewLabelName}

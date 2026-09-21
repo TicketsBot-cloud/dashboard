@@ -2,6 +2,9 @@ import type { FC } from "react";
 import { useState, useRef, useEffect, useId, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
+import RequiredMark from "./RequiredMark";
+import { FAULT_FIELD_CLASS, IDLE_FIELD_CLASS, MISSING_FIELD_CLASS } from "@/lib/field-validity";
+import { normaliseColour } from "@/lib/colour";
 
 interface MultiSelectOption {
   key: string;
@@ -18,6 +21,9 @@ interface MultiSelectProps {
   className?: string;
   label?: string;
   placeholder?: string;
+  error?: boolean;
+  required?: boolean;
+  missing?: boolean;
 }
 
 const defaultProps = {
@@ -25,10 +31,12 @@ const defaultProps = {
   className: "",
   label: undefined,
   placeholder: "Select options...",
+  error: false,
+  required: false,
 } as const;
 
 const MultiSelect: FC<MultiSelectProps> = (props) => {
-  const { value, onChange, options, disabled, className, label, placeholder } = {
+  const { value, onChange, options, disabled, className, label, placeholder, error, required } = {
     ...defaultProps,
     ...props,
   };
@@ -88,15 +96,23 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
     option.label.toLowerCase().includes(searchText.toLowerCase()),
   );
 
+  const missing = !disabled && !!props.missing;
+  const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
+
   return (
     <div className={`flex flex-col relative ${className}`}>
-      {label && <label className="mb-1 text-white">{label}</label>}
+      {label && (
+        <label className="mb-1 text-white">
+          {label}
+          {required && <RequiredMark />}
+        </label>
+      )}
 
       <div
         ref={triggerRef}
         role="combobox"
         tabIndex={disabled ? -1 : 0}
-        className={`inline-flex items-center bg-gray-700 border border-neutral-600 rounded overflow-hidden px-1 cursor-pointer w-full text-left ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`inline-flex items-center bg-gray-700 border rounded overflow-hidden px-1 cursor-pointer w-full text-left ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${borderClass}`}
         onClick={() => {
           if (!disabled) setIsOpen(!isOpen);
         }}
@@ -111,12 +127,17 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
         aria-owns={isOpen ? listboxId : undefined}
         aria-haspopup="listbox"
         aria-label={label || "Multi-select"}
+        aria-required={required || undefined}
+        aria-invalid={error || undefined}
+        data-missing={missing || error || undefined}
+        data-bloom={error || undefined}
       >
-        <div className="w-full p-2 min-h-10 flex flex-wrap gap-1 items-center">
+        <div className="w-full px-2 py-1.5 min-h-10 flex flex-wrap gap-1 items-center">
           {selectedOptions.length > 0 ? (
             selectedOptions.map((selectedOption) => {
-              const fadedBgStyle = selectedOption.color
-                ? { backgroundColor: `${selectedOption.color}20` }
+              const swatch = selectedOption.color && normaliseColour(selectedOption.color);
+              const fadedBgStyle = swatch
+                ? { backgroundColor: `color-mix(in srgb, ${swatch} 20%, transparent)` }
                 : {};
 
               return (
@@ -126,10 +147,10 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
                   style={fadedBgStyle}
                   title={selectedOption.label}
                 >
-                  {selectedOption.color && (
+                  {swatch && (
                     <div
-                      className="w-3 h-3 rounded-full mr-1 shrink-0"
-                      style={{ backgroundColor: `#${selectedOption.color}` }}
+                      className="w-3 h-3 rounded-full mr-1 shrink-0 ring-1 ring-white/15"
+                      style={{ backgroundColor: swatch }}
                     />
                   )}
                   <span className="min-w-0 truncate">{selectedOption.label}</span>
@@ -242,8 +263,8 @@ const MultiSelect: FC<MultiSelectProps> = (props) => {
                     </div>
                     {option.color && (
                       <div
-                        className="w-3 h-3 mt-1.5 shrink-0 rounded-full mr-2"
-                        style={{ backgroundColor: `#${option.color}` }}
+                        className="w-3 h-3 mt-1.5 shrink-0 rounded-full mr-2 ring-1 ring-white/15"
+                        style={{ backgroundColor: normaliseColour(option.color) }}
                       />
                     )}
                     <span className="min-w-0 flex-1 break-words text-white">{option.label}</span>

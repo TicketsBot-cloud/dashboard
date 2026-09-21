@@ -97,6 +97,7 @@ export interface GuildChannel {
 }
 
 export interface GuildSettings {
+  ticket_limit: number;
   context_menu_permission_level: string;
   context_menu_add_sender: boolean;
   context_menu_panel?: number;
@@ -309,8 +310,13 @@ export interface MultiPanelEmbed {
     icon_url?: string;
     url?: string;
   };
-  colour: number;
+  colour: string;
   description?: string;
+  fields?: Array<{
+    name: string;
+    value: string;
+    inline?: boolean;
+  }>;
   footer: {
     text?: string;
     icon_url?: string;
@@ -528,6 +534,23 @@ export interface Tag {
   use_embed: boolean;
   embed?: TagEmbed;
   kb_article_id?: number | null;
+}
+
+export interface TagAliasResyncStatus {
+  status: "idle" | "running" | "completed";
+  cooldown_until?: string;
+  total: number;
+  processed: number;
+  recreated: number;
+  removed: number;
+  rebound: number;
+  in_sync: number;
+  skipped: number;
+  failed: number;
+  started_at?: string;
+  finished_at?: string;
+  warnings: string[];
+  errors: { tag_id: string; error: string }[];
 }
 
 export interface WhitelabelBot {

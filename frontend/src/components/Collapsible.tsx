@@ -1,6 +1,7 @@
 import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { FIELD_REVEAL_EVENT } from "@/lib/scroll-to-missing";
 
 interface CollapsibleProps {
   title: string;
@@ -15,6 +16,20 @@ export default function Collapsible(props: CollapsibleProps) {
   const [internalOpen, setInternalOpen] = useState(props.defaultOpen ?? false);
   const isOpen = props.open ?? internalOpen;
   const contentId = useId();
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const onOpenChange = props.onOpenChange;
+  const controlled = props.open !== undefined;
+  useEffect(() => {
+    const reveal = (event: Event) => {
+      const target = (event as CustomEvent<HTMLElement>).detail;
+      if (!target || !contentRef.current?.contains(target)) return;
+      if (!controlled) setInternalOpen(true);
+      onOpenChange?.(true);
+    };
+    window.addEventListener(FIELD_REVEAL_EVENT, reveal);
+    return () => window.removeEventListener(FIELD_REVEAL_EVENT, reveal);
+  }, [controlled, onOpenChange]);
 
   const toggleCollapsible = () => {
     const nextOpen = !isOpen;
@@ -45,6 +60,7 @@ export default function Collapsible(props: CollapsibleProps) {
         <FontAwesomeIcon icon={isOpen ? faChevronUp : faChevronDown} aria-hidden="true" />
       </button>
       <div
+        ref={contentRef}
         id={contentId}
         className="grid transition-[grid-template-rows] duration-300 ease-in-out"
         style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}

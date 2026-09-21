@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { Link } from "react-router";
-import { apiClient } from "@/lib/api";
+import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { useOnboardingStore } from "@/stores/onboarding";
 import Button from "@/components/Button";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
@@ -17,13 +17,20 @@ const OnboardingBanner: FC<OnboardingBannerProps> = ({ guildId }) => {
     guildId,
   );
 
-  if (!state || state.onboarding_completed || state.skipped || flagLoading || !wizardEnabled) {
+  if (
+    !state ||
+    state.guild_id !== guildId ||
+    state.onboarding_completed ||
+    state.skipped ||
+    flagLoading ||
+    !wizardEnabled
+  ) {
     return null;
   }
 
   const handleDismiss = async () => {
     try {
-      await apiClient.onboarding.update(guildId, { skipped: true });
+      await apiClient.onboarding.update(guildId, { skipped: true }, SKIP_ERROR_TOAST);
       setOnboardingState({ ...state, skipped: true });
     } catch {
       // Silently fail - the banner will persist until next page load

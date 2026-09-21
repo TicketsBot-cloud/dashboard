@@ -183,7 +183,7 @@ export default function Affiliate() {
               earn at 10%, everyone else at 5%. Applications are reviewed by our team.
             </p>
             <TextInput
-              label="Preferred code (optional)"
+              label="Preferred code"
               value={preferredCode}
               onChange={setPreferredCode}
               placeholder="e.g. TKTS"

@@ -16,7 +16,7 @@ export default function GuildLayout() {
   const navigate = useNavigate();
   const { selectedGuild, selectGuild, updateGuild } = useGuildStore();
   const updateGuildPermission = useAuthStore((s) => s.updateGuildPermission);
-  const { setState: setOnboardingState } = useOnboardingStore();
+  const { setState: setOnboardingState, reset: resetOnboarding } = useOnboardingStore();
   const [verified, setVerified] = useState(false);
   const [bootstrapReady, setBootstrapReady] = useState(false);
 
@@ -32,6 +32,7 @@ export default function GuildLayout() {
 
     setVerified(false);
     setBootstrapReady(false);
+    resetOnboarding();
 
     let cancelled = false;
 
@@ -155,6 +156,7 @@ export default function GuildLayout() {
     updateGuildPermission,
     navigate,
     setOnboardingState,
+    resetOnboarding,
     isTranscriptView,
   ]);
 
@@ -177,7 +179,7 @@ export default function GuildLayout() {
   return (
     <GuildBootstrapContext.Provider value={true}>
       <GuildContext.Provider value={selectedGuild == undefined ? null : selectedGuild}>
-        {guildId && (selectedGuild?.permission_level ?? 0) >= 1 && (
+        {guildId && (selectedGuild?.permission_level ?? 0) >= 2 && (
           <OnboardingBanner guildId={guildId} />
         )}
         <Outlet />

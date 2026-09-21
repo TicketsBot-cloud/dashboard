@@ -1,5 +1,6 @@
 import { isSafeUrl } from "@/lib/url";
 import { emojiUrl } from "@/lib/discord-cdn";
+import { BUTTON_STYLE_COLOURS } from "@/constants/buttonStyles";
 
 interface ButtonProps {
   button_style?: number;
@@ -12,20 +13,8 @@ interface ButtonProps {
 }
 
 function convertButtonStyle(style?: number): string {
-  switch (style) {
-    case 1:
-      return "text-white bg-[#4752c4]";
-    case 2:
-      return "bg-[#4f545c] text-white";
-    case 3:
-      return "text-white bg-[#2d7d46]";
-    case 4:
-      return "text-white bg-[#a12d2f]";
-    case 5:
-      return "bg-[#4f545c] text-white no-underline";
-    default:
-      return "";
-  }
+  if (style === undefined || BUTTON_STYLE_COLOURS[style] === undefined) return "";
+  return style === 5 ? "text-white no-underline" : "text-white";
 }
 
 export default function Button({
@@ -39,12 +28,16 @@ export default function Button({
 }: ButtonProps) {
   const baseClasses = `inline-flex items-center justify-center align-middle px-4 h-8 min-w-15 rounded text-sm font-medium select-none transition-colors duration-150 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`;
   const styleClasses = convertButtonStyle(button_style);
+  const backgroundStyle = {
+    backgroundColor: button_style === undefined ? undefined : BUTTON_STYLE_COLOURS[button_style],
+  };
 
   if (button_style === 5 && url && isSafeUrl(url)) {
     return (
       <a
         href={url}
         className={`${baseClasses} ${styleClasses} ${className}`}
+        style={backgroundStyle}
         data-custom-id={custom_id || ""}
         target="_blank"
         rel="noopener noreferrer"
@@ -65,7 +58,11 @@ export default function Button({
   }
 
   return (
-    <div className={`${baseClasses} ${styleClasses} ${className}`} data-custom-id={custom_id || ""}>
+    <div
+      className={`${baseClasses} ${styleClasses} ${className}`}
+      style={backgroundStyle}
+      data-custom-id={custom_id || ""}
+    >
       {emoji &&
         (emoji.id && emoji.id !== "0" ? (
           <img

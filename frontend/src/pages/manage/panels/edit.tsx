@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FC } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
+import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
 import {
   guildKeys,
   useGuildEmojis,
@@ -22,6 +23,8 @@ import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import NumberInput from "@/components/NumberInput";
 import ColourSelect from "@/components/ColourSelect";
+import { BUTTON_STYLE_OPTIONS } from "@/constants/buttonStyles";
+import { roleColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import EmojiPicker from "@/components/EmojiPicker";
 import PanelPreview from "@/components/PanelPreview";
@@ -35,13 +38,20 @@ import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
+import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import { FEATURE_PANELS, COMPONENTS_V2_BUILDER_FLAG } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
 import FeatureGate from "@/components/FeatureGate";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faTrash, faCrown, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
+import {
+  faSave,
+  faTrash,
+  faCrown,
+  faWandMagicSparkles,
+  faExclamationTriangle,
+} from "@fortawesome/free-solid-svg-icons";
 import { sortGuildChannels } from "@/lib/guild-channels";
 import {
   PANEL_MESSAGE_INFO,
@@ -118,6 +128,7 @@ const EditPanelsPage: FC = () => {
 
   const sortedChannels = sortGuildChannels(selectedGuild?.channels || []);
   const existingChannelIds = new Set((selectedGuild?.channels ?? []).map((c) => c.id));
+  const channelsLoaded = (selectedGuild?.channels?.length ?? 0) > 0;
 
   const [panel, setPanel] = useState<Panel | null>(null);
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
@@ -131,6 +142,7 @@ const EditPanelsPage: FC = () => {
   // repost the message" caption and confirmation only ever compare against how it started this
   // session - not against every toggle flip in between.
   const originalMessageV2Ref = useRef(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
   const handleApiError = useApiErrorHandler(
@@ -347,6 +359,37 @@ const EditPanelsPage: FC = () => {
     }
   };
 
+  // Mirrors validateButtonLabelOrEmoji.
+  const hasButtonLabel = !!(panel.button_label ?? "").trim();
+  const hasButtonEmoji = panel.use_custom_emoji
+    ? !!(panel.emoji_id && panel.emoji_name?.trim())
+    : !!panelEmoteName(panel.emote).trim();
+  const buttonIdentityMissing = !hasButtonLabel && !hasButtonEmoji;
+  const missingChannel = !panel.channel_id;
+  const missingCategory = !panel.category_id;
+  const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
+  const welcomeMessage = panel.welcome_message;
+  const welcomeMessageEmpty =
+    !!welcomeMessage &&
+    !welcomeMessage.title?.trim() &&
+    !welcomeMessage.description?.trim() &&
+    !welcomeMessage.fields?.length &&
+    !welcomeMessage.image_url?.trim() &&
+    !welcomeMessage.thumbnail_url?.trim();
+  const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
+  const invalidWelcomeMessageUrls = collectEmbedUrlErrors(panel.welcome_message);
+  const hasMissingRequired =
+    missingChannel ||
+    missingCategory ||
+    missingThreadChannel ||
+    buttonIdentityMissing ||
+    stale(panel.channel_id) ||
+    stale(panel.category_id) ||
+    stale(panel.transcript_channel_id) ||
+    stale(panel.ticket_notification_channel) ||
+    welcomeMessageEmpty ||
+    invalidWelcomeMessageUrls.length > 0;
+
   return (
     <MainLayout
       title={`Panel Editor - ${panel.name || panel.title}`}
@@ -519,7 +562,8 @@ const EditPanelsPage: FC = () => {
               <Select
                 label="Panel Channel"
                 info={PANEL_MESSAGE_INFO}
-                error={!!panel.channel_id && !existingChannelIds.has(panel.channel_id)}
+                required
+                error={stale(panel.channel_id)}
                 options={sortedChannels}
                 value={panel.channel_id || ""}
                 onChange={(e) =>
@@ -536,7 +580,9 @@ const EditPanelsPage: FC = () => {
             </div>
             <div className="py-2 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
-                label="Button Text"
+                label="Button Text (or an emoji)"
+                required
+                missing={buttonIdentityMissing}
                 placeholder="e.g. Open Ticket"
                 value={panel.button_label || ""}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, button_label: e } : prev))}
@@ -544,12 +590,11 @@ const EditPanelsPage: FC = () => {
               <Select
                 label="Button Colour"
                 value={panel.button_style?.toString() || "1"}
-                options={[
-                  { label: "Blue", key: "1" },
-                  { label: "Grey", key: "2" },
-                  { label: "Green", key: "3" },
-                  { label: "Red", key: "4" },
-                ]}
+                options={BUTTON_STYLE_OPTIONS.map(({ key, label, color }) => ({
+                  key,
+                  label,
+                  color,
+                }))}
                 onChange={(e) =>
                   setPanel((prev) =>
                     prev ? { ...prev, button_style: e ?? prev.button_style } : prev,
@@ -560,6 +605,7 @@ const EditPanelsPage: FC = () => {
 
               <EmojiPicker
                 label="Button Emoji"
+                missing={buttonIdentityMissing}
                 className="col-span-2"
                 value={panel.use_custom_emoji ? "" : panelEmoteName(panel.emote)}
                 guildEmojiId={panel.use_custom_emoji ? panel.emoji_id : undefined}
@@ -642,7 +688,8 @@ const EditPanelsPage: FC = () => {
 
           <Select
             label="Ticket Category"
-            error={!!panel.category_id && !existingChannelIds.has(panel.category_id)}
+            required
+            error={stale(panel.category_id)}
             options={
               selectedGuild?.channels
                 ?.filter((c) => c.type == 4)
@@ -689,9 +736,7 @@ const EditPanelsPage: FC = () => {
           <Select
             label="Transcript Channel"
             info={TRANSCRIPT_CHANNEL_INFO}
-            error={
-              !!panel.transcript_channel_id && !existingChannelIds.has(panel.transcript_channel_id)
-            }
+            error={stale(panel.transcript_channel_id)}
             showNoneOption={true}
             noneOptionLabel="No Transcript Channel"
             options={sortedChannels}
@@ -709,15 +754,15 @@ const EditPanelsPage: FC = () => {
             options={
               selectedGuild?.roles
                 ? [
-                    { label: "Ticket Opener", key: "user", color: "ffffff" },
-                    { label: "@here", key: "here", color: "ffffff" },
+                    { label: "Ticket Opener", key: "user", color: "#FFFFFF" },
+                    { label: "@here", key: "here", color: "#FFFFFF" },
                     ...(selectedGuild.roles.map((role) => ({
                       label: role.name,
                       key: role.id,
-                      color: role.color.toString(16),
-                    })) || [{ label: "@here", key: "here", color: "ffffff" }]),
+                      color: roleColour(role.color),
+                    })) || [{ label: "@here", key: "here", color: "#FFFFFF" }]),
                   ]
-                : [{ label: "@here", key: "here", color: "ffffff" }]
+                : [{ label: "@here", key: "here", color: "#FFFFFF" }]
             }
             onChange={(e) => setPanel((prev) => (prev ? { ...prev, mentions: e } : prev))}
           />
@@ -765,6 +810,18 @@ const EditPanelsPage: FC = () => {
         subtitle="Configure the message sent on ticket open"
         defaultOpen={false}
       >
+        {welcomeMessageEmpty && (
+          <div
+            data-missing="true"
+            className="mx-4 mb-4 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm"
+          >
+            <FontAwesomeIcon icon={faExclamationTriangle} />
+            <span>
+              A welcome message needs a title, description, image, thumbnail or field. Discord
+              rejects an empty embed.
+            </span>
+          </div>
+        )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
           <FeatureGate flag={COMPONENTS_V2_BUILDER_FLAG} guildId={guildId}>
             <div className="md:col-span-2">
@@ -881,6 +938,7 @@ const EditPanelsPage: FC = () => {
                     label="Title URL"
                     placeholder="e.g. https://example.com"
                     value={panel.welcome_message?.url || ""}
+                    error={embedUrlError(panel.welcome_message?.url)}
                     onChange={(e) =>
                       setPanel((prev) =>
                         prev
@@ -935,6 +993,7 @@ const EditPanelsPage: FC = () => {
                       label="Author Icon URL"
                       placeholder="e.g. https://example.com/icon.png"
                       value={panel.welcome_message?.author?.icon_url || ""}
+                      error={embedUrlError(panel.welcome_message?.author?.icon_url)}
                       onChange={(e) =>
                         setPanel((prev) =>
                           prev
@@ -954,6 +1013,7 @@ const EditPanelsPage: FC = () => {
                       label="Author URL"
                       placeholder="e.g. https://example.com"
                       value={panel.welcome_message?.author?.url || ""}
+                      error={embedUrlError(panel.welcome_message?.author?.url)}
                       onChange={(e) =>
                         setPanel((prev) =>
                           prev
@@ -976,6 +1036,7 @@ const EditPanelsPage: FC = () => {
                     label="Thumbnail URL"
                     placeholder="e.g. https://example.com/thumbnail.png"
                     value={panel.welcome_message?.thumbnail_url || ""}
+                    error={embedUrlError(panel.welcome_message?.thumbnail_url)}
                     onChange={(e) =>
                       setPanel((prev) =>
                         prev
@@ -992,6 +1053,7 @@ const EditPanelsPage: FC = () => {
                     label="Image URL"
                     placeholder="e.g. https://example.com/image.png"
                     value={panel.welcome_message?.image_url || ""}
+                    error={embedUrlError(panel.welcome_message?.image_url)}
                     onChange={(e) =>
                       setPanel((prev) =>
                         prev
@@ -1032,6 +1094,7 @@ const EditPanelsPage: FC = () => {
                       label="Footer Icon URL"
                       placeholder="e.g. https://example.com/footer-icon.png"
                       value={panel.welcome_message?.footer?.icon_url || ""}
+                      error={embedUrlError(panel.welcome_message?.footer?.icon_url)}
                       onChange={(e) =>
                         setPanel((prev) =>
                           prev
@@ -1104,11 +1167,8 @@ const EditPanelsPage: FC = () => {
           <Select
             label="Thread Notification Channel"
             info={THREAD_NOTIFICATION_CHANNEL_INFO}
-            error={
-              (!!panel.ticket_notification_channel &&
-                !existingChannelIds.has(panel.ticket_notification_channel)) ||
-              (panel.use_threads && !panel.ticket_notification_channel)
-            }
+            required={panel.use_threads}
+            error={stale(panel.ticket_notification_channel)}
             disabled={!panel.use_threads}
             options={
               selectedGuild?.channels
@@ -1525,11 +1585,19 @@ const EditPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
+        disabled={saveAttempted && hasMissingRequired}
         visuallyDisabled={isLocked}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={() => {
           if (!panel.name?.trim()) {
             toast.error("Enter a panel name before saving.");
+            return;
+          }
+          if (hasMissingRequired) {
+            setSaveAttempted(true);
+            if (!scrollToFirstMissingField()) {
+              toast.error("Fill in the required fields before saving.");
+            }
             return;
           }
 

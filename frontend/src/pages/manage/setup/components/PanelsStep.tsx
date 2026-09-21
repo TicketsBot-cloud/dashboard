@@ -164,6 +164,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
         form_id: formId ? parseInt(formId) : null,
         button_style: "1",
         button_label: "Open a Ticket",
+        access_control_list: [{ action: "allow", role_id: guildId }],
       } as Record<string, unknown>);
       toast.success("Panel created");
       onPanelCreated();
@@ -221,6 +222,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
                     label="Channel"
+                    required
                     value={importChannel}
                     options={textChannelOptions}
                     onChange={setImportChannel}
@@ -228,6 +230,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
                   />
                   <Select
                     label="Category"
+                    required
                     value={importCategory}
                     options={categoryOptions}
                     onChange={setImportCategory}
@@ -251,6 +254,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
               label="Title"
+              required
               value={title}
               onChange={setTitle}
               placeholder="Open a Ticket"
@@ -268,6 +272,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Channel"
+              required
               value={channel}
               options={textChannelOptions}
               onChange={setChannel}
@@ -275,6 +280,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
             />
             <Select
               label="Category"
+              required
               value={category}
               options={categoryOptions}
               onChange={setCategory}

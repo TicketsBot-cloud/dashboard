@@ -36,6 +36,7 @@ const EmbedPreview: FC<EmbedPreviewProps> = ({ embed, raw = false }) => {
   const authorIconUrl = previewAvatarUrl(embed.author?.icon_url);
   const authorUrl = previewAvatarUrl(embed.author?.url);
   const footerIconUrl = previewAvatarUrl(embed.footer?.icon_url);
+  const titleUrl = previewAvatarUrl(embed.url);
 
   // Group fields into rows: inline fields share a row (max 3), non-inline get their own
   const fieldRows: EmbedField[][] = [];
@@ -90,7 +91,17 @@ const EmbedPreview: FC<EmbedPreviewProps> = ({ embed, raw = false }) => {
               <span className="text-sm font-semibold">{embed.author.name}</span>
             </div>
           ) : null}
-          <DiscordText raw={raw} content={embed.title || ""} className="text-sm font-bold" />
+          {titleUrl && isSafeUrl(titleUrl) && embed.title ? (
+            <a href={titleUrl} target="_blank" rel="noopener noreferrer">
+              <DiscordText
+                raw={raw}
+                content={embed.title}
+                className="text-sm font-bold text-[#00a8fc] hover:underline"
+              />
+            </a>
+          ) : (
+            <DiscordText raw={raw} content={embed.title || ""} className="text-sm font-bold" />
+          )}
           {embed.description && (
             <DiscordText raw={raw} content={embed.description} className="text-sm pt-2" />
           )}

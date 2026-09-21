@@ -288,6 +288,7 @@ export default function Whitelabel() {
                   <div className="sm:w-2/3">
                     <TextInput
                       label="Status Text"
+                      required
                       value={bot.status}
                       onChange={(value) => setBot((prev) => ({ ...prev, status: value }))}
                       placeholder="/help"
@@ -324,6 +325,7 @@ export default function Whitelabel() {
               <h2 className="text-lg font-semibold text-white mb-4">Bot Token</h2>
               <TextInput
                 label="Bot Token"
+                required
                 value={token}
                 onChange={setToken}
                 placeholder="xxxxxxxxxxxxxxxxxxxxxxxx.xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxx"

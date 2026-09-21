@@ -13,6 +13,7 @@ import DiscordContent from "@/components/discord/DiscordContent";
 import DateTimePicker from "@/components/DateTimePicker";
 import { useKBArticles } from "@/hooks/queries/useKB";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
+import { embedUrlError } from "@/lib/embed-url";
 import type { Tag, TagEmbed } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
@@ -189,6 +190,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
           <div className="space-y-4">
             <TextInput
               label="Tag ID"
+              required
               placeholder="e.g. greeting"
               value={id}
               onChange={(v) => {
@@ -230,6 +232,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                   <div className="mt-3">
                     <Select
                       label="Knowledge Base Article"
+                      required
                       value={kbArticleId != null ? String(kbArticleId) : null}
                       options={kbArticleOptions}
                       onChange={(v) => setKbArticleId(v != null ? parseInt(v) : null)}
@@ -291,6 +294,15 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                       />
                     </div>
 
+                    <TextInput
+                      label="Title URL"
+                      placeholder="e.g. https://example.com"
+                      value={embed.url || ""}
+                      error={embedUrlError(embed.url)}
+                      onChange={(v) => setEmbed((prev) => ({ ...prev, url: v }))}
+                      maxLength={EMBED_LIMITS.URL}
+                    />
+
                     <Textarea
                       label="Description"
                       value={embed.description || ""}
@@ -317,6 +329,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                           label="Author Icon URL"
                           placeholder="https://example.com/icon.png"
                           value={embed.author?.icon_url || ""}
+                          error={embedUrlError(embed.author?.icon_url)}
                           onChange={(v) =>
                             setEmbed((prev) => ({
                               ...prev,
@@ -329,6 +342,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                           label="Author URL"
                           placeholder="https://example.com"
                           value={embed.author?.url || ""}
+                          error={embedUrlError(embed.author?.url)}
                           onChange={(v) =>
                             setEmbed((prev) => ({
                               ...prev,
@@ -345,6 +359,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         label="Thumbnail URL"
                         placeholder="https://example.com/thumbnail.png"
                         value={embed.thumbnail_url || ""}
+                        error={embedUrlError(embed.thumbnail_url)}
                         onChange={(v) => setEmbed((prev) => ({ ...prev, thumbnail_url: v }))}
                         maxLength={EMBED_LIMITS.URL}
                       />
@@ -352,6 +367,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         label="Image URL"
                         placeholder="https://example.com/image.png"
                         value={embed.image_url || ""}
+                        error={embedUrlError(embed.image_url)}
                         onChange={(v) => setEmbed((prev) => ({ ...prev, image_url: v }))}
                         maxLength={EMBED_LIMITS.URL}
                       />
@@ -374,6 +390,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         label="Footer Icon URL"
                         placeholder="https://example.com/footer-icon.png"
                         value={embed.footer?.icon_url || ""}
+                        error={embedUrlError(embed.footer?.icon_url)}
                         onChange={(v) =>
                           setEmbed((prev) => ({
                             ...prev,
@@ -383,7 +400,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         maxLength={EMBED_LIMITS.URL}
                       />
                       <DateTimePicker
-                        label="Footer Timestamp (Optional)"
+                        label="Footer Timestamp"
                         value={parseEmbedTimestamp(embed.timestamp)}
                         onChange={(date) =>
                           setEmbed((prev) => ({

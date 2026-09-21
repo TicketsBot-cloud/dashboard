@@ -76,6 +76,12 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	existingAcl, err := dbclient.Client.PanelAccessControlRules.GetAll(c, panelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panel"))
+		return
+	}
+
 	if existing.ForceDisabled {
 		c.JSON(400, utils.ErrorStr("This panel is disabled and cannot be modified: please reactivate premium to re-enable it"))
 		return
@@ -290,7 +296,7 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	// If ticket limit is 0, treat it as use global setting
+	// If ticket limit is 0, this panel has no limit of its own
 	if data.TicketLimit != nil && *data.TicketLimit == 0 {
 		data.TicketLimit = nil
 	}
@@ -397,8 +403,11 @@ func UpdatePanel(c *gin.Context) {
 			return err
 		}
 
-		if err := dbclient.Client.PanelAccessControlRules.ReplaceWithTx(c, tx, panel.PanelId, data.AccessControlList); err != nil {
-			return err
+		// nil means the request omitted the ACL, so the stored rules stand.
+		if data.AccessControlList != nil {
+			if err := dbclient.Client.PanelAccessControlRules.ReplaceWithTx(c, tx, panel.PanelId, *data.AccessControlList); err != nil {
+				return err
+			}
 		}
 
 		if err := dbclient.Client.PanelKBCategories.SetWithTx(c, tx, panel.PanelId, data.KBCategoryIds); err != nil {
@@ -513,6 +522,10 @@ func UpdatePanel(c *gin.Context) {
 		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
 		OldData:      existing,
 		NewData:      panel,
+		Metadata: map[string]any{
+			"access_control_list_old": existingAcl,
+			"access_control_list_new": data.AccessControlList,
+		},
 	})
 
 	c.JSON(200, utils.SuccessResponse)

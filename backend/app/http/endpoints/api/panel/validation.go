@@ -442,11 +442,14 @@ func validateWelcomeMessage(ctx PanelValidationContext) validation.ValidationFun
 
 func validateAccessControlList(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		acl := ctx.Data.AccessControlList
-
-		if len(acl) == 0 {
-			return validation.NewInvalidInputError("Access control list is empty")
+		// Absent means "leave the stored rules alone"; an empty list means "no restrictions"
+		// and clears the rules. Create fills in a default before validation runs, so nil only
+		// reaches here from update.
+		if ctx.Data.AccessControlList == nil {
+			return nil
 		}
+
+		acl := *ctx.Data.AccessControlList
 
 		if len(acl) > 10 {
 			return validation.NewInvalidInputError("Access control list cannot have more than 10 roles")
@@ -454,15 +457,12 @@ func validateAccessControlList(ctx PanelValidationContext) validation.Validation
 
 		roles := utils.ToSet(utils.Map(ctx.Roles, utils.RoleToId))
 
-		if roles.Size() != len(ctx.Roles) {
-			return validation.NewInvalidInputError("Duplicate roles in access control list")
-		}
-
-		everyoneRoleFound := false
+		seen := make(map[uint64]struct{}, len(acl))
 		for _, rule := range acl {
-			if rule.RoleId == ctx.GuildId {
-				everyoneRoleFound = true
+			if _, duplicate := seen[rule.RoleId]; duplicate {
+				return validation.NewInvalidInputErrorf("Duplicate role %d in access control list", rule.RoleId)
 			}
+			seen[rule.RoleId] = struct{}{}
 
 			if rule.Action != database.AccessControlActionDeny && rule.Action != database.AccessControlActionAllow {
 				return validation.NewInvalidInputErrorf("Invalid access control action \"%s\"", rule.Action)
@@ -471,10 +471,6 @@ func validateAccessControlList(ctx PanelValidationContext) validation.Validation
 			if !roles.Contains(rule.RoleId) {
 				return validation.NewInvalidInputErrorf("Invalid role %d in access control list not found in the guild", rule.RoleId)
 			}
-		}
-
-		if !everyoneRoleFound {
-			return validation.NewInvalidInputError("Access control list does not contain @everyone rule")
 		}
 
 		return nil
@@ -490,6 +486,11 @@ func validateEmbed(e *types.CustomEmbed) error {
 		return validation.NewInvalidInputError("Your embed message does not contain any content")
 	}
 
+	if err := e.ValidateUrls(); err != nil {
+		return validation.NewInvalidInputError(err.Error())
+	}
+
+	// urlRegex additionally constrains host shape here; ValidateUrls is scheme-only.
 	for _, url := range []*string{e.ImageUrl, e.ThumbnailUrl} {
 		if url == nil || *url == types.AvatarUrlPlaceholder {
 			continue
@@ -571,7 +572,7 @@ func validateTicketLimit(ctx PanelValidationContext) validation.ValidationFunc {
 		}
 
 		if *ctx.Data.TicketLimit > 10 {
-			return validation.NewInvalidInputError("Ticket limit must be at most 11")
+			return validation.NewInvalidInputError("Ticket limit must be at most 10")
 		}
 
 		return nil

@@ -794,6 +794,7 @@ const TicketViewPage: FC = () => {
           <Select
             onChange={(v) => setSelectedTag(v ?? "")}
             value={selectedTag}
+            required
             className="py-4"
             placeholder="Select a tag..."
             options={tagKeys.map((tag) => ({ key: tag, label: tag }))}

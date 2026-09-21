@@ -63,6 +63,20 @@ func ValidateWebhookUrl(rawUrl string) error {
 	return nil
 }
 
+// Not url.Parse: it rejects invalid percent-escapes, failing URLs already stored today.
+func ValidateHttpUrl(rawUrl string) error {
+	lower := strings.ToLower(rawUrl)
+	if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+		return errors.New("URL must start with http:// or https://")
+	}
+
+	if strings.TrimSpace(urlAuthority(rawUrl)) == "" {
+		return errors.New("URL must include a host")
+	}
+
+	return nil
+}
+
 func urlAuthority(rawUrl string) string {
 	_, after, found := strings.Cut(rawUrl, "://")
 	if !found {

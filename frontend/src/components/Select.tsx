@@ -6,6 +6,9 @@ import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import ChannelInfoModal from "@/components/modals/ChannelInfoModal";
 import type { SelectInfo } from "@/constants/panelChannelInfo";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
+import RequiredMark from "./RequiredMark";
+import { FAULT_FIELD_CLASS, IDLE_FIELD_CLASS, MISSING_FIELD_CLASS } from "@/lib/field-validity";
+import { normaliseColour } from "@/lib/colour";
 
 interface SelectOption {
   key: string | null;
@@ -28,6 +31,8 @@ interface SelectProps {
   noneOptionLabel?: string;
   hideSearch?: boolean;
   error?: boolean;
+  required?: boolean;
+  missing?: boolean;
   info?: SelectInfo;
 }
 
@@ -40,6 +45,7 @@ const defaultProps = {
   noneOptionLabel: "None",
   hideSearch: false,
   error: false,
+  required: false,
 } as const;
 
 const Select: FC<SelectProps> = (props) => {
@@ -57,6 +63,7 @@ const Select: FC<SelectProps> = (props) => {
     hideSearch,
     error,
     info,
+    required,
   } = {
     ...defaultProps,
     ...props,
@@ -111,12 +118,19 @@ const Select: FC<SelectProps> = (props) => {
     option.label.toLowerCase().includes(searchText.toLowerCase()),
   );
 
+  // Raw value, not selectedOption: `options` loads async.
+  const missing = !disabled && (props.missing ?? (required && (value === null || value === "")));
+  const borderClass = error ? FAULT_FIELD_CLASS : missing ? MISSING_FIELD_CLASS : IDLE_FIELD_CLASS;
+
   return (
     <div className={`flex flex-col relative ${className}`}>
       {label && hideLabel && <label className="sr-only">{label}</label>}
       {label && !hideLabel && (
         <div className="mb-1 flex items-center gap-1.5">
-          <label className="text-white">{label}</label>
+          <label className="text-white">
+            {label}
+            {required && <RequiredMark />}
+          </label>
           {info && (
             <button
               type="button"
@@ -130,10 +144,12 @@ const Select: FC<SelectProps> = (props) => {
         </div>
       )}
 
+      {/* aria-required needs a role other than button. */}
       <button
         ref={triggerRef}
         type="button"
-        className={`inline-flex items-center bg-gray-700 border rounded overflow-hidden px-1 w-full text-left ${disabled ? "opacity-50" : ""} ${error ? "border-red-500/60 shadow-[0_0_30px_rgba(239,68,68,0.45)]" : "border-neutral-600"}`}
+        role="combobox"
+        className={`inline-flex items-center bg-gray-700 border rounded overflow-hidden px-1 w-full text-left ${disabled ? "opacity-50" : ""} ${borderClass}`}
         onClick={() => {
           if (!disabled) setIsOpen(!isOpen);
         }}
@@ -150,14 +166,18 @@ const Select: FC<SelectProps> = (props) => {
         aria-owns={isOpen ? listboxId : undefined}
         aria-label={label || "Select"}
         title={label || "Select"}
+        aria-required={required || undefined}
+        aria-invalid={error || undefined}
+        data-missing={missing || error || undefined}
+        data-bloom={error || undefined}
       >
         <div className="w-full p-2 min-h-10 flex items-center gap-2">
           {selectedOption ? (
             <>
               {selectedOption.color && (
                 <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: selectedOption.color }}
+                  className="w-3 h-3 rounded-full shrink-0 ring-1 ring-white/15"
+                  style={{ backgroundColor: normaliseColour(selectedOption.color) }}
                 />
               )}
               <span className="text-white">{selectedOption.label}</span>
@@ -279,8 +299,8 @@ const Select: FC<SelectProps> = (props) => {
                         </div>
                         {option.color && (
                           <div
-                            className="w-3 h-3 rounded-full mr-2 shrink-0"
-                            style={{ backgroundColor: option.color }}
+                            className="w-3 h-3 rounded-full mr-2 shrink-0 ring-1 ring-white/15"
+                            style={{ backgroundColor: normaliseColour(option.color) }}
                           />
                         )}
                         <span className="text-white">{option.label}</span>

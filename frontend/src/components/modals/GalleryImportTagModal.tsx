@@ -73,6 +73,7 @@ const GalleryImportTagModal: FC<GalleryImportTagModalProps> = ({ listing, open, 
         <div className="space-y-4">
           <Select
             label="Server"
+            required
             placeholder="Select a server..."
             value={selectedGuildId}
             onChange={(v) => setSelectedGuildId(v)}
@@ -82,6 +83,7 @@ const GalleryImportTagModal: FC<GalleryImportTagModalProps> = ({ listing, open, 
           {selectedGuildId && (
             <TextInput
               label="Tag ID"
+              required
               placeholder="e.g. welcome"
               value={tagId}
               onChange={setTagId}

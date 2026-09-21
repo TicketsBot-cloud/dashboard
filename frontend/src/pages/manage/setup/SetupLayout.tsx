@@ -67,6 +67,13 @@ function SetupLayoutContent() {
       return;
     }
 
+    if ((g.permission_level ?? 0) < 2) {
+      selectGuild(null);
+      toast.warning("You need administrator permissions to access the setup wizard.");
+      navigate("/", { replace: true });
+      return;
+    }
+
     setVerified(false);
 
     const verifyAndLoad = async () => {

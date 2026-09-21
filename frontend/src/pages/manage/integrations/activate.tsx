@@ -137,6 +137,7 @@ const ActivateIntegrationPage: FC = () => {
                     <div key={secret.name} className="flex flex-col gap-1">
                       <TextInput
                         label={secret.name}
+                        required
                         placeholder={secret.name}
                         value={secretValues[secret.name] ?? ""}
                         onChange={(val) =>

@@ -17,6 +17,7 @@ const FORM_INPUT_TYPE_NAMES: Record<number, string> = {
   6: "Role Select",
   7: "Mentionable Select",
   8: "Channel Select",
+  10: "Text Display",
   21: "Radio Group",
   22: "Checkbox Group",
 };
@@ -59,13 +60,16 @@ function hasMarkdown(content: string | undefined): boolean {
   return plain !== source;
 }
 
-// Only the text EmbedPreview and TagListingPreview pass through DiscordText.
-// Form labels and placeholders are not markdown surfaces in Discord.
+// Only the text EmbedPreview, TagListingPreview and form Text Display fields pass through
+// DiscordText. Form labels and placeholders are not markdown surfaces in Discord.
 function markdownFields(listing: GalleryListing): (string | undefined)[] {
   const listingType = listing.listing_type || "panel";
 
   if (listingType === "form") {
-    return [];
+    const snapshot = listing.snapshot_data as GalleryFormSnapshot | undefined;
+    return (snapshot?.inputs ?? [])
+      .filter((input) => input.type === 10)
+      .map((input) => input.content);
   }
 
   if (listingType === "tag") {
@@ -170,22 +174,29 @@ const TagListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ list
   );
 };
 
-const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot }> = ({ input }) => {
+const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot; raw: boolean }> = ({
+  input,
+  raw,
+}) => {
   const typeName = FORM_INPUT_TYPE_NAMES[input.type] ?? `Type ${input.type}`;
+  const isTextDisplay = input.type === 10;
 
   return (
     <div className="bg-gray-900 rounded p-3">
       <div className="flex items-start justify-between gap-2 mb-1">
-        <span className="text-white text-sm font-medium">{input.label}</span>
-        <div className="flex items-center gap-2 shrink-0">
+        {!isTextDisplay && <span className="text-white text-sm font-medium">{input.label}</span>}
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
           <span className="text-gray-400 text-xs">{typeName}</span>
-          {input.required && (
+          {!isTextDisplay && input.required && (
             <span className="bg-red-600/20 text-red-400 rounded-full px-2 py-0.5 text-xs font-medium">
               Required
             </span>
           )}
         </div>
       </div>
+      {isTextDisplay && input.content && (
+        <DiscordText raw={raw} content={input.content} className="text-gray-300 text-sm" />
+      )}
       {input.description && <p className="text-gray-400 text-xs mt-1">{input.description}</p>}
       {input.placeholder && (
         <p className="text-gray-400 text-xs mt-1 italic">Placeholder: {input.placeholder}</p>
@@ -205,7 +216,7 @@ const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot }> = ({ input })
   );
 };
 
-const FormListingPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
+const FormListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ listing, raw }) => {
   const snapshot = listing.snapshot_data as GalleryFormSnapshot | undefined;
 
   if (!snapshot) {
@@ -224,7 +235,7 @@ const FormListingPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
       {sortedInputs.length > 0 ? (
         <div className="space-y-3">
           {sortedInputs.map((input, i) => (
-            <FormInputPreviewRow key={i} input={input} />
+            <FormInputPreviewRow key={i} input={input} raw={raw} />
           ))}
         </div>
       ) : (
@@ -244,7 +255,7 @@ const GalleryListingPreview: FC<GalleryListingPreviewProps> = ({ listing, raw = 
     case "tag":
       return <TagListingPreview listing={listing} raw={raw} />;
     case "form":
-      return <FormListingPreview listing={listing} />;
+      return <FormListingPreview listing={listing} raw={raw} />;
     default:
       return <PanelListingPreview listing={listing} raw={raw} />;
   }

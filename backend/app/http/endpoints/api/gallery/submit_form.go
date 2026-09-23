@@ -122,6 +122,7 @@ func SubmitFormHandler(ctx *gin.Context) {
 			Label:       input.Label,
 			Description: input.Description,
 			Placeholder: input.Placeholder,
+			Content:     input.Content,
 			Required:    input.Required,
 			MinLength:   input.MinLength,
 			MaxLength:   input.MaxLength,

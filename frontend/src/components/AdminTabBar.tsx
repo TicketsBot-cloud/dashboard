@@ -50,7 +50,7 @@ const AdminTabBar: FC = () => {
           <Link
             key={tab.path}
             to={tab.path}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center w-full sm:w-auto sm:min-w-36 sm:whitespace-nowrap ${
+            className={`flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center sm:w-44 sm:whitespace-nowrap ${
               isActive
                 ? "bg-blue-600 text-white"
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white"

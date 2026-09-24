@@ -139,6 +139,9 @@ const ACTION_TYPE_LABELS: Record<number, string> = {
   440: "Feature Flag Toggle",
   441: "Feature Flag Create",
   442: "Feature Flag Rules Update",
+
+  450: "Submission Blacklist Add",
+  451: "Submission Blacklist Remove",
 };
 
 const RESOURCE_TYPE_LABELS: Record<number, string> = {
@@ -180,6 +183,7 @@ const RESOURCE_TYPE_LABELS: Record<number, string> = {
   36: "Notification",
   37: "User Email Verification",
   38: "Feature Flag",
+  39: "Submission Blacklist",
 };
 
 export function formatActionType(type: number): string {

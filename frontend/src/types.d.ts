@@ -453,9 +453,24 @@ export interface GlobalBlacklistEntry {
 
 export interface ServerBlacklistEntry {
   guild_id: string;
+  name?: string;
+  icon?: string;
   reason?: string;
   owner_id?: string;
   real_owner_id?: string;
+}
+
+export type SubmissionBlacklistFeature = "gallery" | "integrations";
+
+export type SubmissionBlacklistTarget = "user" | "guild";
+
+export interface SubmissionBlacklistEntry {
+  target_type: SubmissionBlacklistTarget;
+  target_id: string;
+  name?: string;
+  avatar_url?: string;
+  icon?: string;
+  reason: string | null;
 }
 
 export interface PremiumKeyEntry {

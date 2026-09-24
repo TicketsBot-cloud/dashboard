@@ -16,13 +16,19 @@ const tabs: Tab[] = [
   { label: "Polar Products", path: "/admin/polar-products", minTier: "owner" },
   { label: "SKUs", path: "/admin/skus", minTier: "owner" },
   { label: "Gallery", path: "/admin/gallery", minTier: "helper" },
-  { label: "Integrations", path: "/admin/integrations", minTier: "admin" },
+  { label: "Integrations", path: "/admin/integrations", minTier: "owner" },
   { label: "Affiliates", path: "/admin/affiliate", minTier: "admin" },
   { label: "Analytics", path: "/admin/analytics", minTier: "admin" },
   { label: "Feature Flags", path: "/admin/flags", minTier: "owner" },
   { label: "Audit Log", path: "/admin/audit-log", minTier: "admin" },
   { label: "Global Blacklist", path: "/admin/global-blacklist", minTier: "owner" },
   { label: "Server Blacklist", path: "/admin/server-blacklist", minTier: "helper" },
+  { label: "Gallery Blacklist", path: "/admin/submission-blacklist/gallery", minTier: "admin" },
+  {
+    label: "Integration Blacklist",
+    path: "/admin/submission-blacklist/integrations",
+    minTier: "owner",
+  },
   { label: "Utilities", path: "/admin/utilities", minTier: "owner" },
 ];
 
@@ -44,7 +50,7 @@ const AdminTabBar: FC = () => {
           <Link
             key={tab.path}
             to={tab.path}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center w-full sm:w-36 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center w-full sm:w-auto sm:min-w-36 sm:whitespace-nowrap ${
               isActive
                 ? "bg-blue-600 text-white"
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white"

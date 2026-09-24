@@ -15,6 +15,7 @@ import {
   GlobalBlacklistPage,
   PremiumPage,
   ServerBlacklistPage,
+  SubmissionBlacklistPage,
 } from "@/router/lazy-pages";
 import { AdminIndexRedirect, SiblingRouteRedirect } from "@/router/redirects/components";
 import { lazyPage } from "@/router/wrap";
@@ -36,7 +37,7 @@ export const adminRoutes: RouteObject[] = [
   { path: "gallery", element: lazyPage(<AdminGalleryPage />) },
   {
     path: "integrations",
-    loader: requireAdminTier("admin"),
+    loader: requireAdminTier("owner"),
     element: lazyPage(<AdminIntegrationsPage />),
   },
   {
@@ -45,6 +46,16 @@ export const adminRoutes: RouteObject[] = [
     element: lazyPage(<GlobalBlacklistPage />),
   },
   { path: "server-blacklist", element: lazyPage(<ServerBlacklistPage />) },
+  {
+    path: "submission-blacklist/gallery",
+    loader: requireAdminTier("admin"),
+    element: lazyPage(<SubmissionBlacklistPage key="gallery" feature="gallery" />),
+  },
+  {
+    path: "submission-blacklist/integrations",
+    loader: requireAdminTier("owner"),
+    element: lazyPage(<SubmissionBlacklistPage key="integrations" feature="integrations" />),
+  },
   {
     path: "polar-products",
     loader: requireAdminTier("owner"),

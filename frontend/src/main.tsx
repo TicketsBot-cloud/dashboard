@@ -29,6 +29,8 @@ import {
   faUserShield,
   faSquareCaretLeft,
   faRightToBracket,
+  faTrash,
+  faSync,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -54,6 +56,8 @@ library.add(
   faUserShield,
   faSquareCaretLeft,
   faRightToBracket,
+  faTrash,
+  faSync,
 );
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { userAvatarUrl } from "@/lib/discord-cdn";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import BlacklistAvatar from "@/components/BlacklistAvatar";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import Button from "@/components/Button";
 import TextInput from "@/components/TextInput";
@@ -75,9 +75,6 @@ export default function GlobalBlacklistPage() {
     }
   };
 
-  const getAvatarUrl = (entry: GlobalBlacklistEntry): string =>
-    userAvatarUrl(entry.id, entry.avatar_url ?? null);
-
   if (isLoading) {
     return <TableSkeleton rows={4} columns={3} />;
   }
@@ -123,7 +120,7 @@ export default function GlobalBlacklistPage() {
 
       {/* User Grid */}
       <div
-        className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
         role="list"
         aria-label="Blacklisted users"
       >
@@ -131,13 +128,14 @@ export default function GlobalBlacklistPage() {
           <div
             key={entry.id}
             role="listitem"
-            className="group flex items-center space-x-4 bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition"
+            className="flex items-center space-x-4 bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition"
           >
             <div className="w-12 h-12 rounded-md overflow-hidden shrink-0">
-              <img
-                src={getAvatarUrl(entry)}
-                alt={`${entry.username} avatar`}
-                className="w-full h-full object-cover"
+              <BlacklistAvatar
+                targetType="user"
+                targetId={entry.id}
+                label={entry.username}
+                avatarUrl={entry.avatar_url}
               />
             </div>
             <div className="flex-1 min-w-0">
@@ -148,7 +146,7 @@ export default function GlobalBlacklistPage() {
               variant="ghost"
               size="icon"
               onClick={() => setDeleteTarget(entry)}
-              className="opacity-0 group-hover:opacity-100 text-green-400 hover:text-green-300 hover:bg-green-900/30 transition-all"
+              className="text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-all"
               title={`Remove ${entry.username} from blacklist`}
             >
               <FontAwesomeIcon icon="trash" aria-hidden="true" />
@@ -171,7 +169,7 @@ export default function GlobalBlacklistPage() {
         title="Remove from Blacklist"
         message={`Are you sure you want to remove ${deleteTarget?.username ?? "this user"} from the global blacklist?`}
         confirmText="Remove"
-        confirmVariant="success"
+        confirmVariant="danger"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />

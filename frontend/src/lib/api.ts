@@ -40,6 +40,9 @@ import type {
   BotStaffMember,
   GlobalBlacklistEntry,
   ServerBlacklistEntry,
+  SubmissionBlacklistEntry,
+  SubmissionBlacklistFeature,
+  SubmissionBlacklistTarget,
   AdminEntitlement,
   PremiumKeyEntry,
   SkuWithDetails,
@@ -768,6 +771,18 @@ export const apiClient = {
       add: (guildId: string, data?: { reason?: string }) =>
         api.post(`/api/admin/server-blacklist/${guildId}`, data),
       remove: (guildId: string) => api.delete(`/api/admin/server-blacklist/${guildId}`),
+    },
+    submissionBlacklist: {
+      list: (feature: SubmissionBlacklistFeature) =>
+        api.get<SubmissionBlacklistEntry[]>(`/api/admin/submission-blacklist/${feature}`),
+      add: (
+        feature: SubmissionBlacklistFeature,
+        type: SubmissionBlacklistTarget,
+        id: string,
+        data?: { reason?: string },
+      ) => api.post(`/api/admin/submission-blacklist/${feature}/${type}/${id}`, data),
+      remove: (feature: SubmissionBlacklistFeature, type: SubmissionBlacklistTarget, id: string) =>
+        api.delete(`/api/admin/submission-blacklist/${feature}/${type}/${id}`),
     },
     featureFlags: {
       list: () => api.get<FeatureFlagList>("/api/admin/feature-flags"),

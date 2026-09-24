@@ -90,6 +90,10 @@ func UpdateIntegrationHandler(ctx *gin.Context) {
 		return
 	}
 
+	if integration.Public && utils.RejectIfSubmissionBlacklisted(ctx, database.SubmissionFeatureIntegrations, userId, 0) {
+		return
+	}
+
 	if data.ValidationUrl != nil {
 		sameHost, err := isSameValidationUrlHost(data.WebhookUrl, *data.ValidationUrl)
 		if err != nil {

@@ -240,7 +240,7 @@ func ResubmitHandler(ctx *gin.Context) {
 				snapshotInputs[i] = database.GalleryFormInputSnapshot{
 					Type: input.Type, Position: input.Position, Style: input.Style,
 					Label: input.Label, Description: input.Description, Placeholder: input.Placeholder,
-					Required: input.Required, MinLength: input.MinLength, MaxLength: input.MaxLength,
+					Content: input.Content, Required: input.Required, MinLength: input.MinLength, MaxLength: input.MaxLength,
 				}
 				if opts, exists := optionsByInput[input.Id]; exists {
 					snapshotOpts := make([]database.GalleryFormInputOptionSnapshot, len(opts))

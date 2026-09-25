@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
 	"github.com/TicketsBot-cloud/database"
@@ -30,10 +31,11 @@ type (
 	}
 
 	inputCreateBody struct {
-		Label       string                   `json:"label" validate:"required,min=1,max=45"`
+		Label       string                   `json:"label" validate:"omitempty,max=45"`
 		Description *string                  `json:"description,omitempty" validate:"omitempty,max=100"`
 		Placeholder *string                  `json:"placeholder,omitempty" validate:"omitempty,min=1,max=100"`
-		Type        int                      `json:"type" validate:"required,oneof=3 4 5 6 7 8 21 22"`
+		Content     *string                  `json:"content,omitempty" validate:"omitempty,max=4000"`
+		Type        int                      `json:"type" validate:"required,oneof=3 4 5 6 7 8 10 21 22"`
 		Position    int                      `json:"position" validate:"required,min=1,max=5"`
 		Style       component.TextStyleTypes `json:"style" validate:"omitempty,required,min=1,max=2"`
 		Required    bool                     `json:"required"`
@@ -91,6 +93,14 @@ func UpdateInputs(c *gin.Context) {
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
+	}
+
+	for i := range data.Create {
+		data.Create[i] = normalizeTypeFields(data.Create[i])
+	}
+
+	for i := range data.Update {
+		data.Update[i].inputCreateBody = normalizeTypeFields(data.Update[i].inputCreateBody)
 	}
 
 	if err := validate.Struct(data); err != nil {
@@ -206,6 +216,11 @@ func UpdateInputs(c *gin.Context) {
 		}
 	}
 
+	if contentLength := totalTextDisplayLength(data); contentLength > 4000 {
+		c.JSON(400, utils.ErrorStr("Text display content must be at most 4000 characters in total (current: %d characters)", contentLength))
+		return
+	}
+
 	if err := saveInputs(c, formId, data, existingInputs); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save form inputs to database"))
 		return
@@ -254,6 +269,23 @@ func arePositionsCorrect(body updateInputsBody) bool {
 	}
 
 	return true
+}
+
+func totalTextDisplayLength(body updateInputsBody) int {
+	var total int
+	for _, input := range body.Create {
+		if input.Type == 10 && input.Content != nil {
+			total += utf8.RuneCountInString(*input.Content)
+		}
+	}
+
+	for _, input := range body.Update {
+		if input.Type == 10 && input.Content != nil {
+			total += utf8.RuneCountInString(*input.Content)
+		}
+	}
+
+	return total
 }
 
 func validateUniqueOptionValues(options []inputOption) error {
@@ -307,6 +339,17 @@ func validateApiBodyTemplate(config *inputApiConfigBody) error {
 }
 
 func validateInput(input inputCreateBody, optionTypes map[int]string) error {
+	if input.Type == 10 {
+		if input.Content == nil || strings.TrimSpace(*input.Content) == "" {
+			return fmt.Errorf("Text display content is required")
+		}
+		return nil
+	}
+
+	if strings.TrimSpace(input.Label) == "" {
+		return fmt.Errorf("Field labels are required")
+	}
+
 	if input.Type == 4 && input.MaxLength < 1 {
 		return fmt.Errorf("Text input max length must be at least 1")
 	}
@@ -358,7 +401,7 @@ func validateInput(input inputCreateBody, optionTypes map[int]string) error {
 }
 
 func normalizeLengths(input inputCreateBody) (*uint16, *uint16) {
-	if input.Type == 21 {
+	if input.Type == 10 || input.Type == 21 {
 		return nil, nil
 	}
 
@@ -391,6 +434,19 @@ func normalizeLengths(input inputCreateBody) (*uint16, *uint16) {
 	}
 
 	return &minLength, &maxLength
+}
+
+func normalizeTypeFields(input inputCreateBody) inputCreateBody {
+	if input.Type == 10 {
+		input.Label = ""
+		input.Required = false
+		input.Placeholder = nil
+		input.Description = nil
+	} else {
+		input.Content = nil
+	}
+
+	return input
 }
 
 func saveInputs(ctx context.Context, formId int, data updateInputsBody, existingInputs []database.FormInput) error {
@@ -426,6 +482,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			Label:       input.Label,
 			Description: input.Description,
 			Placeholder: input.Placeholder,
+			Content:     input.Content,
 			Required:    input.Required,
 			MinLength:   minLengthPtr,
 			MaxLength:   maxLengthPtr,
@@ -435,19 +492,11 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			return err
 		}
 
+		if err := dbclient.Client.FormInputOption.DeleteByFormInputTx(ctx, tx, wrapped.Id); err != nil {
+			return err
+		}
+
 		if wrapped.Type == 3 || wrapped.Type == 21 || wrapped.Type == 22 { // String Select, RadioGroup, CheckboxGroup
-			// Delete existing options
-			options, err := dbclient.Client.FormInputOption.GetOptions(ctx, wrapped.Id)
-			if err != nil {
-				return err
-			}
-
-			for _, option := range options {
-				if err := dbclient.Client.FormInputOption.DeleteTx(ctx, tx, option.Id); err != nil {
-					return err
-				}
-			}
-
 			// Add new options
 			for i, opt := range input.Options {
 				option := database.FormInputOption{
@@ -487,6 +536,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 			input.Label,
 			input.Description,
 			input.Placeholder,
+			input.Content,
 			input.Required,
 			minLengthPtr,
 			maxLengthPtr,
@@ -522,7 +572,7 @@ func saveInputs(ctx context.Context, formId int, data updateInputsBody, existing
 
 func saveApiConfig(ctx context.Context, tx pgx.Tx, formInputId int, input inputCreateBody) error {
 	if input.Type != 3 {
-		return nil
+		return dbclient.Client.FormInputApiConfig.DeleteByFormInputTx(ctx, tx, formInputId)
 	}
 
 	existingConfig, hasExisting, err := dbclient.Client.FormInputApiConfig.GetTx(ctx, tx, formInputId)

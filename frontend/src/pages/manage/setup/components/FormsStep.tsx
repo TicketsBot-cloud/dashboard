@@ -23,6 +23,7 @@ interface FormInputPayload {
   style?: number;
   placeholder?: string;
   description?: string;
+  content?: string;
   options?: Array<{
     label: string;
     value: string;
@@ -177,6 +178,10 @@ const FormsStep = forwardRef<FormsStepRef, FormsStepProps>(
 
             if (input.description && input.description.trim().length > 0) {
               item.description = input.description;
+            }
+
+            if (input.content && input.content.trim().length > 0) {
+              item.content = input.content;
             }
 
             if (input.options && input.options.length > 0) {

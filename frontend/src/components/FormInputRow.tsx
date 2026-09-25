@@ -6,6 +6,7 @@ import Select from "./Select";
 import RangeSlider from "./RangeSlider";
 import NumberInput from "./NumberInput";
 import Textarea from "./Textarea";
+import DiscordContent from "./discord/DiscordContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faTrash, faPlus } from "@fortawesome/free-solid-svg-icons";
 import Slider from "./Slider";
@@ -30,6 +31,7 @@ interface FormInputRowProps {
 }
 
 const OPTION_TYPES = [3, 21, 22];
+const NO_RANGE_TYPES = [10, 21];
 
 // Must match SecretHeaderMask on the API; sent back untouched to keep the stored secret.
 const SECRET_HEADER_MASK = "••••••••";
@@ -115,8 +117,12 @@ const FormInputRow: FC<FormInputRowProps> = ({
 
   // Validation
   const hasInvalidLabel =
-    !input.label || input.label.trim().length === 0 || input.label.length > 45;
-  const hasInvalidDescription = !!input.description && input.description.length > 100;
+    input.type !== 10 &&
+    (!input.label || input.label.trim().length === 0 || input.label.length > 45);
+  const contentLength = [...(input.content ?? "")].length;
+  const hasInvalidContent = input.type === 10 && (!input.content?.trim() || contentLength > 4000);
+  const hasInvalidDescription =
+    input.type !== 10 && !!input.description && input.description.length > 100;
   const minOptionsRequired = input.type === 21 ? 2 : 1;
   const maxOptionsAllowed = input.type === 21 || input.type === 22 ? 10 : 25;
   const hasNoOptions =
@@ -175,6 +181,7 @@ const FormInputRow: FC<FormInputRowProps> = ({
   const hasBlankOptions = blankOptions.length > 0;
   const hasValidationErrors =
     hasInvalidLabel ||
+    hasInvalidContent ||
     hasInvalidDescription ||
     hasDuplicateValues ||
     hasNoOptions ||
@@ -212,6 +219,7 @@ const FormInputRow: FC<FormInputRowProps> = ({
     { label: "Channel Select", key: "8" },
     { label: "Radio Group", key: "21" },
     { label: "Checkbox Group", key: "22" },
+    { label: "Text Display", key: "10" },
   ];
 
   const inputStyles = [
@@ -262,42 +270,46 @@ const FormInputRow: FC<FormInputRowProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <TextInput
-          label="Label"
-          required
-          placeholder="Enter field label"
-          value={input.label || ""}
-          onChange={(value) => handleChange("label", value)}
-        />
-        <TextInput
-          label="Placeholder"
-          placeholder="Enter placeholder text (for text inputs)"
-          value={input.placeholder || ""}
-          onChange={(value) => handleChange("placeholder", value)}
-        />
-      </div>
-      {!!input.label && input.label.length > 45 && (
-        <ValidationWarning
-          message={`Label must be 45 characters or less (currently ${input.label.length})`}
-        />
+      {input.type !== 10 && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <TextInput
+              label="Label"
+              required
+              placeholder="Enter field label"
+              value={input.label || ""}
+              onChange={(value) => handleChange("label", value)}
+            />
+            <TextInput
+              label="Placeholder"
+              placeholder="Enter placeholder text (for text inputs)"
+              value={input.placeholder || ""}
+              onChange={(value) => handleChange("placeholder", value)}
+            />
+          </div>
+          {!!input.label && input.label.length > 45 && (
+            <ValidationWarning
+              message={`Label must be 45 characters or less (currently ${input.label.length})`}
+            />
+          )}
+
+          <div className="mt-3">
+            <TextInput
+              label="Description"
+              placeholder="Add a description to help users understand this field"
+              value={input.description || ""}
+              onChange={(value) => handleChange("description", value)}
+            />
+          </div>
+          {hasInvalidDescription && (
+            <ValidationWarning
+              message={`Description must be 100 characters or less (currently ${input.description!.length})`}
+            />
+          )}
+        </>
       )}
 
-      <div className="mt-3">
-        <TextInput
-          label="Description"
-          placeholder="Add a description to help users understand this field"
-          value={input.description || ""}
-          onChange={(value) => handleChange("description", value)}
-        />
-      </div>
-      {hasInvalidDescription && (
-        <ValidationWarning
-          message={`Description must be 100 characters or less (currently ${input.description!.length})`}
-        />
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${input.type !== 10 ? "mt-3" : ""}`}>
         <Select
           label="Type"
           options={inputTypes}
@@ -310,6 +322,8 @@ const FormInputRow: FC<FormInputRowProps> = ({
               type: newType,
               options: optionTypes.includes(newType) ? (input.options ?? []) : undefined,
               api_config: newType === 3 ? input.api_config : undefined,
+              min_length: input.min_length ?? 0,
+              max_length: input.max_length ?? 255,
             } as ExtendedFormInput;
 
             if (newType !== 3) setIsApiSelect(false);
@@ -328,11 +342,13 @@ const FormInputRow: FC<FormInputRowProps> = ({
         )}
 
         <div className="flex gap-4">
-          <Slider
-            label="Required"
-            value={input.required}
-            onChange={(e) => handleChange("required", e)}
-          />
+          {input.type !== 10 && (
+            <Slider
+              label="Required"
+              value={input.required}
+              onChange={(e) => handleChange("required", e)}
+            />
+          )}
           {input.type == 3 && (
             <Slider
               label="API Config"
@@ -356,7 +372,34 @@ const FormInputRow: FC<FormInputRowProps> = ({
         </div>
       </div>
 
-      {input.type !== 21 && (
+      {input.type === 10 && (
+        <div className="mt-3">
+          <Textarea
+            label="Content"
+            required
+            max={4000}
+            placeholder="Text shown in the form. Discord markdown is supported."
+            value={input.content ?? ""}
+            onChange={(value) => handleChange("content", value)}
+          />
+          {contentLength > 4000 && (
+            <ValidationWarning
+              message={`Content must be 4000 characters or less (currently ${contentLength})`}
+            />
+          )}
+          {!!input.content?.trim() && (
+            <div className="mt-3">
+              <span className="text-sm font-medium text-gray-300">Preview</span>
+              <DiscordContent
+                content={input.content}
+                className="mt-2 text-sm bg-[#242429] rounded p-3"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {!NO_RANGE_TYPES.includes(input.type) && (
         <div className="mt-3">
           <RangeSlider
             label={input.type == 4 ? "Length Range" : "Items Range"}

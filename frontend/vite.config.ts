@@ -93,7 +93,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       port: 5173,
-      open: true,
+      open: baseUrl,
       allowedHosts: ["localhost", new URL(baseUrl).hostname],
       headers: securityHeaders,
     },

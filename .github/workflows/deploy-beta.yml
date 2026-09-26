@@ -1,0 +1,88 @@
+name: Deploy to Beta
+
+# Pick the branch in the "Use workflow from" dropdown. The branch must contain this file.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to deploy
+        required: true
+        type: choice
+        default: both
+        options:
+          - both
+          - api
+          - dash
+
+# Beta is a single shared environment, so queue runs rather than letting two branches
+# interleave (branch A's API with branch B's frontend).
+concurrency:
+  group: beta
+  cancel-in-progress: false
+
+jobs:
+  api:
+    if: inputs.target != 'dash'
+    uses: ticketsbot-cloud/template/.github/workflows/template.yaml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      package_name: beta-api
+      sha: ${{ github.sha }}
+      working_directory: backend
+      update_submodules_remote: true
+    secrets: inherit
+
+  dash:
+    if: inputs.target != 'api'
+    runs-on: ubuntu-latest
+    environment:
+      name: beta
+      url: https://beta-dash.tickets.bot
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # API, BASE and WS URLs are required by vite.config.ts and also feed the CSP.
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_BASE_URL: ${{ vars.VITE_BASE_URL }}
+          VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+          VITE_BOT_ID: ${{ vars.VITE_BOT_ID }}
+          VITE_DOCS_URL: ${{ vars.VITE_DOCS_URL }}
+          VITE_KB_DOMAIN: ${{ vars.VITE_KB_DOMAIN }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_GROWTHBOOK_URL: ${{ vars.VITE_GROWTHBOOK_URL }}
+          VITE_ICON_URL: ${{ vars.VITE_ICON_URL }}
+          VITE_PATREON_URL: ${{ vars.VITE_PATREON_URL }}
+          VITE_WEBSITE_URL: ${{ vars.VITE_WEBSITE_URL }}
+          VITE_POWERED_BY: ${{ vars.VITE_POWERED_BY }}
+
+      # dv2 is the Pages project's production branch, which is what beta-dash.tickets.bot
+      # serves. Deploying under the feature branch name would only create a preview URL.
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages deploy dist --project-name=beta-dashboard --branch=dv2 --commit-hash=${{ github.sha }}

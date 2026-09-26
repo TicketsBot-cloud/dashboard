@@ -11,6 +11,7 @@ import type {
   FeatureFlagRule,
   Guild,
   GuildChannel,
+  InvitableGuild,
   GuildRole,
   GuildSettings,
   GuildEmoji,
@@ -228,9 +229,17 @@ export const apiClient = {
   },
 
   guilds: {
-    reload: () =>
+    reload: (config?: AxiosRequestConfig) =>
       api.post<{ success: boolean; guilds: Guild[]; reauthenticate_required?: boolean }>(
         "/user/guilds/reload",
+        undefined,
+        config,
+      ),
+    /** Servers the user can manage that the bot is not in, for per-server invite links. */
+    invitable: () =>
+      api.get<{ success: boolean; guilds: InvitableGuild[] }>(
+        "/user/guilds/invitable",
+        SKIP_ERROR_TOAST,
       ),
     getAll: () => api.get<Guild[]>("/guilds"),
     getById: (guildId: string) => api.get<Guild>(`/guilds/${guildId}`),

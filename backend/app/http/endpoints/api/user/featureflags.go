@@ -32,6 +32,7 @@ var browserFlags = []string{
 	"202608_FEATURE_WHITELABEL",
 	"202608_FEATURE_INTEGRATIONS",
 	"202608_FEATURE_AUTOMATIONS",
+	"202609_SERVER_LIST_INVITE",
 }
 
 // evalBrowserFlags evaluates the allowlisted flags against the given attributes.

@@ -28,6 +28,13 @@ export interface User {
  */
 export type GuildPermissionLevel = 0 | 1 | 2;
 
+/** A server the user can manage that the bot has not joined yet. */
+export interface InvitableGuild {
+  id: Snowflake;
+  name: string;
+  icon: string;
+}
+
 export interface Guild {
   id: Snowflake;
   icon?: string;

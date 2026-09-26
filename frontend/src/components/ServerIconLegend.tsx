@@ -1,8 +1,12 @@
 import type { FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-/** Compact legend for icon view — intended below the server grid. */
-const ServerIconLegend: FC = () => (
+interface ServerIconLegendProps {
+  showInvite?: boolean;
+}
+
+/** Compact legend for icon view, intended below the server grid. */
+const ServerIconLegend: FC<ServerIconLegendProps> = ({ showInvite = false }) => (
   <footer
     className="mt-10 pt-5 border-t border-gray-800 flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs text-gray-400"
     aria-label="Icon legend"
@@ -27,6 +31,15 @@ const ServerIconLegend: FC = () => (
       </span>
       No access
     </span>
+    {showInvite && (
+      <span className="inline-flex items-center gap-2">
+        <span
+          className="h-4 w-4 rounded-md outline-2 outline-dashed outline-gray-500 shrink-0"
+          aria-hidden="true"
+        />
+        Tickets not added yet
+      </span>
+    )}
   </footer>
 );
 

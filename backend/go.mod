@@ -8,7 +8,7 @@ go 1.26.0
 
 // replace github.com/TicketsBot-cloud/worker => ../../worker
 
-replace github.com/TicketsBot-cloud/gdl => ../../gdl
+// replace github.com/TicketsBot-cloud/gdl => ../../gdl
 
 replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0
 
@@ -17,7 +17,7 @@ require (
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260905165836-38e4090764a4
 	github.com/TicketsBot-cloud/database v0.0.0-20260913165941-c2ecc7191b02
-	github.com/TicketsBot-cloud/gdl v0.0.0-20260612070331-a3947b410d3e
+	github.com/TicketsBot-cloud/gdl v0.0.0-20260927072153-8dbf0b284f57
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
 	github.com/TicketsBot-cloud/worker v0.0.0-20260827073646-455b39e53841
 	github.com/apex/log v1.1.2

@@ -2,7 +2,7 @@ module github.com/ticketsbot-cloud/dashboard/backend
 
 go 1.26.0
 
-// replace github.com/TicketsBot-cloud/database => ../../database
+replace github.com/TicketsBot-cloud/database => ../../database
 
 // replace github.com/TicketsBot-cloud/common => ../../common
 

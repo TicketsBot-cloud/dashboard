@@ -5,7 +5,7 @@
  * without creating an import cycle through the router.
  *
  * A key here must also appear in the API's browserFlags allowlist
- * (dash-api/app/http/endpoints/api/user/featureflags.go), otherwise it is never
+ * (dashboard/backend/app/http/endpoints/api/user/featureflags.go), otherwise it is never
  * sent to the browser and reads as off. Rolling a flag out is done in Admin,
  * Feature Flags, and needs no deploy.
  */
@@ -32,3 +32,9 @@ export const FEATURE_BLACKLIST = "202608_FEATURE_BLACKLIST";
 export const FEATURE_WHITELABEL = "202608_FEATURE_WHITELABEL";
 export const FEATURE_INTEGRATIONS = "202608_FEATURE_INTEGRATIONS";
 export const FEATURE_AUTOMATIONS = "202608_FEATURE_AUTOMATIONS";
+
+/**
+ * String flag choosing which invite entry points the server list shows:
+ * "off", "toolbar", "per_server" or "both". See useServerListInviteVariant.
+ */
+export const SERVER_LIST_INVITE_FLAG = "202609_SERVER_LIST_INVITE";

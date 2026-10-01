@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	gdlcache "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/TicketsBot-cloud/gdl/objects/guild"
+	gdlpermission "github.com/TicketsBot-cloud/gdl/permission"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/TicketsBot-cloud/worker/i18n"
@@ -106,6 +108,75 @@ func LoadGuilds(ctx context.Context, accessToken string, userId uint64) ([]Guild
 	})
 
 	return dtos, nil
+}
+
+type InvitableGuildDto struct {
+	Id   uint64 `json:"id,string"`
+	Name string `json:"name"`
+	Icon string `json:"icon"`
+}
+
+// LoadInvitableGuilds returns the guilds from the user's last Discord guild list
+// sync that the bot is not in and that the user is able to add the bot to.
+func LoadInvitableGuilds(ctx context.Context, userId uint64) ([]InvitableGuildDto, error) {
+	userGuilds, err := dbclient.Client.UserGuilds.Get(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user guilds: %w", err)
+	}
+
+	if len(userGuilds) == 0 {
+		return []InvitableGuildDto{}, nil
+	}
+
+	guildIds := make([]uint64, len(userGuilds))
+	for i, g := range userGuilds {
+		guildIds[i] = g.GuildId
+	}
+
+	botGuilds, err := getExistingGuilds(ctx, guildIds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch bot guilds: %w", err)
+	}
+
+	botGuildIds := collections.NewSet[uint64]()
+	for _, guildId := range botGuilds {
+		botGuildIds.Add(guildId)
+	}
+
+	return FilterInvitableGuilds(userGuilds, botGuildIds), nil
+}
+
+// FilterInvitableGuilds mirrors Discord's own rule for adding a bot: the user must
+// own the guild or hold Administrator or Manage Server in it.
+func FilterInvitableGuilds(guilds []database.UserGuild, botGuildIds *collections.Set[uint64]) []InvitableGuildDto {
+	dtos := make([]InvitableGuildDto, 0, len(guilds))
+	for _, g := range guilds {
+		if botGuildIds != nil && botGuildIds.Contains(g.GuildId) {
+			continue
+		}
+
+		canInvite := g.Owner ||
+			gdlpermission.HasPermissionRaw(g.UserPermissions, gdlpermission.Administrator) ||
+			gdlpermission.HasPermissionRaw(g.UserPermissions, gdlpermission.ManageGuild)
+		if !canInvite {
+			continue
+		}
+
+		dtos = append(dtos, InvitableGuildDto{
+			Id:   g.GuildId,
+			Name: g.Name,
+			Icon: g.Icon,
+		})
+	}
+
+	slices.SortFunc(dtos, func(a, b InvitableGuildDto) int {
+		if c := cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name)); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.Id, b.Id)
+	})
+
+	return dtos
 }
 
 // TODO: Remove this function!

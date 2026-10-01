@@ -92,8 +92,8 @@ const ServerIconTile: FC<ServerIconTileProps> = ({ guild }) => {
     "rounded-xl block p-1 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900";
 
   const ariaLabel = disabled
-    ? `${guild.name} — ${tierLabel}. ${permissionDescription}. Click to learn how to get access.`
-    : `${guild.name} — ${tierLabel}. ${permissionDescription}`;
+    ? `${guild.name}, ${tierLabel}. ${permissionDescription}. Click to learn how to get access.`
+    : `${guild.name}, ${tierLabel}. ${permissionDescription}`;
 
   const tooltipLabel = `${guild.name} (${tierLabel})`;
 

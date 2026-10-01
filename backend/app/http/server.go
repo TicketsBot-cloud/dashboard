@@ -433,6 +433,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 	userGroup := router.Group("/user", middleware.VerifyXTicketsHeader, middleware.AuthenticateToken, middleware.UpdateLastSeen)
 	{
 		userGroup.POST("/guilds/reload", api.ReloadGuildsHandler)
+		userGroup.GET("/guilds/invitable", api.GetInvitableGuildsHandler)
 		userGroup.GET("/permission-level", api.GetPermissionLevel)
 
 		// User settings

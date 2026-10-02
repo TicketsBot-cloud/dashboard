@@ -2,7 +2,7 @@ module github.com/ticketsbot-cloud/dashboard/backend
 
 go 1.26.0
 
-replace github.com/TicketsBot-cloud/database => ../../database
+// replace github.com/TicketsBot-cloud/database => ../../database
 
 // replace github.com/TicketsBot-cloud/common => ../../common
 
@@ -14,7 +14,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20251015181023-f0b66a074704
 	github.com/TicketsBot-cloud/common v0.0.0-20260927072029-424264fc4be2
-	github.com/TicketsBot-cloud/database v0.0.0-20260927071905-7a22c7be0e4a
+	github.com/TicketsBot-cloud/database v0.0.0-20261002063446-01dca52a987e
 	github.com/TicketsBot-cloud/gdl v0.0.0-20260612070331-a3947b410d3e
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20251018211319-7a7df5cacbdc
 	github.com/TicketsBot-cloud/worker v0.0.0-20260827073646-455b39e53841

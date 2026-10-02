@@ -21,6 +21,10 @@ func SubmitFormHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
 
+	if utils.RejectIfSubmissionBlacklisted(ctx, database.SubmissionFeatureGallery, userId, guildId) {
+		return
+	}
+
 	formIdStr := ctx.Param("formid")
 	formId, err := strconv.Atoi(formIdStr)
 	if err != nil {

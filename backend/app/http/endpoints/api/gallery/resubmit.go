@@ -21,6 +21,10 @@ func ResubmitHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
 
+	if utils.RejectIfSubmissionBlacklisted(ctx, database.SubmissionFeatureGallery, userId, guildId) {
+		return
+	}
+
 	listingId, err := strconv.Atoi(ctx.Param("listingId"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid listing ID"))

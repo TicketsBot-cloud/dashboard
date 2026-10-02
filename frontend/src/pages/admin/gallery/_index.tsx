@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useId, useMemo, type FC } from "react";
 import { apiClient } from "@/lib/api";
+import { userAvatarUrl } from "@/lib/discord-cdn";
 import { toast } from "sonner";
 import type { GallerySubmission } from "@/types";
 import Button from "@/components/Button";
@@ -224,13 +225,14 @@ const AdminGalleryPage: FC = () => {
                     </div>
                     <div className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
                       by
-                      {submission.submitted_user.avatar_url && (
-                        <img
-                          src={submission.submitted_user.avatar_url}
-                          alt=""
-                          className="w-4 h-4 rounded-full inline"
-                        />
-                      )}
+                      <img
+                        src={userAvatarUrl(
+                          submission.submitted_user.id,
+                          submission.submitted_user.avatar_url,
+                        )}
+                        alt=""
+                        className="w-4 h-4 rounded-full inline"
+                      />
                       {submission.submitted_user.username} &middot; {date}
                     </div>
                   </div>

@@ -15,26 +15,28 @@ import (
 
 func ListPanels(c *gin.Context) {
 	type panelResponse struct {
-		PanelId           int     `json:"panel_id"`
-		ChannelId         uint64  `json:"channel_id,string"`
-		Title             string  `json:"title"`
-		Colour            int32   `json:"colour"`
-		ButtonLabel       string  `json:"button_label"`
-		ButtonStyle       int     `json:"button_style,string"`
-		EmojiName         *string `json:"emoji_name,omitempty"`
-		EmojiId           *uint64 `json:"emoji_id,omitempty,string"`
-		UseCustomEmoji    bool    `json:"use_custom_emoji"`
-		Emote             *string `json:"emote,omitempty"`
-		HasSupportHours   bool    `json:"has_support_hours"`
-		IsCurrentlyActive bool    `json:"is_currently_active"`
-		Disabled          bool    `json:"disabled"`
-		ForceDisabled     bool    `json:"force_disabled"`
+		PanelId           int                        `json:"panel_id"`
+		ChannelId         uint64                     `json:"channel_id,string"`
+		Title             string                     `json:"title"`
+		Colour            int32                      `json:"colour"`
+		ButtonLabel       string                     `json:"button_label"`
+		ButtonStyle       int                        `json:"button_style,string"`
+		EmojiName         *string                    `json:"emoji_name,omitempty"`
+		EmojiId           *uint64                    `json:"emoji_id,omitempty,string"`
+		UseCustomEmoji    bool                       `json:"use_custom_emoji"`
+		Emote             *string                    `json:"emote,omitempty"`
+		HasSupportHours   bool                       `json:"has_support_hours"`
+		IsCurrentlyActive bool                       `json:"is_currently_active"`
+		Disabled          bool                       `json:"disabled"`
+		ForceDisabled     bool                       `json:"force_disabled"`
+		CloseReasons      database.PanelCloseReasons `json:"close_reasons"`
 	}
 
 	guildId := c.Keys["guildid"].(uint64)
 
 	var panels []database.Panel
 	var activePanelIds []int
+	var closeReasons map[int]database.PanelCloseReasons
 
 	g, ctx := errgroup.WithContext(c)
 
@@ -47,6 +49,12 @@ func ListPanels(c *gin.Context) {
 	g.Go(func() error {
 		var err error
 		activePanelIds, err = dbclient.Client.PanelSupportHours.GetActivePanels(ctx, guildId)
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		closeReasons, err = dbclient.Client.PanelCloseReasons.GetAllForGuild(ctx, guildId)
 		return err
 	})
 
@@ -110,6 +118,12 @@ func ListPanels(c *gin.Context) {
 	wrapped := make([]panelResponse, len(panels))
 	for i, p := range panels {
 		hasSH := supportHoursSet[p.PanelId]
+
+		panelCloseReasons, ok := closeReasons[p.PanelId]
+		if !ok {
+			panelCloseReasons = database.DefaultPanelCloseReasons()
+		}
+
 		wrapped[i] = panelResponse{
 			PanelId:           p.PanelId,
 			ChannelId:         p.ChannelId,
@@ -125,6 +139,7 @@ func ListPanels(c *gin.Context) {
 			IsCurrentlyActive: !hasSH || activeSet[p.PanelId],
 			Disabled:          p.Disabled,
 			ForceDisabled:     p.ForceDisabled,
+			CloseReasons:      panelCloseReasons,
 		}
 	}
 

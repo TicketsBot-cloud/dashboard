@@ -93,6 +93,7 @@ export interface GuildChannel {
     join_timestamp: string; // ISO 8601 format
     flags: number; // Flags for the member
   };
+  flags?: number;
   // Additional fields can be added as needed
 }
 
@@ -993,6 +994,7 @@ export interface ChannelPermCheckResult {
   required: string[];
   missing: string[];
   deleted: boolean;
+  no_access: boolean;
   ok: boolean;
 }
 

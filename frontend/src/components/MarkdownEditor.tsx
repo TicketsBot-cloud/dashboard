@@ -229,7 +229,7 @@ const MarkdownEditor: FC<MarkdownEditorProps> = ({
 
   // Sync external value changes (e.g. when loading saved data)
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     const currentMd = getMarkdown(editor.storage);
     if (value !== currentMd) {
       editor.commands.setContent(value);

@@ -20,6 +20,7 @@ import { prepareMultiPanelForApi } from "@/lib/panel-payload";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
+import ChannelRefreshHint from "@/components/ChannelRefreshHint";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
 import { intToColour } from "@/lib/colour";
@@ -228,6 +229,7 @@ const MultiPanelsPage: FC = () => {
         <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <Select
             label="Panel Channel"
+            hint={<ChannelRefreshHint />}
             info={PANEL_MESSAGE_INFO}
             required
             error={staleChannel}

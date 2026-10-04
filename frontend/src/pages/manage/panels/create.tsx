@@ -19,6 +19,7 @@ import type { Panel, SupportHoursData } from "@/types";
 import Collapsible from "@/components/Collapsible";
 import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
+import ChannelRefreshHint from "@/components/ChannelRefreshHint";
 import TextInput from "@/components/TextInput";
 import NumberInput from "@/components/NumberInput";
 import ColourSelect from "@/components/ColourSelect";
@@ -340,6 +341,7 @@ const PanelsPage: FC = () => {
             <div className="py-2">
               <Select
                 label="Panel Channel"
+                hint={<ChannelRefreshHint />}
                 info={PANEL_MESSAGE_INFO}
                 required
                 error={stale(panel.channel_id)}
@@ -494,6 +496,7 @@ const PanelsPage: FC = () => {
 
           <Select
             label="Ticket Category"
+            hint={<ChannelRefreshHint noun="categories" />}
             required
             error={stale(panel.category_id)}
             options={
@@ -521,6 +524,7 @@ const PanelsPage: FC = () => {
             </div>
             <Select
               label="Awaiting Response Category"
+              hint={<ChannelRefreshHint noun="categories" />}
               hideLabel
               showNoneOption={true}
               noneOptionLabel="No Awaiting Response Category"
@@ -541,6 +545,7 @@ const PanelsPage: FC = () => {
         <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <Select
             label="Transcript Channel"
+            hint={<ChannelRefreshHint />}
             error={stale(panel.transcript_channel_id)}
             info={TRANSCRIPT_CHANNEL_INFO}
             showNoneOption={true}
@@ -888,6 +893,7 @@ const PanelsPage: FC = () => {
           />
           <Select
             label="Thread Notification Channel"
+            hint={<ChannelRefreshHint />}
             info={THREAD_NOTIFICATION_CHANNEL_INFO}
             required={panel.use_threads}
             error={stale(panel.ticket_notification_channel)}
@@ -970,6 +976,7 @@ const PanelsPage: FC = () => {
           {panel.overflow_enabled && (
             <Select
               label="Overflow Category"
+              hint={<ChannelRefreshHint noun="categories" />}
               placeholder="Select a category..."
               options={
                 selectedGuild?.channels

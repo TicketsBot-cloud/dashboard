@@ -241,6 +241,13 @@ export const apiClient = {
       api.get<{ id: string | number; name: string; icon: string }>(`/api/${guildId}/guild`),
     getChannels: (guildId: string) =>
       api.get<GuildChannel[]>(`/api/${guildId}/channels`, { timeout: DISCORD_HEAVY_TIMEOUT_MS }),
+    /** Rate limited per guild; a 429 carries `retry_after` in seconds. */
+    refreshChannels: (guildId: string) =>
+      api.get<GuildChannel[]>(`/api/${guildId}/channels`, {
+        ...SKIP_ERROR_TOAST,
+        params: { refresh: true },
+        timeout: DISCORD_HEAVY_TIMEOUT_MS,
+      }),
     getRoles: (guildId: string) =>
       api.get<{ roles: GuildRole[] }>(`/api/${guildId}/roles`, {
         timeout: DISCORD_HEAVY_TIMEOUT_MS,

@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+	"math"
+	"net/http"
 	"sort"
 
 	"github.com/TicketsBot-cloud/gdl/objects/channel"
@@ -49,11 +51,15 @@ func ChannelsHandler(ctx *gin.Context) {
 		case ok:
 			channels = fetched
 		case refresh:
-			channels, err = cache.Instance.GetGuildChannels(ctx, guildId)
+			remaining, err := redis.Client.ChannelRefreshCooldownRemaining(ctx, guildId)
 			if err != nil {
-				ctx.JSON(500, utils.ErrorStr("Unable to load channels. Please try again."))
-				return
+				remaining = redis.ChannelRefreshCooldown
 			}
+
+			body := utils.ErrorStr("Channels were refreshed recently. Please try again shortly.")
+			body["retry_after"] = max(1, int(math.Ceil(remaining.Seconds())))
+			ctx.JSON(http.StatusTooManyRequests, body)
+			return
 		}
 	}
 

@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { useState, useRef, useEffect, useId, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -34,6 +34,7 @@ interface SelectProps {
   required?: boolean;
   missing?: boolean;
   info?: SelectInfo;
+  hint?: ReactNode;
 }
 
 const defaultProps = {
@@ -63,6 +64,7 @@ const Select: FC<SelectProps> = (props) => {
     hideSearch,
     error,
     info,
+    hint,
     required,
   } = {
     ...defaultProps,
@@ -198,6 +200,8 @@ const Select: FC<SelectProps> = (props) => {
           </svg>
         </div>
       </button>
+
+      {hint}
 
       {isOpen &&
         !disabled &&

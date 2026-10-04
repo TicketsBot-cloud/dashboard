@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import TextInput from "@/components/TextInput";
 import Textarea from "@/components/Textarea";
 import Select from "@/components/Select";
+import ChannelRefreshHint from "@/components/ChannelRefreshHint";
 import ColourSelect from "@/components/ColourSelect";
 import Button from "@/components/Button";
 import GalleryCard from "@/components/GalleryCard";
@@ -222,6 +223,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
                     label="Channel"
+                    hint={<ChannelRefreshHint />}
                     required
                     value={importChannel}
                     options={textChannelOptions}
@@ -230,6 +232,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
                   />
                   <Select
                     label="Category"
+                    hint={<ChannelRefreshHint noun="categories" />}
                     required
                     value={importCategory}
                     options={categoryOptions}
@@ -272,6 +275,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Channel"
+              hint={<ChannelRefreshHint />}
               required
               value={channel}
               options={textChannelOptions}
@@ -280,6 +284,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
             />
             <Select
               label="Category"
+              hint={<ChannelRefreshHint noun="categories" />}
               required
               value={category}
               options={categoryOptions}

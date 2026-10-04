@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
+import ChannelRefreshHint from "@/components/ChannelRefreshHint";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 import type { GalleryListing, GuildChannel } from "@/types";
@@ -111,6 +112,9 @@ const GalleryImportModal: FC<GalleryImportModalProps> = ({ listing, open, onClos
                 <>
                   <Select
                     label="Panel Channel"
+                    hint={
+                      <ChannelRefreshHint guildId={selectedGuildId} onRefreshed={setChannels} />
+                    }
                     required
                     placeholder="Select a channel..."
                     value={selectedChannelId}
@@ -119,6 +123,13 @@ const GalleryImportModal: FC<GalleryImportModalProps> = ({ listing, open, onClos
                   />
                   <Select
                     label="Ticket Category"
+                    hint={
+                      <ChannelRefreshHint
+                        guildId={selectedGuildId}
+                        onRefreshed={setChannels}
+                        noun="categories"
+                      />
+                    }
                     required
                     placeholder="Select a category..."
                     value={selectedCategoryId}

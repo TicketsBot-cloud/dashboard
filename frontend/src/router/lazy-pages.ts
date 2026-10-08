@@ -90,6 +90,9 @@ export const AdminIntegrationsPage = lazyRetry(() => import("@/pages/admin/integ
 export const PremiumPage = lazyRetry(() => import("@/pages/admin/premium/_index"));
 export const GlobalBlacklistPage = lazyRetry(() => import("@/pages/admin/global-blacklist/_index"));
 export const ServerBlacklistPage = lazyRetry(() => import("@/pages/admin/server-blacklist/_index"));
+export const SubmissionBlacklistPage = lazyRetry(
+  () => import("@/pages/admin/submission-blacklist/_index"),
+);
 export const AdminPolarProductsPage = lazyRetry(
   () => import("@/pages/admin/polar-products/_index"),
 );

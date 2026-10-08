@@ -208,9 +208,9 @@ const EditPanelsPage: FC = () => {
     missingThreadChannel ||
     buttonIdentityMissing ||
     stale(panel.channel_id) ||
-    stale(panel.category_id) ||
+    (!panel.use_threads && stale(panel.category_id)) ||
     stale(panel.transcript_channel_id) ||
-    stale(panel.ticket_notification_channel) ||
+    (panel.use_threads && stale(panel.ticket_notification_channel)) ||
     welcomeMessageEmpty ||
     invalidWelcomeMessageUrls.length > 0 ||
     findDuplicateCloseReasons(closeReasons.reasons).size > 0;
@@ -413,7 +413,7 @@ const EditPanelsPage: FC = () => {
           <Select
             label="Ticket Category"
             required
-            error={stale(panel.category_id)}
+            error={!panel.use_threads && stale(panel.category_id)}
             options={
               selectedGuild?.channels
                 ?.filter((c) => c.type == 4)
@@ -808,7 +808,7 @@ const EditPanelsPage: FC = () => {
             label="Thread Notification Channel"
             info={THREAD_NOTIFICATION_CHANNEL_INFO}
             required={panel.use_threads}
-            error={stale(panel.ticket_notification_channel)}
+            error={panel.use_threads && stale(panel.ticket_notification_channel)}
             disabled={!panel.use_threads}
             options={
               selectedGuild?.channels

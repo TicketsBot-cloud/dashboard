@@ -380,6 +380,7 @@ export interface FormInput {
   label: string;
   placeholder?: string;
   description?: string;
+  content?: string;
   options?: Array<FormInputOption>;
   required: boolean;
   min_length?: number;
@@ -1037,6 +1038,7 @@ export interface GalleryFormInputSnapshot {
   label: string;
   description?: string;
   placeholder?: string;
+  content?: string;
   required: boolean;
   min_length?: number;
   max_length?: number;

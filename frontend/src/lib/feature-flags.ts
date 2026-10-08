@@ -32,3 +32,11 @@ export const FEATURE_BLACKLIST = "202608_FEATURE_BLACKLIST";
 export const FEATURE_WHITELABEL = "202608_FEATURE_WHITELABEL";
 export const FEATURE_INTEGRATIONS = "202608_FEATURE_INTEGRATIONS";
 export const FEATURE_AUTOMATIONS = "202608_FEATURE_AUTOMATIONS";
+
+/**
+ * Gates the Components v2 message builder on panels and multi-panels, including authoring of
+ * placed panel buttons/select inside a multi-panel's Components v2 tree. Backend acceptance and
+ * resolution of an already-saved placement is never gated by this flag - only whether the
+ * builder (and placement authoring within it) is shown.
+ */
+export const COMPONENTS_V2_BUILDER_FLAG = "202608_COMPONENTS_V2_BUILDER";

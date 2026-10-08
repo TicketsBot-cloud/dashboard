@@ -30,6 +30,7 @@ interface ContainerProps {
         custom_id?: string;
         emoji?: { name: string };
         label?: string;
+        url?: string;
         placeholder?: string;
         options?: Array<{
           value: string;

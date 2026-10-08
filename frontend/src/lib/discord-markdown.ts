@@ -196,7 +196,7 @@ function parseInline(src: string): MdNode[] {
 
 const RE_TRIPLE_QUOTE = /(?:^|\n) *>>> /;
 const RE_FENCE = /```(?:([A-Za-z0-9+#._-]*)\n)?([\s\S]*?)```\n?/g;
-const RE_HEADING = /^ {0,3}(#{1,3}) (.*)$/;
+export const RE_HEADING = /^ {0,3}(#{1,3}) (.*)$/;
 const RE_SUBTEXT = /^ {0,3}-# (.*)$/;
 const RE_QUOTE_LINE = /^ {0,3}>(?!>>) +(.*)$/;
 

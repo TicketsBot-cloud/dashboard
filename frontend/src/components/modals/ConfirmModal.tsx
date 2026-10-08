@@ -26,11 +26,20 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
   onCancel,
 }) => {
   const titleId = useId();
+  const messageId = useId();
   return (
-    <ActionModal isOpen={isOpen} onClose={onCancel} ariaLabelledBy={titleId}>
+    <ActionModal
+      isOpen={isOpen}
+      onClose={onCancel}
+      ariaLabelledBy={titleId}
+      ariaDescribedBy={messageId}
+      role={confirmVariant === "danger" ? "alertdialog" : "dialog"}
+    >
       <div className="p-6">
         <ModalHeader id={titleId} title={title} />
-        <div className="text-gray-300 mb-6">{message}</div>
+        <div id={messageId} className="text-gray-300 mb-6">
+          {message}
+        </div>
         <ModalFooter className="mt-0">
           <Button variant="secondary" onClick={onCancel}>
             {cancelText}

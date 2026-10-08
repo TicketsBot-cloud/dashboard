@@ -137,6 +137,7 @@ const FormsPage: FC = () => {
           label: input.label,
           description: input.description || null,
           placeholder: input.placeholder || null,
+          content: input.content || null,
           type: input.type,
           position: input.position,
           style: input.style ?? 1,

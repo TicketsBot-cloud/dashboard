@@ -72,6 +72,10 @@ func ChannelsHandler(ctx *gin.Context) {
 			continue
 		}
 
+		if ch.IsObfuscated() {
+			continue
+		}
+
 		filtered = append(filtered, ch)
 	}
 

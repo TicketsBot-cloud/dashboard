@@ -183,7 +183,8 @@ const MultiPanelsPage: FC = () => {
   // Returns the message so the Save button can reuse the rules.
   const saveBlocker = () => {
     if (!multiPanel?.channel_id) return "Select a panel channel before saving the multi-panel.";
-    if (staleChannel) return "The selected panel channel no longer exists.";
+    if (staleChannel)
+      return "The selected panel channel no longer exists or the bot can't view it.";
     if (tooFewPanels) return "Select at least two panels before saving the multi-panel.";
     if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
     if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";

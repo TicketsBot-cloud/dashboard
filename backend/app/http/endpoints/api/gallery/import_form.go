@@ -169,6 +169,7 @@ func createFormInputs(ctx *gin.Context, tx pgx.Tx, formId int, inputs []database
 			input.Label,
 			input.Description,
 			input.Placeholder,
+			input.Content,
 			input.Required,
 			input.MinLength,
 			input.MaxLength,

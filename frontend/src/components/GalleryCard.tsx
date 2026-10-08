@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faStar } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router";
 import { GALLERY_TYPE_BADGES } from "@/components/gallery/GalleryListingPreview";
+import { userAvatarUrl } from "@/lib/discord-cdn";
 
 interface GalleryCardProps {
   listing: GalleryListing;
@@ -119,13 +120,11 @@ const GalleryCard: FC<GalleryCardProps> = ({
             </span>
           )}
           <span className="text-gray-400 flex items-center gap-1.5">
-            {listing.submitted_user.avatar_url ? (
-              <img
-                src={listing.submitted_user.avatar_url}
-                alt=""
-                className="w-4 h-4 rounded-full"
-              />
-            ) : null}
+            <img
+              src={userAvatarUrl(listing.submitted_user.id, listing.submitted_user.avatar_url)}
+              alt=""
+              className="w-4 h-4 rounded-full"
+            />
             {listing.submitted_user.username}
           </span>
         </div>

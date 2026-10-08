@@ -378,10 +378,16 @@ func (d *multiPanelCreateData) validateChannel(guildId uint64) func() error {
 
 		var valid bool
 		for _, ch := range channels {
-			if ch.Id == d.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews) {
-				valid = true
-				break
+			if ch.Id != d.ChannelId {
+				continue
 			}
+
+			if ch.IsObfuscated() {
+				return errChannelNoAccess("The selected channel")
+			}
+
+			valid = ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews
+			break
 		}
 
 		if !valid {

@@ -5,6 +5,7 @@ import GalleryListingPreview, {
   GALLERY_TYPE_BADGES,
   listingHasMarkdown,
 } from "@/components/gallery/GalleryListingPreview";
+import { userAvatarUrl } from "@/lib/discord-cdn";
 import type { GallerySubmission } from "@/types";
 
 type PreviewView = "rendered" | "raw";
@@ -108,13 +109,11 @@ const GalleryPreviewModal: FC<GalleryPreviewModalProps> = ({ listing, open, onCl
             </MetaRow>
             <MetaRow label="Submitted by">
               <span className="inline-flex items-center gap-1.5">
-                {listing.submitted_user.avatar_url && (
-                  <img
-                    src={listing.submitted_user.avatar_url}
-                    alt=""
-                    className="w-4 h-4 rounded-full"
-                  />
-                )}
+                <img
+                  src={userAvatarUrl(listing.submitted_user.id, listing.submitted_user.avatar_url)}
+                  alt=""
+                  className="w-4 h-4 rounded-full"
+                />
                 {listing.submitted_user.username}
               </span>
             </MetaRow>

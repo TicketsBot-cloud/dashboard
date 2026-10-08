@@ -93,6 +93,7 @@ export interface GuildChannel {
     join_timestamp: string; // ISO 8601 format
     flags: number; // Flags for the member
   };
+  flags?: number;
   // Additional fields can be added as needed
 }
 
@@ -405,6 +406,7 @@ export interface FormInput {
   label: string;
   placeholder?: string;
   description?: string;
+  content?: string;
   options?: Array<FormInputOption>;
   required: boolean;
   min_length?: number;
@@ -479,9 +481,24 @@ export interface GlobalBlacklistEntry {
 
 export interface ServerBlacklistEntry {
   guild_id: string;
+  name?: string;
+  icon?: string;
   reason?: string;
   owner_id?: string;
   real_owner_id?: string;
+}
+
+export type SubmissionBlacklistFeature = "gallery" | "integrations";
+
+export type SubmissionBlacklistTarget = "user" | "guild";
+
+export interface SubmissionBlacklistEntry {
+  target_type: SubmissionBlacklistTarget;
+  target_id: string;
+  name?: string;
+  avatar_url?: string;
+  icon?: string;
+  reason: string | null;
 }
 
 export interface PremiumKeyEntry {
@@ -1004,6 +1021,7 @@ export interface ChannelPermCheckResult {
   required: string[];
   missing: string[];
   deleted: boolean;
+  no_access: boolean;
   ok: boolean;
 }
 
@@ -1046,6 +1064,7 @@ export interface GalleryFormInputSnapshot {
   label: string;
   description?: string;
   placeholder?: string;
+  content?: string;
   required: boolean;
   min_length?: number;
   max_length?: number;

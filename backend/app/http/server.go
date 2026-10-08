@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/TicketsBot-cloud/common/permission"
+	dbmodel "github.com/TicketsBot-cloud/database"
 	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-gonic/gin"
 	"github.com/penglongli/gin-metrics/ginmetrics"
@@ -21,6 +22,7 @@ import (
 	admin_premiumkeys "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/admin/premiumkeys"
 	admin_serverblacklist "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/admin/serverblacklist"
 	admin_skus "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/admin/skus"
+	admin_submissionblacklist "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/admin/submissionblacklist"
 	admin_utilities "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/admin/utilities"
 	api_affiliate "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/affiliate"
 	api_analytics "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/analytics"
@@ -489,13 +491,9 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			adminTier.DELETE("/gallery/:id", admin_gallery.RemoveHandler)
 
 			adminTier.POST("/server-blacklist/:guildid", admin_serverblacklist.AddHandler)
-			adminTier.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
 
-			adminTier.GET("/integrations", admin_integrations.ListIntegrationsHandler)
-			adminTier.GET("/integrations/:integrationid", admin_integrations.GetIntegrationDetailHandler)
-			adminTier.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
-			adminTier.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
-			adminTier.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
+			adminTier.GET("/submission-blacklist/gallery", admin_submissionblacklist.ListHandler(dbmodel.SubmissionFeatureGallery))
+			adminTier.POST("/submission-blacklist/gallery/:type/:targetid", admin_submissionblacklist.AddHandler(dbmodel.SubmissionFeatureGallery))
 
 			adminTier.GET("/skus", admin_skus.ListHandler)
 
@@ -522,6 +520,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.GET("/global-blacklist", admin_globalblacklist.ListHandler)
 			ownerTier.POST("/global-blacklist/:userid", admin_globalblacklist.AddHandler)
 			ownerTier.DELETE("/global-blacklist/:userid", admin_globalblacklist.RemoveHandler)
+			ownerTier.DELETE("/server-blacklist/:guildid", admin_serverblacklist.RemoveHandler)
+			ownerTier.DELETE("/submission-blacklist/gallery/:type/:targetid", admin_submissionblacklist.RemoveHandler(dbmodel.SubmissionFeatureGallery))
+			ownerTier.GET("/submission-blacklist/integrations", admin_submissionblacklist.ListHandler(dbmodel.SubmissionFeatureIntegrations))
+			ownerTier.POST("/submission-blacklist/integrations/:type/:targetid", admin_submissionblacklist.AddHandler(dbmodel.SubmissionFeatureIntegrations))
+			ownerTier.DELETE("/submission-blacklist/integrations/:type/:targetid", admin_submissionblacklist.RemoveHandler(dbmodel.SubmissionFeatureIntegrations))
 			ownerTier.POST("/skus", admin_skus.CreateHandler)
 			ownerTier.PUT("/skus/:skuid", admin_skus.UpdateHandler)
 			ownerTier.DELETE("/skus/:skuid", admin_skus.DeleteHandler)
@@ -530,6 +533,12 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			ownerTier.POST("/polar-products", admin_polarproducts.CreateHandler)
 			ownerTier.PUT("/polar-products/:productid", admin_polarproducts.UpdateHandler)
 			ownerTier.DELETE("/polar-products/:productid", admin_polarproducts.DeleteHandler)
+
+			ownerTier.GET("/integrations", admin_integrations.ListIntegrationsHandler)
+			ownerTier.GET("/integrations/:integrationid", admin_integrations.GetIntegrationDetailHandler)
+			ownerTier.POST("/integrations/:integrationid/approve", admin_integrations.ApproveIntegrationHandler)
+			ownerTier.POST("/integrations/:integrationid/reject", admin_integrations.RejectIntegrationHandler)
+			ownerTier.POST("/integrations/:integrationid/unapprove", admin_integrations.UnapproveIntegrationHandler)
 
 			ownerTier.POST("/affiliate", admin_affiliate.CreateHandler)
 			ownerTier.POST("/affiliate/:id/approve", admin_affiliate.ApproveHandler)

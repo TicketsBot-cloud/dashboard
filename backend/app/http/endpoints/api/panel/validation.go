@@ -41,6 +41,21 @@ func DefaultApplicators(data *panelBody) []defaults.DefaultApplicator {
 	}
 }
 
+func normaliseCloseReasons(data *panelBody) {
+	if data.CloseReasons == nil {
+		return
+	}
+
+	reasons := make([]string, 0, len(data.CloseReasons.Reasons))
+	for _, reason := range data.CloseReasons.Reasons {
+		if reason = strings.TrimSpace(reason); reason != "" {
+			reasons = append(reasons, reason)
+		}
+	}
+
+	data.CloseReasons.Reasons = reasons
+}
+
 const (
 	MentionBehaviourNone   = "none"
 	MentionBehaviourHide   = "hide"
@@ -82,6 +97,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateNamingScheme,
 		validateWelcomeMessage,
 		validateAccessControlList,
+		validateCloseReasons,
 		validatePendingCategory,
 		validateTranscriptChannelId,
 		validateTicketNotificationChannel,
@@ -469,6 +485,38 @@ func validateAccessControlList(ctx PanelValidationContext) validation.Validation
 
 			if !roles.Contains(rule.RoleId) {
 				return validation.NewInvalidInputErrorf("Invalid role %d in access control list not found in the guild", rule.RoleId)
+			}
+		}
+
+		return nil
+	}
+}
+
+func validateCloseReasons(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.CloseReasons == nil {
+			return nil
+		}
+
+		reasons := ctx.Data.CloseReasons.Reasons
+
+		if len(reasons) > 25 {
+			return validation.NewInvalidInputError("Panel cannot have more than 25 close reasons")
+		}
+
+		for i, reason := range reasons {
+			if utf8.RuneCountInString(reason) > 100 {
+				return validation.NewInvalidInputError("Close reasons must be 100 characters or fewer")
+			}
+
+			if len(reason) > 255 {
+				return validation.NewInvalidInputErrorf("Close reason \"%s\" is too long", reason)
+			}
+
+			for _, previous := range reasons[:i] {
+				if strings.EqualFold(previous, reason) {
+					return validation.NewInvalidInputErrorf("Duplicate close reason \"%s\"", reason)
+				}
 			}
 		}
 

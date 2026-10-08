@@ -124,6 +124,7 @@ export interface TicketLabel {
 
 export interface Ticket {
   ticket_id: number;
+  panel_id?: number | null;
   username: string;
   close_reason?: string;
   closed_by?: number;
@@ -250,6 +251,12 @@ export interface Panel {
   teams: Array<number>;
   kb_category_ids: number[];
   access_control_list: Array<ACL>;
+  close_reasons?: PanelCloseReasons;
+}
+
+export interface PanelCloseReasons {
+  reasons: string[];
+  allow_custom: boolean;
 }
 
 export interface MultiPanelPanelEntry {
@@ -611,6 +618,7 @@ export interface TicketViewResponse {
   success: boolean;
   ticket: TicketViewData;
   panel_title?: string;
+  close_reasons?: PanelCloseReasons;
   messages: StrippedMessage[];
   content_restricted?: boolean;
   channel_missing?: boolean;

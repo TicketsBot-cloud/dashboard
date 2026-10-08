@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
@@ -81,6 +82,15 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	var existingCloseReasons database.PanelCloseReasons
+	if data.CloseReasons != nil {
+		existingCloseReasons, err = dbclient.Client.PanelCloseReasons.Get(c, panelId)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panel"))
+			return
+		}
+	}
+
 	if existing.ForceDisabled {
 		c.JSON(400, utils.ErrorStr("This panel is disabled and cannot be modified: please reactivate premium to re-enable it"))
 		return
@@ -88,6 +98,10 @@ func UpdatePanel(c *gin.Context) {
 
 	// Apply defaults
 	ApplyPanelDefaults(&data)
+	normaliseCloseReasons(&data)
+
+	closeReasonsChanged := data.CloseReasons != nil &&
+		(data.CloseReasons.AllowCustom != existingCloseReasons.AllowCustom || !slices.Equal(data.CloseReasons.Reasons, existingCloseReasons.Reasons))
 
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
 	if err != nil {
@@ -371,6 +385,12 @@ func UpdatePanel(c *gin.Context) {
 			}
 		}
 
+		if closeReasonsChanged {
+			if err := dbclient.Client.PanelCloseReasons.SetWithTx(c, tx, panel.PanelId, *data.CloseReasons); err != nil {
+				return err
+			}
+		}
+
 		if err := dbclient.Client.PanelKBCategories.SetWithTx(c, tx, panel.PanelId, data.KBCategoryIds); err != nil {
 			return err
 		}
@@ -475,6 +495,16 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
+	metadata := map[string]any{
+		"access_control_list_old": existingAcl,
+		"access_control_list_new": data.AccessControlList,
+	}
+
+	if closeReasonsChanged {
+		metadata["close_reasons_old"] = existingCloseReasons
+		metadata["close_reasons_new"] = data.CloseReasons
+	}
+
 	audit.Log(audit.LogEntry{
 		GuildId:      audit.Uint64Ptr(guildId),
 		UserId:       userId,
@@ -483,10 +513,7 @@ func UpdatePanel(c *gin.Context) {
 		ResourceId:   audit.StringPtr(strconv.Itoa(panelId)),
 		OldData:      existing,
 		NewData:      panel,
-		Metadata: map[string]any{
-			"access_control_list_old": existingAcl,
-			"access_control_list_new": data.AccessControlList,
-		},
+		Metadata:     metadata,
 	})
 
 	c.JSON(200, utils.SuccessResponse)

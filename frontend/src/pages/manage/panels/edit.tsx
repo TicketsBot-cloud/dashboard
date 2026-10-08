@@ -33,11 +33,13 @@ import DurationPicker from "@/components/DurationPicker";
 import SupportHoursForm from "@/components/SupportHoursForm";
 import AccessControlListEditor from "@/components/AccessControlListEditor";
 import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
+import CloseReasonsEditor from "@/components/CloseReasonsEditor";
 import DateTimePicker from "@/components/DateTimePicker";
 import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
+import { DEFAULT_CLOSE_REASONS, findDuplicateCloseReasons } from "@/lib/close-reasons";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
@@ -199,6 +201,7 @@ const EditPanelsPage: FC = () => {
     !welcomeMessage.thumbnail_url?.trim();
   const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
   const invalidWelcomeMessageUrls = collectEmbedUrlErrors(panel.welcome_message);
+  const closeReasons = panel.close_reasons ?? DEFAULT_CLOSE_REASONS;
   const hasMissingRequired =
     missingChannel ||
     missingCategory ||
@@ -209,7 +212,8 @@ const EditPanelsPage: FC = () => {
     stale(panel.transcript_channel_id) ||
     (panel.use_threads && stale(panel.ticket_notification_channel)) ||
     welcomeMessageEmpty ||
-    invalidWelcomeMessageUrls.length > 0;
+    invalidWelcomeMessageUrls.length > 0 ||
+    findDuplicateCloseReasons(closeReasons.reasons).size > 0;
 
   return (
     <MainLayout
@@ -1004,6 +1008,45 @@ const EditPanelsPage: FC = () => {
                 }
               />
             </div>
+          </div>
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-col">
+              <span className="mb-1 text-white">Close Reasons</span>
+              <CloseReasonsEditor
+                reasons={closeReasons.reasons}
+                onChange={(reasons) =>
+                  setPanel((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          close_reasons: {
+                            ...(prev.close_reasons ?? DEFAULT_CLOSE_REASONS),
+                            reasons,
+                          },
+                        }
+                      : prev,
+                  )
+                }
+              />
+            </div>
+            <Slider
+              label="Allow Custom Close Reasons"
+              value={closeReasons.allow_custom}
+              disabled={closeReasons.reasons.length === 0}
+              onChange={(e) =>
+                setPanel((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        close_reasons: {
+                          ...(prev.close_reasons ?? DEFAULT_CLOSE_REASONS),
+                          allow_custom: e,
+                        },
+                      }
+                    : prev,
+                )
+              }
+            />
           </div>
 
           <div className="border-t border-gray-700 my-6"></div>

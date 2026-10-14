@@ -2,13 +2,13 @@ module github.com/ticketsbot-cloud/dashboard/backend
 
 go 1.26.0
 
-// replace github.com/TicketsBot-cloud/database => ../../database
+replace github.com/TicketsBot-cloud/database => ../../database
 
 // replace github.com/TicketsBot-cloud/common => ../../common
 
-// replace github.com/TicketsBot-cloud/worker => ../../worker
+replace github.com/TicketsBot-cloud/worker => ../../worker
 
-// replace github.com/TicketsBot-cloud/gdl => ../../gdl
+replace github.com/TicketsBot-cloud/gdl => ../../gdl
 
 replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0
 
@@ -37,6 +37,7 @@ require (
 	github.com/jackc/pgtype v1.14.4
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/joho/godotenv v1.5.1
+	github.com/json-iterator/go v1.1.12
 	github.com/mailgun/mailgun-go/v4 v4.23.0
 	github.com/penglongli/gin-metrics v0.1.10
 	github.com/pkg/errors v0.9.1
@@ -90,7 +91,6 @@ require (
 	github.com/jackc/puddle v1.3.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.6.7 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect

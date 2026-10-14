@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FC } from "react";
+import { flushSync } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
@@ -39,19 +40,12 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
-import { FEATURE_PANELS, COMPONENTS_V2_BUILDER_FLAG } from "@/lib/feature-flags";
+import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
-import FeatureGate from "@/components/FeatureGate";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSave,
-  faTrash,
-  faCrown,
-  faWandMagicSparkles,
-  faExclamationTriangle,
-} from "@fortawesome/free-solid-svg-icons";
+import { faSave, faTrash, faCrown, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { sortGuildChannels } from "@/lib/guild-channels";
 import {
   PANEL_MESSAGE_INFO,
@@ -63,20 +57,13 @@ import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
-import MessageModeToggle from "@/components/component-builder/MessageModeToggle";
-import ComponentTreeBuilder from "@/components/component-builder/ComponentTreeBuilder";
-import BuildPreviewTabs from "@/components/component-builder/BuildPreviewTabs";
+import ComponentsV2Section from "@/components/component-builder/ComponentsV2Section";
 import {
   PANEL_MESSAGE_RESERVED,
-  panelWelcomeReserved,
-  countBlocks,
-  applyClassicConversion,
   fromApiComponents,
-  hasConvertibleClassicContent,
-  isSeedTree,
-  seedComponentTreeFromClassic,
-  seedWelcomeComponentTreeFromClassic,
   toApiComponents,
+  validateComponentTree,
+  welcomeReserved,
   type ClassicConversionSource,
   type V2Component,
 } from "@/lib/component-tree";
@@ -135,8 +122,6 @@ const EditPanelsPage: FC = () => {
   const [messageTree, setMessageTree] = useState<V2Component[]>([]);
   const [welcomeTree, setWelcomeTree] = useState<V2Component[]>([]);
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
-  const [messageConvertConfirmOpen, setMessageConvertConfirmOpen] = useState(false);
-  const [welcomeConvertConfirmOpen, setWelcomeConvertConfirmOpen] = useState(false);
   const hasLoadedOnceRef = useRef(false);
   // Captured once when the panel first loads, so the edit-only "switching back to classic will
   // repost the message" caption and confirmation only ever compare against how it started this
@@ -265,59 +250,19 @@ const EditPanelsPage: FC = () => {
     }
   };
 
-  const messageColourHex = `#${(panel.colour || 0x5865f2).toString(16).padStart(6, "0")}`;
   const messageClassicSource: ClassicConversionSource = {
     title: panel.title,
     body: panel.content,
-    colourHex: messageColourHex,
+    colourHex: `#${(panel.colour || 0x5865f2).toString(16).padStart(6, "0")}`,
     imageUrl: panel.image_url,
     thumbnailUrl: panel.thumbnail_url,
   };
-  const hasMessageClassicContent = hasConvertibleClassicContent(messageClassicSource);
-  const messageNothingToLose =
-    messageTree.length === 0 ||
-    isSeedTree(messageTree, {
-      title: panel.title,
-      body: panel.content,
-      colourHex: messageColourHex,
-    });
 
-  const runMessageConversion = () => {
-    const { converted, folded } = applyClassicConversion(
-      messageClassicSource,
-      30 - PANEL_MESSAGE_RESERVED.total,
-      setMessageTree,
-    );
-    if (!converted) {
-      toast.warning(
-        "Nothing could be converted - check your classic content's image and thumbnail URLs.",
-      );
-      return;
-    }
-    if (folded) {
-      toast.warning("Some sections were merged to fit the block budget.");
-    }
-  };
-
-  const handleConvertMessageClick = () => {
-    if (messageNothingToLose) {
-      runMessageConversion();
-    } else {
-      setMessageConvertConfirmOpen(true);
-    }
-  };
-
-  const visibleWelcomeButtons =
-    (panel.hide_close_button ? 0 : 1) +
-    (panel.hide_close_with_reason_button ? 0 : 1) +
-    (panel.hide_claim_button ? 0 : 1);
-  const welcomeReserved = panelWelcomeReserved(visibleWelcomeButtons);
-
-  const welcomeColourHex = panel.welcome_message?.colour || "#5865f2";
+  const welcomeReservedCount = welcomeReserved(panel);
   const welcomeClassicSource: ClassicConversionSource = {
     title: panel.welcome_message?.title,
     body: panel.welcome_message?.description,
-    colourHex: welcomeColourHex,
+    colourHex: panel.welcome_message?.colour || "#5865f2",
     imageUrl: panel.welcome_message?.image_url,
     thumbnailUrl: panel.welcome_message?.thumbnail_url,
     fields: panel.welcome_message?.fields,
@@ -325,39 +270,14 @@ const EditPanelsPage: FC = () => {
     authorUrl: panel.welcome_message?.author?.url,
     footerText: panel.welcome_message?.footer?.text,
   };
-  const hasWelcomeClassicContent = hasConvertibleClassicContent(welcomeClassicSource);
-  const welcomeNothingToLose =
-    welcomeTree.length === 0 ||
-    isSeedTree(welcomeTree, {
-      title: panel.welcome_message?.title,
-      body: panel.welcome_message?.description,
-      colourHex: welcomeColourHex,
-    });
-
-  const runWelcomeConversion = () => {
-    const { converted, folded } = applyClassicConversion(
-      welcomeClassicSource,
-      30 - welcomeReserved.total,
-      setWelcomeTree,
-    );
-    if (!converted) {
-      toast.warning(
-        "Nothing could be converted - check your classic content's image and thumbnail URLs.",
-      );
-      return;
-    }
-    if (folded) {
-      toast.warning("Some sections were merged to fit the block budget.");
-    }
-  };
-
-  const handleConvertWelcomeClick = () => {
-    if (welcomeNothingToLose) {
-      runWelcomeConversion();
-    } else {
-      setWelcomeConvertConfirmOpen(true);
-    }
-  };
+  const welcomeConversionNotes = [
+    ...(welcomeClassicSource.fields?.length
+      ? ["Field layout is dropped; fields become plain text."]
+      : []),
+    ...(welcomeClassicSource.authorName ? ["The author icon is dropped."] : []),
+    ...(welcomeClassicSource.footerText ? ["The footer icon is dropped."] : []),
+    ...(panel.welcome_message?.timestamp ? ["The timestamp is dropped."] : []),
+  ];
 
   // Mirrors validateButtonLabelOrEmoji.
   const hasButtonLabel = !!(panel.button_label ?? "").trim();
@@ -369,7 +289,9 @@ const EditPanelsPage: FC = () => {
   const missingCategory = !panel.category_id;
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
   const welcomeMessage = panel.welcome_message;
+  const welcomeIsV2 = panel.welcome_message_uses_components_v2;
   const welcomeMessageEmpty =
+    !welcomeIsV2 &&
     !!welcomeMessage &&
     !welcomeMessage.title?.trim() &&
     !welcomeMessage.description?.trim() &&
@@ -377,7 +299,13 @@ const EditPanelsPage: FC = () => {
     !welcomeMessage.image_url?.trim() &&
     !welcomeMessage.thumbnail_url?.trim();
   const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
-  const invalidWelcomeMessageUrls = collectEmbedUrlErrors(panel.welcome_message);
+  const invalidWelcomeMessageUrls = welcomeIsV2 ? [] : collectEmbedUrlErrors(panel.welcome_message);
+  const componentTreeInvalid =
+    (panel.message_uses_components_v2 &&
+      validateComponentTree(messageTree, { reserved: PANEL_MESSAGE_RESERVED }).length > 0) ||
+    (welcomeIsV2 &&
+      validateComponentTree(welcomeTree, { reserved: welcomeReservedCount, requireContent: true })
+        .length > 0);
   const hasMissingRequired =
     missingChannel ||
     missingCategory ||
@@ -388,7 +316,8 @@ const EditPanelsPage: FC = () => {
     stale(panel.transcript_channel_id) ||
     (panel.use_threads && stale(panel.ticket_notification_channel)) ||
     welcomeMessageEmpty ||
-    invalidWelcomeMessageUrls.length > 0;
+    invalidWelcomeMessageUrls.length > 0 ||
+    componentTreeInvalid;
 
   return (
     <MainLayout
@@ -401,105 +330,60 @@ const EditPanelsPage: FC = () => {
         featureLabel="Panel changes"
         existingLabel="panels"
       />
-      <div className="mb-4 bg-gray-800 rounded-xl p-4">
-        <TextInput
-          label="Panel Name"
-          placeholder="e.g. Billing Support"
-          value={panel.name || ""}
-          onChange={(e) => setPanel((prev) => (prev ? { ...prev, name: e } : prev))}
-          maxLength={80}
-          showCount
-          error={!panel.name?.trim() ? "Panel name is required" : undefined}
-        />
-        <p className="text-xs text-gray-400 mt-1">
-          Used to identify this panel in the dashboard. It isn't shown in Discord.
-        </p>
-      </div>
       <Collapsible
         title="Panel Appearance"
         subtitle="Configure the panel's appearance"
         defaultOpen={true}
       >
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
-          <FeatureGate flag={COMPONENTS_V2_BUILDER_FLAG} guildId={guildId}>
-            <div className="md:col-span-2">
-              <MessageModeToggle
-                mode={panel.message_uses_components_v2 ? "components_v2" : "classic"}
-                isPremium={!!premiumState?.premium}
-                onChange={(mode) => {
-                  const useV2 = mode === "components_v2";
-                  if (useV2 && messageTree.length === 0) {
-                    setMessageTree(seedComponentTreeFromClassic(panel));
-                  }
-                  setPanel((prev) =>
-                    prev ? { ...prev, message_uses_components_v2: useV2 } : prev,
-                  );
-                }}
-              />
-              {!originalMessageV2Ref.current && panel.message_uses_components_v2 && (
+          <ComponentsV2Section
+            saveAttempted={saveAttempted}
+            guildId={guildId}
+            isV2={panel.message_uses_components_v2}
+            onV2Change={(isV2) =>
+              setPanel((prev) => (prev ? { ...prev, message_uses_components_v2: isV2 } : prev))
+            }
+            tree={messageTree}
+            onTreeChange={setMessageTree}
+            classicSource={messageClassicSource}
+            title="Panel Properties"
+            previewTitle="Panel Preview"
+            reserved={PANEL_MESSAGE_RESERVED}
+            reservedNote="Some space is also kept for the open-ticket button."
+            guildEmojis={guildEmojis}
+            toggleNote={
+              !originalMessageV2Ref.current && panel.message_uses_components_v2 ? (
                 <p className="text-xs text-gray-400 mt-1">
                   Once you save this in the new format, switching back to classic will repost the
                   message.
                 </p>
-              )}
-            </div>
-          </FeatureGate>
+              ) : null
+            }
+            preview={
+              <PanelPreview
+                type="panel"
+                data={{ panel, buttons: [panel] }}
+                messageMode="components_v2"
+                componentTree={messageTree}
+              />
+            }
+          />
 
-          {panel.message_uses_components_v2 ? (
-            <BuildPreviewTabs
-              className="md:col-span-2 mb-1"
-              build={
-                <div className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-semibold">Panel Properties</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      visuallyDisabled={!hasMessageClassicContent}
-                      aria-describedby={
-                        !hasMessageClassicContent ? "convert-message-hint" : undefined
-                      }
-                      onClick={handleConvertMessageClick}
-                    >
-                      <FontAwesomeIcon
-                        icon={faWandMagicSparkles}
-                        className="mr-1.5"
-                        aria-hidden="true"
-                      />
-                      Convert from classic
-                    </Button>
-                  </div>
-                  {!hasMessageClassicContent && (
-                    <p id="convert-message-hint" className="text-xs text-gray-400 mt-1">
-                      Add a title, description or image in Classic mode first, then convert it here.
-                    </p>
-                  )}
-                  <div className="mt-2">
-                    <ComponentTreeBuilder
-                      components={messageTree}
-                      onChange={setMessageTree}
-                      guildEmojis={guildEmojis}
-                      budgetUsed={countBlocks(messageTree)}
-                      budgetMax={30 - PANEL_MESSAGE_RESERVED.total}
-                      topLevelMax={10 - PANEL_MESSAGE_RESERVED.topLevel}
-                      budgetReservedNote="Some space is also kept for the open-ticket button."
-                    />
-                  </div>
-                </div>
-              }
-              preview={
-                <div>
-                  <span className="text-xl font-semibold">Panel Preview</span>
-                  <PanelPreview
-                    type="panel"
-                    data={{ panel, buttons: [panel] }}
-                    messageMode="components_v2"
-                    componentTree={messageTree}
-                  />
-                </div>
-              }
+          <div className="pb-4">
+            <TextInput
+              label="Panel Name (Optional)"
+              placeholder="e.g. Billing support"
+              value={panel.name || ""}
+              onChange={(e) => setPanel((prev) => (prev ? { ...prev, name: e } : prev))}
+              maxLength={100}
+              showCount
             />
-          ) : (
+            <p className="text-xs text-gray-400 mt-1">
+              Used to identify this panel in the dashboard. It isn't shown in Discord.
+            </p>
+          </div>
+
+          {!panel.message_uses_components_v2 && (
             <div className="pb-2">
               <span className="text-xl font-semibold">Panel Properties</span>
               <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
@@ -823,80 +707,38 @@ const EditPanelsPage: FC = () => {
           </div>
         )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
-          <FeatureGate flag={COMPONENTS_V2_BUILDER_FLAG} guildId={guildId}>
-            <div className="md:col-span-2">
-              <MessageModeToggle
-                mode={panel.welcome_message_uses_components_v2 ? "components_v2" : "classic"}
-                isPremium={!!premiumState?.premium}
-                onChange={(mode) => {
-                  const useV2 = mode === "components_v2";
-                  if (useV2 && welcomeTree.length === 0) {
-                    setWelcomeTree(seedWelcomeComponentTreeFromClassic(panel));
-                  }
-                  setPanel((prev) =>
-                    prev ? { ...prev, welcome_message_uses_components_v2: useV2 } : prev,
-                  );
-                }}
+          <ComponentsV2Section
+            saveAttempted={saveAttempted}
+            guildId={guildId}
+            isV2={panel.welcome_message_uses_components_v2}
+            onV2Change={(isV2) =>
+              setPanel((prev) =>
+                prev ? { ...prev, welcome_message_uses_components_v2: isV2 } : prev,
+              )
+            }
+            tree={welcomeTree}
+            onTreeChange={setWelcomeTree}
+            classicSource={welcomeClassicSource}
+            conversionNotes={welcomeConversionNotes}
+            title="Welcome Message Properties"
+            previewTitle="Welcome Message Preview"
+            convertSuffix="welcome message"
+            reserved={welcomeReservedCount}
+            reservedNote="Some space is also kept for the close and claim buttons and the answers people give on your form."
+            requireContent
+            guildEmojis={guildEmojis}
+            preview={
+              <PanelPreview
+                type="welcome"
+                data={{ panel }}
+                brandingFooter={showBrandingFooter}
+                messageMode="components_v2"
+                componentTree={welcomeTree}
               />
-            </div>
-          </FeatureGate>
+            }
+          />
 
-          {panel.welcome_message_uses_components_v2 ? (
-            <BuildPreviewTabs
-              className="md:col-span-2 mb-1"
-              build={
-                <div className="pb-2 mb-5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-semibold">Welcome Message Properties</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      visuallyDisabled={!hasWelcomeClassicContent}
-                      aria-describedby={
-                        !hasWelcomeClassicContent ? "convert-welcome-hint" : undefined
-                      }
-                      onClick={handleConvertWelcomeClick}
-                    >
-                      <FontAwesomeIcon
-                        icon={faWandMagicSparkles}
-                        className="mr-1.5"
-                        aria-hidden="true"
-                      />
-                      Convert from classic<span className="sr-only"> (welcome message)</span>
-                    </Button>
-                  </div>
-                  {!hasWelcomeClassicContent && (
-                    <p id="convert-welcome-hint" className="text-xs text-gray-400 mt-1">
-                      Add a title, description or image in Classic mode first, then convert it here.
-                    </p>
-                  )}
-                  <div className="mt-2">
-                    <ComponentTreeBuilder
-                      components={welcomeTree}
-                      onChange={setWelcomeTree}
-                      guildEmojis={guildEmojis}
-                      budgetUsed={countBlocks(welcomeTree)}
-                      budgetMax={30 - welcomeReserved.total}
-                      topLevelMax={10 - welcomeReserved.topLevel}
-                      budgetReservedNote="Some space is also kept for the close/claim buttons and the answers people give on your form."
-                    />
-                  </div>
-                </div>
-              }
-              preview={
-                <div>
-                  <span className="text-xl font-semibold">Welcome Message Preview</span>
-                  <PanelPreview
-                    type="welcome"
-                    data={{ panel }}
-                    brandingFooter={showBrandingFooter}
-                    messageMode="components_v2"
-                    componentTree={welcomeTree}
-                  />
-                </div>
-              }
-            />
-          ) : (
+          {!panel.welcome_message_uses_components_v2 && (
             <>
               <div className="pb-2 mb-5">
                 <span className="text-xl font-semibold">Welcome Message Properties</span>
@@ -1585,16 +1427,13 @@ const EditPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
-        disabled={saveAttempted && hasMissingRequired}
-        visuallyDisabled={isLocked}
+        // Not natively disabled: the button is focused when this flips, and a disabled control drops focus.
+        visuallyDisabled={isLocked || (saveAttempted && hasMissingRequired)}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={() => {
-          if (!panel.name?.trim()) {
-            toast.error("Enter a panel name before saving.");
-            return;
-          }
           if (hasMissingRequired) {
-            setSaveAttempted(true);
+            // Flushed so the field errors it reveals exist when the first problem is located.
+            flushSync(() => setSaveAttempted(true));
             if (!scrollToFirstMissingField()) {
               toast.error("Fill in the required fields before saving.");
             }
@@ -1624,67 +1463,9 @@ const EditPanelsPage: FC = () => {
         }}
         onCancel={() => setDowngradeConfirmOpen(false)}
         title="Switch back to classic?"
-        message="Switching this button message back to classic mode means we'll delete the current message and post a new one in its place. It'll lose its position in the channel, and any reactions or replies on it will be gone. Continue?"
+        message="Switching this button message back to classic mode deletes the current message and posts a new one in its place. The new message loses its position in the channel, and any reactions on the old one are lost. Replies to the old message stay in the channel. Continue?"
         confirmText="Switch and repost"
         cancelText="Keep as is"
-        confirmVariant="danger"
-      />
-      <ConfirmModal
-        isOpen={messageConvertConfirmOpen}
-        onConfirm={() => {
-          setMessageConvertConfirmOpen(false);
-          runMessageConversion();
-        }}
-        onCancel={() => setMessageConvertConfirmOpen(false)}
-        title="Convert from classic?"
-        message={
-          <>
-            <p>
-              This replaces the current block layout with a fresh conversion of your classic
-              content. Continue?
-            </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>
-                Any blocks you&apos;ve added manually in the builder that aren&apos;t part of the
-                classic content will be discarded.
-              </li>
-            </ul>
-          </>
-        }
-        confirmText="Convert and replace"
-        cancelText="Cancel"
-        confirmVariant="danger"
-      />
-      <ConfirmModal
-        isOpen={welcomeConvertConfirmOpen}
-        onConfirm={() => {
-          setWelcomeConvertConfirmOpen(false);
-          runWelcomeConversion();
-        }}
-        onCancel={() => setWelcomeConvertConfirmOpen(false)}
-        title="Convert from classic?"
-        message={
-          <>
-            <p>
-              This replaces the current block layout with a fresh conversion of your classic
-              content. Continue?
-            </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              {!!welcomeClassicSource.fields?.length && (
-                <li>Field layout is dropped; fields become plain text.</li>
-              )}
-              {!!welcomeClassicSource.authorName && <li>The author icon is dropped.</li>}
-              {!!welcomeClassicSource.footerText && <li>The footer icon is dropped.</li>}
-              {!!panel.welcome_message?.timestamp && <li>The timestamp is dropped.</li>}
-              <li>
-                Any blocks you&apos;ve added manually in the builder that aren&apos;t part of the
-                classic content will be discarded.
-              </li>
-            </ul>
-          </>
-        }
-        confirmText="Convert and replace"
-        cancelText="Cancel"
         confirmVariant="danger"
       />
     </MainLayout>

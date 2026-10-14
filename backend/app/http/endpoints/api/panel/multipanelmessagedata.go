@@ -2,9 +2,7 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"math"
 
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
@@ -29,8 +27,6 @@ type multiPanelMessageData struct {
 
 	Embed *embed.Embed
 
-	// UsesComponentsV2 switches send()/edit() from the classic embed builder to the
-	// Components V2 tree in Components, with the system select-menu/button-rows appended.
 	UsesComponentsV2 bool
 	Components       []component.Component
 }
@@ -61,14 +57,15 @@ func multiPanelIntoMessageData(panel database.MultiPanel, footer footerPolicy) m
 		SelectMenuPlaceholder: panel.SelectMenuPlaceholder,
 	}
 
-	if panel.UsesComponentsV2 && panel.Components != nil {
-		var components []component.Component
-		if err := json.Unmarshal([]byte(*panel.Components), &components); err != nil {
-			// Data was validated and marshalled by us on write, so this should not happen.
-			// Fall back to the classic embed rather than sending a broken/empty message.
-			log.Logger.Error("Failed to unmarshal multi-panel components; falling back to classic message", zap.Int("multi_panel_id", panel.Id), zap.Error(err))
+	if panel.UsesComponentsV2 {
+		// A corrupt tree renders as an empty one. Falling back to Classic would send an
+		// edit without the V2 flag to a message that has it, which Discord refuses.
+		data.UsesComponentsV2 = true
+
+		components, err := unmarshalComponents(panel.Components)
+		if err != nil {
+			log.Logger.Error("Failed to unmarshal multi-panel components; rendering an empty tree", zap.Int("multi_panel_id", panel.Id), zap.Error(err))
 		} else {
-			data.UsesComponentsV2 = true
 			data.Components = components
 		}
 	}
@@ -134,9 +131,6 @@ func effectiveDescription(description *string) *string {
 	return description
 }
 
-// buildPanelSelectOptions builds one SelectOption per panel, shared between the
-// system-owned dropdown built here and a panel-select placeholder resolved inside a
-// guild-authored tree (see resolveComponentTreePanelRefs).
 func buildPanelSelectOptions(panels []database.PanelWithCustomization) []component.SelectOption {
 	options := make([]component.SelectOption, len(panels))
 	for i, pwc := range panels {
@@ -156,39 +150,91 @@ func buildPanelSelectOptions(panels []database.PanelWithCustomization) []compone
 	return options
 }
 
-// unplacedPanels filters panels down to those not already referenced by a panel
-// placeholder somewhere in d.Components, so buildSystemComponents never duplicates a
-// panel that has been placed inside the guild-authored tree. Derived directly from
-// d.Components (a validated tree - already carrying panel_id/is_panel_select for a
-// Components V2 multi-panel, whether just bound from a request or reconstructed from
-// stored JSON by multiPanelIntoMessageData) rather than threaded in as a parameter, so
-// every call path - initial send, in-place edit, and the resend/panel-update/panel-delete
-// flows that rebuild multiPanelMessageData from stored data - stays correct without each
-// caller having to recompute placement itself.
-func (d *multiPanelMessageData) unplacedPanels(panels []database.PanelWithCustomization) []database.PanelWithCustomization {
-	if !d.UsesComponentsV2 || len(d.Components) == 0 {
-		return panels
+// buildPanelDropdown is the single builder for the dropdown, whether it is appended
+// by the system or placed inside the authored tree.
+func (d *multiPanelMessageData) buildPanelDropdown(panels []database.PanelWithCustomization) component.Component {
+	placeholder := "Select a topic..."
+	if d.SelectMenuPlaceholder != nil {
+		placeholder = *d.SelectMenuPlaceholder
 	}
 
-	placed, hasSelect, err := collectPlacedPanelIds(d.Components)
-	if err != nil {
-		// A tree that fails this walk should never reach here - it was already validated
-		// at save time. Fail safe by treating nothing as placed, rather than dropping
-		// every panel from the default row on an unexpected error.
-		return panels
-	}
+	return component.BuildSelectMenu(component.SelectMenu{
+		CustomId:    panelDropdownCustomId,
+		Options:     buildPanelSelectOptions(panels),
+		Placeholder: placeholder,
+		MinValues:   utils.IntPtr(1),
+		MaxValues:   utils.IntPtr(1),
+	})
+}
 
-	// A placed panel-select node has no PanelId-bearing entries of its own in placed
-	// (only Buttons carry a PanelId), but it still absorbs every remaining panel - its
-	// options are built from the unplaced subset when resolved, see
-	// resolveComponentPanelRef - so the default row has nothing left to show at all.
-	if hasSelect {
+// buildSystemRows builds the dropdown row or the button rows for the given panels.
+func (d *multiPanelMessageData) buildSystemRows(panels []database.PanelWithCustomization) []component.Component {
+	if len(panels) == 0 {
 		return nil
 	}
 
-	if len(placed) == 0 {
-		return panels
+	if d.SelectMenu {
+		return []component.Component{component.BuildActionRow(d.buildPanelDropdown(panels))}
 	}
+
+	var rows []component.Component
+	for start := 0; start < len(panels); start += maxActionRowChildren {
+		end := min(start+maxActionRowChildren, len(panels))
+
+		buttons := make([]component.Component, 0, end-start)
+		for _, pwc := range panels[start:end] {
+			buttons = append(buttons, component.BuildButton(buildResolvedPanelButton(pwc)))
+		}
+
+		rows = append(rows, component.BuildActionRow(buttons...))
+	}
+
+	return rows
+}
+
+// buildComponents returns the components to send. For a Components V2 message that is the
+// authored tree with panel placements resolved into real buttons and dropdown, plus the
+// system rows for every panel the tree does not place. Nothing unresolved survives: a
+// placement whose panel is no longer in the multi-panel, or any node that is not a
+// recognised safe component, is dropped, so a "panel:" marker can never reach Discord.
+func (d *multiPanelMessageData) buildComponents(panels []database.PanelWithCustomization) (tree, system []component.Component) {
+	if !d.UsesComponentsV2 {
+		return nil, d.buildSystemRows(panels)
+	}
+
+	byId := make(map[int]database.PanelWithCustomization, len(panels))
+	for _, pwc := range panels {
+		byId[pwc.PanelId] = pwc
+	}
+
+	placed := make(map[int]bool)
+	tree = mapComponentTree(d.Components, func(c component.Component) (component.Component, bool) {
+		switch data := c.ComponentData.(type) {
+		case component.Button:
+			if data.CustomId == "" {
+				return c, isResolvableLinkButton(data)
+			}
+
+			panelId, ok := parsePanelPlacement(data.CustomId)
+			if !ok || data.Url != nil || placed[panelId] {
+				return component.Component{}, false
+			}
+
+			pwc, ok := byId[panelId]
+			if !ok {
+				return component.Component{}, false
+			}
+
+			placed[panelId] = true
+			return component.BuildButton(buildResolvedPanelButton(pwc)), true
+		case component.SelectMenu:
+			return c, d.SelectMenu && data.CustomId == panelDropdownCustomId
+		case component.TextDisplay, component.MediaGallery, component.Separator, component.Thumbnail:
+			return c, true
+		default:
+			return component.Component{}, false
+		}
+	})
 
 	unplaced := make([]database.PanelWithCustomization, 0, len(panels))
 	for _, pwc := range panels {
@@ -197,98 +243,96 @@ func (d *multiPanelMessageData) unplacedPanels(panels []database.PanelWithCustom
 		}
 	}
 
-	return unplaced
+	dropdownPlaced := false
+	tree = mapComponentTree(tree, func(c component.Component) (component.Component, bool) {
+		if _, ok := c.ComponentData.(component.SelectMenu); !ok {
+			return c, true
+		}
+
+		if dropdownPlaced || len(unplaced) == 0 {
+			return component.Component{}, false
+		}
+
+		dropdownPlaced = true
+		return d.buildPanelDropdown(unplaced), true
+	})
+
+	if dropdownPlaced {
+		return tree, nil
+	}
+
+	return tree, d.buildSystemRows(unplaced)
 }
 
-// buildSystemComponents builds the backend-owned select-menu or button-rows that are
-// always appended on top of whatever the guild authors, in both Classic and Components
-// V2 mode. Any panel already placed inside the guild-authored tree (see unplacedPanels)
-// is excluded here, so it never appears twice.
-func (d *multiPanelMessageData) buildSystemComponents(panels []database.PanelWithCustomization) []component.Component {
-	panels = d.unplacedPanels(panels)
-	if len(panels) == 0 {
-		return nil
-	}
+func isResolvableLinkButton(b component.Button) bool {
+	return b.Style == component.ButtonStyleLink && b.Url != nil && *b.Url != ""
+}
 
-	if d.SelectMenu {
-		options := buildPanelSelectOptions(panels)
+// mapComponentTree rebuilds a tree bottom-up, passing every leaf (anything that is not a
+// container, section or action row) through fn. A leaf fn rejects is dropped, and so is any
+// parent left unable to render without it: an action row or container with no children, and
+// a section with no text or no accessory.
+func mapComponentTree(nodes []component.Component, fn func(component.Component) (component.Component, bool)) []component.Component {
+	out := make([]component.Component, 0, len(nodes))
 
-		var placeholder string
-		if d.SelectMenuPlaceholder == nil {
-			placeholder = "Select a topic..."
-		} else {
-			placeholder = *d.SelectMenuPlaceholder
+	for _, c := range nodes {
+		switch data := c.ComponentData.(type) {
+		case component.Container:
+			data.Components = mapComponentTree(data.Components, fn)
+			if len(data.Components) == 0 {
+				continue
+			}
+
+			c.ComponentData = data
+		case component.Section:
+			accessory, ok := fn(data.Accessory)
+			if !ok {
+				continue
+			}
+
+			data.Components = mapComponentTree(data.Components, fn)
+			if len(data.Components) == 0 {
+				continue
+			}
+
+			data.Accessory = accessory
+			c.ComponentData = data
+		case component.ActionRow:
+			data.Components = mapComponentTree(data.Components, fn)
+			if len(data.Components) == 0 {
+				continue
+			}
+
+			c.ComponentData = data
+		default:
+			resolved, ok := fn(c)
+			if !ok {
+				continue
+			}
+
+			c = resolved
 		}
 
-		return []component.Component{
-			component.BuildActionRow(
-				component.BuildSelectMenu(
-					component.SelectMenu{
-						CustomId:    "multipanel",
-						Options:     options,
-						Placeholder: placeholder,
-						MinValues:   utils.IntPtr(1),
-						MaxValues:   utils.IntPtr(1),
-						Disabled:    false,
-					}),
-			),
-		}
+		out = append(out, c)
 	}
 
-	buttons := make([]component.Component, len(panels))
-	for i, pwc := range panels {
-		effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-		effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-		effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-		emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
-
-		buttons[i] = component.BuildButton(component.Button{
-			Label:    getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
-			CustomId: pwc.CustomId,
-			Style:    component.ButtonStyle(pwc.ButtonStyle),
-			Emoji:    emoji,
-			Disabled: pwc.Disabled,
-		})
-	}
-
-	var rows []component.Component
-	for i := 0; i <= int(math.Ceil(float64(len(buttons))/5)); i++ {
-		lb := i * 5
-		ub := lb + 5
-
-		if ub >= len(buttons) {
-			ub = len(buttons)
-		}
-
-		if lb >= ub {
-			break
-		}
-
-		row := component.BuildActionRow(buttons[lb:ub]...)
-		rows = append(rows, row)
-	}
-
-	return rows
+	return out
 }
 
 func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
-	// buildSystemComponents must run before the tree is resolved: it filters out panels
-	// placed inside the tree by reading d.Components (see unplacedPanels), and resolving
-	// the tree clears the panel_id/is_panel_select markers it depends on.
-	systemComponents := d.buildSystemComponents(panels)
+	tree, system := d.buildComponents(panels)
 
 	var data rest.CreateMessageData
 	if d.UsesComponentsV2 {
-		resolvedComponents := resolveComponentTreePanelRefs(d.Components, panels)
 		data = rest.CreateMessageData{
 			Flags:      message.SumFlags(message.FlagComponentsV2),
-			Components: append(append([]component.Component{}, resolvedComponents...), systemComponents...),
+			Components: append(tree, system...),
 		}
 	} else {
 		d.applyFooter()
 		data = rest.CreateMessageData{
 			Embeds:     []*embed.Embed{d.Embed},
-			Components: systemComponents,
+			Components: system,
 		}
 	}
 
@@ -301,201 +345,41 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 	return msg.Id, nil
 }
 
-// buildEditData constructs the outgoing edit payload. wasAlreadyV2 must reflect whether the
-// message already carried the Components V2 flag before this edit - see the equivalent
-// note on panelMessageData.buildEditData for why this matters. resolvedComponents must be
-// d.Components already run through resolveComponentTreePanelRefs - see the call in edit().
-func (d *multiPanelMessageData) buildEditData(resolvedComponents, systemComponents []component.Component, wasAlreadyV2 bool) rest.EditMessageData {
+func (d *multiPanelMessageData) buildEditData(components []component.Component) rest.EditMessageData {
 	if d.UsesComponentsV2 {
-		// Flags must always be set explicitly here, even on an ongoing V2-to-V2 edit -
-		// see the identical note on panelMessageData.buildEditData for why (EditMessageData.Flags
-		// has no `omitempty` in the pinned gdl version, so an unset Flags sends an
-		// explicit "flags":0 and Discord validates Components against Classic rules).
-		data := rest.EditMessageData{
-			Flags:      message.SumFlags(message.FlagComponentsV2),
-			Components: append(append([]component.Component{}, resolvedComponents...), systemComponents...),
-		}
-
-		if !wasAlreadyV2 {
-			data.Content = ""
-			data.Embeds = []*embed.Embed{}
-		}
-
-		return data
+		return v2EditData(components)
 	}
 
 	d.applyFooter()
 	return rest.EditMessageData{
 		Embeds:     []*embed.Embed{d.Embed},
-		Components: systemComponents,
+		Components: components,
 	}
 }
 
-// edit updates the existing multi-panel message.
-func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint64, panels []database.PanelWithCustomization, wasAlreadyV2 bool) error {
-	// buildSystemComponents must run before the tree is resolved - see the identical note
-	// in send().
-	systemComponents := d.buildSystemComponents(panels)
-	resolvedComponents := resolveComponentTreePanelRefs(d.Components, panels)
-	data := d.buildEditData(resolvedComponents, systemComponents, wasAlreadyV2)
+// v2EditData is sent for every Components V2 edit. IS_COMPONENTS_V2 can be set but never
+// removed, and an edit that omits flags is validated as a classic message. Embeds must be
+// empty on a V2 message, and without allowed_mentions Discord re-parses mentions with its
+// default allowances.
+func v2EditData(components []component.Component) rest.EditMessageData {
+	return rest.EditMessageData{
+		Embeds:          []*embed.Embed{},
+		Flags:           message.SumFlags(message.FlagComponentsV2),
+		Components:      components,
+		AllowedMentions: &message.AllowedMention{},
+	}
+}
+
+func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint64, panels []database.PanelWithCustomization) error {
+	tree, system := d.buildComponents(panels)
+	data := d.buildEditData(append(tree, system...))
 
 	_, err := rest.EditMessage(context.Background(), ctx.Token, ctx.RateLimiter, d.ChannelId, messageId, data)
 	return err
 }
 
-// resolveComponentTreePanelRefs walks a guild-authored Components V2 tree and replaces
-// every panel placeholder - a Button carrying PanelId, or the single SelectMenu carrying
-// IsPanelSelect - with a real component built from the referenced panel(s), clearing the
-// placeholder markers on the output. A node that doesn't reference a panel is returned
-// unchanged.
-//
-// This must never be the value written back to storage: whatever the caller persists
-// must remain the pre-resolve tree, still carrying panel_id/is_panel_select, so a saved
-// multi-panel doesn't lose the "this opens panel X" placement information the next time
-// it's edited in the dashboard. marshalComponents in multipanelcreate.go/
-// multipanelupdate.go always marshals data.Components (the request body) for that
-// reason, never this function's return value.
-//
-// A placeholder whose panel is no longer present in panels - for example the referenced
-// panel was deleted from the guild via a path outside this multi-panel's own create/
-// update flow, such as paneldelete.go rebuilding every multi-panel that targeted it - is
-// dropped rather than sent to Discord half-formed: a button with no custom_id and no URL
-// is not a valid Discord component, and a Section can't be sent without its accessory.
-func resolveComponentTreePanelRefs(tree []component.Component, panels []database.PanelWithCustomization) []component.Component {
-	placed, _, err := collectPlacedPanelIds(tree)
-	if err != nil {
-		// A tree that fails this walk should never reach here - it was already validated
-		// at save time. Fail safe by treating nothing as placed.
-		placed = nil
-	}
-
-	unplaced := make([]database.PanelWithCustomization, 0, len(panels))
-	for _, pwc := range panels {
-		if !placed[pwc.PanelId] {
-			unplaced = append(unplaced, pwc)
-		}
-	}
-
-	return resolveComponentSlice(tree, panels, unplaced)
-}
-
-func resolveComponentSlice(tree []component.Component, panels, unplaced []database.PanelWithCustomization) []component.Component {
-	resolved := make([]component.Component, 0, len(tree))
-
-	for _, c := range tree {
-		if rc, ok := resolveComponentPanelRef(c, panels, unplaced); ok {
-			resolved = append(resolved, rc)
-		}
-	}
-
-	return resolved
-}
-
-// resolveComponentPanelRef resolves a single node. The bool return reports whether the
-// node should be kept by its parent - false for a placeholder whose panel no longer
-// exists, so the caller can drop it instead of emitting an invalid payload.
-func resolveComponentPanelRef(c component.Component, panels, unplaced []database.PanelWithCustomization) (component.Component, bool) {
-	switch c.Type {
-	case component.ComponentContainer:
-		container, ok := c.ComponentData.(component.Container)
-		if !ok {
-			return c, true
-		}
-
-		container.Components = resolveComponentSlice(container.Components, panels, unplaced)
-		c.ComponentData = container
-		return c, true
-	case component.ComponentSection:
-		section, ok := c.ComponentData.(component.Section)
-		if !ok {
-			return c, true
-		}
-
-		section.Components = resolveComponentSlice(section.Components, panels, unplaced)
-
-		resolvedAccessory, ok := resolveComponentPanelRef(section.Accessory, panels, unplaced)
-		if !ok {
-			// The accessory referenced a panel that no longer exists: a section can't be
-			// sent without one, so drop the whole section.
-			return component.Component{}, false
-		}
-
-		section.Accessory = resolvedAccessory
-		c.ComponentData = section
-		return c, true
-	case component.ComponentActionRow:
-		row, ok := c.ComponentData.(component.ActionRow)
-		if !ok {
-			return c, true
-		}
-
-		row.Components = resolveComponentSlice(row.Components, panels, unplaced)
-		if len(row.Components) == 0 {
-			// Every button in this row referenced a panel that no longer exists.
-			return component.Component{}, false
-		}
-
-		c.ComponentData = row
-		return c, true
-	case component.ComponentButton:
-		button, ok := c.ComponentData.(component.Button)
-		if !ok || button.PanelId == nil {
-			return c, true
-		}
-
-		pwc := findPanelById(panels, *button.PanelId)
-		if pwc == nil {
-			return component.Component{}, false
-		}
-
-		return component.BuildButton(buildResolvedPanelButton(*pwc)), true
-	case component.ComponentSelectMenu:
-		sm, ok := c.ComponentData.(component.SelectMenu)
-		if !ok || !sm.IsPanelSelect {
-			return c, true
-		}
-
-		if len(unplaced) == 0 {
-			// Every panel this dropdown would have listed is gone (for example the last
-			// unplaced panel was deleted from the guild via paneldelete.go after this
-			// placement was saved). Discord rejects a select menu with zero options, so
-			// drop the node rather than send a broken payload; the parent action row then
-			// drops too via its own len(row.Components) == 0 check.
-			return component.Component{}, false
-		}
-
-		return component.BuildSelectMenu(component.SelectMenu{
-			CustomId:    "multipanel",
-			Options:     buildPanelSelectOptions(unplaced),
-			Placeholder: sm.Placeholder,
-			MinValues:   utils.IntPtr(1),
-			MaxValues:   utils.IntPtr(1),
-			Disabled:    false,
-		}), true
-	default:
-		return c, true
-	}
-}
-
-// findPanelById looks a panel up by its real panel ID rather than slice position:
-// panels is index-aligned with the request body in the handlers that build it, but
-// resolveComponentTreePanelRefs walks the guild-authored tree in tree order, not panel
-// order.
-func findPanelById(panels []database.PanelWithCustomization, panelId int) *database.PanelWithCustomization {
-	for i := range panels {
-		if panels[i].PanelId == panelId {
-			return &panels[i]
-		}
-	}
-
-	return nil
-}
-
-// buildResolvedPanelButton rebuilds a full Button from a panel's own resolved defaults -
-// the same Label/Emoji/Style/Disabled buildSystemComponents would use for this panel in
-// the default row - discarding anything else the client sent on the placeholder node.
-// PanelId is left unset on the output, so it never leaks into the outbound Discord
-// payload.
+// buildResolvedPanelButton builds a panel's button from its own resolved defaults, ignoring
+// anything the client sent on a placement node.
 func buildResolvedPanelButton(pwc database.PanelWithCustomization) component.Button {
 	effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
 	effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)

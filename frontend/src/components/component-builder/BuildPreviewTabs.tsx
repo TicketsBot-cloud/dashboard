@@ -1,68 +1,65 @@
-import { useId, useState, type FC, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FC, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+import Tabs from "@/components/Tabs";
+import { FIELD_REVEAL_EVENT } from "@/lib/scroll-to-missing";
 
 interface BuildPreviewTabsProps {
   build: ReactNode;
   preview: ReactNode;
-  /** Extra class names for the tab-switch row, e.g. to span both columns of a parent grid. */
+  /** Extra class names for the tab row, e.g. to span both columns of a parent grid. */
   className?: string;
 }
 
 /**
- * Two-tab Build/Preview switch shown only below `md`, where the builder and its live preview
- * can't sit side by side. Renders as three siblings (tabs, build pane, preview pane) rather than
- * a single wrapper, so a parent `grid-cols-1 md:grid-cols-2` still lays the build and preview
- * panes out side by side from `md` up - Classic mode's always-stacked mobile layout is untouched.
+ * Build/Preview tabs shown below `md`, where the two panes cannot sit side by side. Renders three
+ * siblings so a parent `md:grid-cols-2` lays the panes out together from `md` up.
  */
 const BuildPreviewTabs: FC<BuildPreviewTabsProps> = ({ build, preview, className = "" }) => {
   const [activeTab, setActiveTab] = useState<"build" | "preview">("build");
   const uid = useId();
-  const buildTabId = `${uid}-build-tab`;
-  const previewTabId = `${uid}-preview-tab`;
-  const buildPanelId = `${uid}-build-panel`;
-  const previewPanelId = `${uid}-preview-panel`;
+  const buildKey = `${uid}-build`;
+  const previewKey = `${uid}-preview`;
+  const buildPanelRef = useRef<HTMLDivElement>(null);
+
+  // A failed save reveals the first problem field. Below md the Build pane is display:none while
+  // Preview is active, so switch to it first or the field cannot take focus. flushSync because the
+  // caller focuses the field on the next frame.
+  useEffect(() => {
+    const reveal = (e: Event) => {
+      const target = (e as CustomEvent<HTMLElement>).detail;
+      if (target && buildPanelRef.current?.contains(target)) {
+        flushSync(() => setActiveTab("build"));
+      }
+    };
+    window.addEventListener(FIELD_REVEAL_EVENT, reveal);
+    return () => window.removeEventListener(FIELD_REVEAL_EVENT, reveal);
+  }, []);
 
   return (
     <>
-      <div className={`md:hidden flex gap-2 ${className}`} role="tablist">
-        <button
-          id={buildTabId}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "build"}
-          aria-controls={buildPanelId}
-          className={`px-3 py-1.5 rounded text-sm font-medium ${
-            activeTab === "build" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300"
-          }`}
-          onClick={() => setActiveTab("build")}
-        >
-          Build
-        </button>
-        <button
-          id={previewTabId}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "preview"}
-          aria-controls={previewPanelId}
-          className={`px-3 py-1.5 rounded text-sm font-medium ${
-            activeTab === "preview" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300"
-          }`}
-          onClick={() => setActiveTab("preview")}
-        >
-          Preview
-        </button>
-      </div>
+      <Tabs
+        className={`md:hidden ${className}`}
+        ariaLabel="Message editor view"
+        tabs={[
+          { key: buildKey, label: "Build" },
+          { key: previewKey, label: "Preview" },
+        ]}
+        activeTab={activeTab === "build" ? buildKey : previewKey}
+        onChange={(key) => setActiveTab(key === buildKey ? "build" : "preview")}
+      />
       <div
-        id={buildPanelId}
+        ref={buildPanelRef}
+        id={`tabpanel-${buildKey}`}
         role="tabpanel"
-        aria-labelledby={buildTabId}
+        aria-labelledby={`tab-${buildKey}`}
         className={activeTab === "build" ? "block" : "hidden md:block"}
       >
         {build}
       </div>
       <div
-        id={previewPanelId}
+        id={`tabpanel-${previewKey}`}
         role="tabpanel"
-        aria-labelledby={previewTabId}
+        aria-labelledby={`tab-${previewKey}`}
         className={activeTab === "preview" ? "block" : "hidden md:block"}
       >
         {preview}

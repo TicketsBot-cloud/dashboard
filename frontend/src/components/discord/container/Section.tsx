@@ -16,6 +16,8 @@ interface SectionProps {
     media?: {
       url: string;
     };
+    description?: string;
+    spoiler?: boolean;
     style?: number;
     custom_id?: string;
     emoji?: { name: string };
@@ -39,7 +41,11 @@ export default function Section({ textComponents = [], accessory = null, entitie
       </div>
       <div className="ml-3 flex items-center">
         {accessory?.type === 11 && accessory.media?.url && (
-          <img src={accessory.media.url} alt="media" className="max-w-20 max-h-20 rounded-md" />
+          <img
+            src={accessory.media.url}
+            alt={`${accessory.spoiler ? "Spoiler: " : ""}${accessory.description || "Image"}`}
+            className={`max-w-20 max-h-20 rounded-md ${accessory.spoiler ? "blur hover:blur-none" : ""}`}
+          />
         )}
         {accessory?.type === 2 && (
           <Button

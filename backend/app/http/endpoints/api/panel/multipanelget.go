@@ -32,7 +32,6 @@ func MultiPanelGet(ctx *gin.Context) {
 		Panels                []panelConfiguration `json:"panels"`
 		UsesComponentsV2      bool                 `json:"uses_components_v2"`
 		Components            *string              `json:"components"`
-		ForceDisabled         bool                 `json:"force_disabled"`
 	}
 
 	guildId := ctx.Keys["guildid"].(uint64)
@@ -96,7 +95,6 @@ func MultiPanelGet(ctx *gin.Context) {
 			Panels:                configs,
 			UsesComponentsV2:      multiPanel.UsesComponentsV2,
 			Components:            multiPanel.Components,
-			ForceDisabled:         multiPanel.ForceDisabled,
 		},
 	})
 }

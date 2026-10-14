@@ -14,8 +14,8 @@ const ComponentBudgetMeter: FC<ComponentBudgetMeterProps> = ({ used, max, reserv
   const widthPercent = Math.min(100, Math.max(0, ratio * 100));
 
   return (
-    <div className="mt-3" aria-live="polite">
-      <p className="text-xs text-gray-400">
+    <div className="mt-3">
+      <p role="status" className="text-xs text-gray-400">
         {used} of {max} blocks used
       </p>
       <div className="mt-1 bg-gray-700 h-1.5 rounded-full overflow-hidden">

@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import { useId, type FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash, faImage, faLink, faTicket } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/Button";
@@ -6,39 +6,55 @@ import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import Textarea from "@/components/Textarea";
 import Slider from "@/components/Slider";
-import { EMBED_LIMITS } from "@/constants/embedLimits";
-import { isSafeUrl } from "@/lib/url";
+import { useFocusAfterRemove } from "@/hooks/useFocusAfterRemove";
+import { useTouchedFields } from "@/hooks/useTouchedFields";
 import type { GuildEmoji } from "@/types";
-import type { V2Section, V2TextChild } from "@/lib/component-tree";
+import {
+  MAX_ALT_TEXT_LENGTH,
+  MAX_SECTION_TEXTS,
+  MAX_TEXT_CHARACTERS,
+  MAX_URL_LENGTH,
+  blankTextError,
+  linkLabelError,
+  linkUrlError,
+  mediaUrlError,
+  type V2Section,
+  type V2TextChild,
+} from "@/lib/component-tree";
 import PanelButtonTag from "./PanelButtonTag";
-
-const MAX_TEXTS = 3;
 
 interface SectionEditorProps {
   value: V2Section;
   onChange: (updated: V2Section) => void;
   guildEmojis?: GuildEmoji[];
-  /**
-   * Panels not yet placed elsewhere in the tree (plus, if this section's accessory already
-   * points at a panel, that panel's own entry - the caller's responsibility). Undefined means
-   * no "panels" concept applies here (single-panel/welcome-message builder), so the "Panel
-   * button" accessory option is omitted entirely.
-   */
+  /** Panels not yet placed in the tree, plus the one this accessory holds. Undefined hides panel placement. */
   availablePanels?: { panel_id: number; label: string; emoji?: string }[];
+  saveAttempted?: boolean;
 }
 
-const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanels }) => {
+const SectionEditor: FC<SectionEditorProps> = ({
+  value,
+  onChange,
+  availablePanels,
+  saveAttempted = false,
+}) => {
+  const hintId = useId();
+  const { shows, touch } = useTouchedFields(saveAttempted);
+  const { targetRef: addTextRef, request: focusAddText } = useFocusAfterRemove<HTMLButtonElement>();
+  const { targetRef: firstAccessoryRef, request: focusAccessoryChoices } =
+    useFocusAfterRemove<HTMLButtonElement>();
   const updateText = (index: number, content: string) => {
     const components = value.components.map((c, i) => (i === index ? { ...c, content } : c));
     onChange({ ...value, components });
   };
 
   const removeText = (index: number) => {
+    focusAddText();
     onChange({ ...value, components: value.components.filter((_, i) => i !== index) });
   };
 
   const addText = () => {
-    if (value.components.length >= MAX_TEXTS) return;
+    if (value.components.length >= MAX_SECTION_TEXTS) return;
     const newChild: V2TextChild = { id: crypto.randomUUID(), content: "" };
     onChange({ ...value, components: [...value.components, newChild] });
   };
@@ -55,38 +71,43 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
           <Textarea
             label={`Text #${i + 1}`}
             value={child.content}
-            max={EMBED_LIMITS.DESCRIPTION}
+            max={MAX_TEXT_CHARACTERS}
             onChange={(content) => updateText(i, content)}
+            onBlur={() => touch(`${child.id}:text`)}
+            error={shows(`${child.id}:text`) ? blankTextError(child.content) : undefined}
             className="flex-1"
           />
           <Button
             variant="ghost"
             size="icon"
-            title="Remove text"
+            title={`Remove text ${i + 1}`}
+            aria-label={`Remove text ${i + 1}`}
             onClick={() => removeText(i)}
-            className="mt-6 text-red-400 hover:text-red-300"
+            className="mt-6 text-red-300 hover:text-red-200"
           >
-            <FontAwesomeIcon icon={faTrash} />
+            <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
           </Button>
         </div>
       ))}
       <div className="flex items-center gap-3">
         <Button
+          ref={addTextRef}
           variant="dashed"
           onClick={addText}
-          disabled={value.components.length >= MAX_TEXTS}
+          disabled={value.components.length >= MAX_SECTION_TEXTS}
           className="text-sm font-medium w-fit"
         >
           <FontAwesomeIcon icon={faPlus} /> Add text
         </Button>
         <span className="text-xs">
-          {value.components.length}/{MAX_TEXTS} texts
+          {value.components.length}/{MAX_SECTION_TEXTS} texts
         </span>
       </div>
 
       {!value.accessory && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
+            ref={firstAccessoryRef}
             variant="dashed"
             className="w-fit text-sm font-medium"
             onClick={() => onChange({ ...value, accessory: { kind: "thumbnail", url: "" } })}
@@ -107,6 +128,7 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
               variant="dashed"
               className="w-fit text-sm font-medium"
               visuallyDisabled={availablePanels.length === 0}
+              aria-describedby={availablePanels.length === 0 ? hintId : undefined}
               title={
                 availablePanels.length === 0 ? "All panels are already placed elsewhere" : undefined
               }
@@ -118,6 +140,11 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
             >
               <FontAwesomeIcon icon={faTicket} /> Panel button
             </Button>
+          )}
+          {availablePanels !== undefined && availablePanels.length === 0 && (
+            <span id={hintId} className="sr-only">
+              All panels are already placed elsewhere
+            </span>
           )}
         </div>
       )}
@@ -132,10 +159,13 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
                 onChange={(url) =>
                   onChange({ ...value, accessory: { ...thumbnailAccessory, url } })
                 }
-                maxLength={EMBED_LIMITS.URL}
+                onBlur={() => touch("accessory:url")}
+                maxLength={MAX_URL_LENGTH}
+                error={shows("accessory:url") ? mediaUrlError(thumbnailAccessory.url) : undefined}
               />
               <TextInput
                 label="Alt text (optional)"
+                maxLength={MAX_ALT_TEXT_LENGTH}
                 value={thumbnailAccessory.description || ""}
                 onChange={(description) =>
                   onChange({
@@ -149,10 +179,14 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
               variant="ghost"
               size="icon"
               title="Remove side image"
-              onClick={() => onChange({ ...value, accessory: undefined })}
-              className="mt-6 text-red-400 hover:text-red-300"
+              aria-label="Remove side image"
+              onClick={() => {
+                focusAccessoryChoices();
+                onChange({ ...value, accessory: undefined });
+              }}
+              className="mt-6 text-red-300 hover:text-red-200"
             >
-              <FontAwesomeIcon icon={faTrash} />
+              <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
             </Button>
           </div>
           <Slider
@@ -175,7 +209,11 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
                 onChange={(label) =>
                   onChange({ ...value, accessory: { ...linkButtonAccessory, label } })
                 }
+                onBlur={() => touch("accessory:label")}
                 maxLength={80}
+                error={
+                  shows("accessory:label") ? linkLabelError(linkButtonAccessory.label) : undefined
+                }
               />
               <TextInput
                 label="URL"
@@ -183,11 +221,10 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
                 onChange={(url) =>
                   onChange({ ...value, accessory: { ...linkButtonAccessory, url } })
                 }
-                maxLength={EMBED_LIMITS.URL}
+                onBlur={() => touch("accessory:linkurl")}
+                maxLength={MAX_URL_LENGTH}
                 error={
-                  linkButtonAccessory.url.length > 0 && !isSafeUrl(linkButtonAccessory.url)
-                    ? "Enter a valid http(s) URL"
-                    : undefined
+                  shows("accessory:linkurl") ? linkUrlError(linkButtonAccessory.url) : undefined
                 }
               />
             </div>
@@ -195,10 +232,14 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
               variant="ghost"
               size="icon"
               title="Remove link button"
-              onClick={() => onChange({ ...value, accessory: undefined })}
-              className="mt-6 text-red-400 hover:text-red-300"
+              aria-label="Remove link button"
+              onClick={() => {
+                focusAccessoryChoices();
+                onChange({ ...value, accessory: undefined });
+              }}
+              className="mt-6 text-red-300 hover:text-red-200"
             >
-              <FontAwesomeIcon icon={faTrash} />
+              <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -232,10 +273,14 @@ const SectionEditor: FC<SectionEditorProps> = ({ value, onChange, availablePanel
               variant="ghost"
               size="icon"
               title="Remove panel button"
-              onClick={() => onChange({ ...value, accessory: undefined })}
-              className="text-red-400 hover:text-red-300"
+              aria-label="Remove panel button"
+              onClick={() => {
+                focusAccessoryChoices();
+                onChange({ ...value, accessory: undefined });
+              }}
+              className="text-red-300 hover:text-red-200"
             >
-              <FontAwesomeIcon icon={faTrash} />
+              <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
             </Button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import SelectMenu from "./container/SelectMenu";
 import MediaGallery from "./container/MediaGallery";
 import Container from "./container/Container";
 import Section from "./container/Section";
+import Separator from "./container/Separator";
 import DiscordContent from "./DiscordContent";
 
 const DiscordComponents: FC<DiscordComponentsProps> = ({
@@ -131,9 +132,13 @@ const DiscordComponents: FC<DiscordComponentsProps> = ({
             );
 
           case 14: // Separator, as a top-level component rather than nested in a Container
-            return <div key={index} className="h-px w-full bg-gray-600/50 my-1 max-w-130" />;
+            return (
+              <Separator key={index} divider={component.divider} spacing={component.spacing} />
+            );
 
-          // Container component for complex layouts
+          case 17: // Container, including an empty one
+            return <Container key={index} entities={entities} component={component} />;
+
           default:
             if (component.components && component.components.length > 0) {
               return <Container key={index} entities={entities} component={component} />;

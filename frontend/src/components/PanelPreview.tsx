@@ -9,7 +9,7 @@ import { BRANDING_FOOTER_ICON, BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { formatEmbedTimestampForDisplay } from "@/lib/embed-timestamp";
 import { isSafeUrl } from "@/lib/url";
 import { previewAvatarUrl } from "@/lib/embed-avatar";
-import { toPreviewComponents, type V2Component } from "@/lib/component-tree";
+import { toPreviewComponents, visibleWelcomeButtons, type V2Component } from "@/lib/component-tree";
 
 const EMPTY_ENTITIES = { users: {}, channels: {}, roles: {} };
 
@@ -33,14 +33,7 @@ interface PanelPreviewProps {
   brandingFooter?: boolean;
   messageMode?: "classic" | "components_v2";
   componentTree?: V2Component[];
-  /**
-   * Every panel in the multipanel (or single panel builder's containing panel, where the
-   * concept never applies), passed through to `toPreviewComponents` so a placed panel node
-   * anywhere in `componentTree` can be resolved to what it will actually render as. Omitted
-   * entirely for the single-panel and welcome-message builders, which have no "panels" concept -
-   * `toPreviewComponents` degrades to skipping any panel-kind node in that case, which never
-   * exist in those trees anyway.
-   */
+  /** Every panel in the multi-panel, so placed panels in the tree resolve to real buttons. */
   panelsForPreview?: Panel[];
 }
 
@@ -59,7 +52,7 @@ const PanelPreview: FC<PanelPreviewProps> = ({
     !content ? null : isV2 ? (
       <AutoAppendedTag className="mt-1">{content}</AutoAppendedTag>
     ) : (
-      content
+      <div className="mt-1">{content}</div>
     );
 
   if (type === "panel") {
@@ -93,18 +86,20 @@ const PanelPreview: FC<PanelPreviewProps> = ({
 
     return (
       <>
-        <div
-          className="bg-[#2b2d31] rounded border-l-4 p-3 w-full sm:max-w-130 mt-4"
-          style={{
-            borderLeftColor: `#${(p.colour || 0x5865f2).toString(16).padStart(6, "0")}`,
-          }}
-        >
-          {isV2 ? (
+        {isV2 ? (
+          <div className="w-full sm:max-w-130 mt-4">
             <DiscordComponents
               components={toPreviewComponents(componentTree ?? [], panelsForPreview ?? [])}
               entities={EMPTY_ENTITIES}
             />
-          ) : (
+          </div>
+        ) : (
+          <div
+            className="bg-[#2b2d31] rounded border-l-4 p-3 w-full sm:max-w-130 mt-4"
+            style={{
+              borderLeftColor: `#${(p.colour || 0x5865f2).toString(16).padStart(6, "0")}`,
+            }}
+          >
             <>
               <div className="flex">
                 <div className="flex-1 min-w-0">
@@ -133,8 +128,8 @@ const PanelPreview: FC<PanelPreviewProps> = ({
                 </div>
               )}
             </>
-          )}
-        </div>
+          </div>
+        )}
         {buttonsRow(buttonsContent)}
       </>
     );
@@ -196,18 +191,27 @@ const PanelPreview: FC<PanelPreviewProps> = ({
   const authorUrl = resolveTicketAvatar(embedData?.author?.url);
   const titleUrl = resolveTicketAvatar(embedData?.url);
 
+  const welcomeButtons =
+    isV2 && !isMultiPanelRequest ? visibleWelcomeButtons(panel as Panel) : null;
+
   return (
     <>
-      <div
-        className="bg-[#2b2d31] rounded border-l-4 p-3 w-full sm:max-w-130 mt-4"
-        style={{ borderLeftColor: borderColor }}
-      >
-        {isV2 ? (
+      {isV2 ? (
+        <div className="w-full sm:max-w-130 mt-4">
           <DiscordComponents
-            components={toPreviewComponents(componentTree ?? [], panelsForPreview ?? [])}
+            components={toPreviewComponents(
+              componentTree ?? [],
+              panelsForPreview ?? [],
+              (panel as MultiPanel | MultiPanelRequest).select_menu_placeholder,
+            )}
             entities={EMPTY_ENTITIES}
           />
-        ) : (
+        </div>
+      ) : (
+        <div
+          className="bg-[#2b2d31] rounded border-l-4 p-3 w-full sm:max-w-130 mt-4"
+          style={{ borderLeftColor: borderColor }}
+        >
           <>
             <div className="flex">
               <div className="flex-1 min-w-0">
@@ -262,7 +266,8 @@ const PanelPreview: FC<PanelPreviewProps> = ({
                         key={ri}
                         className="grid gap-2"
                         style={{
-                          gridTemplateColumns: row.length > 1 ? `repeat(${row.length}, 1fr)` : "1fr",
+                          gridTemplateColumns:
+                            row.length > 1 ? `repeat(${row.length}, 1fr)` : "1fr",
                         }}
                       >
                         {row.map((field, fi) => (
@@ -271,7 +276,10 @@ const PanelPreview: FC<PanelPreviewProps> = ({
                               content={field.name}
                               className="text-xs font-semibold text-white"
                             />
-                            <DiscordContent content={field.value} className="text-xs text-[#dbdee1]" />
+                            <DiscordContent
+                              content={field.value}
+                              className="text-xs text-[#dbdee1]"
+                            />
                           </div>
                         ))}
                       </div>
@@ -311,8 +319,28 @@ const PanelPreview: FC<PanelPreviewProps> = ({
               </div>
             )}
           </>
+        </div>
+      )}
+      {welcomeButtons &&
+        (welcomeButtons.close || welcomeButtons.closeWithReason || welcomeButtons.claim) && (
+          <AutoAppendedTag className="mt-1">
+            <div className="flex flex-wrap gap-2">
+              {welcomeButtons.close && (
+                <Button button_style={4} label="Close" emoji={{ name: "\u{1F512}" }} />
+              )}
+              {welcomeButtons.closeWithReason && (
+                <Button button_style={4} label="Close with reason" emoji={{ name: "\u{1F512}" }} />
+              )}
+              {welcomeButtons.claim && (
+                <Button
+                  button_style={3}
+                  label="Claim"
+                  emoji={{ name: "\u{1F64B}\u200D\u2642\uFE0F" }}
+                />
+              )}
+            </div>
+          </AutoAppendedTag>
         )}
-      </div>
       {buttonsRow(
         buttons && buttons.length > 0
           ? (() => {
@@ -339,7 +367,7 @@ const PanelPreview: FC<PanelPreviewProps> = ({
                   };
                 });
                 return (
-                  <div className="mt-1 w-full sm:max-w-130">
+                  <div className="w-full sm:max-w-130">
                     <SelectMenu
                       open
                       placeholder={mp.select_menu_placeholder || "Select a topic..."}
@@ -349,7 +377,7 @@ const PanelPreview: FC<PanelPreviewProps> = ({
                 );
               }
               return (
-                <div className="flex flex-wrap gap-2 mt-1">
+                <div className="flex flex-wrap gap-2">
                   {buttons.map((p, index) => (
                     <Button
                       key={p.panel_id ?? index}

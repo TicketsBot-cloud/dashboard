@@ -15,12 +15,10 @@ interface ContainerEditorProps {
   onAnnounce: (message: string) => void;
   disabled?: boolean;
   budgetMax: number;
-  /** Threaded straight through to the nested BlockList - see BlockList's prop of the same name. */
   availablePanels?: { panel_id: number; label: string; emoji?: string }[];
-  /** Threaded straight through to the nested BlockList - see BlockList's prop of the same name. */
   allPanels?: { panel_id: number; label: string; emoji?: string }[];
-  /** Threaded straight through to the nested BlockList - see BlockList's prop of the same name. */
   selectMenuModeOn?: boolean;
+  saveAttempted?: boolean;
 }
 
 const ContainerEditor: FC<ContainerEditorProps> = ({
@@ -35,6 +33,7 @@ const ContainerEditor: FC<ContainerEditorProps> = ({
   availablePanels,
   allPanels,
   selectMenuModeOn,
+  saveAttempted,
 }) => {
   const containerLabel =
     getTopLevelContainers(tree).find((c) => c.id === value.id)?.label ?? "Container";
@@ -78,10 +77,10 @@ const ContainerEditor: FC<ContainerEditorProps> = ({
         onAnnounce={onAnnounce}
         disabled={disabled}
         budgetMax={budgetMax}
-        topLevelMax={Infinity}
         availablePanels={availablePanels}
         allPanels={allPanels}
         selectMenuModeOn={selectMenuModeOn}
+        saveAttempted={saveAttempted}
       />
     </div>
   );

@@ -4,28 +4,42 @@ import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/Button";
 import TextInput from "@/components/TextInput";
 import Slider from "@/components/Slider";
-import { EMBED_LIMITS } from "@/constants/embedLimits";
-import type { V2MediaGallery, V2MediaGalleryItem } from "@/lib/component-tree";
-
-const MAX_ITEMS = 10;
+import { useFocusAfterRemove } from "@/hooks/useFocusAfterRemove";
+import { useTouchedFields } from "@/hooks/useTouchedFields";
+import {
+  MAX_ALT_TEXT_LENGTH,
+  MAX_GALLERY_ITEMS,
+  MAX_URL_LENGTH,
+  mediaUrlError,
+  type V2MediaGallery,
+  type V2MediaGalleryItem,
+} from "@/lib/component-tree";
 
 interface MediaGalleryEditorProps {
   value: V2MediaGallery;
   onChange: (updated: V2MediaGallery) => void;
+  saveAttempted?: boolean;
 }
 
-const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({ value, onChange }) => {
+const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({
+  value,
+  onChange,
+  saveAttempted = false,
+}) => {
+  const { shows, touch } = useTouchedFields(saveAttempted);
+  const { targetRef: addRef, request: focusAddButton } = useFocusAfterRemove<HTMLButtonElement>();
   const updateItem = (index: number, update: Partial<V2MediaGalleryItem>) => {
     const items = value.items.map((item, i) => (i === index ? { ...item, ...update } : item));
     onChange({ ...value, items });
   };
 
   const removeItem = (index: number) => {
+    focusAddButton();
     onChange({ ...value, items: value.items.filter((_, i) => i !== index) });
   };
 
   const addItem = () => {
-    if (value.items.length >= MAX_ITEMS) return;
+    if (value.items.length >= MAX_GALLERY_ITEMS) return;
     onChange({ ...value, items: [...value.items, { url: "" }] });
   };
 
@@ -39,10 +53,13 @@ const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({ value, onChange }) =>
                 label="Image URL"
                 value={item.url}
                 onChange={(url) => updateItem(i, { url })}
-                maxLength={EMBED_LIMITS.URL}
+                onBlur={() => touch(`${i}:url`)}
+                maxLength={MAX_URL_LENGTH}
+                error={shows(`${i}:url`) ? mediaUrlError(item.url) : undefined}
               />
               <TextInput
                 label="Alt text (optional)"
+                maxLength={MAX_ALT_TEXT_LENGTH}
                 value={item.description || ""}
                 onChange={(description) => updateItem(i, { description: description || undefined })}
               />
@@ -50,11 +67,12 @@ const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({ value, onChange }) =>
             <Button
               variant="ghost"
               size="icon"
-              title="Remove item"
+              title={`Remove image ${i + 1}`}
+              aria-label={`Remove image ${i + 1}`}
               onClick={() => removeItem(i)}
-              className="mt-6 text-red-400 hover:text-red-300"
+              className="mt-6 text-red-300 hover:text-red-200"
             >
-              <FontAwesomeIcon icon={faTrash} />
+              <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
             </Button>
           </div>
           <Slider
@@ -66,15 +84,16 @@ const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({ value, onChange }) =>
       ))}
       <div className="flex items-center gap-3">
         <Button
+          ref={addRef}
           variant="secondary"
           onClick={addItem}
-          disabled={value.items.length >= MAX_ITEMS}
+          disabled={value.items.length >= MAX_GALLERY_ITEMS}
           className="text-sm font-medium w-fit"
         >
           <FontAwesomeIcon icon={faPlus} /> Add item
         </Button>
         <span className="text-xs">
-          {value.items.length}/{MAX_ITEMS} items
+          {value.items.length}/{MAX_GALLERY_ITEMS} items
         </span>
       </div>
     </div>

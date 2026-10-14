@@ -29,19 +29,13 @@ import DateTimePicker from "@/components/DateTimePicker";
 import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import PremiumGate from "@/components/PremiumGate";
-import FeatureGate from "@/components/FeatureGate";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
-import { useFeatureFlag } from "@/hooks/useFeatureFlag";
-import { FEATURE_PANELS, COMPONENTS_V2_BUILDER_FLAG } from "@/lib/feature-flags";
+import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSave,
-  faExclamationTriangle,
-  faWandMagicSparkles,
-} from "@fortawesome/free-solid-svg-icons";
+import { faSave, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import Slider from "@/components/Slider";
 import EmojiPicker from "@/components/EmojiPicker";
 import { sortGuildChannels } from "@/lib/guild-channels";
@@ -51,19 +45,16 @@ import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
-import MessageModeToggle from "@/components/component-builder/MessageModeToggle";
-import ComponentTreeBuilder from "@/components/component-builder/ComponentTreeBuilder";
-import BuildPreviewTabs from "@/components/component-builder/BuildPreviewTabs";
+import ComponentsV2Section from "@/components/component-builder/ComponentsV2Section";
 import {
-  applyClassicConversion,
-  countBlocks,
   fromApiComponents,
   getPlacedPanelIds,
-  hasConvertibleClassicContent,
   hasPanelSelectBlock,
   multiPanelReserved,
+  prunePlacedPanels,
   removePanelSelectBlock,
   toApiComponents,
+  validateComponentTree,
   type ClassicConversionSource,
   type V2Component,
 } from "@/lib/component-tree";
@@ -93,12 +84,6 @@ const MultiPanelsPage: FC = () => {
   const queryClient = useQueryClient();
 
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
-  // undefined while loading - only treated as "on" once it has actually resolved to true, so
-  // the placement UI never flashes on then off while the flag read is still in flight.
-  const { enabled: componentPlacementEnabled } = useFeatureFlag(
-    COMPONENTS_V2_BUILDER_FLAG,
-    guildId,
-  );
   const [forcedLock, setForcedLock] = useState(false);
   const handleApiError = useApiErrorHandler(
     "Panel management is temporarily unavailable. Please try again shortly.",
@@ -145,7 +130,6 @@ const MultiPanelsPage: FC = () => {
   const [multiPanel, setMultiPanel] = useState<MultiPanel | null>(null);
   const [componentTree, setComponentTree] = useState<V2Component[]>([]);
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
-  const [convertConfirmOpen, setConvertConfirmOpen] = useState(false);
   // Captured once when the multi-panel first loads, so the resend-confirmation on save only
   // ever compares against how it started this session, not against every toggle flip in between.
   const originalV2Ref = useRef(false);
@@ -215,7 +199,9 @@ const MultiPanelsPage: FC = () => {
     channelsLoaded && !!multiPanel?.channel_id && !existingChannelIds.has(multiPanel.channel_id);
 
   const embed = multiPanel?.embed;
+  const isV2 = !!multiPanel?.uses_components_v2;
   const embedEmpty =
+    !isV2 &&
     !!embed &&
     !embed.title?.trim() &&
     !embed.description?.trim() &&
@@ -232,9 +218,13 @@ const MultiPanelsPage: FC = () => {
     if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
     if (embedEmpty) return "The embed cannot be empty.";
 
-    const invalidUrls = collectEmbedUrlErrors(multiPanel?.embed);
+    const invalidUrls = isV2 ? [] : collectEmbedUrlErrors(multiPanel?.embed);
     if (invalidUrls.length > 0) {
       return `Fix these embed URLs before saving: ${invalidUrls.join(", ")}.`;
+    }
+
+    if (isV2 && validateComponentTree(componentTree, { reserved }).length > 0) {
+      return "Fix the problems listed under the message builder before saving.";
     }
 
     return null;
@@ -245,14 +235,6 @@ const MultiPanelsPage: FC = () => {
       try {
         const res = await apiClient.multiPanels.getById(guildId, panelId);
         const data = res.data.data;
-
-        if (data.force_disabled) {
-          toast.warning(
-            "This multi-panel is disabled because it requires premium. Reactivate premium to edit it.",
-          );
-          navigate(`/manage/${guildId}/panels`);
-          return;
-        }
 
         setMultiPanel({ ...data, embed: data.embed ?? defaultEmbed });
         originalV2Ref.current = data.uses_components_v2;
@@ -267,11 +249,6 @@ const MultiPanelsPage: FC = () => {
 
   const saveMultiPanel = async () => {
     if (!multiPanel) return;
-
-    if (!multiPanel.name?.trim()) {
-      toast.error("Enter a multi-panel name before saving.");
-      return;
-    }
 
     try {
       await apiClient.multiPanels.update(
@@ -292,92 +269,42 @@ const MultiPanelsPage: FC = () => {
     }
   };
 
-  // Only render the placement UI (and the props that drive it) once the flag has actually
-  // resolved to true - undefined-while-loading must never be treated as on.
-  const showPlacementUI = componentPlacementEnabled === true;
-
-  // Every selected panel, resolved to its effective (customisation-applied) label/emoji.
   const resolvedPanels = getPreviewButtons();
   const placedPanelIds = getPlacedPanelIds(componentTree);
   const hasPlacedSelect = hasPanelSelectBlock(componentTree);
-  // Excludes whichever panels are already placed somewhere in the tree, matching what the
-  // backend will actually render in the auto-appended default row/dropdown.
-  const unplacedResolvedPanels = resolvedPanels.filter((p) => !placedPanelIds.has(p.panel_id));
-  // A placed panel_select binds every remaining unplaced panel into itself (its options are
-  // resolved from the unplaced set - see toPreviewComponents), so none of them are left over
-  // for the backend's auto-appended row. Confirmed against unplacedPanels() in the backend's
-  // multipanelmessagedata.go: it returns nil outright whenever the tree already has a
-  // panel_select, regardless of how many panels remain unplaced. The preview's default row
-  // must mirror that exactly, or it renders a second dropdown alongside the one in the tree.
-  const defaultRowPanels = hasPlacedSelect ? [] : unplacedResolvedPanels;
+  // A placed dropdown absorbs every unplaced panel, so the backend appends no default row.
+  const defaultRowPanels = hasPlacedSelect
+    ? []
+    : resolvedPanels.filter((p) => !placedPanelIds.has(p.panel_id));
 
   const toPickerPanel = (p: (typeof resolvedPanels)[number]) => ({
     panel_id: p.panel_id,
     label: p.button_label || "Open Ticket",
     emoji: resolveEmoteName(p.emote) || undefined,
   });
-  const availablePanelsForPicker = unplacedResolvedPanels.map(toPickerPanel);
-  const allPanelsForPicker = resolvedPanels.map(toPickerPanel);
 
-  // Per multiPanelReserved's own doc comment: netted against whatever the tree already accounts
-  // for itself, so the system-appended reservation and the tree's own budget never both charge
-  // for the same panel or the same dropdown. multiPanel can still be null here (not yet loaded),
-  // in which case there is nothing to reserve for yet. A placed panel_select absorbs every
-  // remaining panel (see defaultRowPanels above), so the backend appends nothing at all in that
-  // case - confirmed against unplacedPanels() in multipanelmessagedata.go, which returns nil
-  // outright once the tree has a panel_select, not "unplaced minus one". Deviates from a literal
-  // reading of multiPanelReserved's doc comment (which suggests "minus one further"): that
-  // reading was checked against the backend and does not match it, so panelCount is zeroed
-  // instead.
   const reserved = multiPanelReserved({
-    selectMenu: hasPlacedSelect ? false : !!multiPanel?.select_menu,
-    panelCount: hasPlacedSelect
-      ? 0
-      : Math.max(0, (multiPanel?.panels.length ?? 0) - placedPanelIds.size),
+    selectMenu: !!multiPanel?.select_menu,
+    hasPlacedSelect,
+    panelCount: multiPanel?.panels.length ?? 0,
+    placedCount: placedPanelIds.size,
   });
-  const budgetReservedNote =
-    reserved.total === 0
-      ? undefined
-      : "Some space is also kept for the panel selection buttons or dropdown.";
 
-  const embedColourHex = `#${(multiPanel?.embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`;
   const classicSource: ClassicConversionSource = {
     title: multiPanel?.embed.title,
     body: multiPanel?.embed.description,
-    colourHex: embedColourHex,
+    colourHex: multiPanel?.embed.colour || "#5865f2",
     imageUrl: multiPanel?.embed.image_url,
     thumbnailUrl: multiPanel?.embed.thumbnail_url,
     authorName: multiPanel?.embed.author?.name,
     authorUrl: multiPanel?.embed.author?.url,
     footerText: multiPanel?.embed.footer?.text,
   };
-  const hasClassicContent = hasConvertibleClassicContent(classicSource);
-  const nothingToLose = componentTree.length === 0;
-
-  const runConversion = () => {
-    const { converted, folded } = applyClassicConversion(
-      classicSource,
-      30 - reserved.total,
-      setComponentTree,
-    );
-    if (!converted) {
-      toast.warning(
-        "Nothing could be converted - check your classic content's image and thumbnail URLs.",
-      );
-      return;
-    }
-    if (folded) {
-      toast.warning("Some sections were merged to fit the block budget.");
-    }
-  };
-
-  const handleConvertClick = () => {
-    if (nothingToLose) {
-      runConversion();
-    } else {
-      setConvertConfirmOpen(true);
-    }
-  };
+  const conversionNotes = [
+    ...(classicSource.authorName ? ["The author icon is dropped."] : []),
+    ...(classicSource.footerText ? ["The footer icon is dropped."] : []),
+    ...(multiPanel?.embed.timestamp ? ["The timestamp is dropped."] : []),
+  ];
 
   return (
     <MainLayout
@@ -392,13 +319,12 @@ const MultiPanelsPage: FC = () => {
       />
       <div className="mb-4 bg-gray-800 rounded-xl p-4">
         <TextInput
-          label="Multi-Panel Name"
+          label="Multi-Panel Name (Optional)"
           placeholder="e.g. Support Categories"
           value={multiPanel?.name || ""}
           onChange={(e) => setMultiPanel((prev) => (prev ? { ...prev, name: e } : prev))}
           maxLength={100}
           showCount
-          error={!multiPanel?.name?.trim() ? "Multi-panel name is required" : undefined}
         />
         <p className="text-xs text-gray-400 mt-1">
           Used to identify this multi-panel in the dashboard. It isn't shown in Discord.
@@ -427,21 +353,22 @@ const MultiPanelsPage: FC = () => {
             missing={tooFewPanels}
             value={multiPanel?.panels?.map((p) => p.panel_id.toString()) || []}
             options={panels?.map((panel) => ({
-              label: panel.title,
+              label: panel.name || panel.title,
               key: panel.panel_id.toString(),
               color: intToColour(panel.colour),
             }))}
-            onChange={(e) =>
+            onChange={(e) => {
+              const newIds = e.map(Number);
+              setComponentTree((tree) => prunePlacedPanels(tree, new Set(newIds)));
               setMultiPanel((prev) => {
                 if (!prev) return prev;
-                const newIds = e.map(Number);
                 const existingById = Object.fromEntries(prev.panels.map((p) => [p.panel_id, p]));
                 return {
                   ...prev,
                   panels: newIds.map((id) => existingById[id] ?? { panel_id: id }),
                 };
-              })
-            }
+              });
+            }}
           />
         </div>
         <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -547,78 +474,48 @@ const MultiPanelsPage: FC = () => {
           </div>
         )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
-          <FeatureGate flag={COMPONENTS_V2_BUILDER_FLAG} guildId={guildId}>
-            <div className="md:col-span-2">
-              <MessageModeToggle
-                mode={multiPanel?.uses_components_v2 ? "components_v2" : "classic"}
-                isPremium={!!premiumState?.premium}
-                onChange={(mode) =>
-                  setMultiPanel((prev) =>
-                    prev ? { ...prev, uses_components_v2: mode === "components_v2" } : prev,
-                  )
-                }
-              />
-            </div>
-          </FeatureGate>
+          <ComponentsV2Section
+            saveAttempted={saveAttempted}
+            guildId={guildId}
+            isV2={isV2}
+            onV2Change={(next) =>
+              setMultiPanel((prev) => (prev ? { ...prev, uses_components_v2: next } : prev))
+            }
+            tree={componentTree}
+            onTreeChange={setComponentTree}
+            classicSource={classicSource}
+            conversionNotes={conversionNotes}
+            title="Panel Properties"
+            previewTitle="Panel Preview"
+            reserved={reserved}
+            reservedNote={
+              reserved === 0
+                ? undefined
+                : "Some space is also kept for the panel selection buttons or dropdown."
+            }
+            guildEmojis={guildEmojis}
+            placement={{
+              availablePanels: resolvedPanels
+                .filter((p) => !placedPanelIds.has(p.panel_id))
+                .map(toPickerPanel),
+              allPanels: resolvedPanels.map(toPickerPanel),
+              selectMenuModeOn: !!multiPanel?.select_menu,
+            }}
+            preview={
+              multiPanel && (
+                <PanelPreview
+                  type="welcome"
+                  data={{ panel: multiPanel, buttons: defaultRowPanels }}
+                  brandingFooter={showBrandingFooter}
+                  messageMode="components_v2"
+                  componentTree={componentTree}
+                  panelsForPreview={resolvedPanels}
+                />
+              )
+            }
+          />
 
-          {multiPanel?.uses_components_v2 ? (
-            <BuildPreviewTabs
-              className="md:col-span-2 mb-1"
-              build={
-                <div className="pb-2 mb-5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-semibold">Panel Properties</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      visuallyDisabled={!hasClassicContent}
-                      aria-describedby={!hasClassicContent ? "convert-hint" : undefined}
-                      onClick={handleConvertClick}
-                    >
-                      <FontAwesomeIcon
-                        icon={faWandMagicSparkles}
-                        className="mr-1.5"
-                        aria-hidden="true"
-                      />
-                      Convert from classic
-                    </Button>
-                  </div>
-                  {!hasClassicContent && (
-                    <p id="convert-hint" className="text-xs text-gray-400 mt-1">
-                      Add a title, description or image in Classic mode first, then convert it here.
-                    </p>
-                  )}
-                  <div className="mt-2">
-                    <ComponentTreeBuilder
-                      components={componentTree}
-                      onChange={setComponentTree}
-                      guildEmojis={guildEmojis}
-                      budgetUsed={countBlocks(componentTree)}
-                      budgetMax={30 - reserved.total}
-                      topLevelMax={10 - reserved.topLevel}
-                      budgetReservedNote={budgetReservedNote}
-                      availablePanels={showPlacementUI ? availablePanelsForPicker : undefined}
-                      allPanels={showPlacementUI ? allPanelsForPicker : undefined}
-                      selectMenuModeOn={showPlacementUI ? multiPanel.select_menu : undefined}
-                    />
-                  </div>
-                </div>
-              }
-              preview={
-                <div>
-                  <span className="text-xl font-semibold">Panel Preview</span>
-                  <PanelPreview
-                    type="welcome"
-                    data={{ panel: multiPanel, buttons: defaultRowPanels }}
-                    brandingFooter={showBrandingFooter}
-                    messageMode="components_v2"
-                    componentTree={componentTree}
-                    panelsForPreview={resolvedPanels}
-                  />
-                </div>
-              }
-            />
-          ) : (
+          {!isV2 && (
             <>
               <div className="pb-2 mb-5">
                 <span className="text-xl font-semibold">Panel Properties</span>
@@ -637,20 +534,13 @@ const MultiPanelsPage: FC = () => {
                   />
                   <ColourSelect
                     label="Colour"
-                    value={
-                      multiPanel?.embed?.colour
-                        ? `#${multiPanel.embed.colour.toString(16).padStart(6, "0")}`
-                        : "#5865f2"
-                    }
+                    value={multiPanel?.embed?.colour || "#5865f2"}
                     onChange={(e) =>
                       setMultiPanel((prev) =>
                         prev
                           ? {
                               ...prev,
-                              embed: {
-                                ...prev.embed,
-                                colour: parseInt(e.replace("#", ""), 16),
-                              },
+                              embed: { ...prev.embed, colour: e },
                             }
                           : prev,
                       )
@@ -827,7 +717,7 @@ const MultiPanelsPage: FC = () => {
                     />
                   </PremiumGate>
                   <DateTimePicker
-                    label="Footer Timestamp (Optional)"
+                    label="Footer Timestamp"
                     value={parseEmbedTimestamp(multiPanel?.embed?.timestamp)}
                     onChange={(date) =>
                       setMultiPanel((prev) =>
@@ -881,8 +771,8 @@ const MultiPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
-        disabled={saveAttempted && saveBlocker() !== null}
-        visuallyDisabled={isLocked}
+        // Not natively disabled: the button is focused when this flips, and a disabled control drops focus.
+        visuallyDisabled={isLocked || (saveAttempted && saveBlocker() !== null)}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={() => {
           if (!multiPanel) return;
@@ -917,38 +807,9 @@ const MultiPanelsPage: FC = () => {
         }}
         onCancel={() => setDowngradeConfirmOpen(false)}
         title="Switch back to classic?"
-        message="Switching this multi-panel back to classic mode means we'll delete the current message and post a new one in its place. It'll lose its position in the channel, and any reactions or replies on it will be gone. Continue?"
+        message="Switching this multi-panel back to classic mode deletes the current message and posts a new one in its place. The new message loses its position in the channel, and any reactions on the old one are lost. Replies to the old message stay in the channel. Continue?"
         confirmText="Switch and repost"
         cancelText="Keep as is"
-        confirmVariant="danger"
-      />
-      <ConfirmModal
-        isOpen={convertConfirmOpen}
-        onConfirm={() => {
-          setConvertConfirmOpen(false);
-          runConversion();
-        }}
-        onCancel={() => setConvertConfirmOpen(false)}
-        title="Convert from classic?"
-        message={
-          <>
-            <p>
-              This replaces the current block layout with a fresh conversion of your classic
-              content. Continue?
-            </p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              {!!classicSource.authorName && <li>The author icon is dropped.</li>}
-              {!!classicSource.footerText && <li>The footer icon is dropped.</li>}
-              {!!multiPanel?.embed.timestamp && <li>The timestamp is dropped.</li>}
-              <li>
-                Any blocks you&apos;ve added manually in the builder that aren&apos;t part of the
-                classic content will be discarded.
-              </li>
-            </ul>
-          </>
-        }
-        confirmText="Convert and replace"
-        cancelText="Cancel"
         confirmVariant="danger"
       />
     </MainLayout>

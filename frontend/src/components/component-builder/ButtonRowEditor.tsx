@@ -1,30 +1,38 @@
-import type { FC } from "react";
+import { useId, type FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
-import { EMBED_LIMITS } from "@/constants/embedLimits";
-import { isSafeUrl } from "@/lib/url";
-import type { V2ButtonRow, V2ButtonRowButton } from "@/lib/component-tree";
+import { useFocusAfterRemove } from "@/hooks/useFocusAfterRemove";
+import { useTouchedFields } from "@/hooks/useTouchedFields";
+import {
+  MAX_ROW_BUTTONS,
+  MAX_URL_LENGTH,
+  linkLabelError,
+  linkUrlError,
+  type V2ButtonRow,
+  type V2ButtonRowButton,
+} from "@/lib/component-tree";
 import PanelButtonTag from "./PanelButtonTag";
-
-const MAX_BUTTONS = 5;
 
 interface ButtonRowEditorProps {
   value: V2ButtonRow;
   onChange: (updated: V2ButtonRow) => void;
-  /**
-   * Panels not yet placed elsewhere in the tree (plus, for a row already pointing at a panel,
-   * that panel's own entry - the caller is responsible for including it). Undefined means this
-   * builder is being used somewhere with no "panels" concept at all (single-panel or
-   * welcome-message message), in which case none of the panel-placement UI below renders and
-   * this behaves exactly as a link-only button row.
-   */
+  /** Panels not yet placed in the tree, plus any this row already holds. Undefined hides panel placement. */
   availablePanels?: { panel_id: number; label: string; emoji?: string }[];
+  saveAttempted?: boolean;
 }
 
-const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availablePanels }) => {
+const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
+  value,
+  onChange,
+  availablePanels,
+  saveAttempted = false,
+}) => {
+  const hintId = useId();
+  const { shows, touch } = useTouchedFields(saveAttempted);
+  const { targetRef: addRef, request: focusAddButton } = useFocusAfterRemove<HTMLButtonElement>();
   const updateLinkField = (index: number, update: Partial<{ label: string; url: string }>) => {
     const buttons = value.buttons.map((b, i) => {
       if (i !== index || b.kind === "panel") return b;
@@ -47,9 +55,6 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availableP
       if (kind === "panel") {
         if (currentlyPanel) return b;
         const panelId = availablePanels?.[0]?.panel_id;
-        // The "Ticket panel" toggle is disabled whenever availablePanels is empty, so this
-        // should never be reached with nothing to default to - guard anyway rather than
-        // inventing a hidden panel_id such as 0.
         if (panelId === undefined) return b;
         return { id: b.id, kind: "panel", panel_id: panelId };
       }
@@ -60,11 +65,12 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availableP
   };
 
   const removeButton = (index: number) => {
+    focusAddButton();
     onChange({ ...value, buttons: value.buttons.filter((_, i) => i !== index) });
   };
 
   const addButton = () => {
-    if (value.buttons.length >= MAX_BUTTONS) return;
+    if (value.buttons.length >= MAX_ROW_BUTTONS) return;
     onChange({
       ...value,
       buttons: [...value.buttons, { id: crypto.randomUUID(), label: "", url: "" }],
@@ -80,18 +86,28 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availableP
           <div key={b.id} className="p-3 rounded bg-gray-600 flex items-start gap-2">
             <div className="flex-1 flex flex-col gap-2">
               {availablePanels !== undefined && (
-                <div className="flex items-center gap-2">
+                <div
+                  role="group"
+                  aria-label={`Button ${i + 1} type`}
+                  className="flex items-center gap-2"
+                >
                   <Button
-                    variant={isPanelMode ? "outline" : "secondary"}
+                    variant={isPanelMode ? "outline" : "primary"}
                     size="sm"
+                    aria-pressed={!isPanelMode}
                     onClick={() => setButtonMode(i, "link")}
                   >
+                    {!isPanelMode && <FontAwesomeIcon icon={faCheck} aria-hidden="true" />}
                     Link
                   </Button>
                   <Button
-                    variant={isPanelMode ? "secondary" : "outline"}
+                    variant={isPanelMode ? "primary" : "outline"}
                     size="sm"
+                    aria-pressed={isPanelMode}
                     visuallyDisabled={availablePanels.length === 0}
+                    aria-describedby={
+                      availablePanels.length === 0 ? `${hintId}-${b.id}` : undefined
+                    }
                     title={
                       availablePanels.length === 0
                         ? "All panels are already placed elsewhere"
@@ -99,8 +115,14 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availableP
                     }
                     onClick={() => setButtonMode(i, "panel")}
                   >
+                    {isPanelMode && <FontAwesomeIcon icon={faCheck} aria-hidden="true" />}
                     Ticket panel
                   </Button>
+                  {availablePanels.length === 0 && (
+                    <span id={`${hintId}-${b.id}`} className="sr-only">
+                      All panels are already placed elsewhere
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -128,18 +150,17 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availableP
                     label="Button label"
                     value={b.label}
                     onChange={(label) => updateLinkField(i, { label })}
+                    onBlur={() => touch(`${b.id}:label`)}
                     maxLength={80}
+                    error={shows(`${b.id}:label`) ? linkLabelError(b.label) : undefined}
                   />
                   <TextInput
                     label="URL"
                     value={b.url}
                     onChange={(url) => updateLinkField(i, { url })}
-                    maxLength={EMBED_LIMITS.URL}
-                    error={
-                      b.url.length > 0 && !isSafeUrl(b.url)
-                        ? "Enter a valid http(s) URL"
-                        : undefined
-                    }
+                    maxLength={MAX_URL_LENGTH}
+                    onBlur={() => touch(`${b.id}:url`)}
+                    error={shows(`${b.id}:url`) ? linkUrlError(b.url) : undefined}
                   />
                 </div>
               )}
@@ -147,23 +168,25 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availableP
             <Button
               variant="ghost"
               size="icon"
-              title="Remove button"
+              title={`Remove button ${i + 1}`}
+              aria-label={`Remove button ${i + 1}`}
               onClick={() => removeButton(i)}
-              className={`${availablePanels === undefined ? "mt-6" : "mt-1"} text-red-400 hover:text-red-300`}
+              className={`${availablePanels === undefined ? "mt-6" : "mt-1"} text-red-300 hover:text-red-200`}
             >
-              <FontAwesomeIcon icon={faTrash} />
+              <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
             </Button>
           </div>
         );
       })}
       <div className="flex items-center gap-3">
         <Button
+          ref={addRef}
           variant="dashed"
           onClick={addButton}
-          disabled={value.buttons.length >= MAX_BUTTONS}
+          disabled={value.buttons.length >= MAX_ROW_BUTTONS}
           title={
-            value.buttons.length >= MAX_BUTTONS
-              ? `Maximum of ${MAX_BUTTONS} buttons per row`
+            value.buttons.length >= MAX_ROW_BUTTONS
+              ? `Maximum of ${MAX_ROW_BUTTONS} buttons per row`
               : undefined
           }
           className="text-sm font-medium w-fit"
@@ -171,7 +194,7 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({ value, onChange, availableP
           <FontAwesomeIcon icon={faPlus} /> Add button
         </Button>
         <span className="text-xs">
-          {value.buttons.length}/{MAX_BUTTONS} buttons
+          {value.buttons.length}/{MAX_ROW_BUTTONS} buttons
         </span>
       </div>
     </div>

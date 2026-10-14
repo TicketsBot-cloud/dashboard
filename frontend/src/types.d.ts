@@ -171,16 +171,10 @@ export interface TicketPermissions {
 
 export interface Panel {
   panel_id: number;
+  name?: string | null;
   message_id: Snowflake;
   channel_id: Snowflake;
   guild_id: Snowflake;
-  /**
-   * Dashboard-only label, never sent to Discord - distinct from `title`, which is the classic
-   * embed's Discord-facing title and does double duty as the dashboard list label only for
-   * panels that predate this field. Nullable on existing panels; the list view falls back to
-   * `title` when null.
-   */
-  name: string | null;
   title: string;
   content: string;
   colour: number;
@@ -279,7 +273,7 @@ export interface MultiPanelPanelEntry {
 
 export interface MultiPanel {
   id: number;
-  /** Dashboard-only label, never sent to Discord - see the equivalent note on `Panel.name`. */
+  /** Optional dashboard-only label, never sent to Discord. */
   name: string | null;
   message_id: Snowflake;
   channel_id: Snowflake;
@@ -295,7 +289,7 @@ export interface MultiPanel {
 }
 
 export interface MultiPanelRequest {
-  name: string;
+  name?: string;
   channel_id: Snowflake;
   embed: MultiPanelEmbed;
   panels: Array<MultiPanelPanelEntry>;

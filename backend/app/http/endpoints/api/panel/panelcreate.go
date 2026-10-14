@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
@@ -39,7 +38,7 @@ type PanelAutoCloseBody struct {
 type panelBody struct {
 	ChannelId                 uint64                             `json:"channel_id,string"`
 	MessageId                 uint64                             `json:"message_id,string"`
-	Name                      string                             `json:"name"`
+	Name                      *string                            `json:"name"`
 	Title                     string                             `json:"title"`
 	Content                   string                             `json:"content"`
 	Colour                    uint32                             `json:"colour"`
@@ -132,10 +131,16 @@ func CreatePanel(c *gin.Context) {
 
 	data.MessageId = 0
 
-	// Check panel quota
+	// Voting premium unlocks fields but not quota or Components V2, so this lookup excludes it.
 	quotaTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+		return
+	}
+
+	hasPaid := quotaTier > premium.None
+	if (data.MessageUsesComponentsV2 || data.WelcomeMessageUsesComponentsV2) && !hasPaid {
+		c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))
 		return
 	}
 
@@ -154,6 +159,12 @@ func CreatePanel(c *gin.Context) {
 
 	// Apply defaults
 	ApplyPanelDefaults(&data)
+
+	// Validation skips these in V2 mode because the editor hides them, but they are still stored.
+	if data.MessageUsesComponentsV2 {
+		data.ImageUrl = validClassicUrlOrNil(data.ImageUrl)
+		data.ThumbnailUrl = validClassicUrlOrNil(data.ThumbnailUrl)
+	}
 
 	// Not in DefaultApplicators: that also runs on update, where an empty list means "delete
 	// every rule" rather than "unconfigured".
@@ -192,12 +203,13 @@ func CreatePanel(c *gin.Context) {
 
 	// Do custom validation
 	validationContext := PanelValidationContext{
-		Data:       data,
-		GuildId:    guildId,
-		IsPremium:  featureTier > premium.None,
-		BotContext: botContext,
-		Channels:   channels,
-		Roles:      roles,
+		Data:           data,
+		GuildId:        guildId,
+		IsPremium:      featureTier > premium.None,
+		HasPaidPremium: hasPaid,
+		BotContext:     botContext,
+		Channels:       channels,
+		Roles:          roles,
 	}
 
 	if err := ValidatePanelBody(validationContext); err != nil {
@@ -214,6 +226,8 @@ func CreatePanel(c *gin.Context) {
 	if !data.UseThreads {
 		data.TicketNotificationChannel = nil
 	}
+
+	data.dropHiddenClassicEmbed()
 
 	// Do tag validation
 	if err := validate.Struct(data); err != nil {
@@ -240,6 +254,9 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
+	data.MessageComponents = normaliseComponentTree(data.MessageComponents)
+	data.WelcomeMessageComponents = normaliseComponentTree(data.WelcomeMessageComponents)
+
 	messageData := data.IntoPanelMessageData(customId, footer.ShowBranding)
 	msgId, err := messageData.send(botContext)
 	if err != nil {
@@ -257,6 +274,15 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
+	// Any return before the panel row exists would leave the message in the channel with
+	// nothing behind it.
+	stored := false
+	defer func() {
+		if !stored {
+			discardMessage(botContext, data.ChannelId, msgId)
+		}
+	}()
+
 	var emojiId *uint64
 	var emojiName *string
 	var emojiAnimated bool
@@ -272,18 +298,14 @@ func CreatePanel(c *gin.Context) {
 		}
 	}
 
-	// Store welcome message: exactly one of the relational embed row or the
-	// Components V2 JSONB column is ever populated for a given panel.
+	// The classic welcome embed is kept alongside a Components V2 welcome message so
+	// switching back to Classic does not lose it. dropHiddenClassicEmbed has already
+	// discarded an unusable one.
+	welcomeEmbed := data.WelcomeMessage
+
 	var welcomeMessageEmbed *int
-	var welcomeMessageComponents *string
-	if data.WelcomeMessageUsesComponentsV2 {
-		welcomeMessageComponents, err = marshalComponents(data.WelcomeMessageComponents)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message components to database"))
-			return
-		}
-	} else if data.WelcomeMessage != nil {
-		embed, fields := data.WelcomeMessage.IntoDatabaseStruct()
+	if welcomeEmbed != nil {
+		embed, fields := welcomeEmbed.IntoDatabaseStruct()
 		embed.GuildId = guildId
 
 		id, err := dbclient.Client.Embeds.CreateWithFields(c, embed, fields)
@@ -293,6 +315,15 @@ func CreatePanel(c *gin.Context) {
 		}
 
 		welcomeMessageEmbed = &id
+	}
+
+	var welcomeMessageComponents *string
+	if data.WelcomeMessageUsesComponentsV2 {
+		welcomeMessageComponents, err = marshalComponents(data.WelcomeMessageComponents)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save welcome message components to database"))
+			return
+		}
 	}
 
 	var messageComponents *string
@@ -309,15 +340,12 @@ func CreatePanel(c *gin.Context) {
 		data.TicketLimit = nil
 	}
 
-	// Validated non-empty by validateName; trimmed here for consistent storage.
-	name := strings.TrimSpace(data.Name)
-
 	// Store in DB
 	panel := database.Panel{
 		MessageId:                 msgId,
 		ChannelId:                 data.ChannelId,
 		GuildId:                   guildId,
-		Name:                      &name,
+		Name:                      data.trimmedName(),
 		Title:                     data.Title,
 		Content:                   data.Content,
 		Colour:                    int32(data.Colour),
@@ -399,6 +427,7 @@ func CreatePanel(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel to database"))
 		return
 	}
+	stored = true
 
 	if err := dbclient.Client.PanelTicketPermissions.Set(c, panelId, data.TicketPermissions); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))

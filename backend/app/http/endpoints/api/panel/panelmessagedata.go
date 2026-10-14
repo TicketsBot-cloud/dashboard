@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects"
@@ -30,17 +32,16 @@ type panelMessageData struct {
 	ButtonDisabled           bool
 	ShowBranding             bool
 
-	// UsesComponentsV2 switches send()/edit() from the classic embed builder to the
-	// Components V2 tree in Components, with the system open-ticket button appended.
 	UsesComponentsV2 bool
 	Components       []component.Component
 }
 
-// marshalComponents serialises a guild-authored component tree for JSONB storage.
-// An empty/nil tree is stored as NULL rather than "[]", matching the nullable column.
+// marshalComponents serialises a guild-authored component tree for JSONB storage. It is
+// only called for a message that uses Components V2, where an empty tree is stored as
+// "[]" rather than NULL.
 func marshalComponents(components []component.Component) (*string, error) {
-	if len(components) == 0 {
-		return nil, nil
+	if components == nil {
+		components = []component.Component{}
 	}
 
 	raw, err := json.Marshal(components)
@@ -50,6 +51,20 @@ func marshalComponents(components []component.Component) (*string, error) {
 
 	s := string(raw)
 	return &s, nil
+}
+
+// unmarshalComponents reads a stored tree. NULL is an empty tree.
+func unmarshalComponents(raw *string) ([]component.Component, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	var components []component.Component
+	if err := json.Unmarshal([]byte(*raw), &components); err != nil {
+		return nil, err
+	}
+
+	return components, nil
 }
 
 func panelIntoMessageData(panel database.Panel, showBranding bool) panelMessageData {
@@ -82,14 +97,15 @@ func panelIntoMessageData(panel database.Panel, showBranding bool) panelMessageD
 		ShowBranding:   showBranding,
 	}
 
-	if panel.MessageUsesComponentsV2 && panel.MessageComponents != nil {
-		var components []component.Component
-		if err := json.Unmarshal([]byte(*panel.MessageComponents), &components); err != nil {
-			// Data was validated and marshalled by us on write, so this should not happen.
-			// Fall back to the classic embed rather than sending a broken/empty message.
-			log.Logger.Error("Failed to unmarshal panel message components; falling back to classic message", zap.Int("panel_id", panel.PanelId), zap.Error(err))
+	if panel.MessageUsesComponentsV2 {
+		// A corrupt tree renders as an empty one. Falling back to Classic would send an
+		// edit without the V2 flag to a message that has it, which Discord refuses.
+		data.UsesComponentsV2 = true
+
+		components, err := unmarshalComponents(panel.MessageComponents)
+		if err != nil {
+			log.Logger.Error("Failed to unmarshal panel message components; rendering an empty tree", zap.Int("panel_id", panel.PanelId), zap.Error(err))
 		} else {
-			data.UsesComponentsV2 = true
 			data.Components = components
 		}
 	}
@@ -157,31 +173,9 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 	return msg.Id, nil
 }
 
-// buildEditData constructs the outgoing edit payload. wasAlreadyV2 must reflect
-// whether the message already carried the Components V2 flag before this edit:
-// Discord's flag is sticky and cannot be unset via edit (panelupdate.go resends
-// instead whenever downgrading back to Classic), but the first Classic-to-V2
-// transition must clear content/embeds and apply the flag in the same request.
-func (p *panelMessageData) buildEditData(wasAlreadyV2 bool) rest.EditMessageData {
+func (p *panelMessageData) buildEditData() rest.EditMessageData {
 	if p.UsesComponentsV2 {
-		// Flags must always be set explicitly here, even on an ongoing V2-to-V2 edit:
-		// EditMessageData.Flags has no `omitempty` in the pinned gdl version, so leaving
-		// it unset would send an explicit "flags":0, which Discord reads as "this message
-		// has no flags" and validates Components against Classic (ActionRow-only) rules -
-		// producing a components[0] "must be one of (1,)" error despite the flag being
-		// sticky server-side. Content/Embeds are safe to leave conditional below, since
-		// their "correct" steady-state value in V2 mode is already empty either way.
-		data := rest.EditMessageData{
-			Flags:      message.SumFlags(message.FlagComponentsV2),
-			Components: append(append([]component.Component{}, p.Components...), p.systemButton()),
-		}
-
-		if !wasAlreadyV2 {
-			data.Content = ""
-			data.Embeds = []*embed.Embed{}
-		}
-
-		return data
+		return v2EditData(append(append([]component.Component{}, p.Components...), p.systemButton()))
 	}
 
 	return rest.EditMessageData{
@@ -191,12 +185,23 @@ func (p *panelMessageData) buildEditData(wasAlreadyV2 bool) rest.EditMessageData
 }
 
 // edit updates the existing panel message.
-func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64, wasAlreadyV2 bool) error {
+func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) error {
 	ctx, cancel := app.DefaultContext()
 	defer cancel()
 
-	data := p.buildEditData(wasAlreadyV2)
+	data := p.buildEditData()
 
 	_, err := rest.EditMessage(ctx, c.Token, c.RateLimiter, p.ChannelId, messageId, data)
 	return err
+}
+
+// discardMessage is a best-effort cleanup for a message sent before the save that was meant
+// to follow it failed. It has its own context because the request's may already be cancelled.
+func discardMessage(c *botcontext.BotContext, channelId, messageId uint64) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := rest.DeleteMessage(ctx, c.Token, c.RateLimiter, channelId, messageId); err != nil {
+		log.Logger.Warn("Failed to delete orphaned panel message", zap.Uint64("channel_id", channelId), zap.Uint64("message_id", messageId), zap.Error(err))
+	}
 }

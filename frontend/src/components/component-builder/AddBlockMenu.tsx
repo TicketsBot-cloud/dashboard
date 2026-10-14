@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState, type FC } from "react";
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FC,
+  type FocusEvent as ReactFocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -38,6 +47,8 @@ interface AddBlockMenuProps {
    * `hasPanelSelectBlock`.
    */
   selectMenuModeOn?: boolean;
+  /** Set inside a container, so the trigger is distinguishable from the top-level one. */
+  containerLabel?: string;
 }
 
 // Button Row sits in Layout rather than Content: like Separator, it's a structural row rather
@@ -68,8 +79,10 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
   tree,
   availablePanels,
   selectMenuModeOn,
+  containerLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +120,29 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
+  const handlePopupKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Tab") return;
+    const items = Array.from(
+      e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([aria-disabled="true"])'),
+    );
+    const leaving = e.shiftKey ? e.target === items[0] : e.target === items[items.length - 1];
+    if (!leaving) return;
+    // The popup is portaled to the end of the page, so tabbing out of it would land somewhere
+    // unrelated to the trigger. Close it and return to the trigger instead.
+    e.preventDefault();
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const handlePopupBlur = (e: ReactFocusEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget;
+    // A null relatedTarget is a click on non-focusable popup chrome or a window switch, not a
+    // deliberate move away.
+    if (!(next instanceof Node)) return;
+    if (dropdownRef.current?.contains(next) || triggerRef.current?.contains(next)) return;
+    setIsOpen(false);
+  };
+
   const panelSelectAlreadyPlaced = hasPanelSelectBlock(tree);
 
   const layoutTypes = LAYOUT_TYPES.filter((t) => {
@@ -127,36 +163,44 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
     if (types.length === 0) return null;
     return (
       <div className="p-1">
-        <p className="px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500">{title}</p>
+        <p className="px-2 py-1 text-[10px] uppercase tracking-wide text-gray-300">{title}</p>
         {types.map((type) => {
           const reason = disabledReason(type);
+          const reasonId = `${menuId}-${type}-reason`;
           return (
-            <button
-              key={type}
-              type="button"
-              aria-disabled={!!reason || undefined}
-              title={reason}
-              className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded text-sm ${
-                reason
-                  ? "text-gray-500 cursor-not-allowed hover:bg-transparent"
-                  : "text-white hover:bg-gray-600"
-              }`}
-              onClick={(e) => {
-                if (reason) {
-                  e.preventDefault();
-                  return;
-                }
-                onAdd(type);
-                closeAndReturnFocus();
-              }}
-            >
-              <FontAwesomeIcon
-                icon={ICONS[type]}
-                className="text-gray-400 w-4"
-                aria-hidden="true"
-              />
-              {blockLabel(type)}
-            </button>
+            <Fragment key={type}>
+              <button
+                type="button"
+                aria-disabled={!!reason || undefined}
+                aria-describedby={reason ? reasonId : undefined}
+                title={reason}
+                className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded text-sm ${
+                  reason
+                    ? "text-gray-300 cursor-not-allowed hover:bg-transparent"
+                    : "text-white hover:bg-gray-600"
+                }`}
+                onClick={(e) => {
+                  if (reason) {
+                    e.preventDefault();
+                    return;
+                  }
+                  onAdd(type);
+                  closeAndReturnFocus();
+                }}
+              >
+                <FontAwesomeIcon
+                  icon={ICONS[type]}
+                  className="text-gray-400 w-4"
+                  aria-hidden="true"
+                />
+                {blockLabel(type)}
+              </button>
+              {reason && (
+                <span id={reasonId} className="sr-only">
+                  {reason}
+                </span>
+              )}
+            </Fragment>
           );
         })}
       </div>
@@ -169,14 +213,24 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
         ref={triggerRef}
         variant="dashed"
         className="w-full"
+        aria-label={containerLabel ? `Add block to ${containerLabel}` : undefined}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? menuId : undefined}
         onClick={() => setIsOpen((v) => !v)}
       >
         + Add block
       </Button>
       {isOpen &&
         createPortal(
+          // The handlers only manage focus leaving the group; the items inside are the controls.
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
           <div
             ref={dropdownRef}
+            id={menuId}
+            role="group"
+            aria-label="Add block"
+            onKeyDown={handlePopupKeyDown}
+            onBlur={handlePopupBlur}
             className="fixed bg-gray-700 border border-neutral-600 rounded shadow-lg z-popover overflow-y-auto"
             style={{
               top: position.top,

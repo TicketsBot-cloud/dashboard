@@ -3,13 +3,10 @@ package api
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
-	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/rest/request"
@@ -17,10 +14,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
-	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -67,18 +62,29 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
-	if multiPanel.ForceDisabled {
-		c.JSON(400, utils.ErrorStr("This multi-panel is disabled and cannot be modified: please reactivate premium to re-enable it"))
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
 	}
 
 	if data.UsesComponentsV2 {
-		// The classic embed is never read for a Components V2 message (see the persistence
-		// branch below, gated on !UsesComponentsV2) - the frontend still submits whatever
-		// embed state it has regardless of message mode, so validating its contents here
-		// would reject a Components V2 multi-panel over fields that are never sent to
-		// Discord or stored.
-		data.Embed = nil
+		paid, err := hasPaidPremium(c, guildId, botContext)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+			return
+		}
+
+		if !paid {
+			c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))
+			return
+		}
+
+		data.Embed = classicEmbedForV2(data.Embed)
+		data.stripUnknownPlacements()
+	} else if data.Embed == nil {
+		c.JSON(400, utils.ErrorStr("An embed is required for classic messages."))
+		return
 	}
 
 	if err := validate.Struct(data); err != nil {
@@ -93,51 +99,23 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
-	if err := validateResourceName(data.Name, "Multi-panel"); err != nil {
-		var validationError *validation.InvalidInputError
-		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-		}
+	name, err := normaliseMultiPanelName(data.Name)
+	if err != nil {
+		respondValidationError(c, err, "Failed to update multi-panel")
 		return
 	}
 
 	// validate body & get sub-panels
 	panels, err := data.doValidations(guildId)
 	if err != nil {
-		var validationError *validation.InvalidInputError
-		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-		}
+		respondValidationError(c, err, "Failed to update multi-panel")
 		return
 	}
 
-	// Validate labels for dropdown mode
 	if data.SelectMenu {
-		for _, panel := range panels {
-			var panelConfig *panelConfiguration
-			for _, cfg := range data.Panels {
-				if panel.PanelId == cfg.PanelId {
-					panelConfig = &cfg
-					break
-				}
-			}
-
-			var effectiveLabel string
-			if panelConfig != nil {
-				effectiveLabel = getEffectiveLabelForValidation(panel.ButtonLabel, panelConfig.CustomLabel)
-			} else {
-				effectiveLabel = panel.ButtonLabel
-			}
-
-			if effectiveLabel == "" {
-				formatted := fmt.Sprintf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)
-				c.JSON(400, utils.ErrorStr("%s", formatted))
-				return
-			}
+		if err := validateDropdownLabels(panels, data.Panels); err != nil {
+			respondValidationError(c, err, "Failed to update multi-panel")
+			return
 		}
 	}
 
@@ -156,31 +134,8 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
-	// get bot context
-	botContext, err := botcontext.ContextForGuild(guildId)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
-		return
-	}
-
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
-		return
-	}
-
-	if data.UsesComponentsV2 && premiumTier == premium.None {
-		c.JSON(402, utils.ErrorStr("Component-based multi-panel messages require premium. Purchase premium to unlock this feature."))
-		return
-	}
-
 	if err := validateMultiPanelComponents(data); err != nil {
-		var validationError *validation.InvalidInputError
-		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-		}
+		respondValidationError(c, err, "Failed to update multi-panel")
 		return
 	}
 
@@ -201,6 +156,8 @@ func MultiPanelUpdate(c *gin.Context) {
 			CustomEmojiId:   data.Panels[i].CustomEmojiId,
 		}
 	}
+
+	data.Components = normaliseComponentTree(data.Components)
 
 	messageData := data.IntoMessageData(footer)
 	var messageId uint64
@@ -240,7 +197,7 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	} else {
 		// Try to edit existing message
-		err = messageData.edit(botContext, multiPanel.MessageId, panelsWithCustom, multiPanel.UsesComponentsV2)
+		err = messageData.edit(botContext, multiPanel.MessageId, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
 			// Gone (404/10008), or authored by a different bot and so uneditable (50005):
@@ -281,7 +238,6 @@ func MultiPanelUpdate(c *gin.Context) {
 	}
 
 	// update DB
-	var dbEmbedWithFields *database.CustomEmbedWithFields
 	var componentsJSON *string
 	if data.UsesComponentsV2 {
 		componentsJSON, err = marshalComponents(data.Components)
@@ -289,16 +245,13 @@ func MultiPanelUpdate(c *gin.Context) {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 			return
 		}
-	} else {
-		dbEmbed, dbEmbedFields := data.Embed.IntoDatabaseStruct()
-		dbEmbedWithFields = &database.CustomEmbedWithFields{
-			CustomEmbed: dbEmbed,
-			Fields:      dbEmbedFields,
-		}
 	}
 
-	// Validated non-empty by validateResourceName; trimmed here for consistent storage.
-	name := strings.TrimSpace(data.Name)
+	// A Components V2 save without a usable classic embed leaves the stored one alone.
+	dbEmbed := embedIntoDatabase(data.Embed)
+	if data.UsesComponentsV2 && dbEmbed == nil {
+		dbEmbed = multiPanel.Embed
+	}
 
 	updated := database.MultiPanel{
 		Id:                    multiPanel.Id,
@@ -307,11 +260,10 @@ func MultiPanelUpdate(c *gin.Context) {
 		GuildId:               guildId,
 		SelectMenu:            data.SelectMenu,
 		SelectMenuPlaceholder: data.SelectMenuPlaceholder,
-		Embed:                 dbEmbedWithFields,
+		Embed:                 dbEmbed,
 		UsesComponentsV2:      data.UsesComponentsV2,
 		Components:            componentsJSON,
-		ForceDisabled:         multiPanel.ForceDisabled,
-		Name:                  &name,
+		Name:                  name,
 	}
 
 	if err = dbclient.Client.MultiPanels.Update(c, multiPanel.Id, updated); err != nil {

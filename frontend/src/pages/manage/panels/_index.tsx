@@ -428,7 +428,7 @@ const PanelsPage: FC = () => {
                 ) : (
                   multiPanels.map((panel) => (
                     <Table.Row key={panel.id} className={panel.force_disabled ? "opacity-50" : ""}>
-                      <Table.Cell>{panel.name}</Table.Cell>
+                      <Table.Cell>{panel.name || "Untitled multi-panel"}</Table.Cell>
 
                       <Table.Cell className="px-4 py-3 hidden sm:table-cell">
                         {panel.force_disabled ? (

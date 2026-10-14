@@ -4,12 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
-	"strings"
 
 	"github.com/TicketsBot-cloud/common/featureflags"
-	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel"
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
@@ -21,7 +18,6 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
@@ -71,17 +67,8 @@ func (d *multiPanelCreateData) IntoMessageData(footer footerPolicy) multiPanelMe
 	return data
 }
 
-// validateMultiPanelComponents enforces the type-allowlist and reserved-budget check on
-// a multi-panel's Components V2 tree. Premium gating is handled separately by the caller
-// with an explicit 402, matching the free-tier quota check in panelcreate.go.
-//
-// A panel referenced by a placeholder inside the tree (a button carrying PanelId, or the
-// dropdown carrying IsPanelSelect) is excluded from the reserved system-row budget below,
-// since the backend no longer appends it to the default row - see buildSystemComponents
-// in multipanelmessagedata.go. validPanelIds is built from data.Panels, which
-// validatePanels has already ownership-checked against this guild earlier in the same
-// request's validation pipeline (doValidations runs before this function is ever
-// called), so every ID accepted here is guaranteed to belong to this guild's own panels.
+// validateMultiPanelComponents validates the authored tree and checks it leaves room for
+// the rows the system appends for every panel the tree does not place.
 func validateMultiPanelComponents(data multiPanelCreateData) error {
 	if !data.UsesComponentsV2 {
 		return nil
@@ -92,42 +79,94 @@ func validateMultiPanelComponents(data multiPanelCreateData) error {
 		validPanelIds[p.PanelId] = true
 	}
 
-	if err := validateComponentTree(data.Components, validPanelIds, data.SelectMenu); err != nil {
-		return err
-	}
-
-	placed, hasSelect, err := collectPlacedPanelIds(data.Components)
+	result, err := validateComponentTree(data.Components, treeRules{validPanelIds: validPanelIds, dropdownMode: data.SelectMenu})
 	if err != nil {
 		return err
 	}
 
-	unplacedCount := 0
-	for _, p := range data.Panels {
-		if !placed[p.PanelId] {
-			unplacedCount++
+	unplaced := len(validPanelIds) - len(result.placed)
+	if result.dropdownUsed && unplaced == 0 {
+		return validation.NewInvalidInputError("Dropdown: every panel is already placed as a button, so the dropdown would have nothing to list")
+	}
+
+	return checkComponentBudget(result.count, multiPanelReserved(data.SelectMenu, result.dropdownUsed, unplaced))
+}
+
+// multiPanelReserved is exactly what buildComponents appends after the authored tree.
+func multiPanelReserved(dropdownMode, dropdownPlaced bool, unplaced int) int {
+	switch {
+	case unplaced == 0 || dropdownPlaced:
+		return 0
+	case dropdownMode:
+		return dropdownReserved
+	default:
+		rows := (unplaced + maxActionRowChildren - 1) / maxActionRowChildren
+		return rows + unplaced
+	}
+}
+
+// stripUnknownPlacements removes placements of panels that are not part of this multi-panel,
+// along with any action row, section or container they leave empty, so removing a panel from
+// the list does not make the save fail on a placement the user can no longer see.
+func (d *multiPanelCreateData) stripUnknownPlacements() {
+	known := make(map[int]bool, len(d.Panels))
+	for _, p := range d.Panels {
+		known[p.PanelId] = true
+	}
+
+	d.Components = mapComponentTree(d.Components, func(c component.Component) (component.Component, bool) {
+		if button, ok := c.ComponentData.(component.Button); ok {
+			if panelId, isPlacement := parsePanelPlacement(button.CustomId); isPlacement && !known[panelId] {
+				return component.Component{}, false
+			}
+		}
+
+		return c, true
+	})
+}
+
+func embedIntoDatabase(e *types.CustomEmbed) *database.CustomEmbedWithFields {
+	if e == nil {
+		return nil
+	}
+
+	dbEmbed, dbEmbedFields := e.IntoDatabaseStruct()
+	return &database.CustomEmbedWithFields{CustomEmbed: dbEmbed, Fields: dbEmbedFields}
+}
+
+func findPanelConfig(configs []panelConfiguration, panelId int) *panelConfiguration {
+	for i := range configs {
+		if configs[i].PanelId == panelId {
+			return &configs[i]
 		}
 	}
 
-	if hasSelect && unplacedCount == 0 {
-		return validation.NewInvalidInputError("The panel dropdown placed in the message must have at least one panel left to list; every panel in this multi-panel is already placed elsewhere in the message")
+	return nil
+}
+
+// validateDropdownLabels checks every panel has something to show in a dropdown option.
+func validateDropdownLabels(panels []database.Panel, configs []panelConfiguration) error {
+	for _, panel := range panels {
+		label := panel.ButtonLabel
+		if config := findPanelConfig(configs, panel.PanelId); config != nil {
+			label = getEffectiveLabelForValidation(panel.ButtonLabel, config.CustomLabel)
+		}
+
+		if label == "" {
+			return validation.NewInvalidInputErrorf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)
+		}
 	}
 
-	var reservedTopLevel, reservedTotal int
-	if data.SelectMenu {
-		if !hasSelect {
-			// 1 row + 1 select menu, covering every panel not already placed elsewhere via
-			// a panel button. A placed dropdown reserves nothing extra here: it is already
-			// counted as part of the authored tree by countComponents (row + select = the
-			// same 1 top-level / 2 total this reservation exists to cover).
-			reservedTopLevel, reservedTotal = 1, 2
-		}
+	return nil
+}
+
+func respondValidationError(c *gin.Context, err error, internalMessage string) {
+	var validationError *validation.InvalidInputError
+	if errors.As(err, &validationError) {
+		c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
 	} else {
-		n := unplacedCount
-		rows := int(math.Ceil(float64(n) / 5))
-		reservedTopLevel, reservedTotal = rows, rows+n
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, internalMessage))
 	}
-
-	return validateComponentTreeBudget(data.Components, reservedTopLevel, reservedTotal)
 }
 
 func MultiPanelCreate(c *gin.Context) {
@@ -145,13 +184,29 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
+		return
+	}
+
 	if data.UsesComponentsV2 {
-		// The classic embed is never read for a Components V2 message (see IntoMessageData
-		// and the persistence branch below, both gated on !UsesComponentsV2) - the frontend
-		// still submits whatever embed state it has regardless of message mode, so validating
-		// its contents here would reject a Components V2 multi-panel over fields that are
-		// never sent to Discord or stored.
-		data.Embed = nil
+		paid, err := hasPaidPremium(c, guildId, botContext)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+			return
+		}
+
+		if !paid {
+			c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))
+			return
+		}
+
+		data.Embed = classicEmbedForV2(data.Embed)
+		data.stripUnknownPlacements()
+	} else if data.Embed == nil {
+		c.JSON(400, utils.ErrorStr("An embed is required for classic messages."))
+		return
 	}
 
 	if err := validate.Struct(data); err != nil {
@@ -166,74 +221,28 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
-	if err := validateResourceName(data.Name, "Multi-panel"); err != nil {
-		var validationError *validation.InvalidInputError
-		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
-		}
+	name, err := normaliseMultiPanelName(data.Name)
+	if err != nil {
+		respondValidationError(c, err, "Failed to create multi-panel")
 		return
 	}
 
 	// validate body & get sub-panels
 	panels, err := data.doValidations(guildId)
 	if err != nil {
-		var validationError *validation.InvalidInputError
-		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
-		}
+		respondValidationError(c, err, "Failed to create multi-panel")
 		return
 	}
 
-	// Validate labels for dropdown mode
 	if data.SelectMenu {
-		for _, panel := range panels {
-			panelConfig := data.Panels[0]
-			for i, cfg := range data.Panels {
-				if panels[i].PanelId == cfg.PanelId {
-					panelConfig = cfg
-					break
-				}
-			}
-
-			effectiveLabel := getEffectiveLabelForValidation(panel.ButtonLabel, panelConfig.CustomLabel)
-
-			if effectiveLabel == "" {
-				formatted := fmt.Sprintf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)
-				c.JSON(400, utils.ErrorStr("%s", formatted))
-				return
-			}
+		if err := validateDropdownLabels(panels, data.Panels); err != nil {
+			respondValidationError(c, err, "Failed to create multi-panel")
+			return
 		}
-	}
-
-	// get bot context
-	botContext, err := botcontext.ContextForGuild(guildId)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
-		return
-	}
-
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
-		return
-	}
-
-	if data.UsesComponentsV2 && premiumTier == premium.None {
-		c.JSON(402, utils.ErrorStr("Component-based multi-panel messages require premium. Purchase premium to unlock this feature."))
-		return
 	}
 
 	if err := validateMultiPanelComponents(data); err != nil {
-		var validationError *validation.InvalidInputError
-		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
-		}
+		respondValidationError(c, err, "Failed to create multi-panel")
 		return
 	}
 
@@ -255,6 +264,8 @@ func MultiPanelCreate(c *gin.Context) {
 		}
 	}
 
+	data.Components = normaliseComponentTree(data.Components)
+
 	messageData := data.IntoMessageData(footer)
 	messageId, err := messageData.send(botContext, panelsWithCustom)
 	if err != nil {
@@ -272,7 +283,15 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
-	var dbEmbedWithFields *database.CustomEmbedWithFields
+	// Any return before the row exists would leave the message in the channel with nothing
+	// behind it.
+	stored := false
+	defer func() {
+		if !stored {
+			discardMessage(botContext, data.ChannelId, messageId)
+		}
+	}()
+
 	var componentsJSON *string
 	if data.UsesComponentsV2 {
 		componentsJSON, err = marshalComponents(data.Components)
@@ -280,16 +299,7 @@ func MultiPanelCreate(c *gin.Context) {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 			return
 		}
-	} else {
-		dbEmbed, dbEmbedFields := data.Embed.IntoDatabaseStruct()
-		dbEmbedWithFields = &database.CustomEmbedWithFields{
-			CustomEmbed: dbEmbed,
-			Fields:      dbEmbedFields,
-		}
 	}
-
-	// Validated non-empty by validateResourceName; trimmed here for consistent storage.
-	name := strings.TrimSpace(data.Name)
 
 	multiPanel := database.MultiPanel{
 		MessageId:             messageId,
@@ -297,10 +307,10 @@ func MultiPanelCreate(c *gin.Context) {
 		GuildId:               guildId,
 		SelectMenu:            data.SelectMenu,
 		SelectMenuPlaceholder: data.SelectMenuPlaceholder,
-		Embed:                 dbEmbedWithFields,
+		Embed:                 embedIntoDatabase(data.Embed),
 		UsesComponentsV2:      data.UsesComponentsV2,
 		Components:            componentsJSON,
-		Name:                  &name,
+		Name:                  name,
 	}
 
 	multiPanel.Id, err = dbclient.Client.MultiPanels.Create(c, multiPanel)
@@ -308,6 +318,7 @@ func MultiPanelCreate(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to create multi-panel"))
 		return
 	}
+	stored = true
 
 	group, _ := errgroup.WithContext(context.Background())
 	for i, panel := range panels {
@@ -352,8 +363,10 @@ func MultiPanelCreate(c *gin.Context) {
 }
 
 func (d *multiPanelCreateData) doValidations(guildId uint64) (panels []database.Panel, err error) {
-	if err := validateEmbed(d.Embed); err != nil {
-		return nil, err
+	if !d.UsesComponentsV2 {
+		if err := validateEmbed(d.Embed); err != nil {
+			return nil, err
+		}
 	}
 
 	group, _ := errgroup.WithContext(context.Background())
@@ -414,7 +427,13 @@ func (d *multiPanelCreateData) validatePanels(guildId uint64) (panels []database
 		return nil, err
 	}
 
+	seen := make(map[int]struct{}, len(d.Panels))
 	for _, panelConfig := range d.Panels {
+		if _, duplicate := seen[panelConfig.PanelId]; duplicate {
+			return nil, validation.NewInvalidInputError("each panel can only be added to a multi-panel once")
+		}
+		seen[panelConfig.PanelId] = struct{}{}
+
 		var valid bool
 		// find panel struct
 		for _, panel := range existingPanels {

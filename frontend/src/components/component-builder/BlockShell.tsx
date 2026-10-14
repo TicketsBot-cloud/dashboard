@@ -1,14 +1,7 @@
-import type { CSSProperties, FC, ReactNode } from "react";
+import { useLayoutEffect, useRef, type FC, type ReactNode } from "react";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronUp,
-  faChevronDown,
-  faTrash,
-  faGripVertical,
-} from "@fortawesome/free-solid-svg-icons";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { faChevronUp, faChevronDown, faTrash } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/Button";
 
 interface MoveTarget {
@@ -17,9 +10,11 @@ interface MoveTarget {
 }
 
 interface BlockShellProps {
-  /** Stable id of the block this shell renders, used as the dnd-kit sortable item id. */
-  id: string;
+  /** Identifies the block to the focus restore after a structural change. */
+  blockId: string;
   label: string;
+  /** The enclosing container's label, prefixed onto every accessible name when nested. */
+  containerLabel?: string;
   icon: IconDefinition;
   canMoveUp: boolean;
   canMoveDown: boolean;
@@ -37,8 +32,9 @@ interface BlockShellProps {
 }
 
 const BlockShell: FC<BlockShellProps> = ({
-  id,
+  blockId,
   label,
+  containerLabel,
   icon,
   canMoveUp,
   canMoveDown,
@@ -53,53 +49,36 @@ const BlockShell: FC<BlockShellProps> = ({
   disabled,
   children,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id,
-    disabled,
-  });
+  const upRef = useRef<HTMLButtonElement>(null);
+  const downRef = useRef<HTMLButtonElement>(null);
+  const pendingFocus = useRef<"up" | "down" | null>(null);
+  const fullLabel = containerLabel ? `${containerLabel}, ${label}` : label;
 
-  // The actual floating drag preview is rendered by ComponentTreeBuilder's DragOverlay, so this
-  // card only ever needs to show where it would land if dropped now (a plain vertical
-  // translate) - dnd-kit skips its own pointer-following transform on the source item whenever
-  // a DragOverlay is present.
-  const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  // Reordering moves this block's DOM nodes, which drops focus, and the pressed arrow becomes
+  // disabled at either end of the list. Restore focus to it, or to the opposite arrow.
+  useLayoutEffect(() => {
+    const pressed = pendingFocus.current;
+    if (!pressed) return;
+    pendingFocus.current = null;
+    const same = pressed === "up" ? upRef.current : downRef.current;
+    const opposite = pressed === "up" ? downRef.current : upRef.current;
+    (same && !same.disabled ? same : opposite)?.focus();
+  });
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      data-block-id={blockId}
+      role="group"
+      aria-label={fullLabel}
+      tabIndex={-1}
       className={
-        (nested
-          ? "bg-gray-800 border-l-2 border-gray-600 ml-2 pl-4 rounded-lg p-4 mb-3"
-          : "bg-gray-700 rounded-lg p-4 mb-3") + (isDragging ? " opacity-50" : "")
+        nested
+          ? "bg-gray-800 border-l-2 border-gray-600 ml-2 pl-4 rounded-lg p-4 mb-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          : "bg-gray-700 rounded-lg p-4 mb-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
       }
     >
       <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         <div className="flex items-center gap-2 text-sm font-medium text-white">
-          <Button
-            ref={setActivatorNodeRef}
-            variant="outline"
-            size="icon"
-            disabled={disabled}
-            aria-label={`Reorder ${label}`}
-            title={`Reorder ${label}`}
-            style={{ touchAction: "none" }}
-            {...attributes}
-            {...listeners}
-          >
-            <FontAwesomeIcon icon={faGripVertical} aria-hidden="true" />
-          </Button>
           <FontAwesomeIcon icon={icon} className="text-gray-400" aria-hidden="true" />
           {label}
         </div>
@@ -107,6 +86,7 @@ const BlockShell: FC<BlockShellProps> = ({
           {canMoveOutOfContainer && onMoveOutOfContainer && (
             <Button variant="outline" size="sm" onClick={onMoveOutOfContainer} disabled={disabled}>
               Move out of container
+              <span className="sr-only"> ({fullLabel})</span>
             </Button>
           )}
           {!!moveIntoContainerTargets?.length && onMoveIntoContainer && (
@@ -114,7 +94,7 @@ const BlockShell: FC<BlockShellProps> = ({
               className="bg-gray-800 border border-gray-600 text-gray-300 text-xs rounded px-2 py-1 disabled:opacity-50"
               value=""
               disabled={disabled}
-              aria-label={`Move ${label} into a container`}
+              aria-label={`Move ${fullLabel} into a container`}
               onChange={(e) => {
                 if (e.target.value) onMoveIntoContainer(e.target.value);
                 e.target.value = "";
@@ -129,22 +109,30 @@ const BlockShell: FC<BlockShellProps> = ({
             </select>
           )}
           <Button
+            ref={upRef}
             variant="primary"
             size="icon"
-            onClick={onMoveUp}
+            onClick={() => {
+              pendingFocus.current = "up";
+              onMoveUp();
+            }}
             disabled={disabled || !canMoveUp}
-            aria-label={`Move ${label} up`}
-            title={`Move ${label} up`}
+            aria-label={`Move ${fullLabel} up`}
+            title={`Move ${fullLabel} up`}
           >
             <FontAwesomeIcon icon={faChevronUp} aria-hidden="true" />
           </Button>
           <Button
+            ref={downRef}
             variant="primary"
             size="icon"
-            onClick={onMoveDown}
+            onClick={() => {
+              pendingFocus.current = "down";
+              onMoveDown();
+            }}
             disabled={disabled || !canMoveDown}
-            aria-label={`Move ${label} down`}
-            title={`Move ${label} down`}
+            aria-label={`Move ${fullLabel} down`}
+            title={`Move ${fullLabel} down`}
           >
             <FontAwesomeIcon icon={faChevronDown} aria-hidden="true" />
           </Button>
@@ -153,8 +141,8 @@ const BlockShell: FC<BlockShellProps> = ({
             size="icon"
             onClick={onDelete}
             disabled={disabled}
-            aria-label={`Delete ${label}`}
-            title={`Delete ${label}`}
+            aria-label={`Delete ${fullLabel}`}
+            title={`Delete ${fullLabel}`}
           >
             <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
           </Button>

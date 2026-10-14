@@ -8,6 +8,8 @@ interface MessageModeToggleProps {
   mode: MessageMode;
   onChange: (mode: MessageMode) => void;
   isPremium: boolean;
+  /** When false, Components v2 cannot be switched to, but a message already using it can switch back. */
+  canEnterV2?: boolean;
   disabled?: boolean;
 }
 
@@ -27,7 +29,13 @@ const OPTIONS: { mode: MessageMode; icon: typeof faListUl; title: string; descri
     },
   ];
 
-const MessageModeToggle: FC<MessageModeToggleProps> = ({ mode, onChange, isPremium, disabled }) => {
+const MessageModeToggle: FC<MessageModeToggleProps> = ({
+  mode,
+  onChange,
+  isPremium,
+  canEnterV2 = true,
+  disabled,
+}) => {
   const name = useId();
 
   return (
@@ -35,18 +43,22 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({ mode, onChange, isPremi
       <legend className="text-sm font-medium text-gray-300 mb-2">Message format</legend>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {OPTIONS.map((option) => {
-          const locked = option.mode === "components_v2" && !isPremium;
+          const isV2 = option.mode === "components_v2";
+          const locked = isV2 && !isPremium;
           const selected = mode === option.mode;
+          const unavailable = isV2 && !canEnterV2 && !selected;
+          // Only the icon and description dim, so the label and Premium badge keep full contrast.
+          const dim = !selected && (locked || unavailable) ? "opacity-50" : "";
 
           return (
             <label
               key={option.mode}
-              className={`relative flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                locked
-                  ? "opacity-50 cursor-not-allowed"
-                  : selected
-                    ? "border-blue-500 bg-blue-500/10 cursor-pointer"
-                    : "border-gray-700 bg-gray-800 opacity-75 hover:opacity-100 hover:border-gray-600 cursor-pointer"
+              className={`relative flex items-start gap-3 p-3 rounded-lg border transition-colors focus-within:ring-2 focus-within:ring-blue-500 ${
+                selected
+                  ? `border-blue-500 bg-blue-500/10 ${locked ? "cursor-not-allowed" : "cursor-pointer"}`
+                  : locked || unavailable
+                    ? "border-gray-700 bg-gray-800 cursor-not-allowed"
+                    : "border-gray-700 bg-gray-800 hover:border-gray-600 cursor-pointer"
               }`}
             >
               <input
@@ -54,7 +66,7 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({ mode, onChange, isPremi
                 name={name}
                 className="sr-only"
                 checked={selected}
-                disabled={locked}
+                disabled={locked || unavailable}
                 onChange={() => onChange(option.mode)}
               />
               {locked && (
@@ -70,8 +82,8 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({ mode, onChange, isPremi
                 </span>
               )}
               <div
-                className={`flex items-center justify-center w-9 h-9 rounded shrink-0 ${
-                  selected && !locked ? "bg-blue-500/20 text-blue-400" : "bg-gray-700 text-gray-400"
+                className={`flex items-center justify-center w-9 h-9 rounded shrink-0 ${dim} ${
+                  selected ? "bg-blue-500/20 text-blue-400" : "bg-gray-700 text-gray-400"
                 }`}
               >
                 <FontAwesomeIcon icon={option.icon} aria-hidden="true" />
@@ -79,7 +91,7 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({ mode, onChange, isPremi
               <div>
                 <div className="flex items-center gap-1.5 font-semibold text-white">
                   {option.title}
-                  {selected && !locked && (
+                  {selected && (
                     <FontAwesomeIcon
                       icon={faCheck}
                       className="text-blue-400 text-xs"
@@ -87,7 +99,7 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({ mode, onChange, isPremi
                     />
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">{option.description}</p>
+                <p className={`text-xs text-gray-400 mt-0.5 ${dim}`}>{option.description}</p>
               </div>
             </label>
           );

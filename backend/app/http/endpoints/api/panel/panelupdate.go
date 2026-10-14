@@ -86,6 +86,22 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	hasPaid := false
+	if data.MessageUsesComponentsV2 || data.WelcomeMessageUsesComponentsV2 {
+		hasPaid, err = hasPaidPremium(c, guildId, botContext)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
+
+		if !hasPaid {
+			c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))
+			return
+		}
+	}
+
+	data.retainClassicFields(existing)
+
 	// Apply defaults
 	ApplyPanelDefaults(&data)
 
@@ -121,12 +137,13 @@ func UpdatePanel(c *gin.Context) {
 
 	// Do custom validation
 	validationContext := PanelValidationContext{
-		Data:       data,
-		GuildId:    guildId,
-		IsPremium:  premiumTier > premium.None,
-		BotContext: botContext,
-		Channels:   channels,
-		Roles:      roles,
+		Data:           data,
+		GuildId:        guildId,
+		IsPremium:      premiumTier > premium.None,
+		HasPaidPremium: hasPaid,
+		BotContext:     botContext,
+		Channels:       channels,
+		Roles:          roles,
 	}
 
 	if err := ValidatePanelBody(validationContext); err != nil {
@@ -143,6 +160,8 @@ func UpdatePanel(c *gin.Context) {
 	if !data.UseThreads {
 		data.TicketNotificationChannel = nil
 	}
+
+	data.dropHiddenClassicEmbed()
 
 	// Do tag validation
 	if err := validate.Struct(data); err != nil {
@@ -172,11 +191,18 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
+	data.MessageComponents = normaliseComponentTree(data.MessageComponents)
+	data.WelcomeMessageComponents = normaliseComponentTree(data.WelcomeMessageComponents)
+
 	messageData := data.IntoPanelMessageData(existing.CustomId, footer.ShowBranding)
 	var newMessageId uint64
 
+	// Discord does not allow unsetting IS_COMPONENTS_V2 via edit, so a downgrade back to
+	// Classic must resend rather than edit in place (AC6), same as a channel change.
+	downgradingFromV2 := existing.MessageUsesComponentsV2 && !data.MessageUsesComponentsV2
+
 	// Check if channel changed
-	if existing.ChannelId != data.ChannelId {
+	if existing.ChannelId != data.ChannelId || downgradingFromV2 {
 		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
 		newMessageId, err = messageData.send(botContext)
 		if err != nil {
@@ -230,39 +256,59 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	// Update welcome message
-	var welcomeMessageEmbed *int
-	if data.WelcomeMessage == nil {
-		if existing.WelcomeMessageEmbed != nil { // If welcome message wasn't null, but now is, delete the embed
+	// The classic welcome embed is kept alongside a Components V2 welcome message so
+	// switching back to Classic does not lose it. In V2 mode an absent or unusable embed
+	// (already dropped by dropHiddenClassicEmbed) leaves the stored one alone.
+	welcomeEmbed := data.WelcomeMessage
+
+	welcomeMessageEmbed := existing.WelcomeMessageEmbed
+	switch {
+	case welcomeEmbed == nil && !data.WelcomeMessageUsesComponentsV2:
+		if existing.WelcomeMessageEmbed != nil {
 			if err := dbclient.Client.Embeds.Delete(c, *existing.WelcomeMessageEmbed); err != nil {
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
-		} // else, welcomeMessageEmbed will be nil
-	} else {
-		// TODO: Upsert? Don't think we can, as no unique key in the table, panel_id is in panels table
-		if existing.WelcomeMessageEmbed == nil { // Create
-			embed, fields := data.WelcomeMessage.IntoDatabaseStruct()
-			embed.GuildId = guildId
+		}
 
-			id, err := dbclient.Client.Embeds.CreateWithFields(c, embed, fields)
-			if err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-				return
-			}
+		welcomeMessageEmbed = nil
+	case welcomeEmbed != nil && existing.WelcomeMessageEmbed == nil:
+		embed, fields := welcomeEmbed.IntoDatabaseStruct()
+		embed.GuildId = guildId
 
-			welcomeMessageEmbed = &id
-		} else { // Update
-			welcomeMessageEmbed = existing.WelcomeMessageEmbed
+		id, err := dbclient.Client.Embeds.CreateWithFields(c, embed, fields)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
 
-			embed, fields := data.WelcomeMessage.IntoDatabaseStruct()
-			embed.Id = *existing.WelcomeMessageEmbed
-			embed.GuildId = guildId
+		welcomeMessageEmbed = &id
+	case welcomeEmbed != nil:
+		embed, fields := welcomeEmbed.IntoDatabaseStruct()
+		embed.Id = *existing.WelcomeMessageEmbed
+		embed.GuildId = guildId
 
-			if err := dbclient.Client.Embeds.UpdateWithFields(c, embed, fields); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-				return
-			}
+		if err := dbclient.Client.Embeds.UpdateWithFields(c, embed, fields); err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
+	}
+
+	var welcomeMessageComponents *string
+	if data.WelcomeMessageUsesComponentsV2 {
+		welcomeMessageComponents, err = marshalComponents(data.WelcomeMessageComponents)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
+	}
+
+	var messageComponents *string
+	if data.MessageUsesComponentsV2 {
+		messageComponents, err = marshalComponents(data.MessageComponents)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
 		}
 	}
 
@@ -277,6 +323,7 @@ func UpdatePanel(c *gin.Context) {
 		MessageId:                 newMessageId,
 		ChannelId:                 data.ChannelId,
 		GuildId:                   guildId,
+		Name:                      data.trimmedName(),
 		Title:                     data.Title,
 		Content:                   data.Content,
 		Colour:                    int32(data.Colour),
@@ -315,6 +362,11 @@ func UpdatePanel(c *gin.Context) {
 		FeedbackEnabled:           data.FeedbackEnabled,
 		SupportCanView:            data.SupportCanView,
 		SupportCanType:            data.SupportCanType,
+
+		MessageUsesComponentsV2:        data.MessageUsesComponentsV2,
+		MessageComponents:              messageComponents,
+		WelcomeMessageUsesComponentsV2: data.WelcomeMessageUsesComponentsV2,
+		WelcomeMessageComponents:       welcomeMessageComponents,
 	}
 
 	// insert mention data

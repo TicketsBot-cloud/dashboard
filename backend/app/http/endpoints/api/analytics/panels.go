@@ -321,7 +321,7 @@ GROUP BY p.panel_id, p.default_team;`
 	group.Go(func() error {
 		// The primary key is "id". "multi_panel_id" is the FK name on
 		// multi_panel_targets, not a column here.
-		query := `SELECT id, embed->>'title' FROM multi_panels WHERE guild_id = $1;`
+		query := `SELECT id, COALESCE(NULLIF(name, ''), embed->>'title') FROM multi_panels WHERE guild_id = $1;`
 		rows, err := dbclient.Client.Tickets.Query(groupCtx, query, guildId)
 		if err != nil {
 			return err

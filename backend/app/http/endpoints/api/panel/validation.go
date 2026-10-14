@@ -12,7 +12,6 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel"
 	"github.com/TicketsBot-cloud/gdl/objects/guild"
-	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation/defaults"
@@ -47,13 +46,20 @@ const (
 	MentionBehaviourDelete = "delete"
 )
 
+// multiPanelNameMaxLength bounds the dashboard-only multi-panel label.
+const multiPanelNameMaxLength = 100
+
+const panelNameMaxLength = 100
+
 type PanelValidationContext struct {
-	Data       panelBody
-	GuildId    uint64
-	IsPremium  bool
-	BotContext *botcontext.BotContext
-	Channels   []channel.Channel
-	Roles      []guild.Role
+	Data      panelBody
+	GuildId   uint64
+	IsPremium bool
+	// HasPaidPremium excludes voting premium, which unlocks fields but not Components V2.
+	HasPaidPremium bool
+	BotContext     *botcontext.BotContext
+	Channels       []channel.Channel
+	Roles          []guild.Role
 }
 
 func ValidatePanelBody(validationContext PanelValidationContext) error {
@@ -65,6 +71,7 @@ func ValidatePanelBody(validationContext PanelValidationContext) error {
 
 func panelValidators() []validation.Validator[PanelValidationContext] {
 	return []validation.Validator[PanelValidationContext]{
+		validateName,
 		validateTitle,
 		validateContent,
 		validateChannelId,
@@ -91,6 +98,46 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateSupportCanType,
 		validateAutoClose,
 		validateMentionBehaviour,
+		validateMessageComponents,
+		validateWelcomeMessageComponents,
+	}
+}
+
+// normaliseMultiPanelName trims the optional dashboard-only label. A blank name is nil.
+func normaliseMultiPanelName(raw string) (*string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return nil, nil
+	}
+
+	if utf8.RuneCountInString(name) > multiPanelNameMaxLength {
+		return nil, validation.NewInvalidInputErrorf("Multi-panel name must be %d characters or fewer", multiPanelNameMaxLength)
+	}
+
+	return &name, nil
+}
+
+// trimmedName is the optional dashboard-only label; blank means unset.
+func (p panelBody) trimmedName() *string {
+	if p.Name == nil {
+		return nil
+	}
+
+	name := strings.TrimSpace(*p.Name)
+	if name == "" {
+		return nil
+	}
+
+	return &name
+}
+
+func validateName(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if name := ctx.Data.trimmedName(); name != nil && utf8.RuneCountInString(*name) > panelNameMaxLength {
+			return validation.NewInvalidInputErrorf("Panel name must be %d characters or fewer", panelNameMaxLength)
+		}
+
+		return nil
 	}
 }
 
@@ -213,9 +260,13 @@ func validateEmoji(c PanelValidationContext) validation.ValidationFunc {
 
 var urlRegex = regexp.MustCompile(`^https?://([-a-zA-Z0-9@:%._+~#=]{1,256})\.[a-zA-Z0-9()]{1,63}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$`)
 
+func isValidClassicUrl(url string) bool {
+	return len(url) <= 255 && urlRegex.MatchString(url)
+}
+
 func validateNullableUrl(url *string) validation.ValidationFunc {
 	return func() error {
-		if url != nil && (len(*url) > 255 || !urlRegex.MatchString(*url)) {
+		if url != nil && !isValidClassicUrl(*url) {
 			return validation.NewInvalidInputError("Invalid URL")
 		}
 
@@ -224,16 +275,26 @@ func validateNullableUrl(url *string) validation.ValidationFunc {
 }
 
 func validateImageUrl(ctx PanelValidationContext) validation.ValidationFunc {
+	if ctx.Data.MessageUsesComponentsV2 {
+		return skipValidation
+	}
+
 	return validateNullableUrl(ctx.Data.ImageUrl)
 }
 
 func validateThumbnailUrl(ctx PanelValidationContext) validation.ValidationFunc {
+	if ctx.Data.MessageUsesComponentsV2 {
+		return skipValidation
+	}
+
 	return validateNullableUrl(ctx.Data.ThumbnailUrl)
 }
 
+func skipValidation() error { return nil }
+
 func validateButtonStyle(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if ctx.Data.ButtonStyle < component.ButtonStylePrimary && ctx.Data.ButtonStyle > component.ButtonStyleDanger {
+		if !isPanelButtonStyle(ctx.Data.ButtonStyle) {
 			return validation.NewInvalidInputError("Invalid button style")
 		}
 
@@ -434,6 +495,10 @@ func validateNamingScheme(ctx PanelValidationContext) validation.ValidationFunc 
 }
 
 func validateWelcomeMessage(ctx PanelValidationContext) validation.ValidationFunc {
+	if ctx.Data.WelcomeMessageUsesComponentsV2 {
+		return skipValidation
+	}
+
 	return func() error {
 		return validateEmbed(ctx.Data.WelcomeMessage)
 	}
@@ -476,15 +541,82 @@ func validateAccessControlList(ctx PanelValidationContext) validation.Validation
 	}
 }
 
+func embedHasContent(e *types.CustomEmbed) bool {
+	return e.Title != nil || e.Description != nil || len(e.Fields) > 0 || e.ImageUrl != nil || e.ThumbnailUrl != nil
+}
+
 func validateEmbed(e *types.CustomEmbed) error {
 	if e == nil {
 		return nil
 	}
 
-	if e.Title == nil && e.Description == nil && len(e.Fields) == 0 && e.ImageUrl == nil && e.ThumbnailUrl == nil {
+	if !embedHasContent(e) {
 		return validation.NewInvalidInputError("Your embed message does not contain any content")
 	}
 
+	return validateEmbedContent(e)
+}
+
+// classicEmbedForV2 returns the classic embed to store alongside a Components V2 message,
+// so switching back to Classic keeps it. The user cannot see this embed in V2 mode, so an
+// empty or invalid one (including one that fails its struct tags) is dropped (nil, meaning
+// "leave what is stored") instead of failing the save.
+func classicEmbedForV2(e *types.CustomEmbed) *types.CustomEmbed {
+	if e == nil || !embedHasContent(e) || validateEmbedContent(e) != nil || validate.Struct(e) != nil {
+		return nil
+	}
+
+	return e
+}
+
+// dropHiddenClassicEmbed must run before validate.Struct(p), which would otherwise reject
+// the welcome embed's struct tags for an embed the user cannot see.
+func (p *panelBody) dropHiddenClassicEmbed() {
+	if p.WelcomeMessageUsesComponentsV2 {
+		p.WelcomeMessage = classicEmbedForV2(p.WelcomeMessage)
+	}
+}
+
+// retainClassicFields keeps the stored classic message fields through a Components V2 save,
+// so switching back to Classic does not lose them. The editor hides these fields in V2 mode,
+// so a missing or invalid value means "unchanged" rather than an error or a reset to the
+// defaults. A zero colour is indistinguishable from an omitted one and is treated as omitted.
+// It must run before ApplyPanelDefaults.
+func (p *panelBody) retainClassicFields(existing database.Panel) {
+	if !p.MessageUsesComponentsV2 {
+		return
+	}
+
+	if strings.TrimSpace(p.Title) == "" || utf8.RuneCountInString(p.Title) > 80 {
+		p.Title = existing.Title
+	}
+
+	if strings.TrimSpace(p.Content) == "" || utf8.RuneCountInString(p.Content) > 4096 {
+		p.Content = existing.Content
+	}
+
+	if p.Colour == 0 || p.Colour > maxAccentColour {
+		p.Colour = uint32(existing.Colour)
+	}
+
+	p.ImageUrl = suppliedClassicUrlOr(p.ImageUrl, existing.ImageUrl)
+	p.ThumbnailUrl = suppliedClassicUrlOr(p.ThumbnailUrl, existing.ThumbnailUrl)
+}
+
+func suppliedClassicUrlOr(supplied, existing *string) *string {
+	if supplied != nil && isValidClassicUrl(*supplied) {
+		return supplied
+	}
+
+	return existing
+}
+
+// validClassicUrlOrNil is for a V2 create, where there is nothing stored to fall back to.
+func validClassicUrlOrNil(url *string) *string {
+	return suppliedClassicUrlOr(url, nil)
+}
+
+func validateEmbedContent(e *types.CustomEmbed) error {
 	if err := e.ValidateUrls(); err != nil {
 		return validation.NewInvalidInputError(err.Error())
 	}
@@ -634,6 +766,63 @@ func validateMentionBehaviour(ctx PanelValidationContext) validation.ValidationF
 			return validation.NewInvalidInputError("Invalid mention behaviour")
 		}
 	}
+}
+
+func validateMessageComponents(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if !ctx.Data.MessageUsesComponentsV2 {
+			return nil
+		}
+
+		if !ctx.HasPaidPremium {
+			return validation.NewInvalidInputError("Component-based messages are a premium feature")
+		}
+
+		_, err := validateComponentTree(ctx.Data.MessageComponents, treeRules{reserved: panelMessageReserved})
+		return err
+	}
+}
+
+func validateWelcomeMessageComponents(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if !ctx.Data.WelcomeMessageUsesComponentsV2 {
+			return nil
+		}
+
+		if !ctx.HasPaidPremium {
+			return validation.NewInvalidInputError("Component-based welcome messages are a premium feature")
+		}
+
+		if len(ctx.Data.WelcomeMessageComponents) == 0 {
+			return validation.NewInvalidInputError("The welcome message needs at least one component")
+		}
+
+		_, err := validateComponentTree(ctx.Data.WelcomeMessageComponents, treeRules{reserved: welcomeMessageReserved(ctx.Data)})
+		return err
+	}
+}
+
+// welcomeMessageReserved is the room the worker needs for what it appends at ticket open:
+// the form answers, and the close and claim buttons that are visible for this panel.
+func welcomeMessageReserved(data panelBody) int {
+	visible := 0
+	if !data.HideCloseButton {
+		visible++
+	}
+	if !data.HideCloseWithReasonButton {
+		visible++
+	}
+	// Claim is not offered in thread mode.
+	if !data.HideClaimButton && !data.UseThreads {
+		visible++
+	}
+
+	reserved := welcomeFormAnswersReserved
+	if visible > 0 {
+		reserved += visible + 1
+	}
+
+	return reserved
 }
 
 func validateAutoClose(ctx PanelValidationContext) validation.ValidationFunc {

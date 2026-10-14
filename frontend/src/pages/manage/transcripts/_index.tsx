@@ -540,7 +540,7 @@ const TranscriptsPage: FC = () => {
                 { key: null, label: "Any Panel" },
                 ...panels.map((p) => ({
                   key: p.panel_id.toString(),
-                  label: p.title,
+                  label: p.name || p.title,
                   color: intToColour(p.colour),
                 })),
               ]}

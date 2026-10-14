@@ -23,7 +23,7 @@ import TextInput from "@/components/TextInput";
 import NumberInput from "@/components/NumberInput";
 import ColourSelect from "@/components/ColourSelect";
 import { BUTTON_STYLE_OPTIONS } from "@/constants/buttonStyles";
-import { roleColour } from "@/lib/colour";
+import { embedColourHex, embedColourInt, roleColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import EmojiPicker from "@/components/EmojiPicker";
 import PanelPreview from "@/components/PanelPreview";
@@ -320,12 +320,12 @@ const PanelsPage: FC = () => {
                 showCount
               />
               <ColourSelect
+                nullable
+                clearable
                 label="Panel Colour"
-                value={`#${(panel.colour || 0x5865f2).toString(16).padStart(6, "0")}`}
+                value={embedColourHex(panel.colour)}
                 onChange={(e) =>
-                  setPanel((prev) =>
-                    prev ? { ...prev, colour: parseInt(e.replace("#", ""), 16) } : prev,
-                  )
+                  setPanel((prev) => (prev ? { ...prev, colour: embedColourInt(e) } : prev))
                 }
               />
             </div>
@@ -647,8 +647,12 @@ const PanelsPage: FC = () => {
                 showCount
               />
               <ColourSelect
+                nullable
+                clearable={!!panel.welcome_message}
                 label="Colour"
-                value={`${panel.welcome_message?.colour || "#5865f2"}`}
+                value={
+                  panel.welcome_message ? embedColourHex(panel.welcome_message.colour) : "#5865f2"
+                }
                 onChange={(e) =>
                   setPanel((prev) =>
                     prev

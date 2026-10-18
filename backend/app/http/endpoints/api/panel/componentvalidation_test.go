@@ -10,6 +10,7 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/stretchr/testify/require"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 )
 
 func strPtr(s string) *string { return &s }
@@ -125,6 +126,12 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "url with an empty label", tree: []component.Component{row(linkBtn("Go", "https://a..com"))}, wantErr: "domain"},
 		{name: "url with a leading dot", tree: []component.Component{row(linkBtn("Go", "https://.com"))}, wantErr: "domain"},
 		{name: "url with a trailing dot", tree: []component.Component{row(linkBtn("Go", "https://example.com./x"))}},
+		{name: "url with a single slash after the scheme", tree: []component.Component{row(linkBtn("Go", "https:/example.com"))}, wantErr: "http"},
+		{name: "url with no slashes after the scheme", tree: []component.Component{row(linkBtn("Go", "https:example.com"))}, wantErr: "http"},
+		{name: "media url with a single slash after the scheme", tree: []component.Component{gallery("https:/example.com/a.png")}, wantErr: "Media gallery"},
+		{name: "media url with a dotless hostname", tree: []component.Component{gallery("https://localhost/a.png")}, wantErr: "domain"},
+		{name: "media url with a space", tree: []component.Component{gallery("https://a.com/a b.png")}, wantErr: "spaces or control"},
+		{name: "media url at 513", tree: []component.Component{gallery(urlOfLength(513))}, wantErr: "512"},
 		{name: "url with a port", tree: []component.Component{row(linkBtn("Go", "https://example.com:8443/x?y=1#z"))}},
 		{name: "url with a space", tree: []component.Component{row(linkBtn("Go", "https://a.com/a b"))}, wantErr: "spaces or control"},
 		{name: "url with a tab", tree: []component.Component{row(linkBtn("Go", "https://a.com/a\tb"))}, wantErr: "spaces or control"},
@@ -164,6 +171,12 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "gallery with 0 items", tree: []component.Component{gallery()}, wantErr: "Media gallery"},
 		{name: "gallery with bad scheme", tree: []component.Component{gallery("ftp://example.com/1.png")}, wantErr: "Media gallery"},
 		{name: "gallery item alt text at 1024", tree: []component.Component{component.BuildMediaGallery(component.MediaGallery{Items: []component.MediaGalleryItem{{Media: component.UnfurledMediaItem{Url: "https://example.com/1.png"}, Description: longAlt(1024)}}})}},
+		{name: "avatar placeholder in a gallery where allowed", tree: []component.Component{gallery(types.AvatarUrlPlaceholder)}, rules: treeRules{allowAvatarPlaceholder: true}},
+		{name: "avatar placeholder in a thumbnail where allowed", tree: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("hi"))}, rules: treeRules{allowAvatarPlaceholder: true}},
+		{name: "avatar placeholder in a gallery by default", tree: []component.Component{gallery(types.AvatarUrlPlaceholder)}, wantErr: "Media gallery"},
+		{name: "avatar placeholder in a thumbnail by default", tree: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("hi"))}, wantErr: "Thumbnail"},
+		{name: "avatar placeholder in a link button even where allowed", tree: []component.Component{row(linkBtn("Go", types.AvatarUrlPlaceholder))}, rules: treeRules{allowAvatarPlaceholder: true}, wantErr: "Link button"},
+		{name: "allowing the placeholder still rejects other bad media urls", tree: []component.Component{gallery("not a url")}, rules: treeRules{allowAvatarPlaceholder: true}, wantErr: "Media gallery"},
 		{name: "gallery item alt text at 1025", tree: []component.Component{component.BuildMediaGallery(component.MediaGallery{Items: []component.MediaGalleryItem{{Media: component.UnfurledMediaItem{Url: "https://example.com/1.png"}, Description: longAlt(1025)}}})}, wantErr: "Media gallery"},
 
 		// Section.

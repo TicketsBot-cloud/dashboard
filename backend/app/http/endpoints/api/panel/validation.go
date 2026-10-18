@@ -797,7 +797,7 @@ func validateWelcomeMessageComponents(ctx PanelValidationContext) validation.Val
 			return validation.NewInvalidInputError("The welcome message needs at least one component")
 		}
 
-		_, err := validateComponentTree(ctx.Data.WelcomeMessageComponents, treeRules{reserved: welcomeMessageReserved(ctx.Data)})
+		_, err := validateComponentTree(ctx.Data.WelcomeMessageComponents, treeRules{reserved: welcomeMessageReserved(ctx.Data), allowAvatarPlaceholder: true})
 		return err
 	}
 }

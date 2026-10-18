@@ -157,7 +157,9 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
-	data.Components = normaliseComponentTree(data.Components)
+	if data.UsesComponentsV2 {
+		data.Components = normaliseComponentTree(data.Components)
+	}
 
 	messageData := data.IntoMessageData(footer)
 	var messageId uint64
@@ -238,13 +240,10 @@ func MultiPanelUpdate(c *gin.Context) {
 	}
 
 	// update DB
-	var componentsJSON *string
-	if data.UsesComponentsV2 {
-		componentsJSON, err = marshalComponents(data.Components)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-			return
-		}
+	componentsJSON, err := componentsToStore(data.UsesComponentsV2, data.Components, multiPanel.Components)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+		return
 	}
 
 	// A Components V2 save without a usable classic embed leaves the stored one alone.

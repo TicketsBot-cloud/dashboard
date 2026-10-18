@@ -264,7 +264,9 @@ func MultiPanelCreate(c *gin.Context) {
 		}
 	}
 
-	data.Components = normaliseComponentTree(data.Components)
+	if data.UsesComponentsV2 {
+		data.Components = normaliseComponentTree(data.Components)
+	}
 
 	messageData := data.IntoMessageData(footer)
 	messageId, err := messageData.send(botContext, panelsWithCustom)

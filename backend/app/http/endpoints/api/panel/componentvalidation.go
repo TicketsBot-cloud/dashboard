@@ -9,6 +9,7 @@ import (
 
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 )
 
 const (
@@ -48,6 +49,8 @@ type treeRules struct {
 	validPanelIds map[int]bool
 	dropdownMode  bool
 	reserved      int
+	// The worker resolves the opener's avatar only when it sends a welcome message.
+	allowAvatarPlaceholder bool
 }
 
 type treeValidator struct {
@@ -198,7 +201,7 @@ func (v *treeValidator) textDisplay(t component.TextDisplay) error {
 }
 
 func (v *treeValidator) thumbnail(t component.Thumbnail) error {
-	if err := checkMediaUrl("Thumbnail", t.Media.Url); err != nil {
+	if err := v.checkMediaUrl("Thumbnail", t.Media.Url); err != nil {
 		return err
 	}
 
@@ -211,7 +214,7 @@ func (v *treeValidator) mediaGallery(g component.MediaGallery) error {
 	}
 
 	for _, item := range g.Items {
-		if err := checkMediaUrl("Media gallery", item.Media.Url); err != nil {
+		if err := v.checkMediaUrl("Media gallery", item.Media.Url); err != nil {
 			return err
 		}
 
@@ -336,9 +339,13 @@ func (v *treeValidator) dropdown(s component.SelectMenu) error {
 	return nil
 }
 
-func checkMediaUrl(kind, raw string) error {
+func (v *treeValidator) checkMediaUrl(kind, raw string) error {
 	if raw == "" {
 		return validation.NewInvalidInputErrorf("%s: an image URL is required", kind)
+	}
+
+	if raw == types.AvatarUrlPlaceholder && v.rules.allowAvatarPlaceholder {
+		return nil
 	}
 
 	return checkUrl(kind, raw)

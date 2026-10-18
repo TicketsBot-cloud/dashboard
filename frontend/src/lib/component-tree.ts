@@ -3,6 +3,7 @@ import type { APIMessageTopLevelComponent } from "discord-api-types/v10";
 import { RE_HEADING } from "@/lib/discord-markdown";
 import { intToColour } from "@/lib/colour";
 import { isSafeUrl } from "@/lib/url";
+import { panelEmoteName } from "@/lib/panel-payload";
 
 // discord-api-types/v10 has no ComponentType member for Container (17).
 const DiscordComponentType = {
@@ -22,7 +23,7 @@ const ButtonStyle = {
   Link: 5,
 } as const;
 
-/** Wire custom IDs for placed panels. The backend resolves these into real buttons and dropdowns. */
+// The backend resolves these placeholder custom IDs into the real panel buttons and dropdown.
 const PANEL_CUSTOM_ID_PREFIX = "panel:";
 const PANEL_SELECT_CUSTOM_ID = "multipanel";
 
@@ -34,11 +35,13 @@ export const MAX_SECTION_TEXTS = 3;
 export const MAX_GALLERY_ITEMS = 10;
 export const MAX_ROW_BUTTONS = 5;
 
-/** Components the bot appends to a panel's button message (the open-ticket row and its button). */
+/** The open-ticket row and its button. */
 export const PANEL_MESSAGE_RESERVED = 2;
 
-/** Components reserved on a welcome message for the form answers. */
 const WELCOME_FORM_RESERVED = 5;
+
+/** Welcome messages only: the bot swaps this for the opener's avatar, so it is accepted as a media URL. */
+export const AVATAR_URL_PLACEHOLDER = "%avatar_url%";
 
 export type V2ComponentType =
   | "container"
@@ -107,7 +110,7 @@ export interface V2ButtonRow extends V2Base {
   buttons: V2ButtonRowButton[];
 }
 
-/** A placed dropdown of every panel not placed elsewhere. It has no fields of its own. */
+/** Lists every panel not placed elsewhere. */
 export interface V2PanelSelect extends V2Base {
   type: "panel_select";
 }
@@ -179,14 +182,8 @@ interface PreviewResolver {
   selectPlaceholder?: string;
 }
 
-function resolveEmoteName(emote: Panel["emote"] | undefined): string {
-  if (typeof emote === "string") return emote;
-  if (emote && typeof emote === "object") return emote.name;
-  return "";
-}
-
 function buildEmoji(p: Panel): { name: string; id?: string; animated?: boolean } | undefined {
-  const emoteName = resolveEmoteName(p.emote);
+  const emoteName = panelEmoteName(p.emote);
   if (p.use_custom_emoji) {
     return p.emoji_id ? { name: emoteName, id: p.emoji_id, animated: p.emoji_animated } : undefined;
   }
@@ -338,10 +335,7 @@ export function toApiComponents(tree: V2Component[]): APIMessageTopLevelComponen
   return tree.map((block) => buildComponent(block)) as unknown as APIMessageTopLevelComponent[];
 }
 
-/**
- * Preview-only counterpart of `toApiComponents`: placed panels resolve to real labels and emoji.
- * `panels` must be every panel in the multi-panel, since a placement can reference any of them.
- */
+/** `panels` must be every panel in the multi-panel, since a placement can reference any of them. */
 export function toPreviewComponents(
   tree: V2Component[],
   panels: Panel[],
@@ -504,8 +498,8 @@ function fromApiComponent(node: unknown): V2Component | null {
 // Mirrors discord-markdown.ts's RE_FENCE so a "#" line inside a code fence is never a heading.
 const RE_FENCE = /```(?:([A-Za-z0-9+#._-]*)\n)?([\s\S]*?)```\n?/g;
 
-/** Splits a classic body on heading lines, leaving fenced code intact. Segments are verbatim slices. */
-function splitOnHeadings(body: string): string[] {
+/** Leaves fenced code intact. Segments are verbatim slices; whitespace-only ones are dropped. */
+export function splitOnHeadings(body: string): string[] {
   if (!body) return [];
 
   const fenceRanges: Array<{ start: number; end: number }> = [];
@@ -525,13 +519,13 @@ function splitOnHeadings(body: string): string[] {
 
     if (!isInsideFence(lineStart) && RE_HEADING.test(line)) {
       const segment = body.slice(segmentStart, lineStart).replace(/\n$/, "");
-      if (segment.length > 0) segments.push(segment);
+      if (segment.trim()) segments.push(segment);
       segmentStart = lineStart;
     }
   }
 
   const last = body.slice(segmentStart).replace(/\n$/, "");
-  if (last.length > 0) segments.push(last);
+  if (last.trim()) segments.push(last);
 
   return segments;
 }
@@ -547,6 +541,13 @@ export interface ClassicConversionSource {
   authorName?: string;
   authorUrl?: string;
   footerText?: string;
+  /** Welcome messages only: keeps an `%avatar_url%` image or thumbnail. */
+  allowAvatarPlaceholder?: boolean;
+}
+
+function convertibleImageUrl(url: string | undefined, allowAvatarPlaceholder?: boolean): boolean {
+  if (!url) return false;
+  return isSafeUrl(url) || (!!allowAvatarPlaceholder && url === AVATAR_URL_PLACEHOLDER);
 }
 
 /**
@@ -594,9 +595,8 @@ export function convertClassicToComponentsV2(
   }
 
   const mediaItems: V2MediaGalleryItem[] = [];
-  if (source.imageUrl && isSafeUrl(source.imageUrl)) mediaItems.push({ url: source.imageUrl });
-  if (source.thumbnailUrl && isSafeUrl(source.thumbnailUrl)) {
-    mediaItems.push({ url: source.thumbnailUrl });
+  for (const url of [source.imageUrl, source.thumbnailUrl]) {
+    if (url && convertibleImageUrl(url, source.allowAvatarPlaceholder)) mediaItems.push({ url });
   }
 
   if (segments.length === 0 && mediaItems.length === 0) {
@@ -642,8 +642,8 @@ export function hasConvertibleClassicContent(source: ClassicConversionSource): b
     source.fields?.length ||
     source.authorName?.trim() ||
     source.footerText?.trim() ||
-    (source.imageUrl && isSafeUrl(source.imageUrl)) ||
-    (source.thumbnailUrl && isSafeUrl(source.thumbnailUrl))
+    convertibleImageUrl(source.imageUrl, source.allowAvatarPlaceholder) ||
+    convertibleImageUrl(source.thumbnailUrl, source.allowAvatarPlaceholder)
   );
 }
 
@@ -687,7 +687,7 @@ interface WelcomeButtonSettings {
   use_threads?: boolean;
 }
 
-/** Which of the auto-appended welcome buttons are shown. Claim does not exist in thread mode. */
+/** Claim does not exist in thread mode. */
 export function visibleWelcomeButtons(panel: WelcomeButtonSettings) {
   return {
     close: !panel.hide_close_button,
@@ -696,7 +696,6 @@ export function visibleWelcomeButtons(panel: WelcomeButtonSettings) {
   };
 }
 
-/** Components reserved on a welcome message: form answers, plus the close/claim row when shown. */
 export function welcomeReserved(panel: WelcomeButtonSettings): number {
   const { close, closeWithReason, claim } = visibleWelcomeButtons(panel);
   const buttons = Number(close) + Number(closeWithReason) + Number(claim);
@@ -749,7 +748,6 @@ export function hasPanelSelectBlock(tree: V2Component[]): boolean {
   );
 }
 
-/** Dropdown mode off makes a placed dropdown invalid, so it is removed at the moment of the toggle. */
 export function removePanelSelectBlock(tree: V2Component[]): V2Component[] {
   return tree
     .filter((block) => block.type !== "panel_select")
@@ -784,15 +782,67 @@ export function prunePlacedPanels(tree: V2Component[], validIds: Set<number>): V
   return result;
 }
 
-function validUrl(url: string): boolean {
-  return isSafeUrl(url) && url.length <= MAX_URL_LENGTH;
+// Go's unicode.IsSpace and unicode.IsControl, then the bidi controls the backend also rejects.
+const RE_URL_SPACE_OR_CONTROL =
+  // eslint-disable-next-line no-control-regex
+  /[\u0000-\u0020\u007F-\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/;
+const RE_URL_BIDI_CONTROL = /[\u202A-\u202E\u2066-\u2069\u200E\u200F]/;
+// ASCII that Go's url.Parse refuses in a host. Percent escapes are refused outright, which is
+// slightly stricter than Go.
+const RE_URL_BAD_HOST_CHAR = /[^A-Za-z0-9\-._~!$&'()*+,;=:[\]<>"\u0080-\uFFFF]/;
+const RE_URL_BAD_ESCAPE = /%(?![0-9A-Fa-f]{2})/;
+
+/**
+ * Mirrors the backend's checkUrl. The raw string is inspected rather than `new URL()`, because the
+ * browser normalises inputs Go rejects (`https:/host`, `https://@host`, numeric hosts).
+ */
+export function validUrl(raw: string): boolean {
+  if ([...raw].length > MAX_URL_LENGTH) return false;
+  if (RE_URL_SPACE_OR_CONTROL.test(raw) || RE_URL_BIDI_CONTROL.test(raw)) return false;
+
+  const match = /^https?:\/\/([^/?#]*)(.*)$/i.exec(raw);
+  if (!match) return false;
+  const [, authority, rest] = match;
+  if (authority.includes("@")) return false;
+
+  const hashIndex = rest.indexOf("#");
+  const beforeFragment = hashIndex === -1 ? rest : rest.slice(0, hashIndex);
+  const fragment = hashIndex === -1 ? "" : rest.slice(hashIndex + 1);
+  const path = beforeFragment.split("?")[0];
+  if (RE_URL_BAD_ESCAPE.test(path) || RE_URL_BAD_ESCAPE.test(fragment)) return false;
+
+  let host: string;
+  let port: string;
+  if (authority.startsWith("[")) {
+    const end = authority.indexOf("]");
+    if (end === -1) return false;
+    host = authority.slice(1, end);
+    port = authority.slice(end + 1);
+  } else {
+    const colon = authority.lastIndexOf(":");
+    host = colon === -1 ? authority : authority.slice(0, colon);
+    port = colon === -1 ? "" : authority.slice(colon);
+  }
+  if (port && !/^:\d*$/.test(port)) return false;
+  if (RE_URL_BAD_HOST_CHAR.test(host)) return false;
+
+  const labels = host.replace(/\.$/, "").split(".");
+  return labels.length >= 2 && labels.every((label) => label !== "");
+}
+
+/** Code points, as the backend counts them. */
+export function countCharacters(text: string): number {
+  return [...text].length;
 }
 
 // Shared with the editors so a field shows the same wording as the summary list.
 export const BLANK_TEXT_MESSAGE = "Text cannot be blank.";
 export const LINK_LABEL_MESSAGE = "Every link button needs a label.";
-export const LINK_URL_MESSAGE = `Link button URLs must be http or https and at most ${MAX_URL_LENGTH} characters.`;
-export const MEDIA_URL_MESSAGE = `Image URLs must be http or https and at most ${MAX_URL_LENGTH} characters.`;
+export const LINK_URL_MESSAGE = `Link button URLs must be a full http:// or https:// address with a domain name, no spaces, and at most ${MAX_URL_LENGTH} characters.`;
+export const MEDIA_URL_MESSAGE = `Image URLs must be a full http:// or https:// address with a domain name, no spaces, and at most ${MAX_URL_LENGTH} characters.`;
+const WELCOME_MEDIA_URL_MESSAGE = `${MEDIA_URL_MESSAGE} You can also use ${AVATAR_URL_PLACEHOLDER}.`;
+export const EMPTY_PANEL_SELECT_MESSAGE =
+  "The Panel Select block has no panels left to list. Remove a panel button placed elsewhere, or delete this block.";
 
 export const EMPTY_TREE_MESSAGE =
   "Add at least one block. A Components v2 message cannot be empty.";
@@ -803,19 +853,35 @@ export const linkLabelError = (label: string): string | undefined =>
   label.trim() ? undefined : LINK_LABEL_MESSAGE;
 export const linkUrlError = (url: string): string | undefined =>
   validUrl(url) ? undefined : LINK_URL_MESSAGE;
-export const mediaUrlError = (url: string): string | undefined =>
-  validUrl(url) ? undefined : MEDIA_URL_MESSAGE;
+export const mediaUrlError = (
+  url: string,
+  allowAvatarPlaceholder?: boolean,
+): string | undefined => {
+  if (allowAvatarPlaceholder) {
+    return url === AVATAR_URL_PLACEHOLDER || validUrl(url) ? undefined : WELCOME_MEDIA_URL_MESSAGE;
+  }
+  return validUrl(url) ? undefined : MEDIA_URL_MESSAGE;
+};
 
 export interface ComponentTreeIssue {
   message: string;
-  /** The block the issue belongs to. Absent for whole-message issues such as the component limit. */
+  /** Absent for whole-message issues such as the component limit. */
   blockId?: string;
 }
 
-/** Inline errors for the authored tree. The backend enforces the same rules. */
+export interface TreeValidationOptions {
+  requireContent?: boolean;
+  reserved?: number;
+  /** Welcome messages only. */
+  allowAvatarPlaceholder?: boolean;
+  /** Multi-panels only: panels not placed as buttons, which a placed dropdown would list. */
+  unplacedPanelCount?: number;
+}
+
+/** The backend enforces the same rules. */
 export function validateComponentTree(
   tree: V2Component[],
-  opts: { requireContent?: boolean; reserved?: number } = {},
+  opts: TreeValidationOptions = {},
 ): ComponentTreeIssue[] {
   const issues = new Map<string, ComponentTreeIssue>();
   let textCharacters = 0;
@@ -826,7 +892,6 @@ export function validateComponentTree(
   };
 
   const checkLinkButton = (blockId: string, label: string, url: string) => {
-    textCharacters += label.length;
     const labelError = linkLabelError(label);
     if (labelError) add(labelError, blockId);
     const urlError = linkUrlError(url);
@@ -834,7 +899,7 @@ export function validateComponentTree(
   };
 
   const checkMediaUrl = (blockId: string, url: string) => {
-    const error = mediaUrlError(url);
+    const error = mediaUrlError(url, opts.allowAvatarPlaceholder);
     if (error) add(error, blockId);
   };
 
@@ -859,7 +924,7 @@ export function validateComponentTree(
             add(`A section needs 1 to ${MAX_SECTION_TEXTS} text blocks.`, block.id);
           }
           for (const child of block.components) {
-            textCharacters += child.content.length;
+            textCharacters += countCharacters(child.content);
             const error = blankTextError(child.content);
             if (error) add(error, block.id);
           }
@@ -873,7 +938,7 @@ export function validateComponentTree(
           }
           break;
         case "text_display": {
-          textCharacters += block.content.length;
+          textCharacters += countCharacters(block.content);
           const error = blankTextError(block.content);
           if (error) add(error, block.id);
           break;
@@ -893,6 +958,9 @@ export function validateComponentTree(
             if (button.kind !== "panel") checkLinkButton(block.id, button.label, button.url);
           }
           break;
+        case "panel_select":
+          if (opts.unplacedPanelCount === 0) add(EMPTY_PANEL_SELECT_MESSAGE, block.id);
+          break;
         default:
           break;
       }
@@ -911,9 +979,7 @@ export function validateComponentTree(
     );
   }
   if (textCharacters > MAX_TEXT_CHARACTERS) {
-    add(
-      `Text and button labels total ${textCharacters} characters. The limit is ${MAX_TEXT_CHARACTERS}.`,
-    );
+    add(`Text totals ${textCharacters} characters. The limit is ${MAX_TEXT_CHARACTERS}.`);
   }
 
   return [...issues.values()];
@@ -1015,7 +1081,6 @@ export function addBlockToContainer(
   );
 }
 
-/** Moves a top-level block into a top-level container's children, at the end. */
 export function moveBlockIntoContainer(
   tree: V2Component[],
   blockId: string,
@@ -1029,7 +1094,7 @@ export function moveBlockIntoContainer(
   return addBlockToContainer(withoutBlock, containerId, block);
 }
 
-/** Moves a block out of its container to the top level, right after that container. */
+/** Places the block right after the container it leaves. */
 export function moveBlockOutOfContainer(tree: V2Component[], blockId: string): V2Component[] {
   const containerIndex = tree.findIndex(
     (b) => b.type === "container" && b.components.some((child) => child.id === blockId),

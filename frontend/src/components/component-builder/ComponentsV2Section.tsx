@@ -17,20 +17,25 @@ import {
   type ClassicConversionSource,
   type V2Component,
 } from "@/lib/component-tree";
-import type { GuildEmoji } from "@/types";
 import MessageModeToggle from "./MessageModeToggle";
 import BuildPreviewTabs from "./BuildPreviewTabs";
 import ComponentTreeBuilder from "./ComponentTreeBuilder";
+import type { PickerPanel } from "./picker-panels";
 
 interface PlacementProps {
-  availablePanels: { panel_id: number; label: string; emoji?: string }[];
-  allPanels: { panel_id: number; label: string; emoji?: string }[];
+  /** Panels not placed as buttons anywhere in the tree. */
+  availablePanels: PickerPanel[];
+  allPanels: PickerPanel[];
+  /** From the multi-panel's own panel list, so it is right before guild panels have loaded. */
+  unplacedPanelCount: number;
   selectMenuModeOn: boolean;
 }
 
 interface ComponentsV2SectionProps {
   guildId: string;
   isV2: boolean;
+  /** The mode as loaded, which decides whether the toggle stays available with the flag off. */
+  storedIsV2: boolean;
   onV2Change: (isV2: boolean) => void;
   tree: V2Component[];
   onTreeChange: (tree: V2Component[]) => void;
@@ -46,19 +51,19 @@ interface ComponentsV2SectionProps {
   reservedNote?: string;
   /** An empty tree is rejected by the backend for this message. */
   requireContent?: boolean;
-  guildEmojis: GuildEmoji[];
+  /** Welcome messages only. */
+  allowAvatarPlaceholder?: boolean;
   preview: ReactNode;
-  /** Shown under the mode toggle. */
   toggleNote?: ReactNode;
-  /** Multi-panel only: panel placement inside the tree. */
   placement?: PlacementProps;
-  /** Set once the person has tried to save, which is when per-field errors start to show. */
+  /** Per-field errors only show once a save has been attempted. */
   saveAttempted?: boolean;
 }
 
 const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   guildId,
   isV2,
+  storedIsV2,
   onV2Change,
   tree,
   onTreeChange,
@@ -70,7 +75,7 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   reserved,
   reservedNote,
   requireContent,
-  guildEmojis,
+  allowAvatarPlaceholder,
   preview,
   toggleNote,
   placement,
@@ -81,13 +86,17 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
 
-  // The flag only hides the way into Components v2. A message already using it can always switch back.
-  const showToggle = isV2 || builderEnabled === true;
+  // The flag only hides the way into Components v2. A message stored in it can always switch back
+  // and forth, so this follows the loaded mode rather than the current one.
+  const canEnterV2 = builderEnabled === true || storedIsV2;
   const hasClassicContent = hasConvertibleClassicContent(classicSource);
   // An untouched, empty welcome tree is not an error until a save is attempted.
-  const issues = validateComponentTree(tree, { requireContent, reserved }).filter(
-    (issue) => saveAttempted || issue.message !== EMPTY_TREE_MESSAGE,
-  );
+  const issues = validateComponentTree(tree, {
+    requireContent,
+    reserved,
+    allowAvatarPlaceholder,
+    unplacedPanelCount: placement?.unplacedPanelCount,
+  }).filter((issue) => saveAttempted || issue.message !== EMPTY_TREE_MESSAGE);
   const errors = [...new Set(issues.map((issue) => issue.message))];
 
   const runConversion = () => {
@@ -109,12 +118,12 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
 
   return (
     <>
-      {showToggle && (
+      {(canEnterV2 || isV2) && (
         <div className="md:col-span-2">
           <MessageModeToggle
             mode={isV2 ? "components_v2" : "classic"}
             isPremium={!!premiumState?.premium}
-            canEnterV2={builderEnabled === true}
+            canEnterV2={canEnterV2}
             onChange={(mode) => onV2Change(mode === "components_v2")}
           />
           {toggleNote}
@@ -153,7 +162,7 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
                 <ComponentTreeBuilder
                   components={tree}
                   onChange={onTreeChange}
-                  guildEmojis={guildEmojis}
+                  allowAvatarPlaceholder={allowAvatarPlaceholder}
                   budgetUsed={countBlocks(tree)}
                   budgetMax={MAX_COMPONENTS - reserved}
                   budgetReservedNote={reservedNote}

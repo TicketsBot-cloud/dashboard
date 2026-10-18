@@ -66,14 +66,6 @@ const defaultEmbed = {
   footer: {},
 };
 
-// Mirrors the equivalent private helper in PanelPreview.tsx - a plain human-readable emoji
-// name, whether the panel's emote is a unicode string or a resolved custom guild emoji object.
-function resolveEmoteName(emote: string | { name: string } | undefined): string {
-  if (typeof emote === "string") return emote;
-  if (emote && typeof emote === "object") return emote.name;
-  return "";
-}
-
 const MultiPanelsPage: FC = () => {
   const navigate = useNavigate();
   let { guildId, panelId } = useParams();
@@ -223,7 +215,13 @@ const MultiPanelsPage: FC = () => {
       return `Fix these embed URLs before saving: ${invalidUrls.join(", ")}.`;
     }
 
-    if (isV2 && validateComponentTree(componentTree, { reserved }).length > 0) {
+    if (
+      isV2 &&
+      validateComponentTree(componentTree, {
+        reserved,
+        unplacedPanelCount,
+      }).length > 0
+    ) {
       return "Fix the problems listed under the message builder before saving.";
     }
 
@@ -238,7 +236,13 @@ const MultiPanelsPage: FC = () => {
 
         setMultiPanel({ ...data, embed: data.embed ?? defaultEmbed });
         originalV2Ref.current = data.uses_components_v2;
-        setComponentTree(fromApiComponents(data.components));
+        // A panel deleted since the last save leaves its placement behind.
+        setComponentTree(
+          prunePlacedPanels(
+            fromApiComponents(data.components),
+            new Set(data.panels.map((p) => p.panel_id)),
+          ),
+        );
       } catch (error) {
         console.error("Failed to fetch multi panel:", error);
       }
@@ -280,8 +284,13 @@ const MultiPanelsPage: FC = () => {
   const toPickerPanel = (p: (typeof resolvedPanels)[number]) => ({
     panel_id: p.panel_id,
     label: p.button_label || "Open Ticket",
-    emoji: resolveEmoteName(p.emote) || undefined,
   });
+  const unplacedPickerPanels = resolvedPanels
+    .filter((p) => !placedPanelIds.has(p.panel_id))
+    .map(toPickerPanel);
+  const unplacedPanelCount = (multiPanel?.panels ?? []).filter(
+    (p) => !placedPanelIds.has(p.panel_id),
+  ).length;
 
   const reserved = multiPanelReserved({
     selectMenu: !!multiPanel?.select_menu,
@@ -296,11 +305,13 @@ const MultiPanelsPage: FC = () => {
     colourHex: multiPanel?.embed.colour || "#5865f2",
     imageUrl: multiPanel?.embed.image_url,
     thumbnailUrl: multiPanel?.embed.thumbnail_url,
+    fields: multiPanel?.embed.fields,
     authorName: multiPanel?.embed.author?.name,
     authorUrl: multiPanel?.embed.author?.url,
     footerText: multiPanel?.embed.footer?.text,
   };
   const conversionNotes = [
+    ...(classicSource.fields?.length ? ["Field layout is dropped; fields become plain text."] : []),
     ...(classicSource.authorName ? ["The author icon is dropped."] : []),
     ...(classicSource.footerText ? ["The footer icon is dropped."] : []),
     ...(multiPanel?.embed.timestamp ? ["The timestamp is dropped."] : []),
@@ -319,14 +330,15 @@ const MultiPanelsPage: FC = () => {
       />
       <div className="mb-4 bg-gray-800 rounded-xl p-4">
         <TextInput
-          label="Multi-Panel Name (Optional)"
+          label="Multi-Panel Name"
+          descriptionId="multi-panel-name-help"
           placeholder="e.g. Support Categories"
           value={multiPanel?.name || ""}
           onChange={(e) => setMultiPanel((prev) => (prev ? { ...prev, name: e } : prev))}
           maxLength={100}
           showCount
         />
-        <p className="text-xs text-gray-400 mt-1">
+        <p id="multi-panel-name-help" className="text-xs text-gray-400 mt-1">
           Used to identify this multi-panel in the dashboard. It isn't shown in Discord.
         </p>
       </div>
@@ -478,6 +490,7 @@ const MultiPanelsPage: FC = () => {
             saveAttempted={saveAttempted}
             guildId={guildId}
             isV2={isV2}
+            storedIsV2={originalV2Ref.current}
             onV2Change={(next) =>
               setMultiPanel((prev) => (prev ? { ...prev, uses_components_v2: next } : prev))
             }
@@ -493,11 +506,9 @@ const MultiPanelsPage: FC = () => {
                 ? undefined
                 : "Some space is also kept for the panel selection buttons or dropdown."
             }
-            guildEmojis={guildEmojis}
             placement={{
-              availablePanels: resolvedPanels
-                .filter((p) => !placedPanelIds.has(p.panel_id))
-                .map(toPickerPanel),
+              availablePanels: unplacedPickerPanels,
+              unplacedPanelCount,
               allPanels: resolvedPanels.map(toPickerPanel),
               selectMenuModeOn: !!multiPanel?.select_menu,
             }}

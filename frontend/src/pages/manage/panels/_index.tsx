@@ -408,16 +408,13 @@ const PanelsPage: FC = () => {
               <Table.Head>
                 <Table.Row>
                   <Table.HeaderCell>Panel Name</Table.HeaderCell>
-                  <Table.HeaderCell className="px-4 py-3 hidden sm:table-cell">
-                    Status
-                  </Table.HeaderCell>
                   <Table.HeaderCell className="px-4 py-3 text-right">Action</Table.HeaderCell>
                 </Table.Row>
               </Table.Head>
               <Table.Body>
                 {!multiPanels || multiPanels.length === 0 ? (
                   <Table.Row>
-                    <Table.Cell colSpan={3} className="p-0">
+                    <Table.Cell colSpan={2} className="p-0">
                       <EmptyState
                         icon={faLayerGroup}
                         title="No multi-panels yet"
@@ -427,24 +424,8 @@ const PanelsPage: FC = () => {
                   </Table.Row>
                 ) : (
                   multiPanels.map((panel) => (
-                    <Table.Row key={panel.id} className={panel.force_disabled ? "opacity-50" : ""}>
+                    <Table.Row key={panel.id}>
                       <Table.Cell>{panel.name || "Untitled multi-panel"}</Table.Cell>
-
-                      <Table.Cell className="px-4 py-3 hidden sm:table-cell">
-                        {panel.force_disabled ? (
-                          <span
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 whitespace-nowrap"
-                            title="This multi-panel uses Components v2, which requires premium. Reactivate premium to re-enable it."
-                          >
-                            <FontAwesomeIcon icon={faLock} className="w-3 h-3" />
-                            Force Disabled
-                          </span>
-                        ) : (
-                          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
-                            Active
-                          </span>
-                        )}
-                      </Table.Cell>
 
                       <Table.Cell>
                         <div className="flex justify-end">
@@ -453,7 +434,7 @@ const PanelsPage: FC = () => {
                               {
                                 label: "Resend",
                                 icon: faRotateRight,
-                                disabled: isLocked || panel.force_disabled,
+                                disabled: isLocked,
                                 onClick: () =>
                                   apiClient.multiPanels
                                     .resend(guildId, panel.id.toString(), SKIP_ERROR_TOAST)
@@ -469,7 +450,6 @@ const PanelsPage: FC = () => {
                               {
                                 label: "Edit",
                                 icon: faPencil,
-                                disabled: panel.force_disabled,
                                 onClick: () =>
                                   navigate(`/manage/${guildId}/panels/multi/edit/${panel.id}`),
                               },

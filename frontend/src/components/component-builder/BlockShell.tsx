@@ -10,7 +10,6 @@ interface MoveTarget {
 }
 
 interface BlockShellProps {
-  /** Identifies the block to the focus restore after a structural change. */
   blockId: string;
   label: string;
   /** The enclosing container's label, prefixed onto every accessible name when nested. */
@@ -25,7 +24,6 @@ interface BlockShellProps {
   canMoveOutOfContainer: boolean;
   onMoveOutOfContainer?: () => void;
   onDelete: () => void;
-  /** Visual depth cue for a block rendered inside a Container's block list. */
   nested?: boolean;
   disabled?: boolean;
   children: ReactNode;

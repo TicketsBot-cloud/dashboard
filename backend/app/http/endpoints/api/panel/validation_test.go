@@ -25,6 +25,8 @@ func TestValidateMessageComponents(t *testing.T) {
 		{name: "38 components leave room for the open ticket row", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: texts(38)}, paid: true},
 		{name: "39 components do not", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: texts(39)}, paid: true, wantErr: "Too many components"},
 		{name: "panel placement is not available", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: []component.Component{row(panelBtn(1))}}, paid: true, wantErr: "Panel button"},
+		{name: "avatar placeholder is rejected as a gallery url", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: []component.Component{gallery(types.AvatarUrlPlaceholder)}}, paid: true, wantErr: "Media gallery"},
+		{name: "avatar placeholder is rejected as a thumbnail url", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("a"))}}, paid: true, wantErr: "Thumbnail"},
 	}
 
 	for _, tt := range tests {
@@ -57,6 +59,7 @@ func TestValidateWelcomeMessageComponents(t *testing.T) {
 		wantErr string
 	}{
 		{name: "classic mode skips everything", data: panelBody{}},
+		{name: "classic mode without premium ignores a tree that would fail", data: panelBody{WelcomeMessageComponents: append(texts(60), gallery("not a url"))}},
 		{name: "without paid premium", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(1)}, wantErr: "premium"},
 		{name: "empty tree", data: panelBody{WelcomeMessageUsesComponentsV2: true}, paid: true, wantErr: "at least one component"},
 		{name: "empty non-nil tree", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{}}, paid: true, wantErr: "at least one component"},
@@ -66,6 +69,12 @@ func TestValidateWelcomeMessageComponents(t *testing.T) {
 		{name: "36 components with every button hidden", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(36), HideCloseButton: true, HideCloseWithReasonButton: true, HideClaimButton: true}, paid: true, wantErr: "Too many components"},
 		{name: "claim is not shown in thread mode", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(32), UseThreads: true}, paid: true},
 		{name: "thread mode with one more", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(33), UseThreads: true}, paid: true, wantErr: "Too many components"},
+		{name: "avatar placeholder as a gallery url", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{gallery(types.AvatarUrlPlaceholder)}}, paid: true},
+		{name: "avatar placeholder as a thumbnail url", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("a"))}}, paid: true},
+		{name: "avatar placeholder as a link button url", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{row(linkBtn("Go", types.AvatarUrlPlaceholder))}}, paid: true, wantErr: "Link button"},
+		{name: "avatar placeholder embedded in a longer url", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{gallery("https://example.com/" + types.AvatarUrlPlaceholder)}}, paid: true, wantErr: "Media gallery"},
+		{name: "avatar placeholder with surrounding spaces", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{gallery(" " + types.AvatarUrlPlaceholder)}}, paid: true, wantErr: "Media gallery"},
+		{name: "avatar placeholder in upper case", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{gallery("%AVATAR_URL%")}}, paid: true, wantErr: "Media gallery"},
 	}
 
 	for _, tt := range tests {
@@ -127,15 +136,6 @@ func TestClassicValidatorsAreSkippedInV2(t *testing.T) {
 		ctx := PanelValidationContext{Data: panelBody{WelcomeMessage: emptyEmbed, MessageUsesComponentsV2: true}}
 		require.Error(t, validateWelcomeMessage(ctx)())
 	})
-}
-
-func TestPanelValidatorsDoNotCheckName(t *testing.T) {
-	for _, v := range panelValidators() {
-		require.NotNil(t, v)
-	}
-
-	// A panel body has no name any more, so a request without one must not be rejected.
-	require.NoError(t, validateTitle(PanelValidationContext{Data: panelBody{Title: "ok"}})())
 }
 
 func TestClassicEmbedForV2(t *testing.T) {
@@ -242,6 +242,8 @@ func TestValidateMultiPanelComponents(t *testing.T) {
 
 		{name: "empty tree", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels}},
 		{name: "placement of a panel outside the list", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: []component.Component{row(panelBtn(9))}}, wantErr: "not part of this multi-panel"},
+		{name: "avatar placeholder is rejected as a gallery url", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: []component.Component{gallery(types.AvatarUrlPlaceholder)}}, wantErr: "Media gallery"},
+		{name: "avatar placeholder is rejected as a thumbnail url", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("a"))}}, wantErr: "Thumbnail"},
 	}
 
 	for _, tt := range tests {

@@ -53,6 +53,16 @@ func marshalComponents(components []component.Component) (*string, error) {
 	return &s, nil
 }
 
+// componentsToStore keeps the stored tree through a Classic save, so switching back to
+// Components V2 does not lose it, the same way the classic fields survive a V2 save.
+func componentsToStore(usesComponentsV2 bool, tree []component.Component, stored *string) (*string, error) {
+	if !usesComponentsV2 {
+		return stored, nil
+	}
+
+	return marshalComponents(tree)
+}
+
 // unmarshalComponents reads a stored tree. NULL is an empty tree.
 func unmarshalComponents(raw *string) ([]component.Component, error) {
 	if raw == nil {
@@ -184,7 +194,6 @@ func (p *panelMessageData) buildEditData() rest.EditMessageData {
 	}
 }
 
-// edit updates the existing panel message.
 func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) error {
 	ctx, cancel := app.DefaultContext()
 	defer cancel()

@@ -19,12 +19,14 @@ interface MediaGalleryEditorProps {
   value: V2MediaGallery;
   onChange: (updated: V2MediaGallery) => void;
   saveAttempted?: boolean;
+  allowAvatarPlaceholder?: boolean;
 }
 
 const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({
   value,
   onChange,
   saveAttempted = false,
+  allowAvatarPlaceholder,
 }) => {
   const { shows, touch } = useTouchedFields(saveAttempted);
   const { targetRef: addRef, request: focusAddButton } = useFocusAfterRemove<HTMLButtonElement>();
@@ -55,10 +57,12 @@ const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({
                 onChange={(url) => updateItem(i, { url })}
                 onBlur={() => touch(`${i}:url`)}
                 maxLength={MAX_URL_LENGTH}
-                error={shows(`${i}:url`) ? mediaUrlError(item.url) : undefined}
+                error={
+                  shows(`${i}:url`) ? mediaUrlError(item.url, allowAvatarPlaceholder) : undefined
+                }
               />
               <TextInput
-                label="Alt text (optional)"
+                label="Alt text"
                 maxLength={MAX_ALT_TEXT_LENGTH}
                 value={item.description || ""}
                 onChange={(description) => updateItem(i, { description: description || undefined })}

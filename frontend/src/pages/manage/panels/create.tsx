@@ -96,6 +96,8 @@ const PanelsPage: FC = () => {
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
   const [messageTree, setMessageTree] = useState<V2Component[]>([]);
   const [welcomeTree, setWelcomeTree] = useState<V2Component[]>([]);
+  // A clone keeps its source's formats, which stay switchable even with the builder flag off.
+  const [storedV2, setStoredV2] = useState({ message: false, welcome: false });
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [supportHours, setSupportHours] = useState<SupportHoursData | null>(null);
   const handleSupportHoursChange = useCallback((data: SupportHoursData | null) => {
@@ -238,6 +240,10 @@ const PanelsPage: FC = () => {
           name: source.name ? `${source.name} (Copy)`.slice(0, 100) : null,
           title: `${source.title} (Copy)`.slice(0, 80),
         });
+        setStoredV2({
+          message: source.message_uses_components_v2,
+          welcome: source.welcome_message_uses_components_v2,
+        });
         setMessageTree(fromApiComponents(source.message_components));
         setWelcomeTree(fromApiComponents(source.welcome_message_components));
 
@@ -295,6 +301,7 @@ const PanelsPage: FC = () => {
     authorName: panel.welcome_message?.author?.name,
     authorUrl: panel.welcome_message?.author?.url,
     footerText: panel.welcome_message?.footer?.text,
+    allowAvatarPlaceholder: true,
   };
   const welcomeConversionNotes = [
     ...(welcomeClassicSource.fields?.length
@@ -330,8 +337,11 @@ const PanelsPage: FC = () => {
     (panel.message_uses_components_v2 &&
       validateComponentTree(messageTree, { reserved: PANEL_MESSAGE_RESERVED }).length > 0) ||
     (welcomeIsV2 &&
-      validateComponentTree(welcomeTree, { reserved: welcomeReservedCount, requireContent: true })
-        .length > 0);
+      validateComponentTree(welcomeTree, {
+        reserved: welcomeReservedCount,
+        requireContent: true,
+        allowAvatarPlaceholder: true,
+      }).length > 0);
   const hasMissingRequired =
     missingChannel ||
     missingCategory ||
@@ -360,6 +370,37 @@ const PanelsPage: FC = () => {
         featureLabel="Panel changes"
         existingLabel="panels"
       />
+      <div className="mb-4 bg-gray-800 rounded-xl p-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+        <div>
+          <TextInput
+            label="Panel Name"
+            descriptionId="panel-name-help"
+            placeholder="e.g. Billing support"
+            value={panel.name || ""}
+            onChange={(e) => setPanel((prev) => (prev ? { ...prev, name: e } : prev))}
+            maxLength={100}
+            showCount
+          />
+          <p id="panel-name-help" className="text-xs text-gray-400 mt-1">
+            Used to identify this panel in the dashboard. It isn't shown in Discord.
+          </p>
+        </div>
+        <div>
+          <TextInput
+            label="Panel Title"
+            descriptionId="panel-title-help"
+            placeholder="e.g. Open a ticket"
+            value={panel.title || ""}
+            onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
+            maxLength={80}
+            showCount
+          />
+          <p id="panel-title-help" className="text-xs text-gray-400 mt-1">
+            Used by /open, the ticket channel topic and the thread notice. In Classic mode it is
+            also the embed title.
+          </p>
+        </div>
+      </div>
       <Collapsible
         title="Panel Appearance"
         subtitle="Configure the panel's appearance"
@@ -370,6 +411,7 @@ const PanelsPage: FC = () => {
             saveAttempted={saveAttempted}
             guildId={guildId}
             isV2={panel.message_uses_components_v2}
+            storedIsV2={storedV2.message}
             onV2Change={(isV2) =>
               setPanel((prev) => (prev ? { ...prev, message_uses_components_v2: isV2 } : prev))
             }
@@ -380,7 +422,6 @@ const PanelsPage: FC = () => {
             previewTitle="Panel Preview"
             reserved={PANEL_MESSAGE_RESERVED}
             reservedNote="Some space is also kept for the open-ticket button."
-            guildEmojis={guildEmojis}
             preview={
               <PanelPreview
                 type="panel"
@@ -391,32 +432,10 @@ const PanelsPage: FC = () => {
             }
           />
 
-          <div className="pb-4">
-            <TextInput
-              label="Panel Name (Optional)"
-              placeholder="e.g. Billing support"
-              value={panel.name || ""}
-              onChange={(e) => setPanel((prev) => (prev ? { ...prev, name: e } : prev))}
-              maxLength={100}
-              showCount
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Used to identify this panel in the dashboard. It isn't shown in Discord.
-            </p>
-          </div>
-
           {!panel.message_uses_components_v2 && (
             <div className="pb-2">
               <span className="text-xl font-semibold">Panel Properties</span>
               <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
-                <TextInput
-                  label="Panel Title"
-                  placeholder="e.g. Open a ticket"
-                  value={panel.title || ""}
-                  onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
-                  maxLength={80}
-                  showCount
-                />
                 <ColourSelect
                   label="Panel Colour"
                   value={`#${(panel.colour || 0x5865f2).toString(16).padStart(6, "0")}`}
@@ -739,6 +758,7 @@ const PanelsPage: FC = () => {
             saveAttempted={saveAttempted}
             guildId={guildId}
             isV2={panel.welcome_message_uses_components_v2}
+            storedIsV2={storedV2.welcome}
             onV2Change={(isV2) =>
               setPanel((prev) =>
                 prev ? { ...prev, welcome_message_uses_components_v2: isV2 } : prev,
@@ -754,7 +774,7 @@ const PanelsPage: FC = () => {
             reserved={welcomeReservedCount}
             reservedNote="Some space is also kept for the close and claim buttons and the answers people give on your form."
             requireContent
-            guildEmojis={guildEmojis}
+            allowAvatarPlaceholder
             preview={
               <PanelPreview
                 type="welcome"
@@ -982,7 +1002,7 @@ const PanelsPage: FC = () => {
                     />
                   </PremiumGate>
                   <DateTimePicker
-                    label="Footer Timestamp (Optional)"
+                    label="Footer Timestamp"
                     value={parseEmbedTimestamp(panel.welcome_message?.timestamp)}
                     onChange={(date) =>
                       setPanel((prev) =>

@@ -2,21 +2,21 @@ import type { FC } from "react";
 import Button from "@/components/Button";
 import ColourSelect from "@/components/ColourSelect";
 import Slider from "@/components/Slider";
-import type { GuildEmoji } from "@/types";
 import { getTopLevelContainers, type V2Container, type V2Component } from "@/lib/component-tree";
 import BlockList from "./BlockList";
+import type { PickerPanel } from "./picker-panels";
 
 interface ContainerEditorProps {
   value: V2Container;
   onChange: (updated: V2Container) => void;
-  guildEmojis?: GuildEmoji[];
+  allowAvatarPlaceholder?: boolean;
   tree: V2Component[];
   onTreeChange: (next: V2Component[]) => void;
   onAnnounce: (message: string) => void;
   disabled?: boolean;
   budgetMax: number;
-  availablePanels?: { panel_id: number; label: string; emoji?: string }[];
-  allPanels?: { panel_id: number; label: string; emoji?: string }[];
+  availablePanels?: PickerPanel[];
+  allPanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   saveAttempted?: boolean;
 }
@@ -24,7 +24,7 @@ interface ContainerEditorProps {
 const ContainerEditor: FC<ContainerEditorProps> = ({
   value,
   onChange,
-  guildEmojis = [],
+  allowAvatarPlaceholder,
   tree,
   onTreeChange,
   onAnnounce,
@@ -70,7 +70,7 @@ const ContainerEditor: FC<ContainerEditorProps> = ({
         blocks={value.components}
         tree={tree}
         onTreeChange={onTreeChange}
-        guildEmojis={guildEmojis}
+        allowAvatarPlaceholder={allowAvatarPlaceholder}
         nested
         containerId={value.id}
         containerLabel={containerLabel}

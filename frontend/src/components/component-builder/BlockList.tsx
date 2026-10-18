@@ -1,21 +1,11 @@
-import type { FC } from "react";
-import {
-  faLayerGroup,
-  faColumns,
-  faMinus,
-  faFont,
-  faImages,
-  faLink,
-  faTicket,
-} from "@fortawesome/free-solid-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import type { GuildEmoji } from "@/types";
+import { useId, type FC } from "react";
 import {
   addBlockAtTop,
   addBlockToContainer,
   blockLabel,
   countBlocks,
   createEmptyBlock,
+  EMPTY_PANEL_SELECT_MESSAGE,
   getTopLevelContainers,
   moveBlock,
   moveBlockIntoContainer,
@@ -23,7 +13,6 @@ import {
   removeBlock,
   updateBlock,
   type V2Component,
-  type V2ComponentType,
 } from "@/lib/component-tree";
 import { pendingBlockFocus } from "@/lib/block-focus";
 import BlockShell from "./BlockShell";
@@ -34,43 +23,13 @@ import TextDisplayEditor from "./TextDisplayEditor";
 import MediaGalleryEditor from "./MediaGalleryEditor";
 import SeparatorEditor from "./SeparatorEditor";
 import ButtonRowEditor from "./ButtonRowEditor";
+import { withOwnPanel, type PickerPanel } from "./picker-panels";
+import { BLOCK_ICONS } from "./block-icons";
 
-export const BLOCK_ICONS: Record<V2ComponentType, IconDefinition> = {
-  container: faLayerGroup,
-  section: faColumns,
-  separator: faMinus,
-  text_display: faFont,
-  media_gallery: faImages,
-  button_row: faLink,
-  panel_select: faTicket,
-};
-
-type AvailablePanel = { panel_id: number; label: string; emoji?: string };
-
-/** The pickable panels for one block: the unplaced ones plus whichever the block already holds. */
-const withOwnSelection = (
-  available: AvailablePanel[],
-  allPanels: AvailablePanel[],
-  ownPanelIds: number[],
-): AvailablePanel[] => {
-  const uniqueOwnPanelIds = [...new Set(ownPanelIds)];
-  const missing = uniqueOwnPanelIds.filter((id) => !available.some((p) => p.panel_id === id));
-  if (missing.length === 0) return available;
-  const additions = missing
-    .map((id) => allPanels.find((p) => p.panel_id === id))
-    .filter((p): p is AvailablePanel => p !== undefined);
-  return additions.length > 0 ? [...available, ...additions] : available;
-};
-
-const PanelSelectSummary: FC<{ availablePanels?: AvailablePanel[] }> = ({ availablePanels }) => {
+const PanelSelectSummary: FC<{ availablePanels?: PickerPanel[] }> = ({ availablePanels }) => {
   const names = (availablePanels ?? []).map((p) => p.label);
   if (names.length === 0) {
-    return (
-      <p className="text-sm text-gray-300">
-        No panels remaining - place a panel button elsewhere to remove one from here, or delete this
-        block.
-      </p>
-    );
+    return <p className="text-sm text-gray-300">{EMPTY_PANEL_SELECT_MESSAGE}</p>;
   }
   const fullList = names.join(", ");
   return (
@@ -84,7 +43,7 @@ interface BlockListProps {
   blocks: V2Component[];
   tree: V2Component[];
   onTreeChange: (next: V2Component[]) => void;
-  guildEmojis: GuildEmoji[];
+  allowAvatarPlaceholder?: boolean;
   nested: boolean;
   containerId?: string;
   containerLabel?: string;
@@ -92,9 +51,9 @@ interface BlockListProps {
   disabled?: boolean;
   budgetMax: number;
   /** Panels not yet placed in the tree. Undefined means no panel placement UI at all. */
-  availablePanels?: AvailablePanel[];
+  availablePanels?: PickerPanel[];
   /** Every panel in the multi-panel, so a block can look up the panel it already holds. */
-  allPanels?: AvailablePanel[];
+  allPanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   saveAttempted?: boolean;
 }
@@ -103,7 +62,7 @@ const BlockList: FC<BlockListProps> = ({
   blocks,
   tree,
   onTreeChange,
-  guildEmojis,
+  allowAvatarPlaceholder,
   nested,
   containerId,
   containerLabel,
@@ -115,6 +74,7 @@ const BlockList: FC<BlockListProps> = ({
   selectMenuModeOn,
   saveAttempted,
 }) => {
+  const addMenuFocusId = useId();
   const topLevelContainers = nested ? [] : getTopLevelContainers(tree);
   const budgetExhausted = countBlocks(tree) >= budgetMax;
   const canAddMore = !disabled && !budgetExhausted;
@@ -148,7 +108,8 @@ const BlockList: FC<BlockListProps> = ({
         };
 
         const handleDelete = () => {
-          pendingBlockFocus.id = (blocks[index + 1] ?? blocks[index - 1])?.id ?? null;
+          pendingBlockFocus.id =
+            (blocks[index + 1] ?? blocks[index - 1])?.id ?? containerId ?? addMenuFocusId;
           onTreeChange(removeBlock(tree, block.id));
           onAnnounce(`Deleted ${label}`);
         };
@@ -181,7 +142,7 @@ const BlockList: FC<BlockListProps> = ({
               <ContainerEditor
                 value={block}
                 onChange={handleUpdate}
-                guildEmojis={guildEmojis}
+                allowAvatarPlaceholder={allowAvatarPlaceholder}
                 tree={tree}
                 onTreeChange={onTreeChange}
                 onAnnounce={onAnnounce}
@@ -198,10 +159,10 @@ const BlockList: FC<BlockListProps> = ({
                 value={block}
                 onChange={handleUpdate}
                 saveAttempted={saveAttempted}
-                guildEmojis={guildEmojis}
+                allowAvatarPlaceholder={allowAvatarPlaceholder}
                 availablePanels={
                   availablePanels && allPanels && block.accessory?.kind === "panel_button"
-                    ? withOwnSelection(availablePanels, allPanels, [block.accessory.panel_id])
+                    ? withOwnPanel(availablePanels, allPanels, block.accessory.panel_id)
                     : availablePanels
                 }
               />
@@ -218,6 +179,7 @@ const BlockList: FC<BlockListProps> = ({
                 value={block}
                 onChange={handleUpdate}
                 saveAttempted={saveAttempted}
+                allowAvatarPlaceholder={allowAvatarPlaceholder}
               />
             )}
             {block.type === "separator" && (
@@ -228,15 +190,8 @@ const BlockList: FC<BlockListProps> = ({
                 value={block}
                 onChange={handleUpdate}
                 saveAttempted={saveAttempted}
-                availablePanels={
-                  availablePanels && allPanels
-                    ? withOwnSelection(
-                        availablePanels,
-                        allPanels,
-                        block.buttons.filter((b) => b.kind === "panel").map((b) => b.panel_id),
-                      )
-                    : availablePanels
-                }
+                unplacedPanels={availablePanels}
+                allPanels={allPanels}
               />
             )}
             {block.type === "panel_select" && (
@@ -252,6 +207,7 @@ const BlockList: FC<BlockListProps> = ({
           availablePanels={availablePanels}
           selectMenuModeOn={selectMenuModeOn}
           containerLabel={nested ? containerLabel : undefined}
+          focusId={addMenuFocusId}
           onAdd={(type) => {
             const newBlock = createEmptyBlock(type);
             const next =

@@ -191,14 +191,18 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	data.MessageComponents = normaliseComponentTree(data.MessageComponents)
-	data.WelcomeMessageComponents = normaliseComponentTree(data.WelcomeMessageComponents)
+	if data.MessageUsesComponentsV2 {
+		data.MessageComponents = normaliseComponentTree(data.MessageComponents)
+	}
+	if data.WelcomeMessageUsesComponentsV2 {
+		data.WelcomeMessageComponents = normaliseComponentTree(data.WelcomeMessageComponents)
+	}
 
 	messageData := data.IntoPanelMessageData(existing.CustomId, footer.ShowBranding)
 	var newMessageId uint64
 
 	// Discord does not allow unsetting IS_COMPONENTS_V2 via edit, so a downgrade back to
-	// Classic must resend rather than edit in place (AC6), same as a channel change.
+	// Classic must resend rather than edit in place, same as a channel change.
 	downgradingFromV2 := existing.MessageUsesComponentsV2 && !data.MessageUsesComponentsV2
 
 	// Check if channel changed
@@ -294,22 +298,16 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	var welcomeMessageComponents *string
-	if data.WelcomeMessageUsesComponentsV2 {
-		welcomeMessageComponents, err = marshalComponents(data.WelcomeMessageComponents)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-			return
-		}
+	welcomeMessageComponents, err := componentsToStore(data.WelcomeMessageUsesComponentsV2, data.WelcomeMessageComponents, existing.WelcomeMessageComponents)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
 	}
 
-	var messageComponents *string
-	if data.MessageUsesComponentsV2 {
-		messageComponents, err = marshalComponents(data.MessageComponents)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-			return
-		}
+	messageComponents, err := componentsToStore(data.MessageUsesComponentsV2, data.MessageComponents, existing.MessageComponents)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
 	}
 
 	// If ticket limit is 0, this panel has no limit of its own

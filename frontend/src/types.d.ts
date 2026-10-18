@@ -285,7 +285,6 @@ export interface MultiPanel {
   uses_components_v2: boolean;
   /** See the equivalent note on `Panel.message_components` - a JSON string on read, an array on write. */
   components: APIMessageTopLevelComponent[] | string | null;
-  force_disabled: boolean;
 }
 
 export interface MultiPanelRequest {

@@ -6,7 +6,6 @@ import { FIELD_REVEAL_EVENT } from "@/lib/scroll-to-missing";
 interface BuildPreviewTabsProps {
   build: ReactNode;
   preview: ReactNode;
-  /** Extra class names for the tab row, e.g. to span both columns of a parent grid. */
   className?: string;
 }
 

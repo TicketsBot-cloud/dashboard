@@ -254,8 +254,12 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
-	data.MessageComponents = normaliseComponentTree(data.MessageComponents)
-	data.WelcomeMessageComponents = normaliseComponentTree(data.WelcomeMessageComponents)
+	if data.MessageUsesComponentsV2 {
+		data.MessageComponents = normaliseComponentTree(data.MessageComponents)
+	}
+	if data.WelcomeMessageUsesComponentsV2 {
+		data.WelcomeMessageComponents = normaliseComponentTree(data.WelcomeMessageComponents)
+	}
 
 	messageData := data.IntoPanelMessageData(customId, footer.ShowBranding)
 	msgId, err := messageData.send(botContext)

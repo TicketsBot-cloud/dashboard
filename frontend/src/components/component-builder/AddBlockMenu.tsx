@@ -10,16 +10,6 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import {
-  faLayerGroup,
-  faColumns,
-  faMinus,
-  faFont,
-  faImages,
-  faLink,
-  faTicket,
-} from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/Button";
 import { useFloatingDropdown } from "@/hooks/useFloatingDropdown";
 import {
@@ -28,32 +18,22 @@ import {
   type V2Component,
   type V2ComponentType,
 } from "@/lib/component-tree";
+import { BLOCK_ICONS } from "./block-icons";
+import type { PickerPanel } from "./picker-panels";
 
 interface AddBlockMenuProps {
   onAdd: (type: V2ComponentType) => void;
-  /** Types not offered here, e.g. "container" inside a ContainerEditor's own menu. */
   exclude?: V2ComponentType[];
-  /** The full tree this menu is adding into, used to gate "Panel Select" to at most one per tree. */
   tree: V2Component[];
-  /**
-   * Panels not yet placed elsewhere in the tree. Undefined means no "panels" concept applies
-   * here (single-panel/welcome-message builder), so the "Panel Select" entry is omitted
-   * entirely rather than merely disabled.
-   */
-  availablePanels?: { panel_id: number; label: string; emoji?: string }[];
-  /**
-   * The multipanel's own "dropdown mode" toggle. Explicitly `false` disables "Panel Select"
-   * with a dedicated tooltip; omitted (undefined) applies no extra restriction beyond
-   * `hasPanelSelectBlock`.
-   */
+  /** Panels not yet placed in the tree. Undefined (outside a multi-panel) omits "Panel Select". */
+  availablePanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   /** Set inside a container, so the trigger is distinguishable from the top-level one. */
   containerLabel?: string;
+  /** Lets a delete that empties the list move focus to this trigger. */
+  focusId?: string;
 }
 
-// Button Row sits in Layout rather than Content: like Separator, it's a structural row rather
-// than media/text content, and it's the row itself (not "buttons" as freestanding content) that
-// an admin is placing into the message. Panel Select joins it for the same reason.
 const LAYOUT_TYPES: V2ComponentType[] = [
   "container",
   "section",
@@ -63,16 +43,6 @@ const LAYOUT_TYPES: V2ComponentType[] = [
 ];
 const CONTENT_TYPES: V2ComponentType[] = ["text_display", "media_gallery"];
 
-const ICONS: Record<V2ComponentType, IconDefinition> = {
-  container: faLayerGroup,
-  section: faColumns,
-  separator: faMinus,
-  text_display: faFont,
-  media_gallery: faImages,
-  button_row: faLink,
-  panel_select: faTicket,
-};
-
 const AddBlockMenu: FC<AddBlockMenuProps> = ({
   onAdd,
   exclude = [],
@@ -80,6 +50,7 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
   availablePanels,
   selectMenuModeOn,
   containerLabel,
+  focusId,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuId = useId();
@@ -156,6 +127,7 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
     if (type !== "panel_select") return undefined;
     if (selectMenuModeOn === false) return "Enable dropdown mode in Ticket Settings to add this";
     if (panelSelectAlreadyPlaced) return "Only one panel select block is allowed";
+    if (availablePanels?.length === 0) return "Every panel is already placed as a button";
     return undefined;
   };
 
@@ -189,14 +161,14 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
                 }}
               >
                 <FontAwesomeIcon
-                  icon={ICONS[type]}
+                  icon={BLOCK_ICONS[type]}
                   className="text-gray-400 w-4"
                   aria-hidden="true"
                 />
                 {blockLabel(type)}
               </button>
               {reason && (
-                <span id={reasonId} className="sr-only">
+                <span id={reasonId} hidden>
                   {reason}
                 </span>
               )}
@@ -211,6 +183,7 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
     <>
       <Button
         ref={triggerRef}
+        data-block-id={focusId}
         variant="dashed"
         className="w-full"
         aria-label={containerLabel ? `Add block to ${containerLabel}` : undefined}

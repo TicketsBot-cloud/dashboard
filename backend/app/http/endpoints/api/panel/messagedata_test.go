@@ -423,3 +423,38 @@ func TestCorruptStoredTreeStaysComponentsV2(t *testing.T) {
 		require.False(t, data.UsesComponentsV2)
 	})
 }
+
+func TestComponentsToStore(t *testing.T) {
+	stored := `[{"type":10,"content":"stored"}]`
+
+	tests := []struct {
+		name   string
+		usesV2 bool
+		tree   []component.Component
+		stored *string
+		want   *string
+	}{
+		{name: "classic keeps the stored tree", tree: texts(1), stored: &stored, want: &stored},
+		{name: "classic ignores a submitted tree", tree: []component.Component{text("submitted")}, stored: &stored, want: &stored},
+		{name: "classic with nothing stored stays null", tree: texts(1), stored: nil, want: nil},
+		{name: "classic with no submitted tree keeps the stored tree", tree: nil, stored: &stored, want: &stored},
+		{name: "v2 replaces the stored tree", usesV2: true, tree: []component.Component{text("submitted")}, stored: &stored, want: strPtr(`[{"type":10,"content":"submitted"}]`)},
+		{name: "v2 with no tree stores an empty array", usesV2: true, tree: nil, stored: &stored, want: strPtr("[]")},
+		{name: "v2 with nothing stored", usesV2: true, tree: []component.Component{text("submitted")}, want: strPtr(`[{"type":10,"content":"submitted"}]`)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := componentsToStore(tt.usesV2, tt.tree, tt.stored)
+			require.NoError(t, err)
+
+			if tt.want == nil {
+				require.Nil(t, got)
+				return
+			}
+
+			require.NotNil(t, got)
+			require.JSONEq(t, *tt.want, *got)
+		})
+	}
+}

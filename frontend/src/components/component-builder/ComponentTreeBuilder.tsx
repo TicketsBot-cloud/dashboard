@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FC } from "react";
-import type { GuildEmoji } from "@/types";
 import type { V2Component } from "@/lib/component-tree";
 import { pendingBlockFocus } from "@/lib/block-focus";
 import ComponentBudgetMeter from "./ComponentBudgetMeter";
 import BlockList from "./BlockList";
-
-type AvailablePanel = { panel_id: number; label: string; emoji?: string };
+import type { PickerPanel } from "./picker-panels";
 
 interface ComponentTreeBuilderProps {
   components: V2Component[];
   onChange: (components: V2Component[]) => void;
-  guildEmojis: GuildEmoji[];
+  allowAvatarPlaceholder?: boolean;
   budgetUsed: number;
   budgetMax: number;
   budgetReservedNote?: string;
   disabled?: boolean;
   /** Panels not yet placed in the tree. Undefined means no panel placement UI at all. */
-  availablePanels?: AvailablePanel[];
-  allPanels?: AvailablePanel[];
+  availablePanels?: PickerPanel[];
+  allPanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   saveAttempted?: boolean;
 }
@@ -25,7 +23,7 @@ interface ComponentTreeBuilderProps {
 const ComponentTreeBuilder: FC<ComponentTreeBuilderProps> = ({
   components,
   onChange,
-  guildEmojis,
+  allowAvatarPlaceholder,
   budgetUsed,
   budgetMax,
   budgetReservedNote,
@@ -62,7 +60,7 @@ const ComponentTreeBuilder: FC<ComponentTreeBuilderProps> = ({
           blocks={components}
           tree={components}
           onTreeChange={onChange}
-          guildEmojis={guildEmojis}
+          allowAvatarPlaceholder={allowAvatarPlaceholder}
           nested={false}
           onAnnounce={announce}
           disabled={disabled}

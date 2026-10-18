@@ -15,19 +15,22 @@ import {
   type V2ButtonRowButton,
 } from "@/lib/component-tree";
 import PanelButtonTag from "./PanelButtonTag";
+import { withOwnPanel, type PickerPanel } from "./picker-panels";
 
 interface ButtonRowEditorProps {
   value: V2ButtonRow;
   onChange: (updated: V2ButtonRow) => void;
-  /** Panels not yet placed in the tree, plus any this row already holds. Undefined hides panel placement. */
-  availablePanels?: { panel_id: number; label: string; emoji?: string }[];
+  /** Panels not placed anywhere in the tree. Undefined hides panel placement. */
+  unplacedPanels?: PickerPanel[];
+  allPanels?: PickerPanel[];
   saveAttempted?: boolean;
 }
 
 const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
   value,
   onChange,
-  availablePanels,
+  unplacedPanels,
+  allPanels = [],
   saveAttempted = false,
 }) => {
   const hintId = useId();
@@ -54,7 +57,7 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
       const currentlyPanel = b.kind === "panel";
       if (kind === "panel") {
         if (currentlyPanel) return b;
-        const panelId = availablePanels?.[0]?.panel_id;
+        const panelId = unplacedPanels?.[0]?.panel_id;
         if (panelId === undefined) return b;
         return { id: b.id, kind: "panel", panel_id: panelId };
       }
@@ -81,11 +84,16 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
     <div className="flex flex-col gap-3">
       {value.buttons.map((b, i) => {
         const isPanelMode = b.kind === "panel";
+        const noneUnplaced = unplacedPanels?.length === 0;
+        const panelOptions =
+          b.kind === "panel" && unplacedPanels
+            ? withOwnPanel(unplacedPanels, allPanels, b.panel_id)
+            : (unplacedPanels ?? []);
 
         return (
           <div key={b.id} className="p-3 rounded bg-gray-600 flex items-start gap-2">
             <div className="flex-1 flex flex-col gap-2">
-              {availablePanels !== undefined && (
+              {unplacedPanels !== undefined && (
                 <div
                   role="group"
                   aria-label={`Button ${i + 1} type`}
@@ -104,13 +112,13 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
                     variant={isPanelMode ? "primary" : "outline"}
                     size="sm"
                     aria-pressed={isPanelMode}
-                    visuallyDisabled={availablePanels.length === 0}
+                    visuallyDisabled={!isPanelMode && noneUnplaced}
                     aria-describedby={
-                      availablePanels.length === 0 ? `${hintId}-${b.id}` : undefined
+                      !isPanelMode && noneUnplaced ? `${hintId}-${b.id}` : undefined
                     }
                     title={
-                      availablePanels.length === 0
-                        ? "All panels are already placed elsewhere"
+                      !isPanelMode && noneUnplaced
+                        ? "Every panel is already placed as a button"
                         : undefined
                     }
                     onClick={() => setButtonMode(i, "panel")}
@@ -118,9 +126,9 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
                     {isPanelMode && <FontAwesomeIcon icon={faCheck} aria-hidden="true" />}
                     Ticket panel
                   </Button>
-                  {availablePanels.length === 0 && (
-                    <span id={`${hintId}-${b.id}`} className="sr-only">
-                      All panels are already placed elsewhere
+                  {!isPanelMode && noneUnplaced && (
+                    <span id={`${hintId}-${b.id}`} hidden>
+                      Every panel is already placed as a button
                     </span>
                   )}
                 </div>
@@ -130,11 +138,11 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
                 <div className="flex items-center gap-2">
                   <Select
                     className="flex-1"
-                    label="Ticket panel"
+                    label={`Ticket panel for button ${i + 1}`}
                     hideLabel
                     placeholder="Select a panel..."
                     value={String(b.panel_id)}
-                    options={(availablePanels ?? []).map((p) => ({
+                    options={panelOptions.map((p) => ({
                       key: String(p.panel_id),
                       label: p.label,
                     }))}
@@ -171,7 +179,7 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
               title={`Remove button ${i + 1}`}
               aria-label={`Remove button ${i + 1}`}
               onClick={() => removeButton(i)}
-              className={`${availablePanels === undefined ? "mt-6" : "mt-1"} text-red-300 hover:text-red-200`}
+              className={`${unplacedPanels === undefined ? "mt-6" : "mt-1"} text-red-300 hover:text-red-200`}
             >
               <FontAwesomeIcon icon={faTrash} aria-hidden="true" />
             </Button>

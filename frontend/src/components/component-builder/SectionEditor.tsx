@@ -8,7 +8,6 @@ import Textarea from "@/components/Textarea";
 import Slider from "@/components/Slider";
 import { useFocusAfterRemove } from "@/hooks/useFocusAfterRemove";
 import { useTouchedFields } from "@/hooks/useTouchedFields";
-import type { GuildEmoji } from "@/types";
 import {
   MAX_ALT_TEXT_LENGTH,
   MAX_SECTION_TEXTS,
@@ -22,19 +21,21 @@ import {
   type V2TextChild,
 } from "@/lib/component-tree";
 import PanelButtonTag from "./PanelButtonTag";
+import type { PickerPanel } from "./picker-panels";
 
 interface SectionEditorProps {
   value: V2Section;
   onChange: (updated: V2Section) => void;
-  guildEmojis?: GuildEmoji[];
+  allowAvatarPlaceholder?: boolean;
   /** Panels not yet placed in the tree, plus the one this accessory holds. Undefined hides panel placement. */
-  availablePanels?: { panel_id: number; label: string; emoji?: string }[];
+  availablePanels?: PickerPanel[];
   saveAttempted?: boolean;
 }
 
 const SectionEditor: FC<SectionEditorProps> = ({
   value,
   onChange,
+  allowAvatarPlaceholder,
   availablePanels,
   saveAttempted = false,
 }) => {
@@ -161,10 +162,14 @@ const SectionEditor: FC<SectionEditorProps> = ({
                 }
                 onBlur={() => touch("accessory:url")}
                 maxLength={MAX_URL_LENGTH}
-                error={shows("accessory:url") ? mediaUrlError(thumbnailAccessory.url) : undefined}
+                error={
+                  shows("accessory:url")
+                    ? mediaUrlError(thumbnailAccessory.url, allowAvatarPlaceholder)
+                    : undefined
+                }
               />
               <TextInput
-                label="Alt text (optional)"
+                label="Alt text"
                 maxLength={MAX_ALT_TEXT_LENGTH}
                 value={thumbnailAccessory.description || ""}
                 onChange={(description) =>

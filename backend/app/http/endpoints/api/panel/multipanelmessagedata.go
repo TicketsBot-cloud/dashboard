@@ -167,7 +167,6 @@ func (d *multiPanelMessageData) buildPanelDropdown(panels []database.PanelWithCu
 	})
 }
 
-// buildSystemRows builds the dropdown row or the button rows for the given panels.
 func (d *multiPanelMessageData) buildSystemRows(panels []database.PanelWithCustomization) []component.Component {
 	if len(panels) == 0 {
 		return nil

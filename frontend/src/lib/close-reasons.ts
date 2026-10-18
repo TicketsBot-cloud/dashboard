@@ -33,3 +33,15 @@ export function findDuplicateCloseReasons(reasons: readonly string[]): Set<numbe
   });
   return duplicates;
 }
+
+export function importCloseReasons(
+  current: readonly string[],
+  incoming: readonly string[],
+  replace: boolean,
+): string[] {
+  if (replace) return [...incoming];
+
+  const kept = current.filter((reason) => reason.trim());
+  const present = new Set(kept.map((reason) => reason.trim().toLowerCase()));
+  return [...kept, ...incoming.filter((reason) => !present.has(reason.trim().toLowerCase()))];
+}

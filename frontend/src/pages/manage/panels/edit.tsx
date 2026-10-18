@@ -7,6 +7,7 @@ import {
   useGuildEmojis,
   useGuildForms,
   useGuildPanel,
+  useGuildPanels,
   useGuildPremium,
 } from "@/hooks/queries/useGuild";
 import { useKBCategories } from "@/hooks/queries/useKB";
@@ -81,6 +82,7 @@ const EditPanelsPage: FC = () => {
   const { data: kbCategories = [] } = useKBCategories(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
   const { data: panelData, isLoading: isLoadingPanel } = useGuildPanel(guildId, panelId);
+  const { data: panels = [] } = useGuildPanels(guildId);
   const [supportHours, setSupportHours] = useState<SupportHoursData | null>(null);
   const [initialSupportHours, setInitialSupportHours] = useState<SupportHoursData | null>(null);
   const [isLoadingSupportHours, setIsLoadingSupportHours] = useState(true);
@@ -1014,6 +1016,7 @@ const EditPanelsPage: FC = () => {
               <span className="mb-1 text-white">Close Reasons</span>
               <CloseReasonsEditor
                 reasons={closeReasons.reasons}
+                importPanels={panels.filter((p) => p.panel_id !== Number(panelId))}
                 onChange={(reasons) =>
                   setPanel((prev) =>
                     prev
@@ -1295,10 +1298,14 @@ const EditPanelsPage: FC = () => {
               toast.warning("Panel saved but failed to update support hours.");
             }
 
+            await queryClient.cancelQueries({ queryKey: guildKeys.panels(guildId) });
             // Otherwise reopening the panel replays the cached pre-save response.
             await Promise.all([
               queryClient.invalidateQueries({ queryKey: guildKeys.panel(guildId, panelId) }),
-              queryClient.invalidateQueries({ queryKey: guildKeys.panels(guildId) }),
+              queryClient.invalidateQueries({
+                queryKey: guildKeys.panels(guildId),
+                refetchType: "none",
+              }),
             ]);
 
             toast.success("Panel Edited");

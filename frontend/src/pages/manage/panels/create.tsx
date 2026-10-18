@@ -6,6 +6,7 @@ import {
   guildKeys,
   useGuildEmojis,
   useGuildForms,
+  useGuildPanels,
   useGuildPremium,
 } from "@/hooks/queries/useGuild";
 import { useKBCategories } from "@/hooks/queries/useKB";
@@ -83,6 +84,7 @@ const PanelsPage: FC = () => {
   const showBrandingFooter = !premiumWithVoting?.premium;
   const { data: kbCategories = [] } = useKBCategories(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
+  const { data: panels = [] } = useGuildPanels(guildId);
   const [isLoadingClone, setIsLoadingClone] = useState(!!clonePanelId);
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
   const [saveAttempted, setSaveAttempted] = useState(false);
@@ -1082,6 +1084,7 @@ const PanelsPage: FC = () => {
               <span className="mb-1 text-white">Close Reasons</span>
               <CloseReasonsEditor
                 reasons={closeReasons.reasons}
+                importPanels={panels}
                 onChange={(reasons) =>
                   setPanel((prev) =>
                     prev
@@ -1368,7 +1371,11 @@ const PanelsPage: FC = () => {
                 }
               }
 
-              await queryClient.invalidateQueries({ queryKey: guildKeys.panels(guildId) });
+              await queryClient.cancelQueries({ queryKey: guildKeys.panels(guildId) });
+              await queryClient.invalidateQueries({
+                queryKey: guildKeys.panels(guildId),
+                refetchType: "none",
+              });
 
               initialPanel.current = panel;
               allowNavigation();

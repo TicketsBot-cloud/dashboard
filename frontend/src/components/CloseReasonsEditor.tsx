@@ -1,18 +1,33 @@
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import Button from "@/components/Button";
 import TextInput from "@/components/TextInput";
+import ImportCloseReasonsModal from "@/components/modals/ImportCloseReasonsModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowDown, faArrowUp, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowDown,
+  faArrowUp,
+  faDownload,
+  faPlus,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 import { CLOSE_REASON_LIMITS } from "@/constants/closeReasonLimits";
 import { findDuplicateCloseReasons } from "@/lib/close-reasons";
+import type { Panel } from "@/types";
 
 interface CloseReasonsEditorProps {
   reasons: string[];
   onChange: (reasons: string[]) => void;
+  importPanels?: Panel[];
 }
 
-const CloseReasonsEditor: FC<CloseReasonsEditorProps> = ({ reasons, onChange }) => {
+const CloseReasonsEditor: FC<CloseReasonsEditorProps> = ({
+  reasons,
+  onChange,
+  importPanels = [],
+}) => {
+  const [importOpen, setImportOpen] = useState(false);
   const duplicates = findDuplicateCloseReasons(reasons);
+  const sourcePanels = importPanels.filter((panel) => panel.close_reasons?.reasons.length);
 
   const updateReason = (index: number, value: string) => {
     onChange(reasons.map((r, i) => (i === index ? value : r)));
@@ -87,7 +102,7 @@ const CloseReasonsEditor: FC<CloseReasonsEditorProps> = ({ reasons, onChange }) 
           ))}
         </ol>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="secondary"
           onClick={addReason}
@@ -96,10 +111,26 @@ const CloseReasonsEditor: FC<CloseReasonsEditorProps> = ({ reasons, onChange }) 
         >
           <FontAwesomeIcon icon={faPlus} /> Add Reason
         </Button>
+        {sourcePanels.length > 0 && (
+          <Button
+            variant="secondary"
+            onClick={() => setImportOpen(true)}
+            className="text-sm font-medium w-fit"
+          >
+            <FontAwesomeIcon icon={faDownload} /> Import
+          </Button>
+        )}
         <span className="text-xs">
           {reasons.length}/{CLOSE_REASON_LIMITS.PRESETS} reasons
         </span>
       </div>
+      <ImportCloseReasonsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        panels={sourcePanels}
+        reasons={reasons}
+        onImport={onChange}
+      />
     </div>
   );
 };

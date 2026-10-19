@@ -122,20 +122,12 @@ const TagsPage: FC = () => {
   const [forcedLock, setForcedLock] = useState(false);
   const isLocked = forcedLock || polledLock === true;
 
-  // This page is a long-lived list rather than a form the user navigates away
-  // from after one submit, so a forced lock from a 503 must release once the
-  // poll confirms the flag is back on, otherwise the page stays locked forever
-  // after a single incident even though the flag was re-enabled.
   useEffect(() => {
     if (polledLock === false) {
       setForcedLock(false);
     }
   }, [polledLock]);
 
-  // Announce the lock lifting mid-session (e.g. a flag re-enabled while this page
-  // is open). The banner's own aria-live region only reliably announces the
-  // unlocked-to-locked transition (see FeatureLockBanner), so the reverse gets a
-  // toast instead. Guarded so it never fires on mount, only on a genuine flip.
   const previousLockRef = useRef(isLocked);
   useEffect(() => {
     if (previousLockRef.current && !isLocked) {
@@ -162,7 +154,6 @@ const TagsPage: FC = () => {
   const isResyncRunning = resyncStatus?.status === "running";
   const isResyncing = isResyncRunning || isStartingResync;
 
-  // Ticked locally so the button re-enables without polling
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const cooldownUntil = resyncStatus?.cooldown_until;
 
@@ -195,7 +186,6 @@ const TagsPage: FC = () => {
     }
   }, [guildId]);
 
-  // Re-attach to a job left running by an earlier visit
   useEffect(() => {
     if (!canResync) return;
 
@@ -218,7 +208,6 @@ const TagsPage: FC = () => {
     return () => clearInterval(id);
   }, [isResyncRunning, pollResync]);
 
-  // Reusing the id replaces the toast in place
   useEffect(() => {
     const toastId = resyncToastRef.current;
     if (!resyncStatus || toastId === null) return;
@@ -246,7 +235,6 @@ const TagsPage: FC = () => {
     }
   }, [resyncStatus]);
 
-  // Never leave a spinner behind on a page the user has left.
   useEffect(
     () => () => {
       if (resyncToastRef.current !== null) {
@@ -291,7 +279,6 @@ const TagsPage: FC = () => {
 
   const handleSave = async (tag: Tag, originalId?: string) => {
     try {
-      // If the ID was renamed, delete the old one first
       if (originalId && originalId !== tag.id) {
         await apiClient.tags.delete(guildId, originalId, SKIP_ERROR_TOAST);
       }
@@ -474,9 +461,7 @@ const TagsPage: FC = () => {
               icon={faTag}
               title="No tags yet"
               description="Tags are reusable responses your staff can send in tickets."
-              // EmptyState has no lock affordance of its own, so when locked the
-              // action is omitted entirely rather than left clickable: the banner
-              // above is the only explanation available at this point.
+              // EmptyState can't show a disabled action, so it's omitted while locked
               action={
                 isLocked
                   ? undefined

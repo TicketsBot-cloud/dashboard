@@ -114,6 +114,9 @@ export default defineConfig(({ mode }) => {
       },
       target: "es2022",
       minify: "terser",
+      terserOptions: {
+        ecma: 2020,
+      },
       sourcemap: false,
     },
   };

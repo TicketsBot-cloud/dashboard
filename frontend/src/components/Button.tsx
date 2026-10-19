@@ -33,6 +33,9 @@ interface ButtonProps extends Omit<
   children: ReactNode;
 }
 
+const BASE_CLASSES =
+  "inline-flex items-center justify-center gap-1 rounded transition-colors active:scale-[0.98]";
+
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "bg-blue-600 hover:bg-blue-700 text-white",
   danger: "bg-red-600 hover:bg-red-700 text-white",
@@ -51,6 +54,11 @@ const sizeClasses: Record<ButtonSize, string> = {
   md: "py-2 px-4",
   icon: "p-1.5",
 };
+
+/** Button styling for an `<a>`, which Button itself cannot render. */
+export function buttonLinkClassName(variant: ButtonVariant, size: ButtonSize = "md"): string {
+  return `${BASE_CLASSES} ${variantClasses[variant]} ${sizeClasses[size]}`;
+}
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -82,7 +90,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         aria-disabled={visuallyDisabled || undefined}
         aria-busy={isLoading || undefined}
-        className={`inline-flex items-center justify-center gap-1 rounded transition-colors active:scale-[0.98] disabled:opacity-50 ${
+        className={`${BASE_CLASSES} disabled:opacity-50 ${
           visuallyDisabled
             ? // Fixed colour pair, not the generic opacity-50 treatment: opacity
               // composited over the page background (bg-gray-900) drops any variant's

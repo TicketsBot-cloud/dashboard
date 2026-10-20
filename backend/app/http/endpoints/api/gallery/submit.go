@@ -100,6 +100,11 @@ func SubmitHandler(ctx *gin.Context) {
 		return
 	}
 
+	if panel.MessageUsesComponentsV2 || panel.WelcomeMessageUsesComponentsV2 {
+		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels that use component-based messages cannot be submitted to the gallery. Switch the panel to a classic message first."))
+		return
+	}
+
 	// Validate emoji is unicode only (no custom emoji IDs)
 	if panel.EmojiId != nil {
 		ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels with custom Discord emojis cannot be submitted to the gallery. Please use a standard Unicode emoji instead."))
@@ -136,21 +141,21 @@ func SubmitHandler(ctx *gin.Context) {
 
 	// Snapshot the panel design fields into a gallery listing
 	listing := database.GalleryListing{
-		SubmitterUserId:           userId,
-		SourceGuildId:             guildId,
-		Name:                      body.Name,
-		Description:               body.Description,
-		Category:                  body.Category,
-		Status:                    database.GalleryListingStatusPending,
-		Title:                     panel.Title,
-		Content:                   panel.Content,
-		Colour:                    panel.Colour,
-		ImageUrl:                  panel.ImageUrl,
-		ThumbnailUrl:              panel.ThumbnailUrl,
-		ButtonStyle:               intToInt16Ptr(panel.ButtonStyle),
-		ButtonLabel:               panel.ButtonLabel,
-		EmojiName:                 panel.EmojiName,
-		WelcomeMessage:            welcomeMessageJSON,
+		SubmitterUserId: userId,
+		SourceGuildId:   guildId,
+		Name:            body.Name,
+		Description:     body.Description,
+		Category:        body.Category,
+		Status:          database.GalleryListingStatusPending,
+		Title:           panel.Title,
+		Content:         panel.Content,
+		Colour:          panel.Colour,
+		ImageUrl:        panel.ImageUrl,
+		ThumbnailUrl:    panel.ThumbnailUrl,
+		ButtonStyle:     intToInt16Ptr(panel.ButtonStyle),
+		ButtonLabel:     panel.ButtonLabel,
+		EmojiName:       panel.EmojiName,
+		WelcomeMessage:  welcomeMessageJSON,
 	}
 
 	listingId, err := dbclient.Client.GalleryListings.Create(ctx, listing)

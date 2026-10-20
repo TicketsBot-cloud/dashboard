@@ -219,7 +219,7 @@ const GuildSettings: FC = () => {
               { key: null, label: "None" },
               ...panels.map((p) => ({
                 key: p.panel_id.toString(),
-                label: p.title,
+                label: p.name || p.title,
                 color: intToColour(p.colour),
               })),
             ]}

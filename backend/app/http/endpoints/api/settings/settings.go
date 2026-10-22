@@ -20,7 +20,7 @@ type (
 		Language      *string                `json:"language"`
 	}
 
-	ColourMap map[customisation.Colour]utils.HexColour
+	ColourMap map[customisation.Colour]*utils.HexColour
 )
 
 func loadSettings(ctx context.Context, guildId uint64) (Settings, error) {
@@ -101,20 +101,24 @@ func getColourMap(guildId uint64) (ColourMap, error) {
 		return nil, err
 	}
 
+	return newColourMap(raw), nil
+}
+
+func newColourMap(raw map[int16]*int) ColourMap {
 	colours := make(ColourMap)
 	for id, hex := range raw {
 		if !utils.Exists(activeColours, customisation.Colour(id)) {
 			continue
 		}
 
-		colours[customisation.Colour(id)] = utils.HexColour(hex)
+		colours[customisation.Colour(id)] = utils.ConvertPtr[utils.HexColour](hex)
 	}
 
 	for _, id := range activeColours {
 		if _, ok := colours[id]; !ok {
-			colours[id] = utils.HexColour(customisation.DefaultColours[id])
+			colours[id] = utils.Ptr(utils.HexColour(customisation.DefaultColours[id]))
 		}
 	}
 
-	return colours, nil
+	return colours
 }

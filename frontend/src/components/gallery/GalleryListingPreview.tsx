@@ -3,6 +3,7 @@ import DiscordText from "@/components/discord/DiscordText";
 import { parseDiscordMarkdown } from "@/lib/discord-markdown";
 import EmbedPreview from "@/components/EmbedPreview";
 import DiscordButton from "@/components/discord/container/Button";
+import { embedColourInt } from "@/lib/colour";
 import type {
   GalleryListing,
   GalleryTagSnapshot,
@@ -135,7 +136,7 @@ const PanelListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ li
             raw={raw}
             embed={{
               ...welcomeMessage,
-              colour: parseInt(welcomeMessage.colour, 10) || listing.colour,
+              colour: embedColourInt(welcomeMessage.colour),
             }}
           />
         </PreviewSection>
@@ -164,12 +165,7 @@ const TagListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ list
           className="text-gray-300 text-sm mb-4 bg-gray-900 rounded p-3"
         />
       )}
-      {snapshot.embed && (
-        <EmbedPreview
-          raw={raw}
-          embed={{ ...snapshot.embed, colour: snapshot.embed.colour || 0x14b8a6 }}
-        />
-      )}
+      {snapshot.embed && <EmbedPreview raw={raw} embed={snapshot.embed} />}
     </PreviewSection>
   );
 };

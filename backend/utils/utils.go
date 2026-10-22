@@ -12,6 +12,26 @@ func ValueOrZero[T any](v *T) T {
 	}
 }
 
+type integer interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
+func ConvertPtr[U, T integer](v *T) *U {
+	if v == nil {
+		return nil
+	}
+
+	return Ptr(U(*v))
+}
+
+func PtrEqual[T comparable](a, b *T) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	return *a == *b
+}
+
 func SetNilIfZero[T comparable](value **T) {
 	if value != nil && *value != nil && **value == *new(T) {
 		*value = nil

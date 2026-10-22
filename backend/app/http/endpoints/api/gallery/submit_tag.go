@@ -116,7 +116,7 @@ func SubmitTagHandler(ctx *gin.Context) {
 		// Panel fields left at zero values for non-panel listings
 		Title:       "",
 		Content:     "",
-		Colour:      0,
+		Colour:      nil,
 		ButtonLabel: "",
 	}
 

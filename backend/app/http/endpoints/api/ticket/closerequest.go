@@ -84,6 +84,16 @@ func CloseRequest(c *gin.Context) {
 		return
 	}
 
+	if body.Reason != nil {
+		reason, ok := resolveCloseReason(c, ticket, *body.Reason)
+		if !ok {
+			c.JSON(http.StatusBadRequest, utils.ErrorStr(closeReasonNotPredefined))
+			return
+		}
+
+		body.Reason = &reason
+	}
+
 	botCtx, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorStr("Unable to connect to Discord. Please try again later."))

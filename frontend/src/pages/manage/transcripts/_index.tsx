@@ -24,11 +24,13 @@ import { cellClass, type ResponsiveColumn } from "@/lib/table-columns";
 import Pagination from "@/components/Pagination";
 import TextInput from "@/components/TextInput";
 import Textarea from "@/components/Textarea";
+import CloseReasonSelect from "@/components/CloseReasonSelect";
 import Select from "@/components/Select";
 import LabelBadge from "@/components/LabelBadge";
 import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
 import { colourToInt, intToColour } from "@/lib/colour";
+import { resolveCloseReason } from "@/lib/close-reasons";
 import ActionDropdown from "@/components/ActionDropdown";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import DismissibleModal from "@/components/modal-primitives/DismissibleModal";
@@ -354,13 +356,24 @@ const TranscriptsPage: FC = () => {
   };
 
   // Close reason
+  const editingTicket = transcripts.find((t) => t.ticket_id === editingTicketId);
+  const editCloseReasons = panels.find(
+    (p) => p.panel_id === editingTicket?.panel_id,
+  )?.close_reasons;
+
   const saveCloseReason = async () => {
     if (editingTicketId === null) return;
+    const { reason: canonical, allowed } = resolveCloseReason(editCloseReasons, editReason);
+    if (!allowed) {
+      setEditingTicketId(null);
+      setEditReason("");
+      return;
+    }
     try {
-      await apiClient.tickets.updateCloseReason(guildId, editingTicketId, editReason || null);
+      await apiClient.tickets.updateCloseReason(guildId, editingTicketId, canonical || null);
       setTranscripts((prev) =>
         prev.map((t) =>
-          t.ticket_id === editingTicketId ? { ...t, close_reason: editReason || undefined } : t,
+          t.ticket_id === editingTicketId ? { ...t, close_reason: canonical || undefined } : t,
         ),
       );
       setEditingTicketId(null);
@@ -752,12 +765,23 @@ const TranscriptsPage: FC = () => {
       <ActionModal isOpen={editingTicketId !== null} onClose={() => setEditingTicketId(null)}>
         <div className="p-6">
           <h3 className="text-lg font-medium text-white mb-4">Edit Close Reason</h3>
-          <Textarea
-            value={editReason}
-            onChange={setEditReason}
-            placeholder="No reason specified"
-            max={2000}
-          />
+          {editCloseReasons?.reasons.length ? (
+            <CloseReasonSelect
+              label="Close reason"
+              hideLabel
+              closeReasons={editCloseReasons}
+              value={editReason}
+              onChange={setEditReason}
+              max={2000}
+            />
+          ) : (
+            <Textarea
+              value={editReason}
+              onChange={setEditReason}
+              placeholder="No reason specified"
+              max={2000}
+            />
+          )}
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="secondary" onClick={() => setEditingTicketId(null)}>
               Cancel

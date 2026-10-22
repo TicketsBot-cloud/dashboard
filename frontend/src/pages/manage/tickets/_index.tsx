@@ -30,6 +30,7 @@ import { useTableSort } from "@/hooks/useTableSort";
 import { toTime, type SortColumn, type SortDir } from "@/lib/table-sort";
 import { cellClass, type ResponsiveColumn } from "@/lib/table-columns";
 import TextInput from "@/components/TextInput";
+import CloseReasonSelect from "@/components/CloseReasonSelect";
 import NumberInput from "@/components/NumberInput";
 import Select from "@/components/Select";
 import Slider from "@/components/Slider";
@@ -40,13 +41,18 @@ import LabelBadge from "@/components/LabelBadge";
 import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
 import { colourToInt, intToColour } from "@/lib/colour";
+import {
+  CLOSE_REASON_NOT_PREDEFINED,
+  matchCloseReason,
+  resolveCloseReason,
+} from "@/lib/close-reasons";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import DismissibleModal from "@/components/modal-primitives/DismissibleModal";
 import EmptyState from "@/components/EmptyState";
 import { MainLayout } from "@/pages/layout/Main";
 import { useGuildStore } from "@/stores/guild";
 import Skeleton from "react-loading-skeleton";
-import type { Panel, OpenTicket, Tag, TicketLabel } from "@/types";
+import type { Panel, PanelCloseReasons, OpenTicket, Tag, TicketLabel } from "@/types";
 
 // --- Helpers ---
 function getRelativeTime(date: Date): string {
@@ -81,6 +87,19 @@ function panelTitle(titles: Record<string, string>, panelId: number | null): str
   if (panelId == null) return "None";
   return titles[String(panelId)] || "Unknown Panel";
 }
+
+function failedSummary(failed: Record<string, string>): string {
+  const messages = Object.values(failed);
+  const shared = messages.length > 0 && messages.every((m) => m === CLOSE_REASON_NOT_PREDEFINED);
+  return shared ? `${messages.length} failed: ${messages[0]}.` : `${messages.length} failed.`;
+}
+
+const SkippedNote: FC<{ count: number }> = ({ count }) =>
+  count > 0 ? (
+    <p className="text-yellow-400 text-sm">
+      {count} ticket{count !== 1 ? "s" : ""} will be skipped.
+    </p>
+  ) : null;
 
 // Triage order, not a column sort: direction-independent by design.
 function compareUnclaimed(a: OpenTicket, b: OpenTicket, selfId: string): number {
@@ -445,6 +464,29 @@ const TicketsPage: FC = () => {
   }, [processedTicketIds]);
 
   // --- Bulk actions ---
+  const selectedCloseReasons = useMemo(() => {
+    const byPanel = new Map(panels.map((p) => [p.panel_id, p.close_reasons]));
+    return tickets
+      .filter((t) => selectedTicketIds.has(t.id))
+      .map((t) => (t.panel_id == null ? undefined : byPanel.get(t.panel_id)));
+  }, [panels, tickets, selectedTicketIds]);
+
+  const bulkCloseReasons = useMemo<PanelCloseReasons>(() => {
+    const reasons: string[] = [];
+    for (const closeReasons of selectedCloseReasons) {
+      for (const reason of closeReasons?.reasons ?? []) {
+        if (matchCloseReason(reasons, reason) === undefined) reasons.push(reason);
+      }
+    }
+    return {
+      reasons,
+      allow_custom: selectedCloseReasons.every((cr) => !cr?.reasons.length || cr.allow_custom),
+    };
+  }, [selectedCloseReasons]);
+
+  const countSkipped = (reason: string) =>
+    selectedCloseReasons.filter((cr) => !resolveCloseReason(cr, reason).allowed).length;
+
   const [showBulkCloseModal, setShowBulkCloseModal] = useState(false);
   const [bulkCloseReason, setBulkCloseReason] = useState("");
   const [bulkClosing, setBulkClosing] = useState(false);
@@ -466,7 +508,7 @@ const TicketsPage: FC = () => {
         : "";
       if (Object.keys(failed).length > 0) {
         toast.warning(
-          `Closed ${closed.length} ticket${closed.length !== 1 ? "s" : ""}. ${Object.keys(failed).length} failed.${bgNote}`,
+          `Closed ${closed.length} ticket${closed.length !== 1 ? "s" : ""}. ${failedSummary(failed)}${bgNote}`,
           { id: toastId },
         );
       } else if (background_count) {
@@ -556,7 +598,7 @@ const TicketsPage: FC = () => {
         : "";
       if (Object.keys(failed).length > 0) {
         toast.warning(
-          `Sent to ${sent.length} ticket${sent.length !== 1 ? "s" : ""}. ${Object.keys(failed).length} failed.${bgNote}`,
+          `Sent to ${sent.length} ticket${sent.length !== 1 ? "s" : ""}. ${failedSummary(failed)}${bgNote}`,
           { id: toastId },
         );
       } else if (background_count) {
@@ -1075,12 +1117,25 @@ const TicketsPage: FC = () => {
           </h3>
         </div>
         <div className="p-5 flex flex-col gap-4">
-          <TextInput
-            label="Close reason"
-            value={bulkCloseReason}
-            onChange={(v) => setBulkCloseReason(v)}
-            placeholder="Enter a reason..."
-          />
+          {bulkCloseReasons.reasons.length > 0 ? (
+            <>
+              <CloseReasonSelect
+                label="Close reason"
+                closeReasons={bulkCloseReasons}
+                value={bulkCloseReason}
+                onChange={setBulkCloseReason}
+                max={1024}
+              />
+              <SkippedNote count={countSkipped(bulkCloseReason)} />
+            </>
+          ) : (
+            <TextInput
+              label="Close reason"
+              value={bulkCloseReason}
+              onChange={(v) => setBulkCloseReason(v)}
+              placeholder="Enter a reason..."
+            />
+          )}
           <div className="flex justify-end gap-2">
             <Button
               variant="secondary"
@@ -1217,12 +1272,25 @@ const TicketsPage: FC = () => {
           </h3>
         </div>
         <div className="p-5 flex flex-col gap-4">
-          <TextInput
-            label="Reason"
-            value={bulkCloseRequestReason}
-            onChange={(v) => setBulkCloseRequestReason(v)}
-            placeholder="Reason (optional)"
-          />
+          {bulkCloseReasons.reasons.length > 0 ? (
+            <>
+              <CloseReasonSelect
+                label="Reason"
+                closeReasons={bulkCloseReasons}
+                value={bulkCloseRequestReason}
+                onChange={setBulkCloseRequestReason}
+                max={255}
+              />
+              <SkippedNote count={countSkipped(bulkCloseRequestReason)} />
+            </>
+          ) : (
+            <TextInput
+              label="Reason"
+              value={bulkCloseRequestReason}
+              onChange={(v) => setBulkCloseRequestReason(v)}
+              placeholder="Reason (optional)"
+            />
+          )}
           <NumberInput
             label="Auto-close delay (hours)"
             value={bulkCloseRequestDelay}

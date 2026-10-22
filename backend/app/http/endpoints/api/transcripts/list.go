@@ -22,6 +22,7 @@ type transcriptLabelData struct {
 
 type transcriptMetadata struct {
 	TicketId      int                   `json:"ticket_id"`
+	PanelId       *int                  `json:"panel_id"`
 	Username      string                `json:"username"`
 	CloseReason   *string               `json:"close_reason"`
 	ClosedBy      *uint64               `json:"closed_by"`
@@ -169,6 +170,7 @@ func ListTranscripts(ctx *gin.Context) {
 	for i, ticket := range tickets {
 		transcript := transcriptMetadata{
 			TicketId:      ticket.Id,
+			PanelId:       ticket.PanelId,
 			Username:      usernames[ticket.UserId],
 			HasTranscript: ticket.HasTranscript,
 		}

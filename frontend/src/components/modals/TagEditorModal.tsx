@@ -12,6 +12,7 @@ import EmbedPreview from "@/components/EmbedPreview";
 import DiscordContent from "@/components/discord/DiscordContent";
 import DateTimePicker from "@/components/DateTimePicker";
 import { useKBArticles } from "@/hooks/queries/useKB";
+import { usePreviewEntities } from "@/hooks/usePreviewEntities";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { embedUrlError } from "@/lib/embed-url";
 import type { Tag, TagEmbed } from "@/types";
@@ -52,6 +53,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
   onSave,
   onClose,
 }) => {
+  const previewEntities = usePreviewEntities();
   const [id, setId] = useState("");
   const [useGuildCommand, setUseGuildCommand] = useState(false);
   const [content, setContent] = useState("");
@@ -433,6 +435,8 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                 {hasArticlePreview && (
                   <DiscordContent
                     content={linkedArticle.content ?? ""}
+                    entities={previewEntities}
+                    webhook
                     className="text-sm bg-[#242429] rounded p-3"
                   />
                 )}
@@ -447,6 +451,8 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                 {hasContentPreview && (
                   <DiscordContent
                     content={content}
+                    entities={previewEntities}
+                    webhook
                     className="mt-4 text-sm bg-[#242429] rounded p-3"
                   />
                 )}

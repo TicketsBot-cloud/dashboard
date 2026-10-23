@@ -4,7 +4,14 @@ import type { DiscordEmbedProps } from "./types";
 import { isSafeUrl } from "@/lib/url";
 import DiscordContent from "./DiscordContent";
 
-const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({ embed, entities, className = "" }) => {
+const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({
+  embed,
+  entities,
+  legacy = false,
+  className = "",
+}) => {
+  // An embed with a url drops link rules from its title and field names.
+  const titleProfile = embed.url ? "embedTitleNoLinks" : "embedTitle";
   const formatTimestamp = (timestamp: string): string => {
     return new Date(timestamp).toLocaleDateString([], {
       year: "numeric",
@@ -51,6 +58,7 @@ const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({ embed, entities, classNa
               <DiscordContent
                 content={embed.title}
                 entities={entities}
+                profile={titleProfile}
                 className="text-blue-400! hover:underline font-semibold text-lg"
               />
             </a>
@@ -58,6 +66,7 @@ const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({ embed, entities, classNa
             <DiscordContent
               content={embed.title}
               entities={entities}
+              profile={titleProfile}
               className="text-white font-semibold text-lg"
             />
           )}
@@ -68,6 +77,8 @@ const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({ embed, entities, classNa
         <DiscordContent
           content={embed.description}
           entities={entities}
+          profile="embedDescription"
+          legacy={legacy}
           className="text-gray-300 text-sm mb-3"
         />
       )}
@@ -82,11 +93,14 @@ const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({ embed, entities, classNa
               <DiscordContent
                 content={field.name}
                 entities={entities}
+                profile={titleProfile}
                 className="text-white font-semibold text-sm mb-1"
               />
               <DiscordContent
                 content={field.value}
                 entities={entities}
+                profile="embedFieldValue"
+                legacy={legacy}
                 className="text-gray-300 text-sm"
               />
             </div>

@@ -354,7 +354,11 @@ function NotificationCard({
           </div>
 
           {/* Body */}
-          <DiscordContent content={notification.body} className="text-sm text-gray-300" />
+          <DiscordContent
+            content={notification.body}
+            profile="textDisplay"
+            className="text-sm text-gray-300 discord-markup--underline-links"
+          />
         </div>
 
         {/* Right side: timestamp, unread dot, and mark-read button */}

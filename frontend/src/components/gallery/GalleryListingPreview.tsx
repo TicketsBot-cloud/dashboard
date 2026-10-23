@@ -1,6 +1,8 @@
 import type { FC, ReactNode } from "react";
 import DiscordText from "@/components/discord/DiscordText";
 import { parseDiscordMarkdown } from "@/lib/discord-markdown";
+import type { MdProfile } from "@/lib/discord-markdown";
+import type { DiscordEmojiTable } from "@/lib/discord-emoji";
 import EmbedPreview from "@/components/EmbedPreview";
 import DiscordButton from "@/components/discord/container/Button";
 import type {
@@ -47,54 +49,75 @@ export const GALLERY_TYPE_OPTIONS = Object.entries(GALLERY_TYPE_BADGES).map(([ke
   color: badge.dot,
 }));
 
-// Anything the parser leaves as plain text renders identically either way.
-function hasMarkdown(content: string | undefined): boolean {
+type MarkdownField = [content: string | undefined, profile: MdProfile, webhook?: boolean];
+
+// Only output differing from the source counts: a typed emoji is plain text, a :shortcode: isn't.
+function hasMarkdown(
+  [content, profile, webhook]: MarkdownField,
+  emoji: DiscordEmojiTable | null,
+): boolean {
   if (!content) return false;
 
   const source = content.replace(/\r\n?/g, "\n");
   let plain = "";
-  for (const node of parseDiscordMarkdown(source)) {
-    if (node.type !== "text") return true;
-    plain += node.value;
+  for (const node of parseDiscordMarkdown(source, profile, { emoji, webhook })) {
+    if (node.type === "text") plain += node.value;
+    else if (node.type === "unicodeEmoji") plain += node.surrogate;
+    else return true;
   }
   return plain !== source;
 }
 
+function embedFields(
+  embed:
+    | {
+        title?: string;
+        description?: string;
+        url?: string;
+        fields?: { name: string; value: string }[];
+      }
+    | undefined,
+): MarkdownField[] {
+  const titleProfile: MdProfile = embed?.url ? "embedTitleNoLinks" : "embedTitle";
+  return [
+    [embed?.title, titleProfile],
+    [embed?.description, "embedDescription"],
+    ...(embed?.fields ?? []).flatMap((field): MarkdownField[] => [
+      [field.name, titleProfile],
+      [field.value, "embedFieldValue"],
+    ]),
+  ];
+}
+
 // Only the text EmbedPreview, TagListingPreview and form Text Display fields pass through
 // DiscordText. Form labels and placeholders are not markdown surfaces in Discord.
-function markdownFields(listing: GalleryListing): (string | undefined)[] {
+function markdownFields(listing: GalleryListing): MarkdownField[] {
   const listingType = listing.listing_type || "panel";
 
   if (listingType === "form") {
     const snapshot = listing.snapshot_data as GalleryFormSnapshot | undefined;
     return (snapshot?.inputs ?? [])
       .filter((input) => input.type === 10)
-      .map((input) => input.content);
+      .map((input): MarkdownField => [input.content, "textDisplay"]);
   }
 
   if (listingType === "tag") {
     const snapshot = listing.snapshot_data as GalleryTagSnapshot | undefined;
-    const embed = snapshot?.embed;
-    return [
-      snapshot?.content,
-      embed?.title,
-      embed?.description,
-      ...(embed?.fields ?? []).flatMap((field) => [field.name, field.value]),
-    ];
+    return [[snapshot?.content, "content", true], ...embedFields(snapshot?.embed)];
   }
 
-  const welcomeMessage = listing.welcome_message;
   return [
-    listing.title,
-    listing.content,
-    welcomeMessage?.title,
-    welcomeMessage?.description,
-    ...(welcomeMessage?.fields ?? []).flatMap((field) => [field.name, field.value]),
+    [listing.title, "embedTitle"],
+    [listing.content, "embedDescription"],
+    ...embedFields(listing.welcome_message),
   ];
 }
 
-export function listingHasMarkdown(listing: GalleryListing): boolean {
-  return markdownFields(listing).some(hasMarkdown);
+export function listingHasMarkdown(
+  listing: GalleryListing,
+  emoji: DiscordEmojiTable | null,
+): boolean {
+  return markdownFields(listing).some((field) => hasMarkdown(field, emoji));
 }
 
 const PreviewSection: FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
@@ -161,6 +184,7 @@ const TagListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ list
         <DiscordText
           raw={raw}
           content={snapshot.content}
+          webhook
           className="text-gray-300 text-sm mb-4 bg-gray-900 rounded p-3"
         />
       )}
@@ -195,7 +219,12 @@ const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot; raw: boolean }>
         </div>
       </div>
       {isTextDisplay && input.content && (
-        <DiscordText raw={raw} content={input.content} className="text-gray-300 text-sm" />
+        <DiscordText
+          raw={raw}
+          content={input.content}
+          profile="textDisplay"
+          className="text-gray-300 text-sm"
+        />
       )}
       {input.description && <p className="text-gray-400 text-xs mt-1">{input.description}</p>}
       {input.placeholder && (

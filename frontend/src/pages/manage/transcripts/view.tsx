@@ -92,11 +92,13 @@ const TranscriptsView: FC = () => {
   const entities = useMemo(() => {
     if (!transcript) return null;
     const guildRoles = Object.fromEntries((guild?.roles ?? []).map((r) => [r.id, r]));
+    const guildChannels = Object.fromEntries((guild?.channels ?? []).map((c) => [String(c.id), c]));
     return {
       ...transcript.entities,
+      channels: { ...guildChannels, ...transcript.entities.channels },
       roles: { ...transcript.entities.roles, ...guildRoles },
     };
-  }, [transcript, guild?.roles]);
+  }, [transcript, guild?.roles, guild?.channels]);
 
   return (
     <MainLayout title={`Transcript #${transcriptId}`}>

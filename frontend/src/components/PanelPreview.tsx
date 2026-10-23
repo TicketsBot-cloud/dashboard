@@ -7,6 +7,7 @@ import { BRANDING_FOOTER_ICON, BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { formatEmbedTimestampForDisplay } from "@/lib/embed-timestamp";
 import { isSafeUrl } from "@/lib/url";
 import { previewAvatarUrl } from "@/lib/embed-avatar";
+import { usePreviewEntities } from "@/hooks/usePreviewEntities";
 
 function resolveEmoteName(emote: Panel["emote"] | undefined): string {
   if (typeof emote === "string") return emote;
@@ -30,6 +31,7 @@ interface PanelPreviewProps {
 
 const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => {
   const { panel, buttons } = data;
+  const entities = usePreviewEntities();
 
   if (type === "panel") {
     const p = panel as Panel;
@@ -43,9 +45,16 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
         >
           <div className="flex">
             <div className="flex-1 min-w-0">
-              <DiscordContent content={p.title} className="text-base font-semibold text-white" />
+              <DiscordContent
+                content={p.title}
+                profile="embedTitle"
+                entities={entities}
+                className="text-base font-semibold text-white"
+              />
               <DiscordContent
                 content={p.content}
+                profile="embedDescription"
+                entities={entities}
                 className="text-sm mt-1 text-[#dbdee1] leading-snug"
               />
             </div>
@@ -149,6 +158,8 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
   const authorIconUrl = resolveTicketAvatar(embedData?.author?.icon_url);
   const authorUrl = resolveTicketAvatar(embedData?.author?.url);
   const titleUrl = resolveTicketAvatar(embedData?.url);
+  // An embed with a url drops link rules from its title and field names.
+  const titleProfile = embedData?.url ? "embedTitleNoLinks" : "embedTitle";
 
   return (
     <>
@@ -187,18 +198,24 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
                 <a href={titleUrl} target="_blank" rel="noopener noreferrer">
                   <DiscordContent
                     content={embedData.title}
+                    profile={titleProfile}
+                    entities={entities}
                     className="text-base font-semibold text-[#00a8fc] hover:underline"
                   />
                 </a>
               ) : (
                 <DiscordContent
                   content={embedData.title}
+                  profile={titleProfile}
+                  entities={entities}
                   className="text-base font-semibold text-white"
                 />
               ))}
             {embedData?.description && (
               <DiscordContent
                 content={embedData.description}
+                profile="embedDescription"
+                entities={entities}
                 className="text-sm mt-1 text-[#dbdee1] leading-snug"
               />
             )}
@@ -216,9 +233,16 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
                       <div key={fi} className="min-w-0">
                         <DiscordContent
                           content={field.name}
+                          profile={titleProfile}
+                          entities={entities}
                           className="text-xs font-semibold text-white"
                         />
-                        <DiscordContent content={field.value} className="text-xs text-[#dbdee1]" />
+                        <DiscordContent
+                          content={field.value}
+                          profile="embedFieldValue"
+                          entities={entities}
+                          className="text-xs text-[#dbdee1]"
+                        />
                       </div>
                     ))}
                   </div>

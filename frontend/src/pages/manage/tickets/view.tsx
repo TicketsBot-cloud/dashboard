@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FC } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
 import { apiClient } from "@/lib/api";
 import { Navigate, useParams, useNavigate } from "react-router";
 
@@ -31,6 +31,7 @@ import { faEyeSlash, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
 import Skeleton from "react-loading-skeleton";
 import { showApiErrorToast } from "@/lib/api-error";
 import { useGuildPremium } from "@/hooks/queries/useGuild";
+import { usePreviewEntities } from "@/hooks/usePreviewEntities";
 
 function authorToUser(author: StrippedMessage["author"]): User {
   return {
@@ -152,6 +153,15 @@ const TicketViewPage: FC = () => {
     channels: {},
     roles: {},
   });
+  const guildEntities = usePreviewEntities();
+  const messageEntities = useMemo(
+    () => ({
+      ...entities,
+      channels: { ...guildEntities?.channels, ...entities.channels },
+      roles: { ...guildEntities?.roles, ...entities.roles },
+    }),
+    [entities, guildEntities],
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
@@ -719,7 +729,7 @@ const TicketViewPage: FC = () => {
               <DiscordMessage
                 key={msg.id}
                 message={msg}
-                entities={entities}
+                entities={messageEntities}
                 compact={false}
                 showTimestamp={true}
                 className="mb-2"

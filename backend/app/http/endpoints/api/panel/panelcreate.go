@@ -40,7 +40,7 @@ type panelBody struct {
 	MessageId                 uint64                             `json:"message_id,string"`
 	Title                     string                             `json:"title"`
 	Content                   string                             `json:"content"`
-	Colour                    uint32                             `json:"colour"`
+	Colour                    *uint32                            `json:"colour" validate:"omitempty,max=16777215"`
 	CategoryId                uint64                             `json:"category_id,string"`
 	Emoji                     types.Emoji                        `json:"emote"`
 	WelcomeMessage            *types.CustomEmbed                 `json:"welcome_message" validate:"omitempty"`
@@ -86,7 +86,7 @@ func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) pan
 		Title:          p.Title,
 		Content:        p.Content,
 		CustomId:       customId,
-		Colour:         int(p.Colour),
+		Colour:         utils.ConvertPtr[int](p.Colour),
 		ImageUrl:       p.ImageUrl,
 		ThumbnailUrl:   p.ThumbnailUrl,
 		Emoji:          p.getEmoji(),
@@ -290,7 +290,7 @@ func CreatePanel(c *gin.Context) {
 		GuildId:                   guildId,
 		Title:                     data.Title,
 		Content:                   data.Content,
-		Colour:                    int32(data.Colour),
+		Colour:                    utils.ConvertPtr[int32](data.Colour),
 		TargetCategory:            data.CategoryId,
 		EmojiId:                   emojiId,
 		EmojiName:                 emojiName,

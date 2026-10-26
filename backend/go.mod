@@ -6,7 +6,7 @@ go 1.26.0
 
 // replace github.com/TicketsBot-cloud/common => ../../common
 
-replace github.com/TicketsBot-cloud/worker => ../../worker
+// replace github.com/TicketsBot-cloud/worker => ../../worker
 
 // replace github.com/TicketsBot-cloud/gdl => ../../gdl
 
@@ -19,7 +19,7 @@ require (
 	github.com/TicketsBot-cloud/database v0.0.0-20261022191045-27b0736fc5a3
 	github.com/TicketsBot-cloud/gdl v0.0.0-20261022191043-9caa827c743a
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20260929182354-92f0b13a1e1f
-	github.com/TicketsBot-cloud/worker v0.0.0-20261022190051-090307fd295d
+	github.com/TicketsBot-cloud/worker v0.0.0-20261026221951-1d6f2e690ed4
 	github.com/apex/log v1.9.0
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/getsentry/sentry-go v0.50.0
@@ -70,7 +70,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.16 // indirect
 	github.com/gin-contrib/sse v1.1.2 // indirect
 	github.com/go-chi/chi/v5 v5.5.0 // indirect
-	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-playground/locales v0.14.2 // indirect
 	github.com/go-playground/universal-translator v0.18.2 // indirect
 	github.com/go-redsync/redsync/v4 v4.18.0 // indirect
@@ -81,8 +80,6 @@ require (
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/gorilla/sessions v1.4.0 // indirect
 	github.com/growthbook/growthbook-golang v0.6.0 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -141,6 +138,5 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.17 // indirect
 )

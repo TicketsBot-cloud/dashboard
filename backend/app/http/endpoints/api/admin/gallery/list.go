@@ -39,7 +39,7 @@ type adminListingResponse struct {
 	SnapshotData   stdjson.RawMessage `json:"snapshot_data,omitempty"`
 	Title          string             `json:"title"`
 	Content        string             `json:"content"`
-	Colour         int32              `json:"colour"`
+	Colour         *int32             `json:"colour"`
 	ImageUrl       *string            `json:"image_url"`
 	ThumbnailUrl   *string            `json:"thumbnail_url"`
 	ButtonStyle    *int16             `json:"button_style"`

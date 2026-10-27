@@ -1,4 +1,5 @@
 import type { GuildChannel, GuildRole, User } from "@/types";
+import { intToColour } from "@/lib/colour";
 import DiscordContent from "../DiscordContent";
 import ActionRow from "./ActionRow";
 import Button from "./Button";
@@ -13,7 +14,7 @@ interface ContainerProps {
   };
   component?: {
     spoiler?: boolean;
-    accent_color?: string;
+    accent_color?: number | null;
     type?: number;
     emoji?: { name: string };
     label?: string;
@@ -62,7 +63,8 @@ interface ContainerProps {
 }
 
 export default function Container({ component = {}, entities }: ContainerProps) {
-  const borderColor = component.accent_color || "transparent";
+  const borderColor =
+    component.accent_color != null ? intToColour(component.accent_color) : "transparent";
   const spoilerClass = component.spoiler ? "blur hover:blur-none" : "";
 
   return (

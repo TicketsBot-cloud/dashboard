@@ -107,7 +107,7 @@ export interface GuildSettings {
     switch_panel_claim_behavior: number;
   };
   colours: {
-    [key: string]: string;
+    [key: string]: string | null;
   };
   language: string;
   locales: Array<{
@@ -177,7 +177,7 @@ export interface Panel {
   guild_id: Snowflake;
   title: string;
   content: string;
-  colour: number;
+  colour: number | null;
   category_id: string;
   emoji_name?: string;
   emoji_id?: string;
@@ -226,7 +226,7 @@ export interface Panel {
     title?: string;
     description: string;
     url?: string;
-    colour: string;
+    colour: string | null;
     author: {
       name?: string;
       icon_url?: string;
@@ -292,7 +292,7 @@ export interface MultiPanelEmbed {
     icon_url?: string;
     url?: string;
   };
-  colour: string;
+  colour: string | null;
   description?: string;
   fields?: Array<{
     name: string;
@@ -432,7 +432,7 @@ export interface SupportHoursData {
   out_of_hours_behaviour: "block_creation" | "allow_with_warning";
   out_of_hours_title: string;
   out_of_hours_message: string;
-  out_of_hours_colour: number;
+  out_of_hours_colour: number | null;
 }
 
 export interface BotStaffMember {
@@ -516,7 +516,7 @@ export interface TagEmbed {
   title?: string;
   description?: string;
   url?: string;
-  colour: number;
+  colour: number | null;
   author: { name?: string; icon_url?: string; url?: string };
   image_url?: string;
   thumbnail_url?: string;
@@ -1072,7 +1072,7 @@ export interface GalleryListing {
   // Panel visual design fields
   title: string;
   content: string;
-  colour: number;
+  colour: number | null;
   image_url?: string;
   thumbnail_url?: string;
   button_style: number | null;

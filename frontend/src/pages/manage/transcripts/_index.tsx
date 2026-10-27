@@ -29,7 +29,7 @@ import Select from "@/components/Select";
 import LabelBadge from "@/components/LabelBadge";
 import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
-import { colourToInt, intToColour } from "@/lib/colour";
+import { colourToInt, embedColourHex, intToColour } from "@/lib/colour";
 import { resolveCloseReason } from "@/lib/close-reasons";
 import ActionDropdown from "@/components/ActionDropdown";
 import ActionModal from "@/components/modal-primitives/ActionModal";
@@ -554,7 +554,7 @@ const TranscriptsPage: FC = () => {
                 ...panels.map((p) => ({
                   key: p.panel_id.toString(),
                   label: p.title,
-                  color: intToColour(p.colour),
+                  color: embedColourHex(p.colour) ?? undefined,
                 })),
               ]}
             />

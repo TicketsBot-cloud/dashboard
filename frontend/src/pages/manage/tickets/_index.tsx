@@ -40,7 +40,7 @@ import Textarea from "@/components/Textarea";
 import LabelBadge from "@/components/LabelBadge";
 import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
-import { colourToInt, intToColour } from "@/lib/colour";
+import { colourToInt, embedColourHex, intToColour } from "@/lib/colour";
 import {
   CLOSE_REASON_NOT_PREDEFINED,
   matchCloseReason,
@@ -773,7 +773,7 @@ const TicketsPage: FC = () => {
                 ...panels.map((p) => ({
                   key: p.panel_id.toString(),
                   label: p.title,
-                  color: intToColour(p.colour),
+                  color: embedColourHex(p.colour) ?? undefined,
                 })),
               ]}
             />

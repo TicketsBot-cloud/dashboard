@@ -24,6 +24,7 @@ import type { TagEmbed } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { embedUrlError } from "@/lib/embed-url";
+import { embedColourHex, embedColourInt } from "@/lib/colour";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 const defaultEmbed: TagEmbed = {
@@ -73,16 +74,10 @@ const EditKBArticlePage: FC = () => {
 
       if (article.embed) {
         setUseEmbed(true);
-        const embedColour = (() => {
-          const c = article.embed.colour;
-          if (typeof c === "number") return c;
-          const parsed = parseInt(String(c ?? "").replace(/^#/, ""), 16);
-          return isNaN(parsed) ? defaultEmbed.colour : parsed;
-        })();
         setEmbed({
           ...defaultEmbed,
           ...article.embed,
-          colour: embedColour,
+          colour: embedColourInt(article.embed.colour),
           author: { ...defaultEmbed.author, ...article.embed.author },
           footer: { ...defaultEmbed.footer, ...article.embed.footer },
           fields: article.embed.fields?.length ? [...article.embed.fields] : [],
@@ -330,12 +325,14 @@ const EditKBArticlePage: FC = () => {
                     showCount
                   />
                   <ColourSelect
+                    nullable
+                    clearable
                     label="Colour"
-                    value={`#${(embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`}
+                    value={embedColourHex(embed.colour)}
                     onChange={(v) =>
                       setEmbed((prev) => ({
                         ...prev,
-                        colour: parseInt(v.replace("#", ""), 16),
+                        colour: embedColourInt(v),
                       }))
                     }
                   />

@@ -185,7 +185,7 @@ func ImportHandler(ctx *gin.Context) {
 		e := embed.NewEmbed().
 			SetTitle(panel.Title).
 			SetDescription(panel.Content).
-			SetColor(int(panel.Colour))
+			SetColorPtr(utils.ConvertPtr[int](panel.Colour))
 
 		if panel.ImageUrl != nil {
 			e.SetImage(*panel.ImageUrl)

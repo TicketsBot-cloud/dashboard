@@ -6,6 +6,7 @@ import { faDownload, faStar } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router";
 import { GALLERY_TYPE_BADGES } from "@/components/gallery/GalleryListingPreview";
 import { userAvatarUrl } from "@/lib/discord-cdn";
+import { embedColourHex } from "@/lib/colour";
 
 interface GalleryCardProps {
   listing: GalleryListing;
@@ -18,21 +19,19 @@ interface GalleryCardProps {
 const BODY_CLASS =
   "group flex flex-col flex-1 p-4 text-left transition-colors hover:bg-gray-700/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset";
 
-function getColourHex(listing: GalleryListing): string {
+function getColourHex(listing: GalleryListing): string | undefined {
   const type = listing.listing_type || "panel";
 
   if (type === "tag") {
     const snapshot = listing.snapshot_data as GalleryTagSnapshot | undefined;
-    const embedColour = snapshot?.embed?.colour;
-    const colour = embedColour ?? 0x14b8a6;
-    return "#" + colour.toString(16).padStart(6, "0");
+    return embedColourHex(snapshot?.embed?.colour) ?? "#14b8a6";
   }
 
   if (type === "form") {
     return "#" + (0xf97316).toString(16).padStart(6, "0");
   }
 
-  return "#" + listing.colour.toString(16).padStart(6, "0");
+  return embedColourHex(listing.colour) ?? undefined;
 }
 
 function getContentPreview(listing: GalleryListing): string {

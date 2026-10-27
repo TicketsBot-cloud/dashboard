@@ -162,7 +162,7 @@ func buildCloseRequestMessage(locale *i18n.Locale, requesterId uint64, reason *s
 	msgEmbed := &embed.Embed{
 		Title:       i18n.GetMessage(locale, i18n.TitleCloseRequest),
 		Description: description,
-		Color:       0x2ECC71,
+		Color:       utils.Ptr(0x2ECC71),
 	}
 
 	components := []component.Component{

@@ -4,6 +4,7 @@ import { formatEmbedTimestampForDisplay } from "@/lib/embed-timestamp";
 import DiscordText from "@/components/discord/DiscordText";
 import { previewAvatarUrl } from "@/lib/embed-avatar";
 import { usePreviewEntities } from "@/hooks/usePreviewEntities";
+import { embedBorderColour } from "@/lib/colour";
 
 interface EmbedField {
   name: string;
@@ -15,7 +16,7 @@ interface EmbedPreviewData {
   title?: string;
   description?: string;
   url?: string;
-  colour: number;
+  colour?: number | null;
   author?: { name?: string; icon_url?: string; url?: string };
   image_url?: string;
   thumbnail_url?: string;
@@ -31,7 +32,7 @@ interface EmbedPreviewProps {
 
 const EmbedPreview: FC<EmbedPreviewProps> = ({ embed, raw = false }) => {
   const entities = usePreviewEntities();
-  const borderColor = `#${(embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`;
+  const borderColor = embedBorderColour(embed.colour);
   const footerTimestamp = formatEmbedTimestampForDisplay(embed.timestamp);
   const thumbnailUrl = previewAvatarUrl(embed.thumbnail_url);
   const imageUrl = previewAvatarUrl(embed.image_url);

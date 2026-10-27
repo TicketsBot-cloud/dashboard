@@ -8,6 +8,7 @@ import { formatEmbedTimestampForDisplay } from "@/lib/embed-timestamp";
 import { isSafeUrl } from "@/lib/url";
 import { previewAvatarUrl } from "@/lib/embed-avatar";
 import { usePreviewEntities } from "@/hooks/usePreviewEntities";
+import { embedBorderColour } from "@/lib/colour";
 
 function resolveEmoteName(emote: Panel["emote"] | undefined): string {
   if (typeof emote === "string") return emote;
@@ -40,7 +41,7 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
         <div
           className="bg-[#2b2d31] rounded border-l-4 p-3 w-full sm:max-w-130 mt-4"
           style={{
-            borderLeftColor: `#${(p.colour || 0x5865f2).toString(16).padStart(6, "0")}`,
+            borderLeftColor: embedBorderColour(p.colour),
           }}
         >
           <div className="flex">
@@ -112,7 +113,7 @@ const PanelPreview: FC<PanelPreviewProps> = ({ type, data, brandingFooter }) => 
   const resolveTicketAvatar = (url: string | null | undefined) =>
     isMultiPanelRequest ? url : previewAvatarUrl(url);
 
-  const borderColor = embedData?.colour || "#5865f2";
+  const borderColor = embedData ? embedBorderColour(embedData.colour) : "#5865f2";
 
   const footerText = embedData?.footer
     ? typeof embedData.footer === "string"

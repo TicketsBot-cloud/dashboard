@@ -26,7 +26,8 @@ const DiscordEmbedComponent: FC<DiscordEmbedProps> = ({
     <div
       className={`bg-gray-800 border-l-4 rounded-r p-4 mt-2 max-w-lg ${className}`}
       style={{
-        borderColor: embed.color ? `#${embed.color.toString(16).padStart(6, "0")}` : "#718096",
+        borderColor:
+          embed.color != null ? `#${embed.color.toString(16).padStart(6, "0")}` : "#718096",
       }}
     >
       {embed.author && (

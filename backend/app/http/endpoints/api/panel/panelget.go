@@ -28,6 +28,7 @@ func GetPanel(c *gin.Context) {
 		TicketPermissions            database.TicketPermissions        `json:"ticket_permissions"`
 		AutoClose                    PanelAutoCloseResponse            `json:"auto_close"`
 		MentionBehaviour             string                            `json:"mention_behaviour"`
+		CloseReasons                 database.PanelCloseReasons        `json:"close_reasons"`
 	}
 
 	guildId := c.Keys["guildid"].(uint64)
@@ -164,6 +165,12 @@ func GetPanel(c *gin.Context) {
 		return
 	}
 
+	closeReasons, err := dbclient.Client.PanelCloseReasons.Get(c, panel.PanelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panel"))
+		return
+	}
+
 	mentionBehaviour := panel.MentionBehaviour
 	if mentionBehaviour == "" {
 		mentionBehaviour = "none"
@@ -184,6 +191,7 @@ func GetPanel(c *gin.Context) {
 		TicketPermissions:            ticketPerms,
 		AutoClose:                    panelAutoCloseToResponse(autoCloseSettings),
 		MentionBehaviour:             mentionBehaviour,
+		CloseReasons:                 closeReasons,
 	})
 }
 

@@ -534,7 +534,7 @@ export function splitOnHeadings(body: string): string[] {
 export interface ClassicConversionSource {
   title?: string;
   body?: string;
-  colourHex: string;
+  colourHex: string | null;
   imageUrl?: string;
   thumbnailUrl?: string;
   fields?: Array<{ name: string; value: string; inline?: boolean }>;
@@ -614,7 +614,7 @@ export function convertClassicToComponentsV2(
   const buildContainer = (): V2Container => ({
     id: newId(),
     type: "container",
-    accentColor: source.colourHex,
+    accentColor: source.colourHex ?? undefined,
     components: mediaBlock ? [...textBlocks, mediaBlock] : [...textBlocks],
   });
 

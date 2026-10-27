@@ -8,6 +8,7 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/stretchr/testify/require"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 )
 
@@ -416,10 +417,11 @@ func TestRetainClassicFields(t *testing.T) {
 	stored := database.Panel{
 		Title:        "Stored title",
 		Content:      "Stored content",
-		Colour:       0x112233,
+		Colour:       utils.Ptr[int32](0x112233),
 		ImageUrl:     strPtr("https://example.com/stored.png"),
 		ThumbnailUrl: strPtr("https://example.com/stored-thumb.png"),
 	}
+	storedColour := utils.Ptr[uint32](0x112233)
 	goodUrl := strPtr("https://example.com/new.png")
 
 	tests := []struct {
@@ -429,58 +431,63 @@ func TestRetainClassicFields(t *testing.T) {
 	}{
 		{
 			name: "classic mode is untouched",
-			in:   panelBody{Title: "", Content: "", Colour: 0},
-			want: panelBody{Title: "", Content: "", Colour: 0},
+			in:   panelBody{Title: "", Content: "", Colour: nil},
+			want: panelBody{Title: "", Content: "", Colour: nil},
 		},
 		{
 			name: "v2 request omitting everything keeps the stored values",
 			in:   panelBody{MessageUsesComponentsV2: true},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "v2 request with valid values replaces them",
-			in:   panelBody{MessageUsesComponentsV2: true, Title: "New", Content: "New content", Colour: 0xFFFFFF, ImageUrl: goodUrl, ThumbnailUrl: goodUrl},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "New", Content: "New content", Colour: 0xFFFFFF, ImageUrl: goodUrl, ThumbnailUrl: goodUrl},
+			in:   panelBody{MessageUsesComponentsV2: true, Title: "New", Content: "New content", Colour: utils.Ptr[uint32](0xFFFFFF), ImageUrl: goodUrl, ThumbnailUrl: goodUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "New", Content: "New content", Colour: utils.Ptr[uint32](0xFFFFFF), ImageUrl: goodUrl, ThumbnailUrl: goodUrl},
+		},
+		{
+			name: "black replaces the stored colour",
+			in:   panelBody{MessageUsesComponentsV2: true, Title: "New", Colour: utils.Ptr[uint32](0)},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "New", Content: "Stored content", Colour: utils.Ptr[uint32](0), ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "title at 80 characters is accepted",
 			in:   panelBody{MessageUsesComponentsV2: true, Title: strings.Repeat("a", 80)},
-			want: panelBody{MessageUsesComponentsV2: true, Title: strings.Repeat("a", 80), Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: strings.Repeat("a", 80), Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "title at 81 characters keeps the stored one",
 			in:   panelBody{MessageUsesComponentsV2: true, Title: strings.Repeat("a", 81)},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "whitespace title keeps the stored one",
 			in:   panelBody{MessageUsesComponentsV2: true, Title: "   "},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "content at 4096 characters is accepted",
 			in:   panelBody{MessageUsesComponentsV2: true, Content: strings.Repeat("a", 4096)},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: strings.Repeat("a", 4096), Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: strings.Repeat("a", 4096), Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "content at 4097 characters keeps the stored one",
 			in:   panelBody{MessageUsesComponentsV2: true, Content: strings.Repeat("a", 4097)},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "colour above 0xFFFFFF keeps the stored one",
-			in:   panelBody{MessageUsesComponentsV2: true, Colour: 0x1000000},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			in:   panelBody{MessageUsesComponentsV2: true, Colour: utils.Ptr[uint32](0x1000000)},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "invalid urls never replace the stored ones",
 			in:   panelBody{MessageUsesComponentsV2: true, ImageUrl: strPtr("javascript:alert(1)"), ThumbnailUrl: strPtr("not a url")},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 		{
 			name: "url over 255 characters keeps the stored one",
 			in:   panelBody{MessageUsesComponentsV2: true, ImageUrl: strPtr("https://example.com/" + strings.Repeat("a", 236))},
-			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: 0x112233, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
+			want: panelBody{MessageUsesComponentsV2: true, Title: "Stored title", Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
 	}
 
@@ -496,6 +503,12 @@ func TestRetainClassicFields(t *testing.T) {
 		body.retainClassicFields(database.Panel{Title: "t", Content: "c"})
 		require.Nil(t, body.ImageUrl)
 		require.Nil(t, body.ThumbnailUrl)
+	})
+
+	t.Run("nothing stored and no colour supplied leaves the colour nil", func(t *testing.T) {
+		body := panelBody{MessageUsesComponentsV2: true}
+		body.retainClassicFields(database.Panel{Title: "t", Content: "c"})
+		require.Nil(t, body.Colour)
 	})
 }
 

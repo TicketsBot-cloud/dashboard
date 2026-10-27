@@ -580,7 +580,7 @@ func (p *panelBody) dropHiddenClassicEmbed() {
 // retainClassicFields keeps the stored classic message fields through a Components V2 save,
 // so switching back to Classic does not lose them. The editor hides these fields in V2 mode,
 // so a missing or invalid value means "unchanged" rather than an error or a reset to the
-// defaults. A zero colour is indistinguishable from an omitted one and is treated as omitted.
+// defaults. A null colour is indistinguishable from an omitted one and is treated as omitted.
 // It must run before ApplyPanelDefaults.
 func (p *panelBody) retainClassicFields(existing database.Panel) {
 	if !p.MessageUsesComponentsV2 {
@@ -595,8 +595,8 @@ func (p *panelBody) retainClassicFields(existing database.Panel) {
 		p.Content = existing.Content
 	}
 
-	if p.Colour == 0 || p.Colour > maxAccentColour {
-		p.Colour = uint32(existing.Colour)
+	if p.Colour == nil || *p.Colour > maxAccentColour {
+		p.Colour = utils.ConvertPtr[uint32](existing.Colour)
 	}
 
 	p.ImageUrl = suppliedClassicUrlOr(p.ImageUrl, existing.ImageUrl)

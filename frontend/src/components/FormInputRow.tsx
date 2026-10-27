@@ -7,6 +7,7 @@ import RangeSlider from "./RangeSlider";
 import NumberInput from "./NumberInput";
 import Textarea from "./Textarea";
 import DiscordContent from "./discord/DiscordContent";
+import { usePreviewEntities } from "@/hooks/usePreviewEntities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faTrash, faPlus } from "@fortawesome/free-solid-svg-icons";
 import Slider from "./Slider";
@@ -104,6 +105,7 @@ const FormInputRow: FC<FormInputRowProps> = ({
   onChange,
   onValidationChange,
 }) => {
+  const previewEntities = usePreviewEntities();
   const [input, setInput] = useState(data);
   const [isApiSelect, setIsApiSelect] = useState(input.api_config !== undefined);
   const [useCustomBody, setUseCustomBody] = useState(!!input.api_config?.body_template?.trim());
@@ -392,6 +394,8 @@ const FormInputRow: FC<FormInputRowProps> = ({
               <span className="text-sm font-medium text-gray-300">Preview</span>
               <DiscordContent
                 content={input.content}
+                profile="textDisplay"
+                entities={previewEntities}
                 className="mt-2 text-sm bg-[#242429] rounded p-3"
               />
             </div>

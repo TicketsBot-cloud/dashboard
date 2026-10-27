@@ -105,6 +105,7 @@ export default function Container({ component = {}, entities }: ContainerProps) 
                   key={index}
                   content={subcomponent.content || ""}
                   entities={entities}
+                  profile="textDisplay"
                 />
               );
             } else if (subcomponent.type === 12) {

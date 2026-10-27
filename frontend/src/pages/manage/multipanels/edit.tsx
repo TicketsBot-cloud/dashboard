@@ -22,7 +22,7 @@ import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
-import { intToColour } from "@/lib/colour";
+import { embedColourHex } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -302,7 +302,7 @@ const MultiPanelsPage: FC = () => {
   const classicSource: ClassicConversionSource = {
     title: multiPanel?.embed.title,
     body: multiPanel?.embed.description,
-    colourHex: multiPanel?.embed.colour || "#5865f2",
+    colourHex: embedColourHex(multiPanel?.embed.colour),
     imageUrl: multiPanel?.embed.image_url,
     thumbnailUrl: multiPanel?.embed.thumbnail_url,
     fields: multiPanel?.embed.fields,
@@ -367,7 +367,7 @@ const MultiPanelsPage: FC = () => {
             options={panels?.map((panel) => ({
               label: panel.name || panel.title,
               key: panel.panel_id.toString(),
-              color: intToColour(panel.colour),
+              color: embedColourHex(panel.colour) ?? undefined,
             }))}
             onChange={(e) => {
               const newIds = e.map(Number);
@@ -544,8 +544,10 @@ const MultiPanelsPage: FC = () => {
                     showCount
                   />
                   <ColourSelect
+                    nullable
+                    clearable
                     label="Colour"
-                    value={multiPanel?.embed?.colour || "#5865f2"}
+                    value={multiPanel?.embed ? embedColourHex(multiPanel.embed.colour) : "#5865f2"}
                     onChange={(e) =>
                       setMultiPanel((prev) =>
                         prev

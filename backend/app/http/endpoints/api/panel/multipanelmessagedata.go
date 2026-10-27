@@ -71,7 +71,8 @@ func multiPanelIntoMessageData(panel database.MultiPanel, footer footerPolicy) m
 	}
 
 	if !data.UsesComponentsV2 {
-		custom := &types.CustomEmbed{Colour: 0x5865f2}
+		blurple := types.Colour(0x5865f2)
+		custom := &types.CustomEmbed{Colour: &blurple}
 		if panel.Embed != nil && panel.Embed.CustomEmbed != nil {
 			custom = types.NewCustomEmbed(panel.Embed.CustomEmbed, panel.Embed.Fields)
 		}

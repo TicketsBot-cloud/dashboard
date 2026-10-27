@@ -21,7 +21,7 @@ import type { GuildSettings } from "@/types";
 import PermissionWarningBanner from "@/components/PermissionWarningBanner";
 import PanelSwitchBehaviourInfoModal from "@/components/modals/PanelSwitchBehaviourInfoModal";
 import { PANEL_SWITCH_OPTIONS } from "@/constants/panelSwitchBehaviour";
-import { intToColour } from "@/lib/colour";
+import { embedColourHex } from "@/lib/colour";
 
 const PanelSwitchSelect: FC<{ value: number; onChange: (v: number) => void }> = ({
   value,
@@ -220,7 +220,7 @@ const GuildSettings: FC = () => {
               ...panels.map((p) => ({
                 key: p.panel_id.toString(),
                 label: p.name || p.title,
-                color: intToColour(p.colour),
+                color: embedColourHex(p.colour) ?? undefined,
               })),
             ]}
           />
@@ -259,13 +259,21 @@ const GuildSettings: FC = () => {
         >
           <div className="p-6 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             <ColourSelect
-              value={form.colours?.["0"] || "#2ecc71"}
+              nullable
+              clearable
+              value={form.colours?.["0"] === undefined ? "#2ecc71" : form.colours["0"]}
+              fallbackColour="#2ecc71"
+              disabled={!premiumState?.premium}
               onChange={(v) => updateField("colours", { ...form.colours, "0": v })}
               label="Success"
             />
 
             <ColourSelect
-              value={form.colours?.["1"] || "#fc3f35"}
+              nullable
+              clearable
+              value={form.colours?.["1"] === undefined ? "#fc3f35" : form.colours["1"]}
+              fallbackColour="#fc3f35"
+              disabled={!premiumState?.premium}
               onChange={(v) => updateField("colours", { ...form.colours, "1": v })}
               label="Failure"
             />

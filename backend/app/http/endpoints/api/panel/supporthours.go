@@ -24,7 +24,7 @@ type supportHoursResponse struct {
 	OutOfHoursBehaviour string                   `json:"out_of_hours_behaviour"`
 	OutOfHoursTitle     string                   `json:"out_of_hours_title"`
 	OutOfHoursMessage   string                   `json:"out_of_hours_message"`
-	OutOfHoursColour    int                      `json:"out_of_hours_colour"`
+	OutOfHoursColour    *int                     `json:"out_of_hours_colour"`
 }
 
 // supportHoursAuditData is used for audit log old/new data to include both hours and settings
@@ -97,14 +97,10 @@ func GetSupportHours(c *gin.Context) {
 	outOfHoursBehaviour := string(database.OutOfHoursBehaviourBlockCreation)
 	var outOfHoursTitle string
 	var outOfHoursMessage string
-	outOfHoursColour := 0xFC3F35
 	if settingsExist {
 		outOfHoursBehaviour = string(settings.OutOfHoursBehaviour)
 		outOfHoursTitle = settings.OutOfHoursTitle
 		outOfHoursMessage = settings.OutOfHoursMessage
-		if settings.OutOfHoursColour != 0 {
-			outOfHoursColour = settings.OutOfHoursColour
-		}
 	}
 
 	response := supportHoursResponse{
@@ -113,10 +109,18 @@ func GetSupportHours(c *gin.Context) {
 		OutOfHoursBehaviour: outOfHoursBehaviour,
 		OutOfHoursTitle:     outOfHoursTitle,
 		OutOfHoursMessage:   outOfHoursMessage,
-		OutOfHoursColour:    outOfHoursColour,
+		OutOfHoursColour:    outOfHoursColourResponse(settings, settingsExist),
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+func outOfHoursColourResponse(settings database.PanelSupportHoursSettings, settingsExist bool) *int {
+	if !settingsExist {
+		return utils.Ptr(0xFC3F35)
+	}
+
+	return settings.OutOfHoursColour
 }
 
 // supportHoursPayload represents individual hour configuration in requests
@@ -134,7 +138,11 @@ type supportHoursRequestBody struct {
 	OutOfHoursBehaviour string                `json:"out_of_hours_behaviour"`
 	OutOfHoursTitle     string                `json:"out_of_hours_title"`
 	OutOfHoursMessage   string                `json:"out_of_hours_message"`
-	OutOfHoursColour    int                   `json:"out_of_hours_colour"`
+	OutOfHoursColour    *int                  `json:"out_of_hours_colour"`
+}
+
+func isValidOutOfHoursColour(colour *int) bool {
+	return colour == nil || (*colour >= 0 && *colour <= 0xFFFFFF)
 }
 
 func SetSupportHours(c *gin.Context) {
@@ -219,6 +227,11 @@ func SetSupportHours(c *gin.Context) {
 	// Validate timezone
 	if !database.IsValidTimezone(requestBody.Timezone) {
 		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid timezone: %s", requestBody.Timezone))
+		return
+	}
+
+	if !isValidOutOfHoursColour(requestBody.OutOfHoursColour) {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid out of hours colour"))
 		return
 	}
 
@@ -318,7 +331,7 @@ func SetSupportHours(c *gin.Context) {
 	if string(oldSettings.OutOfHoursBehaviour) != behaviour ||
 		oldSettings.OutOfHoursTitle != outOfHoursTitle ||
 		oldSettings.OutOfHoursMessage != outOfHoursMessage ||
-		oldSettings.OutOfHoursColour != requestBody.OutOfHoursColour {
+		!utils.PtrEqual(oldSettings.OutOfHoursColour, requestBody.OutOfHoursColour) {
 		hasChanges = true
 	}
 

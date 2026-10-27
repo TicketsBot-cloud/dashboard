@@ -62,7 +62,7 @@ func MultiPanelGet(ctx *gin.Context) {
 	if multiPanel.Embed != nil && multiPanel.Embed.CustomEmbed != nil {
 		transformedEmbed = types.NewCustomEmbed(multiPanel.Embed.CustomEmbed, multiPanel.Embed.Fields)
 	} else {
-		transformedEmbed = &types.CustomEmbed{Colour: 0x5865f2}
+		transformedEmbed = &types.CustomEmbed{Colour: utils.Ptr(types.Colour(0x5865f2))}
 	}
 
 	panels, err := dbclient.Client.MultiPanelTargets.GetPanels(ctx, multiPanelId)

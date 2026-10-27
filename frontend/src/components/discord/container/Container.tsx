@@ -15,7 +15,7 @@ interface ContainerProps {
   };
   component?: {
     spoiler?: boolean;
-    accent_color?: string | number;
+    accent_color?: string | number | null;
     type?: number;
     emoji?: { name: string };
     label?: string;

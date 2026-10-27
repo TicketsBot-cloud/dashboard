@@ -315,6 +315,8 @@ const TeamsPage: FC = () => {
   };
 
   const deleteTeam = async (id: string) => {
+    if (id === "default" || id === "0") return;
+
     try {
       await apiClient.teams.delete(guildId, id, SKIP_ERROR_TOAST);
       toast.success("Team deleted successfully");
@@ -475,7 +477,7 @@ const TeamsPage: FC = () => {
                   label="Team"
                 />
               </div>
-              {activeTeamId !== "0" && (
+              {activeTeamId !== "default" && activeTeamId !== "0" && (
                 <Button
                   variant="danger"
                   visuallyDisabled={isLocked}

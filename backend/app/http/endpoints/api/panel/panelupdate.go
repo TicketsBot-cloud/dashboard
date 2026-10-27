@@ -324,7 +324,7 @@ func UpdatePanel(c *gin.Context) {
 		Name:                      data.trimmedName(),
 		Title:                     data.Title,
 		Content:                   data.Content,
-		Colour:                    int32(data.Colour),
+		Colour:                    utils.ConvertPtr[int32](data.Colour),
 		TargetCategory:            data.CategoryId,
 		EmojiName:                 emojiName,
 		EmojiId:                   emojiId,

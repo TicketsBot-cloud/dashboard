@@ -25,7 +25,7 @@ import TextInput from "@/components/TextInput";
 import NumberInput from "@/components/NumberInput";
 import ColourSelect from "@/components/ColourSelect";
 import { BUTTON_STYLE_OPTIONS } from "@/constants/buttonStyles";
-import { roleColour } from "@/lib/colour";
+import { embedColourHex, embedColourInt, roleColour } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import EmojiPicker from "@/components/EmojiPicker";
 import PanelPreview from "@/components/PanelPreview";
@@ -255,7 +255,7 @@ const EditPanelsPage: FC = () => {
   const messageClassicSource: ClassicConversionSource = {
     title: panel.title,
     body: panel.content,
-    colourHex: `#${(panel.colour || 0x5865f2).toString(16).padStart(6, "0")}`,
+    colourHex: embedColourHex(panel.colour),
     imageUrl: panel.image_url,
     thumbnailUrl: panel.thumbnail_url,
   };
@@ -264,7 +264,7 @@ const EditPanelsPage: FC = () => {
   const welcomeClassicSource: ClassicConversionSource = {
     title: panel.welcome_message?.title,
     body: panel.welcome_message?.description,
-    colourHex: panel.welcome_message?.colour || "#5865f2",
+    colourHex: embedColourHex(panel.welcome_message?.colour),
     imageUrl: panel.welcome_message?.image_url,
     thumbnailUrl: panel.welcome_message?.thumbnail_url,
     fields: panel.welcome_message?.fields,
@@ -411,12 +411,12 @@ const EditPanelsPage: FC = () => {
               <span className="text-xl font-semibold">Panel Properties</span>
               <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
                 <ColourSelect
+                  nullable
+                  clearable
                   label="Panel Colour"
-                  value={`#${(panel.colour || 0x5865f2).toString(16).padStart(6, "0")}`}
+                  value={embedColourHex(panel.colour)}
                   onChange={(e) =>
-                    setPanel((prev) =>
-                      prev ? { ...prev, colour: parseInt(e.replace("#", ""), 16) } : prev,
-                    )
+                    setPanel((prev) => (prev ? { ...prev, colour: embedColourInt(e) } : prev))
                   }
                 />
               </div>
@@ -774,8 +774,14 @@ const EditPanelsPage: FC = () => {
                     showCount
                   />
                   <ColourSelect
+                    nullable
+                    clearable={!!panel.welcome_message}
                     label="Colour"
-                    value={`${panel.welcome_message?.colour || "#5865f2"}`}
+                    value={
+                      panel.welcome_message
+                        ? embedColourHex(panel.welcome_message.colour)
+                        : "#5865f2"
+                    }
                     onChange={(e) =>
                       setPanel((prev) =>
                         prev

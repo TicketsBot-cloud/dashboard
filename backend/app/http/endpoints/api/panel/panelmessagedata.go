@@ -17,6 +17,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	"github.com/ticketsbot-cloud/dashboard/backend/config"
 	"github.com/ticketsbot-cloud/dashboard/backend/log"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"go.uber.org/zap"
 )
 
@@ -24,7 +25,7 @@ type panelMessageData struct {
 	ChannelId uint64
 
 	Title, Content, CustomId string
-	Colour                   int
+	Colour                   *int
 	ImageUrl, ThumbnailUrl   *string
 	Emoji                    *emoji.Emoji
 	ButtonStyle              component.ButtonStyle
@@ -97,7 +98,7 @@ func panelIntoMessageData(panel database.Panel, showBranding bool) panelMessageD
 		Title:          panel.Title,
 		Content:        panel.Content,
 		CustomId:       panel.CustomId,
-		Colour:         int(panel.Colour),
+		Colour:         utils.ConvertPtr[int](panel.Colour),
 		ImageUrl:       panel.ImageUrl,
 		ThumbnailUrl:   panel.ThumbnailUrl,
 		Emoji:          emote,
@@ -127,7 +128,7 @@ func (p *panelMessageData) buildEmbed() *embed.Embed {
 	e := embed.NewEmbed().
 		SetTitle(p.Title).
 		SetDescription(p.Content).
-		SetColor(p.Colour)
+		SetColorPtr(p.Colour)
 
 	if p.ImageUrl != nil {
 		e.SetImage(*p.ImageUrl)

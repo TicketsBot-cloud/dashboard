@@ -19,7 +19,7 @@ func ListPanels(c *gin.Context) {
 		ChannelId         uint64  `json:"channel_id,string"`
 		Name              string  `json:"name"`
 		Title             string  `json:"title"`
-		Colour            int32   `json:"colour"`
+		Colour            *int32  `json:"colour"`
 		ButtonLabel       string  `json:"button_label"`
 		ButtonStyle       int     `json:"button_style,string"`
 		EmojiName         *string `json:"emoji_name,omitempty"`

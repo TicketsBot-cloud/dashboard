@@ -16,7 +16,7 @@ const ComponentBudgetMeter: FC<ComponentBudgetMeterProps> = ({ used, max, reserv
   return (
     <div className="mt-3">
       <p role="status" className="text-xs text-gray-400">
-        {used} of {max} blocks used
+        {used} of {max} components used
       </p>
       <div className="mt-1 bg-gray-700 h-1.5 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${fillClass}`} style={{ width: `${widthPercent}%` }} />

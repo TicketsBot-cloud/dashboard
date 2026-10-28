@@ -21,8 +21,6 @@ export interface ModalProps {
   className?: string;
   ariaLabelledBy?: string;
   ariaDescribedBy?: string;
-  /** "alertdialog" for a modal that interrupts to confirm a destructive action. Defaults to
-   * "dialog". */
   role?: "dialog" | "alertdialog";
   initialFocusRef?: RefObject<HTMLElement | null>;
   hideCloseButton?: boolean;

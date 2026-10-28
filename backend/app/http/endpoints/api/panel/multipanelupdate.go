@@ -16,6 +16,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -31,7 +32,8 @@ func MultiPanelUpdate(c *gin.Context) {
 
 	// parse body
 	var data multiPanelCreateData
-	if err := c.ShouldBindJSON(&data); err != nil {
+	keys, err := bindJSONWithKeys(c, &data)
+	if err != nil {
 		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
@@ -62,10 +64,28 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
+	if err := data.keepStoredWhenAbsent(keys, multiPanel); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+		return
+	}
+
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
+	}
+
+	if data.entersComponentsV2(multiPanel) {
+		tier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+			return
+		}
+
+		if !componentsV2BuilderEnabled(c, userId, guildId, tier) {
+			c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))
+			return
+		}
 	}
 
 	if data.UsesComponentsV2 {
@@ -246,7 +266,6 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
-	// A Components V2 save without a usable classic embed leaves the stored one alone.
 	dbEmbed := embedIntoDatabase(data.Embed)
 	if data.UsesComponentsV2 && dbEmbed == nil {
 		dbEmbed = multiPanel.Embed
@@ -266,6 +285,16 @@ func MultiPanelUpdate(c *gin.Context) {
 	}
 
 	if err = dbclient.Client.MultiPanels.Update(c, multiPanel.Id, updated); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+		return
+	}
+
+	if err := dbclient.Client.MultiPanels.UpdateComponentsV2(c, multiPanel.Id, updated.UsesComponentsV2, updated.Components); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+		return
+	}
+
+	if err := dbclient.Client.MultiPanels.SetName(c, multiPanel.Id, updated.Name); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
 	}

@@ -33,8 +33,5 @@ export const FEATURE_WHITELABEL = "202608_FEATURE_WHITELABEL";
 export const FEATURE_INTEGRATIONS = "202608_FEATURE_INTEGRATIONS";
 export const FEATURE_AUTOMATIONS = "202608_FEATURE_AUTOMATIONS";
 
-/**
- * Hides only the way into Components v2. A message already using it always shows the mode toggle
- * (so it can switch back to Classic) and keeps its builder, and the backend never checks this flag.
- */
+/** Gates only entering Components v2; messages already using it are unaffected. */
 export const COMPONENTS_V2_BUILDER_FLAG = "202608_COMPONENTS_V2_BUILDER";

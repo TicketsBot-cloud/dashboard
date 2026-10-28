@@ -180,7 +180,7 @@ agg AS (
     GROUP BY panel_id
 )
 SELECT
-    p.panel_id, p.title, p.channel_id, p.disabled, p.force_disabled,
+    p.panel_id, COALESCE(NULLIF(p.name, ''), p.title), p.channel_id, p.disabled, p.force_disabled,
     COALESCE(a.ticket_count, 0), COALESCE(a.closed_count, 0),
     a.avg_frt_secs, a.avg_resolution_secs, a.avg_rating, COALESCE(a.rating_count, 0),
     COALESCE(a.prev_ticket_count, 0), COALESCE(a.prev_closed_count, 0),

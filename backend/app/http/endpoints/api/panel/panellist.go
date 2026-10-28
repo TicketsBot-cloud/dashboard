@@ -112,9 +112,7 @@ func ListPanels(c *gin.Context) {
 	for i, p := range panels {
 		hasSH := supportHoursSet[p.PanelId]
 
-		// Name is the dashboard-only label and takes priority; Title is the classic
-		// embed title, which doubled as the list label before Name existed, and
-		// still does for any panel created before this field was introduced.
+		// Title was the list label before Name existed and still is for a panel without one.
 		displayName := p.Title
 		if p.Name != nil && *p.Name != "" {
 			displayName = *p.Name

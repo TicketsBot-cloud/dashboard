@@ -197,6 +197,33 @@ func TestBuildComponents_V2(t *testing.T) {
 		require.Equal(t, "c3", appended[1].CustomId)
 	})
 
+	t.Run("panel buttons in sections are resolved", func(t *testing.T) {
+		d := multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{
+			section(panelBtn(2), text("side")),
+			container(section(panelBtn(3), text("nested"))),
+		}}
+
+		tree, system := d.buildComponents(panels)
+		require.Len(t, tree, 2)
+
+		accessory := tree[0].ComponentData.(component.Section).Accessory.ComponentData.(component.Button)
+		require.Equal(t, "c2", accessory.CustomId)
+		require.Equal(t, "Two", accessory.Label)
+
+		nested := tree[1].ComponentData.(component.Container).Components[0].ComponentData.(component.Section).Accessory.ComponentData.(component.Button)
+		require.Equal(t, "c3", nested.CustomId)
+		require.Equal(t, "Three", nested.Label)
+
+		require.Len(t, system, 1)
+		appended := rowButtons(t, system[0])
+		require.Len(t, appended, 1)
+		require.Equal(t, "c1", appended[0].CustomId)
+
+		raw, err := json.Marshal(append(tree, system...))
+		require.NoError(t, err)
+		require.NotContains(t, string(raw), "panel:")
+	})
+
 	t.Run("everything placed appends nothing", func(t *testing.T) {
 		d := multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{row(panelBtn(1), panelBtn(2), panelBtn(3))}}
 
@@ -314,7 +341,6 @@ func TestBuildComponents_V2(t *testing.T) {
 	})
 }
 
-// A "panel:" marker, or any custom_id the guild authored, must never reach Discord.
 func TestBuildComponents_NoMarkerReachesDiscord(t *testing.T) {
 	panels := []database.PanelWithCustomization{testPanel(1, "One", "c1"), testPanel(2, "Two", "c2")}
 

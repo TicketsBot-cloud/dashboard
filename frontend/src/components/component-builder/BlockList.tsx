@@ -50,7 +50,6 @@ interface BlockListProps {
   onAnnounce: (message: string) => void;
   disabled?: boolean;
   budgetMax: number;
-  /** Panels not yet placed in the tree. Undefined means no panel placement UI at all. */
   availablePanels?: PickerPanel[];
   /** Every panel in the multi-panel, so a block can look up the panel it already holds. */
   allPanels?: PickerPanel[];
@@ -95,9 +94,10 @@ const BlockList: FC<BlockListProps> = ({
         };
 
         const handleMoveIntoContainer = (targetContainerId: string) => {
-          const target = topLevelContainers.find((c) => c.id === targetContainerId);
+          const next = moveBlockIntoContainer(tree, block.id, targetContainerId);
+          const target = getTopLevelContainers(next).find((c) => c.id === targetContainerId);
           pendingBlockFocus.id = block.id;
-          onTreeChange(moveBlockIntoContainer(tree, block.id, targetContainerId));
+          onTreeChange(next);
           onAnnounce(`Moved ${label} into ${target?.label ?? "container"}`);
         };
 

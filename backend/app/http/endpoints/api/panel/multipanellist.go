@@ -27,8 +27,7 @@ func MultiPanelList(ctx *gin.Context) {
 		if multiPanel.Embed != nil {
 			title = multiPanel.Embed.Title
 		} else if multiPanel.UsesComponentsV2 {
-			// A Components V2 message has no embed title to fall back on.
-			t := "Components V2 message"
+			t := "Components v2 message"
 			title = &t
 		}
 

@@ -1,6 +1,5 @@
 interface SeparatorProps {
   divider?: boolean;
-  /** 1 is small, 2 is large. */
   spacing?: number;
 }
 

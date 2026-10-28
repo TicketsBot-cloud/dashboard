@@ -46,7 +46,6 @@ const (
 	MentionBehaviourDelete = "delete"
 )
 
-// multiPanelNameMaxLength bounds the dashboard-only multi-panel label.
 const multiPanelNameMaxLength = 100
 
 const panelNameMaxLength = 100
@@ -103,7 +102,6 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 	}
 }
 
-// normaliseMultiPanelName trims the optional dashboard-only label. A blank name is nil.
 func normaliseMultiPanelName(raw string) (*string, error) {
 	name := strings.TrimSpace(raw)
 	if name == "" {
@@ -117,7 +115,6 @@ func normaliseMultiPanelName(raw string) (*string, error) {
 	return &name, nil
 }
 
-// trimmedName is the optional dashboard-only label; blank means unset.
 func (p panelBody) trimmedName() *string {
 	if p.Name == nil {
 		return nil
@@ -557,9 +554,7 @@ func validateEmbed(e *types.CustomEmbed) error {
 	return validateEmbedContent(e)
 }
 
-// classicEmbedForV2 returns the classic embed to store alongside a Components V2 message,
-// so switching back to Classic keeps it. The user cannot see this embed in V2 mode, so an
-// empty or invalid one (including one that fails its struct tags) is dropped (nil, meaning
+// The user cannot see this embed in V2 mode, so an unusable one is dropped (nil, meaning
 // "leave what is stored") instead of failing the save.
 func classicEmbedForV2(e *types.CustomEmbed) *types.CustomEmbed {
 	if e == nil || !embedHasContent(e) || validateEmbedContent(e) != nil || validate.Struct(e) != nil {
@@ -577,25 +572,19 @@ func (p *panelBody) dropHiddenClassicEmbed() {
 	}
 }
 
-// retainClassicFields keeps the stored classic message fields through a Components V2 save,
-// so switching back to Classic does not lose them. The editor hides these fields in V2 mode,
-// so a missing or invalid value means "unchanged" rather than an error or a reset to the
-// defaults. A null colour is indistinguishable from an omitted one and is treated as omitted.
-// It must run before ApplyPanelDefaults.
-func (p *panelBody) retainClassicFields(existing database.Panel) {
+// The editor hides these fields in V2 mode, so a missing or invalid value keeps the stored one
+// for a switch back to Classic. Only an omitted colour counts as missing, since null means no
+// colour. It must run before ApplyPanelDefaults.
+func (p *panelBody) retainClassicFields(existing database.Panel, colourSent bool) {
 	if !p.MessageUsesComponentsV2 {
 		return
-	}
-
-	if strings.TrimSpace(p.Title) == "" || utf8.RuneCountInString(p.Title) > 80 {
-		p.Title = existing.Title
 	}
 
 	if strings.TrimSpace(p.Content) == "" || utf8.RuneCountInString(p.Content) > 4096 {
 		p.Content = existing.Content
 	}
 
-	if p.Colour == nil || *p.Colour > maxAccentColour {
+	if !colourSent || (p.Colour != nil && *p.Colour > maxAccentColour) {
 		p.Colour = utils.ConvertPtr[uint32](existing.Colour)
 	}
 
@@ -775,7 +764,7 @@ func validateMessageComponents(ctx PanelValidationContext) validation.Validation
 		}
 
 		if !ctx.HasPaidPremium {
-			return validation.NewInvalidInputError("Component-based messages are a premium feature")
+			return validation.NewInvalidInputError(componentsV2PremiumMessage)
 		}
 
 		_, err := validateComponentTree(ctx.Data.MessageComponents, treeRules{reserved: panelMessageReserved})
@@ -790,7 +779,7 @@ func validateWelcomeMessageComponents(ctx PanelValidationContext) validation.Val
 		}
 
 		if !ctx.HasPaidPremium {
-			return validation.NewInvalidInputError("Component-based welcome messages are a premium feature")
+			return validation.NewInvalidInputError(componentsV2PremiumMessage)
 		}
 
 		if len(ctx.Data.WelcomeMessageComponents) == 0 {
@@ -802,8 +791,7 @@ func validateWelcomeMessageComponents(ctx PanelValidationContext) validation.Val
 	}
 }
 
-// welcomeMessageReserved is the room the worker needs for what it appends at ticket open:
-// the form answers, and the close and claim buttons that are visible for this panel.
+// The worker appends the form answers and the visible buttons at ticket open.
 func welcomeMessageReserved(data panelBody) int {
 	visible := 0
 	if !data.HideCloseButton {

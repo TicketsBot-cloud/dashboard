@@ -30,6 +30,7 @@ import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import PremiumGate from "@/components/PremiumGate";
 import ConfirmModal from "@/components/modals/ConfirmModal";
+import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
@@ -122,6 +123,7 @@ const MultiPanelsPage: FC = () => {
   const [multiPanel, setMultiPanel] = useState<MultiPanel | null>(null);
   const [componentTree, setComponentTree] = useState<V2Component[]>([]);
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
+  const { isSubmitting, guard } = useMutationGuard();
   // Captured once when the multi-panel first loads, so the resend-confirmation on save only
   // ever compares against how it started this session, not against every toggle flip in between.
   const originalV2Ref = useRef(false);
@@ -236,13 +238,13 @@ const MultiPanelsPage: FC = () => {
 
         setMultiPanel({ ...data, embed: data.embed ?? defaultEmbed });
         originalV2Ref.current = data.uses_components_v2;
-        // A panel deleted since the last save leaves its placement behind.
-        setComponentTree(
-          prunePlacedPanels(
-            fromApiComponents(data.components),
-            new Set(data.panels.map((p) => p.panel_id)),
-          ),
+        // A panel deleted since the last save leaves its placement behind, and a Classic save after
+        // dropdown mode was turned off leaves the dropdown behind.
+        const loaded = prunePlacedPanels(
+          fromApiComponents(data.components),
+          new Set(data.panels.map((p) => p.panel_id)),
         );
+        setComponentTree(data.select_menu ? loaded : removePanelSelectBlock(loaded));
       } catch (error) {
         console.error("Failed to fetch multi panel:", error);
       }
@@ -312,8 +314,13 @@ const MultiPanelsPage: FC = () => {
   };
   const conversionNotes = [
     ...(classicSource.fields?.length ? ["Field layout is dropped; fields become plain text."] : []),
-    ...(classicSource.authorName ? ["The author icon is dropped."] : []),
-    ...(classicSource.footerText ? ["The footer icon is dropped."] : []),
+    ...(classicSource.authorName && multiPanel?.embed.author?.icon_url
+      ? ["The author icon is dropped."]
+      : []),
+    ...(classicSource.footerText && multiPanel?.embed.footer?.icon_url
+      ? ["The footer icon is dropped."]
+      : []),
+    ...(classicSource.title && multiPanel?.embed.url ? ["The title link is dropped."] : []),
     ...(multiPanel?.embed.timestamp ? ["The timestamp is dropped."] : []),
   ];
 
@@ -423,7 +430,7 @@ const MultiPanelsPage: FC = () => {
                   className="flex flex-col gap-3 p-3 border border-neutral-600 rounded"
                 >
                   <span className="font-semibold text-sm">
-                    {panel?.title || `Panel ${entry.panel_id}`}
+                    {panel?.name || panel?.title || `Panel ${entry.panel_id}`}
                   </span>
                   <EmojiPicker
                     label="Custom Emoji"
@@ -788,7 +795,8 @@ const MultiPanelsPage: FC = () => {
         visuallyDisabled={isLocked || (saveAttempted && saveBlocker() !== null)}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={() => {
-          if (!multiPanel) return;
+          // The guard drops a second save, but the repost dialog would still reopen.
+          if (!multiPanel || isSubmitting) return;
 
           const blocker = saveBlocker();
           if (blocker) {
@@ -803,7 +811,7 @@ const MultiPanelsPage: FC = () => {
             setDowngradeConfirmOpen(true);
             return;
           }
-          saveMultiPanel();
+          guard(saveMultiPanel);
         }}
       >
         <FontAwesomeIcon icon={faSave} className="mr-2" /> Save Changes
@@ -816,7 +824,7 @@ const MultiPanelsPage: FC = () => {
         isOpen={downgradeConfirmOpen}
         onConfirm={() => {
           setDowngradeConfirmOpen(false);
-          saveMultiPanel();
+          guard(saveMultiPanel);
         }}
         onCancel={() => setDowngradeConfirmOpen(false)}
         title="Switch back to classic?"

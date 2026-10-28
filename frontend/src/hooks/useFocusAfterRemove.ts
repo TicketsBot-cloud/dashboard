@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef } from "react";
 
 /**
- * Moves focus to a fixed control once the render that follows a row removal has committed. The
- * removed row's button is gone by then, and the target may only just have become enabled.
+ * Waits for the commit: the removed row's button is gone by then, and the target may only just have
+ * become enabled.
  */
 export function useFocusAfterRemove<T extends HTMLElement>() {
   const targetRef = useRef<T>(null);

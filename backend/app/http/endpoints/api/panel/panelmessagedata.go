@@ -37,9 +37,6 @@ type panelMessageData struct {
 	Components       []component.Component
 }
 
-// marshalComponents serialises a guild-authored component tree for JSONB storage. It is
-// only called for a message that uses Components V2, where an empty tree is stored as
-// "[]" rather than NULL.
 func marshalComponents(components []component.Component) (*string, error) {
 	if components == nil {
 		components = []component.Component{}
@@ -64,7 +61,6 @@ func componentsToStore(usesComponentsV2 bool, tree []component.Component, stored
 	return marshalComponents(tree)
 }
 
-// unmarshalComponents reads a stored tree. NULL is an empty tree.
 func unmarshalComponents(raw *string) ([]component.Component, error) {
 	if raw == nil {
 		return nil, nil
@@ -145,8 +141,6 @@ func (p *panelMessageData) buildEmbed() *embed.Embed {
 	return e
 }
 
-// systemButton is the open-ticket button the backend always appends, in both
-// Classic and Components V2 mode. The guild-authored tree can never contain one.
 func (p *panelMessageData) systemButton() component.Component {
 	return component.BuildActionRow(component.BuildButton(component.Button{
 		Label:    p.ButtonLabel,
@@ -205,8 +199,7 @@ func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) erro
 	return err
 }
 
-// discardMessage is a best-effort cleanup for a message sent before the save that was meant
-// to follow it failed. It has its own context because the request's may already be cancelled.
+// Uses its own context because the request's may already be cancelled.
 func discardMessage(c *botcontext.BotContext, channelId, messageId uint64) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

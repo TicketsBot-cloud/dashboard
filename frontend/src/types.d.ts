@@ -253,11 +253,7 @@ export interface Panel {
   access_control_list: Array<ACL>;
 
   message_uses_components_v2: boolean;
-  /**
-   * `GetPanel` returns this as a JSON-encoded string (the backend column is `*string`, storing
-   * the raw serialised tree), not a parsed array - use `fromApiComponents` from
-   * `@/lib/component-tree` rather than reading it directly. A save request sends a real array.
-   */
+  /** A JSON string on read (the backend stores the raw tree); a save request sends a real array. */
   message_components: APIMessageTopLevelComponent[] | string | null;
   welcome_message_uses_components_v2: boolean;
   welcome_message_components: APIMessageTopLevelComponent[] | string | null;
@@ -273,7 +269,6 @@ export interface MultiPanelPanelEntry {
 
 export interface MultiPanel {
   id: number;
-  /** Optional dashboard-only label, never sent to Discord. */
   name: string | null;
   message_id: Snowflake;
   channel_id: Snowflake;

@@ -13,7 +13,7 @@ export function scrollToFirstMissingField(): boolean {
     field.scrollIntoView({ behavior: "smooth", block: "center" });
     const input = field.querySelector<HTMLElement>("input, textarea");
     // A bare container (e.g. an error summary) is only focusable programmatically with tabindex -1.
-    if (!input && !field.hasAttribute("tabindex")) field.tabIndex = -1;
+    if (!input && field.tabIndex < 0) field.setAttribute("tabindex", "-1");
     (input ?? field).focus({ preventScroll: true });
 
     field.classList.remove(breath);

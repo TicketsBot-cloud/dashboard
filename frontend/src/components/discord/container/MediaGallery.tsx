@@ -32,17 +32,23 @@ export default function MediaGallery({ items = [] }: MediaGalleryProps) {
     };
   }, [modalOpen]);
 
+  // Discord shows a single item in its own proportions rather than as a cropped tile.
+  const single = items.length === 1;
+
   return (
     <>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2 my-2 max-w-full">
+      <div
+        className={`grid ${single ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(100px,1fr))]"} gap-2 my-2 max-w-full`}
+      >
         {items.map((item, index) => {
           const alt = item.description || "Image";
+          const natural = single && !!item.media?.url;
           return (
             <button
               type="button"
               key={index}
               onClick={() => item.media?.url && handleImageClick(item.media.url, alt)}
-              className={`media-item relative overflow-hidden rounded h-25 cursor-pointer ${
+              className={`media-item relative overflow-hidden rounded ${natural ? "justify-self-start max-w-full" : "h-25"} cursor-pointer ${
                 item.spoiler ? "blur hover:blur-none focus-visible:blur-none" : ""
               }`}
             >
@@ -51,7 +57,7 @@ export default function MediaGallery({ items = [] }: MediaGalleryProps) {
                 <img
                   src={item.media.url}
                   alt={alt}
-                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-110 active:scale-200 active:transition-[transform] active:duration-100"
+                  className={`${natural ? "block w-auto max-w-full h-auto max-h-80" : "w-full h-full object-cover"} transition-transform duration-300 hover:scale-110 active:scale-200 active:transition-[transform] active:duration-100`}
                 />
               )}
             </button>

@@ -1,4 +1,4 @@
-import { useId, type FC } from "react";
+import { useId, useLayoutEffect, useRef, type FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash, faImage, faLink, faTicket } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/Button";
@@ -17,6 +17,7 @@ import {
   linkLabelError,
   linkUrlError,
   mediaUrlError,
+  type V2Accessory,
   type V2Section,
   type V2TextChild,
 } from "@/lib/component-tree";
@@ -27,7 +28,6 @@ interface SectionEditorProps {
   value: V2Section;
   onChange: (updated: V2Section) => void;
   allowAvatarPlaceholder?: boolean;
-  /** Panels not yet placed in the tree, plus the one this accessory holds. Undefined hides panel placement. */
   availablePanels?: PickerPanel[];
   saveAttempted?: boolean;
 }
@@ -44,6 +44,21 @@ const SectionEditor: FC<SectionEditorProps> = ({
   const { targetRef: addTextRef, request: focusAddText } = useFocusAfterRemove<HTMLButtonElement>();
   const { targetRef: firstAccessoryRef, request: focusAccessoryChoices } =
     useFocusAfterRemove<HTMLButtonElement>();
+  const accessoryRef = useRef<HTMLDivElement>(null);
+  const focusNewAccessory = useRef(false);
+
+  // TextInput and Select take no ref, so the new accessory's first control is looked up.
+  useLayoutEffect(() => {
+    if (!focusNewAccessory.current) return;
+    focusNewAccessory.current = false;
+    accessoryRef.current?.querySelector<HTMLElement>("input, button")?.focus();
+  });
+
+  const chooseAccessory = (accessory: V2Accessory) => {
+    focusNewAccessory.current = true;
+    onChange({ ...value, accessory });
+  };
+
   const updateText = (index: number, content: string) => {
     const components = value.components.map((c, i) => (i === index ? { ...c, content } : c));
     onChange({ ...value, components });
@@ -111,16 +126,14 @@ const SectionEditor: FC<SectionEditorProps> = ({
             ref={firstAccessoryRef}
             variant="dashed"
             className="w-fit text-sm font-medium"
-            onClick={() => onChange({ ...value, accessory: { kind: "thumbnail", url: "" } })}
+            onClick={() => chooseAccessory({ kind: "thumbnail", url: "" })}
           >
             <FontAwesomeIcon icon={faImage} /> Image
           </Button>
           <Button
             variant="dashed"
             className="w-fit text-sm font-medium"
-            onClick={() =>
-              onChange({ ...value, accessory: { kind: "link_button", label: "", url: "" } })
-            }
+            onClick={() => chooseAccessory({ kind: "link_button", label: "", url: "" })}
           >
             <FontAwesomeIcon icon={faLink} /> Link button
           </Button>
@@ -131,27 +144,29 @@ const SectionEditor: FC<SectionEditorProps> = ({
               visuallyDisabled={availablePanels.length === 0}
               aria-describedby={availablePanels.length === 0 ? hintId : undefined}
               title={
-                availablePanels.length === 0 ? "All panels are already placed elsewhere" : undefined
+                availablePanels.length === 0
+                  ? "Every panel is already placed as a button"
+                  : undefined
               }
               onClick={() => {
                 const panelId = availablePanels[0]?.panel_id;
                 if (panelId === undefined) return;
-                onChange({ ...value, accessory: { kind: "panel_button", panel_id: panelId } });
+                chooseAccessory({ kind: "panel_button", panel_id: panelId });
               }}
             >
               <FontAwesomeIcon icon={faTicket} /> Panel button
             </Button>
           )}
           {availablePanels !== undefined && availablePanels.length === 0 && (
-            <span id={hintId} className="sr-only">
-              All panels are already placed elsewhere
+            <span id={hintId} hidden>
+              Every panel is already placed as a button
             </span>
           )}
         </div>
       )}
 
       {thumbnailAccessory && (
-        <div className="p-3 rounded bg-gray-600 flex flex-col gap-2">
+        <div ref={accessoryRef} className="p-3 rounded bg-gray-600 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
@@ -205,7 +220,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
       )}
 
       {linkButtonAccessory && (
-        <div className="p-3 rounded bg-gray-600 flex flex-col gap-2">
+        <div ref={accessoryRef} className="p-3 rounded bg-gray-600 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
@@ -251,7 +266,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
       )}
 
       {panelButtonAccessory && (
-        <div className="p-3 rounded bg-gray-600 flex flex-col gap-2">
+        <div ref={accessoryRef} className="p-3 rounded bg-gray-600 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 flex items-center gap-2">
               <Select

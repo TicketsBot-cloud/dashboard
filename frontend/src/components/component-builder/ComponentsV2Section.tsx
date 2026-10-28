@@ -23,7 +23,6 @@ import ComponentTreeBuilder from "./ComponentTreeBuilder";
 import type { PickerPanel } from "./picker-panels";
 
 interface PlacementProps {
-  /** Panels not placed as buttons anywhere in the tree. */
   availablePanels: PickerPanel[];
   allPanels: PickerPanel[];
   /** From the multi-panel's own panel list, so it is right before guild panels have loaded. */
@@ -34,29 +33,22 @@ interface PlacementProps {
 interface ComponentsV2SectionProps {
   guildId: string;
   isV2: boolean;
-  /** The mode as loaded, which decides whether the toggle stays available with the flag off. */
   storedIsV2: boolean;
   onV2Change: (isV2: boolean) => void;
   tree: V2Component[];
   onTreeChange: (tree: V2Component[]) => void;
   classicSource: ClassicConversionSource;
-  /** Extra things the conversion drops, listed in its confirmation. */
   conversionNotes?: string[];
   title: string;
   previewTitle: string;
-  /** Distinguishes the convert button for screen readers when a page has more than one. */
   convertSuffix?: string;
-  /** Components the bot appends to this message, taken off the 40 available. */
   reserved: number;
   reservedNote?: string;
-  /** An empty tree is rejected by the backend for this message. */
   requireContent?: boolean;
-  /** Welcome messages only. */
   allowAvatarPlaceholder?: boolean;
   preview: ReactNode;
   toggleNote?: ReactNode;
   placement?: PlacementProps;
-  /** Per-field errors only show once a save has been attempted. */
   saveAttempted?: boolean;
 }
 
@@ -90,7 +82,6 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   // and forth, so this follows the loaded mode rather than the current one.
   const canEnterV2 = builderEnabled === true || storedIsV2;
   const hasClassicContent = hasConvertibleClassicContent(classicSource);
-  // An untouched, empty welcome tree is not an error until a save is attempted.
   const issues = validateComponentTree(tree, {
     requireContent,
     reserved,
@@ -125,6 +116,7 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
             isPremium={!!premiumState?.premium}
             canEnterV2={canEnterV2}
             onChange={(mode) => onV2Change(mode === "components_v2")}
+            legendSuffix={convertSuffix}
           />
           {toggleNote}
         </div>

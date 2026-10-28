@@ -20,7 +20,6 @@ import { withOwnPanel, type PickerPanel } from "./picker-panels";
 interface ButtonRowEditorProps {
   value: V2ButtonRow;
   onChange: (updated: V2ButtonRow) => void;
-  /** Panels not placed anywhere in the tree. Undefined hides panel placement. */
   unplacedPanels?: PickerPanel[];
   allPanels?: PickerPanel[];
   saveAttempted?: boolean;

@@ -13,9 +13,8 @@ import (
 
 var errJSONTooDeep = errors.New("json nesting too deep")
 
-// LimitJSONBody caps the request body size and JSON nesting depth before the handler binds
-// it. gdl's Component.UnmarshalJSON re-parses every subtree, so its cost is quadratic in
-// nesting depth; an over-deep body must be rejected before it ever reaches that code.
+// gdl's Component.UnmarshalJSON re-parses every subtree, so its cost is quadratic in nesting
+// depth; an over-deep body must be rejected before it ever reaches that code.
 func LimitJSONBody(maxBytes int64, maxDepth int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.ContentLength > maxBytes {

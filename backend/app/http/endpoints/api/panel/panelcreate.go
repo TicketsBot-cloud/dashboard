@@ -138,6 +138,19 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
+	if data.entersComponentsV2(database.Panel{}) {
+		flagTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+			return
+		}
+
+		if !componentsV2BuilderEnabled(c, userId, guildId, flagTier) {
+			c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))
+			return
+		}
+	}
+
 	hasPaid := quotaTier > premium.None
 	if (data.MessageUsesComponentsV2 || data.WelcomeMessageUsesComponentsV2) && !hasPaid {
 		c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))

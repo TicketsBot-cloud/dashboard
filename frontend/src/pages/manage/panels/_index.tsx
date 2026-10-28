@@ -425,7 +425,7 @@ const PanelsPage: FC = () => {
                 ) : (
                   multiPanels.map((panel) => (
                     <Table.Row key={panel.id}>
-                      <Table.Cell>{panel.name || "Untitled multi-panel"}</Table.Cell>
+                      <Table.Cell>{panel.name || panel.title || "Untitled multi-panel"}</Table.Cell>
 
                       <Table.Cell>
                         <div className="flex justify-end">
@@ -462,7 +462,7 @@ const PanelsPage: FC = () => {
                                     isOpen: true,
                                     type: "multipanel",
                                     id: panel.id.toString(),
-                                    name: panel.name || "Multi-panel",
+                                    name: panel.name || panel.title || "Multi-panel",
                                   }),
                               },
                             ]}
@@ -585,7 +585,12 @@ const PanelsPage: FC = () => {
         <GallerySubmitModal
           itemType="panel"
           itemId={gallerySubmitPanel?.panel_id ?? 0}
-          itemTitle={gallerySubmitPanel?.title ?? galleryEditSubmission?.name ?? ""}
+          itemTitle={
+            gallerySubmitPanel?.name ||
+            gallerySubmitPanel?.title ||
+            galleryEditSubmission?.name ||
+            ""
+          }
           guildId={guildId}
           open={!!(gallerySubmitPanel || galleryEditSubmission)}
           onClose={() => {

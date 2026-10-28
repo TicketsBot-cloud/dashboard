@@ -113,30 +113,24 @@ const DiscordComponents: FC<DiscordComponentsProps> = ({
           case 12: // MediaGallery
             return <MediaGallery key={index} items={component.items} />;
 
-          case 10: // TextDisplay, as a top-level component rather than nested in a Container
+          case 10:
             return (
               <DiscordContent key={index} content={component.content || ""} entities={entities} />
             );
 
-          case 13: // File, as a top-level component rather than nested in a Container
+          case 13:
             return (
-              <div key={index} className="my-1">
-                <input
-                  type="file"
-                  disabled
-                  aria-label="File upload"
-                  title="File upload"
-                  className="opacity-50 cursor-not-allowed"
-                />
+              <div key={index} className="my-1 text-sm text-gray-400">
+                {component.name || "File"}
               </div>
             );
 
-          case 14: // Separator, as a top-level component rather than nested in a Container
+          case 14:
             return (
               <Separator key={index} divider={component.divider} spacing={component.spacing} />
             );
 
-          case 17: // Container, including an empty one
+          case 17: // Renders an empty container too, unlike the default branch
             return <Container key={index} entities={entities} component={component} />;
 
           default:

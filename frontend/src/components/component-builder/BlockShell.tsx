@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type FC, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type FC, type ReactNode } from "react";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -12,7 +12,6 @@ interface MoveTarget {
 interface BlockShellProps {
   blockId: string;
   label: string;
-  /** The enclosing container's label, prefixed onto every accessible name when nested. */
   containerLabel?: string;
   icon: IconDefinition;
   canMoveUp: boolean;
@@ -50,10 +49,15 @@ const BlockShell: FC<BlockShellProps> = ({
   const upRef = useRef<HTMLButtonElement>(null);
   const downRef = useRef<HTMLButtonElement>(null);
   const pendingFocus = useRef<"up" | "down" | null>(null);
+  const [moveTarget, setMoveTarget] = useState("");
   const fullLabel = containerLabel ? `${containerLabel}, ${label}` : label;
+  // A deleted container's id must not stay chosen: moving into it would drop the block.
+  const chosenTarget = moveIntoContainerTargets?.some((target) => target.id === moveTarget)
+    ? moveTarget
+    : "";
 
   // Reordering moves this block's DOM nodes, which drops focus, and the pressed arrow becomes
-  // disabled at either end of the list. Restore focus to it, or to the opposite arrow.
+  // disabled at either end of the list.
   useLayoutEffect(() => {
     const pressed = pendingFocus.current;
     if (!pressed) return;
@@ -88,23 +92,34 @@ const BlockShell: FC<BlockShellProps> = ({
             </Button>
           )}
           {!!moveIntoContainerTargets?.length && onMoveIntoContainer && (
-            <select
-              className="bg-gray-800 border border-gray-600 text-gray-300 text-xs rounded px-2 py-1 disabled:opacity-50"
-              value=""
-              disabled={disabled}
-              aria-label={`Move ${fullLabel} into a container`}
-              onChange={(e) => {
-                if (e.target.value) onMoveIntoContainer(e.target.value);
-                e.target.value = "";
-              }}
-            >
-              <option value="">Move into container...</option>
-              {moveIntoContainerTargets.map((target) => (
-                <option key={target.id} value={target.id}>
-                  {target.label}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                className="bg-gray-800 border border-gray-600 text-gray-300 text-xs rounded px-2 py-1 disabled:opacity-50"
+                value={chosenTarget}
+                disabled={disabled}
+                aria-label={`Move ${fullLabel} into a container`}
+                onChange={(e) => setMoveTarget(e.target.value)}
+              >
+                <option value="">Move into container...</option>
+                {moveIntoContainerTargets.map((target) => (
+                  <option key={target.id} value={target.id}>
+                    {target.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={disabled || !chosenTarget}
+                onClick={() => {
+                  onMoveIntoContainer(chosenTarget);
+                  setMoveTarget("");
+                }}
+              >
+                Move
+                <span className="sr-only"> ({fullLabel})</span>
+              </Button>
+            </div>
           )}
           <Button
             ref={upRef}

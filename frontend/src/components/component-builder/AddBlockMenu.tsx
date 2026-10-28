@@ -25,10 +25,8 @@ interface AddBlockMenuProps {
   onAdd: (type: V2ComponentType) => void;
   exclude?: V2ComponentType[];
   tree: V2Component[];
-  /** Panels not yet placed in the tree. Undefined (outside a multi-panel) omits "Panel Select". */
   availablePanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
-  /** Set inside a container, so the trigger is distinguishable from the top-level one. */
   containerLabel?: string;
   /** Lets a delete that empties the list move focus to this trigger. */
   focusId?: string;
@@ -68,15 +66,12 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
 
   const closeAndReturnFocus = () => {
     setIsOpen(false);
-    // Deferred: an add can exhaust the block budget and unmount this menu (trigger included)
-    // in the same update, so wait for that commit before deciding whether there's still a
-    // trigger to focus - focusing it synchronously here would focus a node about to be removed.
+    // Deferred: an add can exhaust the block budget and unmount this trigger in the same update.
     requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
   useEffect(() => {
-    // The dropdown is portaled to the end of document.body, so a keyboard user tabbing
-    // from the trigger would otherwise skip straight past it - move focus in explicitly.
+    // The dropdown is portaled to the end of document.body, so tabbing would skip past it.
     if (!isOpen) return;
     dropdownRef.current
       ?.querySelector<HTMLButtonElement>('button:not([aria-disabled="true"])')
@@ -99,7 +94,7 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
     const leaving = e.shiftKey ? e.target === items[0] : e.target === items[items.length - 1];
     if (!leaving) return;
     // The popup is portaled to the end of the page, so tabbing out of it would land somewhere
-    // unrelated to the trigger. Close it and return to the trigger instead.
+    // unrelated to the trigger.
     e.preventDefault();
     setIsOpen(false);
     triggerRef.current?.focus();

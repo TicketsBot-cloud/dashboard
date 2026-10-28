@@ -136,7 +136,7 @@ func ResubmitHandler(ctx *gin.Context) {
 			}
 
 			if panel.MessageUsesComponentsV2 || panel.WelcomeMessageUsesComponentsV2 {
-				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels that use component-based messages cannot be submitted to the gallery. Switch the panel to a classic message first."))
+				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels that use Components v2 cannot be submitted to the gallery. Switch the panel's messages back to Classic first."))
 				return
 			}
 

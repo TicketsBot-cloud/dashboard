@@ -39,7 +39,7 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
-import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { COMPONENTS_V2_BUILDER_FLAG, FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import TicketModeInfoModal from "@/components/modals/TicketModeInfoModal";
@@ -55,6 +55,7 @@ import {
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
@@ -96,8 +97,7 @@ const PanelsPage: FC = () => {
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
   const [messageTree, setMessageTree] = useState<V2Component[]>([]);
   const [welcomeTree, setWelcomeTree] = useState<V2Component[]>([]);
-  // A clone keeps its source's formats, which stay switchable even with the builder flag off.
-  const [storedV2, setStoredV2] = useState({ message: false, welcome: false });
+  const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [supportHours, setSupportHours] = useState<SupportHoursData | null>(null);
   const handleSupportHoursChange = useCallback((data: SupportHoursData | null) => {
@@ -240,10 +240,6 @@ const PanelsPage: FC = () => {
           name: source.name ? `${source.name} (Copy)`.slice(0, 100) : null,
           title: `${source.title} (Copy)`.slice(0, 80),
         });
-        setStoredV2({
-          message: source.message_uses_components_v2,
-          welcome: source.welcome_message_uses_components_v2,
-        });
         setMessageTree(fromApiComponents(source.message_components));
         setWelcomeTree(fromApiComponents(source.welcome_message_components));
 
@@ -282,6 +278,9 @@ const PanelsPage: FC = () => {
     );
   }
 
+  // Mirrors when ComponentsV2Section shows the Message format toggle.
+  const formatToggleShown = builderEnabled === true || panel.message_uses_components_v2;
+
   const messageClassicSource: ClassicConversionSource = {
     title: panel.title,
     body: panel.content,
@@ -307,8 +306,15 @@ const PanelsPage: FC = () => {
     ...(welcomeClassicSource.fields?.length
       ? ["Field layout is dropped; fields become plain text."]
       : []),
-    ...(welcomeClassicSource.authorName ? ["The author icon is dropped."] : []),
-    ...(welcomeClassicSource.footerText ? ["The footer icon is dropped."] : []),
+    ...(welcomeClassicSource.authorName && panel.welcome_message?.author?.icon_url
+      ? ["The author icon is dropped."]
+      : []),
+    ...(welcomeClassicSource.footerText && panel.welcome_message?.footer?.icon_url
+      ? ["The footer icon is dropped."]
+      : []),
+    ...(welcomeClassicSource.title && panel.welcome_message?.url
+      ? ["The title link is dropped."]
+      : []),
     ...(panel.welcome_message?.timestamp ? ["The timestamp is dropped."] : []),
   ];
 
@@ -396,8 +402,8 @@ const PanelsPage: FC = () => {
             showCount
           />
           <p id="panel-title-help" className="text-xs text-gray-400 mt-1">
-            Used by /open, the ticket channel topic and the thread notice. In Classic mode it is
-            also the embed title.
+            Shown as the embed title{formatToggleShown ? " in Classic mode" : ""}, and used by
+            /open, the ticket channel topic and the thread notice.
           </p>
         </div>
       </div>
@@ -411,7 +417,7 @@ const PanelsPage: FC = () => {
             saveAttempted={saveAttempted}
             guildId={guildId}
             isV2={panel.message_uses_components_v2}
-            storedIsV2={storedV2.message}
+            storedIsV2={false}
             onV2Change={(isV2) =>
               setPanel((prev) => (prev ? { ...prev, message_uses_components_v2: isV2 } : prev))
             }
@@ -435,7 +441,7 @@ const PanelsPage: FC = () => {
           {!panel.message_uses_components_v2 && (
             <div className="pb-2">
               <span className="text-xl font-semibold">Panel Properties</span>
-              <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+              <div className="pt-2">
                 <ColourSelect
                   nullable
                   clearable
@@ -758,7 +764,7 @@ const PanelsPage: FC = () => {
             saveAttempted={saveAttempted}
             guildId={guildId}
             isV2={panel.welcome_message_uses_components_v2}
-            storedIsV2={storedV2.welcome}
+            storedIsV2={false}
             onV2Change={(isV2) =>
               setPanel((prev) =>
                 prev ? { ...prev, welcome_message_uses_components_v2: isV2 } : prev,

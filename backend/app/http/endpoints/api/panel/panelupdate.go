@@ -51,7 +51,8 @@ func UpdatePanel(c *gin.Context) {
 	}
 
 	var data panelBody
-	if err := c.ShouldBindJSON(&data); err != nil {
+	keys, err := bindJSONWithKeys(c, &data)
+	if err != nil {
 		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
@@ -75,6 +76,11 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	if err := data.keepStoredWhenAbsent(keys, existing); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
+	}
+
 	existingAcl, err := dbclient.Client.PanelAccessControlRules.GetAll(c, panelId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panel"))
@@ -83,6 +89,17 @@ func UpdatePanel(c *gin.Context) {
 
 	if existing.ForceDisabled {
 		c.JSON(400, utils.ErrorStr("This panel is disabled and cannot be modified: please reactivate premium to re-enable it"))
+		return
+	}
+
+	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
+	}
+
+	if data.entersComponentsV2(existing) && !componentsV2BuilderEnabled(c, userId, guildId, premiumTier) {
+		c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))
 		return
 	}
 
@@ -100,16 +117,10 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	data.retainClassicFields(existing)
+	data.retainClassicFields(existing, keys["colour"])
 
 	// Apply defaults
 	ApplyPanelDefaults(&data)
-
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-		return
-	}
 
 	footer, err := footerPolicyForGuild(c, guildId, botContext)
 	if err != nil {
@@ -394,6 +405,14 @@ func UpdatePanel(c *gin.Context) {
 
 	err = dbclient.Client.Panel.BeginFunc(c, func(tx pgx.Tx) error {
 		if err := dbclient.Client.Panel.UpdateWithTx(c, tx, panel); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.Panel.UpdateComponentsV2WithTx(c, tx, panel); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.Panel.SetNameWithTx(c, tx, panel.PanelId, panel.Name); err != nil {
 			return err
 		}
 

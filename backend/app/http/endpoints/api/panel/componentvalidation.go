@@ -37,15 +37,12 @@ const (
 	// select menu are interchangeable.
 	panelDropdownCustomId = "multipanel"
 
-	// Components appended by the system on top of the authored tree.
 	panelMessageReserved       = 2 // action row + open ticket button
 	welcomeFormAnswersReserved = 5
 	dropdownReserved           = 2 // action row + select menu
 )
 
-// treeRules describes where a tree will be sent, which decides what it may contain.
 type treeRules struct {
-	// validPanelIds is nil outside a multi-panel, where panel placement is meaningless.
 	validPanelIds map[int]bool
 	dropdownMode  bool
 	reserved      int
@@ -67,9 +64,8 @@ type treeResult struct {
 	count        int
 }
 
-// validateComponentTree checks an authored Components V2 tree against rules.reserved,
-// which a caller that only learns the reservation from the tree itself sets to 0 and then
-// checks with checkComponentBudget.
+// A caller that only learns the reservation from the tree itself passes reserved 0 and then
+// calls checkComponentBudget.
 func validateComponentTree(tree []component.Component, rules treeRules) (treeResult, error) {
 	v := &treeValidator{rules: rules, placed: make(map[int]bool)}
 
@@ -386,8 +382,7 @@ func checkUrl(kind, raw string) error {
 	return nil
 }
 
-// hasDottedHostname rejects hosts Discord refuses: no dot, or an empty label such as ".",
-// "a..com" or ".com". One trailing dot (a fully qualified name) is tolerated.
+// Discord refuses dotless hosts and empty labels. A trailing dot (fully qualified) is fine.
 func hasDottedHostname(host string) bool {
 	labels := strings.Split(strings.TrimSuffix(host, "."), ".")
 	if len(labels) < 2 {

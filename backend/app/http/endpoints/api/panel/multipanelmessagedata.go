@@ -120,11 +120,8 @@ func getEffectiveEmojiAnimated(panel database.Panel, customEmojiName *string, cu
 	return panel.EmojiAnimated
 }
 
-// effectiveDescription treats a non-nil pointer to an empty string as "no description".
-// The dashboard always submits this field as a string (never omitting it), so an admin who
-// leaves a panel's description blank still produces a non-nil *string pointing at "". Discord
-// rejects a select option whose description field is present but empty, so this must never be
-// passed through as-is.
+// The dashboard submits a blank description as "", and Discord rejects a select option whose
+// description is present but empty.
 func effectiveDescription(description *string) *string {
 	if description != nil && *description == "" {
 		return nil
@@ -151,8 +148,6 @@ func buildPanelSelectOptions(panels []database.PanelWithCustomization) []compone
 	return options
 }
 
-// buildPanelDropdown is the single builder for the dropdown, whether it is appended
-// by the system or placed inside the authored tree.
 func (d *multiPanelMessageData) buildPanelDropdown(panels []database.PanelWithCustomization) component.Component {
 	placeholder := "Select a topic..."
 	if d.SelectMenuPlaceholder != nil {
@@ -192,11 +187,7 @@ func (d *multiPanelMessageData) buildSystemRows(panels []database.PanelWithCusto
 	return rows
 }
 
-// buildComponents returns the components to send. For a Components V2 message that is the
-// authored tree with panel placements resolved into real buttons and dropdown, plus the
-// system rows for every panel the tree does not place. Nothing unresolved survives: a
-// placement whose panel is no longer in the multi-panel, or any node that is not a
-// recognised safe component, is dropped, so a "panel:" marker can never reach Discord.
+// Anything that cannot be resolved is dropped, so a "panel:" marker can never reach Discord.
 func (d *multiPanelMessageData) buildComponents(panels []database.PanelWithCustomization) (tree, system []component.Component) {
 	if !d.UsesComponentsV2 {
 		return nil, d.buildSystemRows(panels)
@@ -268,10 +259,8 @@ func isResolvableLinkButton(b component.Button) bool {
 	return b.Style == component.ButtonStyleLink && b.Url != nil && *b.Url != ""
 }
 
-// mapComponentTree rebuilds a tree bottom-up, passing every leaf (anything that is not a
-// container, section or action row) through fn. A leaf fn rejects is dropped, and so is any
-// parent left unable to render without it: an action row or container with no children, and
-// a section with no text or no accessory.
+// A parent left unable to render without a rejected leaf is dropped too: an action row or
+// container with no children, and a section with no text or no accessory.
 func mapComponentTree(nodes []component.Component, fn func(component.Component) (component.Component, bool)) []component.Component {
 	out := make([]component.Component, 0, len(nodes))
 
@@ -357,10 +346,9 @@ func (d *multiPanelMessageData) buildEditData(components []component.Component) 
 	}
 }
 
-// v2EditData is sent for every Components V2 edit. IS_COMPONENTS_V2 can be set but never
-// removed, and an edit that omits flags is validated as a classic message. Embeds must be
-// empty on a V2 message, and without allowed_mentions Discord re-parses mentions with its
-// default allowances.
+// IS_COMPONENTS_V2 can be set but never removed, and an edit that omits flags is validated as
+// a classic message. Embeds must be empty on a V2 message, and without allowed_mentions
+// Discord re-parses mentions with its default allowances.
 func v2EditData(components []component.Component) rest.EditMessageData {
 	return rest.EditMessageData{
 		Embeds:          []*embed.Embed{},
@@ -378,8 +366,6 @@ func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint6
 	return err
 }
 
-// buildResolvedPanelButton builds a panel's button from its own resolved defaults, ignoring
-// anything the client sent on a placement node.
 func buildResolvedPanelButton(pwc database.PanelWithCustomization) component.Button {
 	effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
 	effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)

@@ -47,7 +47,7 @@ func GetSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", c.Param("panelId")))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 
@@ -157,7 +157,7 @@ func SetSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", c.Param("panelId")))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 
@@ -379,7 +379,7 @@ func DeleteSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", c.Param("panelId")))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 
@@ -441,7 +441,7 @@ func IsPanelActive(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", c.Param("panelId")))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 

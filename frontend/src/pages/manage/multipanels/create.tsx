@@ -30,6 +30,7 @@ import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import PremiumGate from "@/components/PremiumGate";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
+import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
@@ -132,6 +133,7 @@ const MultiPanelsPage: FC = () => {
   const { data: premiumState = null } = useGuildPremium(guildId, false);
   const { data: brandingPremium = null } = useGuildPremium(guildId, true);
   const [componentTree, setComponentTree] = useState<V2Component[]>([]);
+  const { guard } = useMutationGuard();
 
   const getPanelById = (id: number) => panels.find((p) => p.panel_id === id);
 
@@ -277,8 +279,13 @@ const MultiPanelsPage: FC = () => {
   };
   const conversionNotes = [
     ...(classicSource.fields?.length ? ["Field layout is dropped; fields become plain text."] : []),
-    ...(classicSource.authorName ? ["The author icon is dropped."] : []),
-    ...(classicSource.footerText ? ["The footer icon is dropped."] : []),
+    ...(classicSource.authorName && multiPanel.embed.author?.icon_url
+      ? ["The author icon is dropped."]
+      : []),
+    ...(classicSource.footerText && multiPanel.embed.footer?.icon_url
+      ? ["The footer icon is dropped."]
+      : []),
+    ...(classicSource.title && multiPanel.embed.url ? ["The title link is dropped."] : []),
     ...(multiPanel.embed.timestamp ? ["The timestamp is dropped."] : []),
   ];
 
@@ -388,7 +395,7 @@ const MultiPanelsPage: FC = () => {
                   className="flex flex-col gap-3 p-3 border border-neutral-600 rounded"
                 >
                   <span className="font-semibold text-sm">
-                    {panel?.title || `Panel ${entry.panel_id}`}
+                    {panel?.name || panel?.title || `Panel ${entry.panel_id}`}
                   </span>
                   <EmojiPicker
                     label="Custom Emoji"
@@ -743,22 +750,24 @@ const MultiPanelsPage: FC = () => {
         // Not natively disabled: the button is focused when this flips, and a disabled control drops focus.
         visuallyDisabled={isLocked || (saveAttempted && saveBlocker() !== null)}
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
-        onClick={async () => {
+        onClick={() => {
           const payload = validateMultiPanel();
           if (!payload) {
             setSaveAttempted(true);
             return;
           }
 
-          try {
-            await apiClient.multiPanels.create(guildId, payload, SKIP_ERROR_TOAST);
-            await queryClient.invalidateQueries({ queryKey: guildKeys.multiPanels(guildId) });
-            toast.success("Multi Panel Created");
-            navigate(`/manage/${guildId}/panels`);
-          } catch (error) {
-            handleApiError(error, "Failed to create multi panel. Please try again.");
-            console.error("Failed to create multi panel:", error);
-          }
+          guard(async () => {
+            try {
+              await apiClient.multiPanels.create(guildId, payload, SKIP_ERROR_TOAST);
+              await queryClient.invalidateQueries({ queryKey: guildKeys.multiPanels(guildId) });
+              toast.success("Multi Panel Created");
+              navigate(`/manage/${guildId}/panels`);
+            } catch (error) {
+              handleApiError(error, "Failed to create multi panel. Please try again.");
+              console.error("Failed to create multi panel:", error);
+            }
+          });
         }}
       >
         <FontAwesomeIcon icon={faPlus} className="mr-2" /> Create Multi Panel

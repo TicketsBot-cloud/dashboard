@@ -59,9 +59,7 @@ export function useGuildPanel(
 }
 
 export function useGuildMultiPanels(guildId: string | undefined, enabled = true) {
-  return useQuery<
-    Array<{ id: number; name: string; title: string | null; force_disabled: boolean }>
-  >({
+  return useQuery<Array<{ id: number; name?: string; title: string | null }>>({
     queryKey: guildKeys.multiPanels(guildId || ""),
     queryFn: () => apiClient.multiPanels.getByGuild(guildId!).then((res) => res.data.data),
     enabled: useGuildQueryEnabled(guildId, enabled),

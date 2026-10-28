@@ -77,12 +77,18 @@ func TestLimitJSONBody(t *testing.T) {
 func TestLimitJSONBody_DeclaredContentLengthOverLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	var reached bool
 	router := gin.New()
-	router.POST("/", LimitJSONBody(10, 16), func(c *gin.Context) { c.Status(http.StatusOK) })
+	router.POST("/", LimitJSONBody(10, 16), func(c *gin.Context) {
+		reached = true
+		c.Status(http.StatusOK)
+	})
 
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"a":"0123456789"}`))
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{}`))
+	req.ContentLength = 11
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+	require.False(t, reached)
 }

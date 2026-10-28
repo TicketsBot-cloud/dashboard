@@ -330,7 +330,7 @@ const PanelPreview: FC<PanelPreviewProps> = ({
                 <Button button_style={4} label="Close" emoji={{ name: "\u{1F512}" }} />
               )}
               {welcomeButtons.closeWithReason && (
-                <Button button_style={4} label="Close with reason" emoji={{ name: "\u{1F512}" }} />
+                <Button button_style={4} label="Close With Reason" emoji={{ name: "\u{1F512}" }} />
               )}
               {welcomeButtons.claim && (
                 <Button

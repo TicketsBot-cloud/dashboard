@@ -8,9 +8,9 @@ interface MessageModeToggleProps {
   mode: MessageMode;
   onChange: (mode: MessageMode) => void;
   isPremium: boolean;
-  /** When false, Components v2 cannot be switched to, but a message already using it can switch back. */
   canEnterV2?: boolean;
   disabled?: boolean;
+  legendSuffix?: string;
 }
 
 const OPTIONS: { mode: MessageMode; icon: typeof faListUl; title: string; description: string }[] =
@@ -35,12 +35,16 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({
   isPremium,
   canEnterV2 = true,
   disabled,
+  legendSuffix,
 }) => {
   const name = useId();
 
   return (
     <fieldset disabled={disabled}>
-      <legend className="text-sm font-medium text-gray-300 mb-2">Message format</legend>
+      <legend className="text-sm font-medium text-gray-300 mb-2">
+        Message format
+        {legendSuffix && <span className="sr-only"> ({legendSuffix})</span>}
+      </legend>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {OPTIONS.map((option) => {
           const isV2 = option.mode === "components_v2";

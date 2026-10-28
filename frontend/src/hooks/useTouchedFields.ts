@@ -1,9 +1,5 @@
 import { useState } from "react";
 
-/**
- * Tracks which fields have been blurred so their errors can wait until the person has left the
- * field. `revealAll` (a save attempt) shows every error regardless.
- */
 export function useTouchedFields(revealAll: boolean) {
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
 

@@ -3,9 +3,9 @@ import type { APIMessageTopLevelComponent } from "discord-api-types/v10";
 import { RE_HEADING } from "@/lib/discord-markdown";
 import { intToColour } from "@/lib/colour";
 import { isSafeUrl } from "@/lib/url";
+import { AVATAR_PLACEHOLDER, previewAvatarUrl } from "@/lib/embed-avatar";
 import { panelEmoteName } from "@/lib/panel-payload";
 
-// discord-api-types/v10 has no ComponentType member for Container (17).
 const DiscordComponentType = {
   ActionRow: 1,
   Button: 2,
@@ -39,9 +39,6 @@ export const MAX_ROW_BUTTONS = 5;
 export const PANEL_MESSAGE_RESERVED = 2;
 
 const WELCOME_FORM_RESERVED = 5;
-
-/** Welcome messages only: the bot swaps this for the opener's avatar, so it is accepted as a media URL. */
-export const AVATAR_URL_PLACEHOLDER = "%avatar_url%";
 
 export type V2ComponentType =
   | "container"
@@ -175,7 +172,6 @@ function hexToColourInt(hex: string): number | undefined {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiComponent = Record<string, any>;
 
-/** Switches the tree walk from the save shape to the shape a placed panel resolves to. */
 interface PreviewResolver {
   lookup: Panel[];
   selectOptions: Panel[];
@@ -233,6 +229,7 @@ function parsePanelCustomId(c: ApiComponent): number | null {
 }
 
 function buildComponent(block: V2Component, resolve?: PreviewResolver): ApiComponent | null {
+  const mediaUrl = (url: string) => (resolve ? previewAvatarUrl(url) : url);
   switch (block.type) {
     case "container": {
       const accentColor = block.accentColor ? hexToColourInt(block.accentColor) : undefined;
@@ -258,7 +255,7 @@ function buildComponent(block: V2Component, resolve?: PreviewResolver): ApiCompo
       if (accessory?.kind === "thumbnail") {
         section.accessory = {
           type: DiscordComponentType.Thumbnail,
-          media: { url: accessory.url },
+          media: { url: mediaUrl(accessory.url) },
           ...(accessory.description ? { description: accessory.description } : {}),
           ...(accessory.spoiler ? { spoiler: true } : {}),
         };
@@ -280,7 +277,7 @@ function buildComponent(block: V2Component, resolve?: PreviewResolver): ApiCompo
       return {
         type: DiscordComponentType.MediaGallery,
         items: block.items.map((item) => ({
-          media: { url: item.url },
+          media: { url: mediaUrl(item.url) },
           ...(item.description ? { description: item.description } : {}),
           ...(item.spoiler ? { spoiler: true } : {}),
         })),
@@ -353,8 +350,8 @@ export function toPreviewComponents(
 }
 
 /**
- * Parses a stored tree. The panel endpoints return the column as a JSON string; a parsed array
- * (echoed after a create) and null are tolerated too.
+ * The panel endpoints return the column as a JSON string; a parsed array (echoed after a create)
+ * and null are tolerated too.
  */
 export function fromApiComponents(raw: unknown): V2Component[] {
   let value: unknown = raw;
@@ -473,7 +470,6 @@ function fromApiComponent(node: unknown): V2Component | null {
         c?.style === ButtonStyle.Link &&
         typeof c?.url === "string";
 
-      // Rows the builder cannot represent (e.g. other interactive rows) are dropped, not edited.
       const allRepresentable =
         children.length > 0 &&
         children.every((c: ApiComponent) => isLinkButton(c) || parsePanelCustomId(c) !== null);
@@ -498,7 +494,6 @@ function fromApiComponent(node: unknown): V2Component | null {
 // Mirrors discord-markdown.ts's RE_FENCE so a "#" line inside a code fence is never a heading.
 const RE_FENCE = /```(?:([A-Za-z0-9+#._-]*)\n)?([\s\S]*?)```\n?/g;
 
-/** Leaves fenced code intact. Segments are verbatim slices; whitespace-only ones are dropped. */
 export function splitOnHeadings(body: string): string[] {
   if (!body) return [];
 
@@ -530,7 +525,6 @@ export function splitOnHeadings(body: string): string[] {
   return segments;
 }
 
-/** Every field is optional: panel messages carry only title, body, colour and images. */
 export interface ClassicConversionSource {
   title?: string;
   body?: string;
@@ -541,20 +535,14 @@ export interface ClassicConversionSource {
   authorName?: string;
   authorUrl?: string;
   footerText?: string;
-  /** Welcome messages only: keeps an `%avatar_url%` image or thumbnail. */
   allowAvatarPlaceholder?: boolean;
 }
 
 function convertibleImageUrl(url: string | undefined, allowAvatarPlaceholder?: boolean): boolean {
   if (!url) return false;
-  return isSafeUrl(url) || (!!allowAvatarPlaceholder && url === AVATAR_URL_PLACEHOLDER);
+  return isSafeUrl(url) || (!!allowAvatarPlaceholder && url === AVATAR_PLACEHOLDER);
 }
 
-/**
- * Splits the body on headings, turns images into a media gallery, and folds fields, author and
- * footer into text. If the result exceeds `maxBlocks`, trailing text blocks are merged until it
- * fits. The media gallery is never merged away.
- */
 export function convertClassicToComponentsV2(
   source: ClassicConversionSource,
   maxBlocks: number,
@@ -634,7 +622,6 @@ export function convertClassicToComponentsV2(
   return { tree: [container], folded };
 }
 
-/** Whether `convertClassicToComponentsV2` would produce anything. Unsafe image URLs don't count. */
 export function hasConvertibleClassicContent(source: ClassicConversionSource): boolean {
   return !!(
     source.title?.trim() ||
@@ -647,7 +634,6 @@ export function hasConvertibleClassicContent(source: ClassicConversionSource): b
   );
 }
 
-/** Applies a conversion only if it produced something, so an all-unsafe-URL source cannot wipe the tree. */
 export function applyClassicConversion(
   source: ClassicConversionSource,
   maxBlocks: number,
@@ -661,7 +647,7 @@ export function applyClassicConversion(
   return { converted: true, folded: result.folded };
 }
 
-/** Mirrors the backend's component count: every block, its children, section accessories and button rows. */
+/** Mirrors the backend's component count. */
 export function countBlocks(tree: V2Component[]): number {
   let count = 0;
   for (const block of tree) {
@@ -702,11 +688,7 @@ export function welcomeReserved(panel: WelcomeButtonSettings): number {
   return WELCOME_FORM_RESERVED + (buttons > 0 ? buttons + 1 : 0);
 }
 
-/**
- * Components the backend appends to a multi-panel message. A placed dropdown absorbs every
- * unplaced panel, so nothing is appended. Otherwise dropdown mode appends one row and one select,
- * and button mode appends rows of up to 5 buttons for the panels not placed in the tree.
- */
+/** Mirrors the backend: a placed dropdown absorbs every unplaced panel, so nothing is appended. */
 export function multiPanelReserved(opts: {
   selectMenu: boolean;
   hasPlacedSelect: boolean;
@@ -758,10 +740,7 @@ export function removePanelSelectBlock(tree: V2Component[]): V2Component[] {
     );
 }
 
-/**
- * Removes placements of panels that are no longer in the multi-panel. Button rows left empty are
- * dropped. A section whose panel accessory goes loses the accessory and is flagged by validation.
- */
+/** A section that loses its panel accessory is kept and flagged by validation. */
 export function prunePlacedPanels(tree: V2Component[], validIds: Set<number>): V2Component[] {
   const result: V2Component[] = [];
   for (const block of tree) {
@@ -791,6 +770,24 @@ const RE_URL_BIDI_CONTROL = /[\u202A-\u202E\u2066-\u2069\u200E\u200F]/;
 // slightly stricter than Go.
 const RE_URL_BAD_HOST_CHAR = /[^A-Za-z0-9\-._~!$&'()*+,;=:[\]<>"\u0080-\uFFFF]/;
 const RE_URL_BAD_ESCAPE = /%(?![0-9A-Fa-f]{2})/;
+const RE_IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+
+/** Go's netip.ParseAddr for IPv6, minus zones: a "%" in the host is refused anyway. */
+function isIpv6(address: string): boolean {
+  const lastColon = address.lastIndexOf(":");
+  if (lastColon === -1) return false;
+  let hex = address;
+  const tail = address.slice(lastColon + 1);
+  if (tail.includes(".")) {
+    if (!RE_IPV4.test(tail)) return false;
+    hex = `${address.slice(0, lastColon + 1)}0:0`;
+  }
+  const halves = hex.split("::");
+  if (halves.length > 2) return false;
+  const groups = halves.flatMap((half) => (half ? half.split(":") : []));
+  if (!groups.every((group) => /^[0-9A-Fa-f]{1,4}$/.test(group))) return false;
+  return halves.length === 2 ? groups.length < 8 : groups.length === 8;
+}
 
 /**
  * Mirrors the backend's checkUrl. The raw string is inspected rather than `new URL()`, because the
@@ -813,13 +810,17 @@ export function validUrl(raw: string): boolean {
 
   let host: string;
   let port: string;
-  if (authority.startsWith("[")) {
-    const end = authority.indexOf("]");
+  const bracket = authority.lastIndexOf("[");
+  if (bracket > 0) return false;
+  if (bracket === 0) {
+    const end = authority.lastIndexOf("]");
     if (end === -1) return false;
     host = authority.slice(1, end);
     port = authority.slice(end + 1);
+    if (!isIpv6(host)) return false;
   } else {
-    const colon = authority.lastIndexOf(":");
+    // Go reads the port from the first colon, so a second colon fails the port check.
+    const colon = authority.indexOf(":");
     host = colon === -1 ? authority : authority.slice(0, colon);
     port = colon === -1 ? "" : authority.slice(colon);
   }
@@ -835,12 +836,11 @@ export function countCharacters(text: string): number {
   return [...text].length;
 }
 
-// Shared with the editors so a field shows the same wording as the summary list.
 export const BLANK_TEXT_MESSAGE = "Text cannot be blank.";
 export const LINK_LABEL_MESSAGE = "Every link button needs a label.";
 export const LINK_URL_MESSAGE = `Link button URLs must be a full http:// or https:// address with a domain name, no spaces, and at most ${MAX_URL_LENGTH} characters.`;
 export const MEDIA_URL_MESSAGE = `Image URLs must be a full http:// or https:// address with a domain name, no spaces, and at most ${MAX_URL_LENGTH} characters.`;
-const WELCOME_MEDIA_URL_MESSAGE = `${MEDIA_URL_MESSAGE} You can also use ${AVATAR_URL_PLACEHOLDER}.`;
+const WELCOME_MEDIA_URL_MESSAGE = `${MEDIA_URL_MESSAGE} You can also use ${AVATAR_PLACEHOLDER}.`;
 export const EMPTY_PANEL_SELECT_MESSAGE =
   "The Panel Select block has no panels left to list. Remove a panel button placed elsewhere, or delete this block.";
 
@@ -858,27 +858,23 @@ export const mediaUrlError = (
   allowAvatarPlaceholder?: boolean,
 ): string | undefined => {
   if (allowAvatarPlaceholder) {
-    return url === AVATAR_URL_PLACEHOLDER || validUrl(url) ? undefined : WELCOME_MEDIA_URL_MESSAGE;
+    return url === AVATAR_PLACEHOLDER || validUrl(url) ? undefined : WELCOME_MEDIA_URL_MESSAGE;
   }
   return validUrl(url) ? undefined : MEDIA_URL_MESSAGE;
 };
 
 export interface ComponentTreeIssue {
   message: string;
-  /** Absent for whole-message issues such as the component limit. */
   blockId?: string;
 }
 
 export interface TreeValidationOptions {
   requireContent?: boolean;
   reserved?: number;
-  /** Welcome messages only. */
   allowAvatarPlaceholder?: boolean;
-  /** Multi-panels only: panels not placed as buttons, which a placed dropdown would list. */
   unplacedPanelCount?: number;
 }
 
-/** The backend enforces the same rules. */
 export function validateComponentTree(
   tree: V2Component[],
   opts: TreeValidationOptions = {},
@@ -979,7 +975,7 @@ export function validateComponentTree(
     );
   }
   if (textCharacters > MAX_TEXT_CHARACTERS) {
-    add(`Text totals ${textCharacters} characters. The limit is ${MAX_TEXT_CHARACTERS}.`);
+    add(`Text can total at most ${MAX_TEXT_CHARACTERS} characters.`);
   }
 
   return [...issues.values()];
@@ -1094,7 +1090,6 @@ export function moveBlockIntoContainer(
   return addBlockToContainer(withoutBlock, containerId, block);
 }
 
-/** Places the block right after the container it leaves. */
 export function moveBlockOutOfContainer(tree: V2Component[], blockId: string): V2Component[] {
   const containerIndex = tree.findIndex(
     (b) => b.type === "container" && b.components.some((child) => child.id === blockId),

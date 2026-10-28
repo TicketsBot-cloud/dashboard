@@ -9,10 +9,7 @@ interface BuildPreviewTabsProps {
   className?: string;
 }
 
-/**
- * Build/Preview tabs shown below `md`, where the two panes cannot sit side by side. Renders three
- * siblings so a parent `md:grid-cols-2` lays the panes out together from `md` up.
- */
+/** Renders three siblings so a parent `md:grid-cols-2` lays the panes out together from `md` up. */
 const BuildPreviewTabs: FC<BuildPreviewTabsProps> = ({ build, preview, className = "" }) => {
   const [activeTab, setActiveTab] = useState<"build" | "preview">("build");
   const uid = useId();

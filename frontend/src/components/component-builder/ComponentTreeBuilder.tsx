@@ -13,7 +13,6 @@ interface ComponentTreeBuilderProps {
   budgetMax: number;
   budgetReservedNote?: string;
   disabled?: boolean;
-  /** Panels not yet placed in the tree. Undefined means no panel placement UI at all. */
   availablePanels?: PickerPanel[];
   allPanels?: PickerPanel[];
   selectMenuModeOn?: boolean;

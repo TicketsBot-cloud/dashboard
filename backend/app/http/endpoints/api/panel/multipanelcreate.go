@@ -18,6 +18,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
@@ -67,8 +68,6 @@ func (d *multiPanelCreateData) IntoMessageData(footer footerPolicy) multiPanelMe
 	return data
 }
 
-// validateMultiPanelComponents validates the authored tree and checks it leaves room for
-// the rows the system appends for every panel the tree does not place.
 func validateMultiPanelComponents(data multiPanelCreateData) error {
 	if !data.UsesComponentsV2 {
 		return nil
@@ -105,9 +104,7 @@ func multiPanelReserved(dropdownMode, dropdownPlaced bool, unplaced int) int {
 	}
 }
 
-// stripUnknownPlacements removes placements of panels that are not part of this multi-panel,
-// along with any action row, section or container they leave empty, so removing a panel from
-// the list does not make the save fail on a placement the user can no longer see.
+// Removing a panel from the list must not fail the save over a placement the user cannot see.
 func (d *multiPanelCreateData) stripUnknownPlacements() {
 	known := make(map[int]bool, len(d.Panels))
 	for _, p := range d.Panels {
@@ -144,7 +141,6 @@ func findPanelConfig(configs []panelConfiguration, panelId int) *panelConfigurat
 	return nil
 }
 
-// validateDropdownLabels checks every panel has something to show in a dropdown option.
 func validateDropdownLabels(panels []database.Panel, configs []panelConfiguration) error {
 	for _, panel := range panels {
 		label := panel.ButtonLabel
@@ -188,6 +184,19 @@ func MultiPanelCreate(c *gin.Context) {
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
 		return
+	}
+
+	if data.entersComponentsV2(database.MultiPanel{}) {
+		tier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
+			return
+		}
+
+		if !componentsV2BuilderEnabled(c, userId, guildId, tier) {
+			c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))
+			return
+		}
 	}
 
 	if data.UsesComponentsV2 {

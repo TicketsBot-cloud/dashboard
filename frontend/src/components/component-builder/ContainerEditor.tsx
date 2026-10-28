@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import Button from "@/components/Button";
 import ColourSelect from "@/components/ColourSelect";
 import Slider from "@/components/Slider";
 import { getTopLevelContainers, type V2Container, type V2Component } from "@/lib/component-tree";
@@ -41,30 +40,28 @@ const ContainerEditor: FC<ContainerEditorProps> = ({
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-        <ColourSelect
-          label="Accent colour"
-          value={value.accentColor || "#5865f2"}
-          disabled={disabled}
-          onChange={(accentColor) => onChange({ ...value, accentColor })}
-        />
-        <div className="flex items-center gap-3">
-          {value.accentColor && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={disabled}
-              onClick={() => onChange({ ...value, accentColor: undefined })}
-            >
-              Clear
-            </Button>
-          )}
+        <div className="flex items-end gap-3">
           <Slider
-            label="Spoiler"
-            value={value.spoiler ?? false}
+            label="Accent colour"
+            value={!!value.accentColor}
             disabled={disabled}
-            onChange={(spoiler) => onChange({ ...value, spoiler })}
+            onChange={(on) => onChange({ ...value, accentColor: on ? "#5865f2" : undefined })}
           />
+          {value.accentColor && (
+            <ColourSelect
+              className="flex-1"
+              value={value.accentColor}
+              disabled={disabled}
+              onChange={(accentColor) => onChange({ ...value, accentColor })}
+            />
+          )}
         </div>
+        <Slider
+          label="Spoiler"
+          value={value.spoiler ?? false}
+          disabled={disabled}
+          onChange={(spoiler) => onChange({ ...value, spoiler })}
+        />
       </div>
       <BlockList
         blocks={value.components}

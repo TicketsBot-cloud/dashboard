@@ -28,6 +28,7 @@ interface ContainerProps {
       url?: string;
       divider?: boolean;
       spacing?: number;
+      name?: string;
       components?: Array<{
         type: number;
         style?: number;
@@ -119,14 +120,8 @@ export default function Container({ component = {}, entities }: ContainerProps) 
               return <MediaGallery key={index} items={subcomponent.items} />;
             } else if (subcomponent.type === 13) {
               return (
-                <div key={index} className="my-1">
-                  <input
-                    type="file"
-                    disabled
-                    aria-label="File upload"
-                    title="File upload"
-                    className="opacity-50 cursor-not-allowed"
-                  />
+                <div key={index} className="my-1 text-sm text-gray-400">
+                  {subcomponent.name || "File"}
                 </div>
               );
             } else if (subcomponent.type === 14) {

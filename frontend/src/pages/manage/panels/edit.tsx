@@ -40,7 +40,7 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
-import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { COMPONENTS_V2_BUILDER_FLAG, FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -53,7 +53,9 @@ import {
   TRANSCRIPT_CHANNEL_INFO,
 } from "@/constants/panelChannelInfo";
 import TicketModeInfoModal from "@/components/modals/TicketModeInfoModal";
+import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
@@ -122,10 +124,12 @@ const EditPanelsPage: FC = () => {
   const [messageTree, setMessageTree] = useState<V2Component[]>([]);
   const [welcomeTree, setWelcomeTree] = useState<V2Component[]>([]);
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
+  const { isSubmitting, guard } = useMutationGuard();
   const hasLoadedOnceRef = useRef(false);
   // Captured once on first load, so the repost caption and confirmation compare against how the
   // panel started this session, not against every toggle flip in between.
   const [storedV2, setStoredV2] = useState({ message: false, welcome: false });
+  const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -252,6 +256,10 @@ const EditPanelsPage: FC = () => {
     }
   };
 
+  // Mirrors when ComponentsV2Section shows the Message format toggle.
+  const formatToggleShown =
+    builderEnabled === true || storedV2.message || panel.message_uses_components_v2;
+
   const messageClassicSource: ClassicConversionSource = {
     title: panel.title,
     body: panel.content,
@@ -277,8 +285,15 @@ const EditPanelsPage: FC = () => {
     ...(welcomeClassicSource.fields?.length
       ? ["Field layout is dropped; fields become plain text."]
       : []),
-    ...(welcomeClassicSource.authorName ? ["The author icon is dropped."] : []),
-    ...(welcomeClassicSource.footerText ? ["The footer icon is dropped."] : []),
+    ...(welcomeClassicSource.authorName && panel.welcome_message?.author?.icon_url
+      ? ["The author icon is dropped."]
+      : []),
+    ...(welcomeClassicSource.footerText && panel.welcome_message?.footer?.icon_url
+      ? ["The footer icon is dropped."]
+      : []),
+    ...(welcomeClassicSource.title && panel.welcome_message?.url
+      ? ["The title link is dropped."]
+      : []),
     ...(panel.welcome_message?.timestamp ? ["The timestamp is dropped."] : []),
   ];
 
@@ -362,8 +377,8 @@ const EditPanelsPage: FC = () => {
             showCount
           />
           <p id="panel-title-help" className="text-xs text-gray-400 mt-1">
-            Used by /open, the ticket channel topic and the thread notice. In Classic mode it is
-            also the embed title.
+            Shown as the embed title{formatToggleShown ? " in Classic mode" : ""}, and used by
+            /open, the ticket channel topic and the thread notice.
           </p>
         </div>
       </div>
@@ -409,7 +424,7 @@ const EditPanelsPage: FC = () => {
           {!panel.message_uses_components_v2 && (
             <div className="pb-2">
               <span className="text-xl font-semibold">Panel Properties</span>
-              <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+              <div className="pt-2">
                 <ColourSelect
                   nullable
                   clearable
@@ -1453,6 +1468,9 @@ const EditPanelsPage: FC = () => {
         visuallyDisabled={isLocked || (saveAttempted && hasMissingRequired)}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
         onClick={() => {
+          // The guard drops a second save, but the repost dialog would still reopen.
+          if (isSubmitting) return;
+
           if (hasMissingRequired) {
             // Flushed so the field errors it reveals exist when the first problem is located.
             flushSync(() => setSaveAttempted(true));
@@ -1467,7 +1485,7 @@ const EditPanelsPage: FC = () => {
             setDowngradeConfirmOpen(true);
             return;
           }
-          savePanel();
+          guard(savePanel);
         }}
       >
         <FontAwesomeIcon icon={faSave} className="mr-2" /> Save Changes
@@ -1480,11 +1498,11 @@ const EditPanelsPage: FC = () => {
         isOpen={downgradeConfirmOpen}
         onConfirm={() => {
           setDowngradeConfirmOpen(false);
-          savePanel();
+          guard(savePanel);
         }}
         onCancel={() => setDowngradeConfirmOpen(false)}
         title="Switch back to classic?"
-        message="Switching this button message back to classic mode deletes the current message and posts a new one in its place. The new message loses its position in the channel, and any reactions on the old one are lost. Replies to the old message stay in the channel. Continue?"
+        message="Switching this panel message back to classic mode deletes the current message and posts a new one in its place. The new message loses its position in the channel, and any reactions on the old one are lost. Replies to the old message stay in the channel. Continue?"
         confirmText="Switch and repost"
         cancelText="Keep as is"
         confirmVariant="danger"

@@ -60,6 +60,23 @@ func ImportHandler(ctx *gin.Context) {
 		return
 	}
 
+	// The bot token can post anywhere the bot is, so both IDs must be proven to belong to this guild
+	// before anything is sent or stored, otherwise a panel can be planted in another server.
+	if body.ChannelId != nil || body.CategoryId != nil {
+		chCtx, cancel := app.DefaultContext()
+		channels, err := botContext.GetGuildChannels(chCtx, guildId)
+		cancel()
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch guild channels from Discord"))
+			return
+		}
+
+		if msg := validateImportTargets(channels, body.ChannelId, body.CategoryId); msg != "" {
+			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("%s", msg))
+			return
+		}
+	}
+
 	// Check panel quota
 	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(ctx, guildId, false, botContext.Token, botContext.RateLimiter)
 	if err != nil {

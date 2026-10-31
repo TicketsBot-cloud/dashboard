@@ -135,6 +135,11 @@ func ResubmitHandler(ctx *gin.Context) {
 				return
 			}
 
+			if panel.MessageUsesComponentsV2 || panel.WelcomeMessageUsesComponentsV2 {
+				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels that use Components v2 cannot be submitted to the gallery. Switch the panel's messages back to Classic first."))
+				return
+			}
+
 			if panel.EmojiId != nil {
 				ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Panels with custom Discord emojis cannot be submitted to the gallery. Please use a standard Unicode emoji instead."))
 				return
@@ -294,9 +299,9 @@ func ResubmitHandler(ctx *gin.Context) {
 		ResourceType: database.AuditResourceGalleryListing,
 		ResourceId:   audit.StringPtr(strconv.Itoa(listingId)),
 		NewData: map[string]any{
-			"name":       body.Name,
-			"category":   body.Category,
-			"resubmit":   true,
+			"name":     body.Name,
+			"category": body.Category,
+			"resubmit": true,
 		},
 	})
 

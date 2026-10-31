@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import Button from "@/components/Button";
+import { useCallback, useEffect, useId, useState } from "react";
+import DismissibleModal from "@/components/modal-primitives/DismissibleModal";
 
 interface MediaGalleryProps {
   items?: Array<{
     spoiler?: boolean;
+    description?: string;
     media?: {
       url: string;
     };
@@ -12,97 +13,73 @@ interface MediaGalleryProps {
 
 export default function MediaGallery({ items = [] }: MediaGalleryProps) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalImageSrc, setModalImageSrc] = useState("");
-  const modalRef = useRef<HTMLDivElement>(null);
-  const galleryRef = useRef<HTMLDivElement>(null);
+  const [modalImage, setModalImage] = useState({ src: "", alt: "" });
+  const titleId = useId();
 
-  const handleImageClick = useCallback((imageSrc: string) => {
+  const handleImageClick = useCallback((src: string, alt: string) => {
+    setModalImage({ src, alt });
     setModalOpen(true);
-    setModalImageSrc(imageSrc);
   }, []);
 
-  const handleModalClose = useCallback(() => {
-    setModalOpen(false);
-    setModalImageSrc("");
-  }, []);
+  const handleModalClose = useCallback(() => setModalOpen(false), []);
 
+  // The modal primitive handles focus, Escape and focus return but not page scroll.
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && modalOpen) {
-        handleModalClose();
-      }
-    };
-
-    if (modalOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = "hidden";
-    }
-
+    if (!modalOpen) return;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [modalOpen, handleModalClose]);
+  }, [modalOpen]);
+
+  // Discord shows a single item in its own proportions rather than as a cropped tile.
+  const single = items.length === 1;
 
   return (
     <>
       <div
-        ref={galleryRef}
-        className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2 my-2 max-w-full"
+        className={`grid ${single ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(100px,1fr))]"} gap-2 my-2 max-w-full`}
       >
-        {items && items.length > 0 && (
-          <>
-            {items.map((item, index) => (
-              <button
-                type="button"
-                key={index}
-                onClick={() => item.media?.url && handleImageClick(item.media.url)}
-                className={`media-item relative overflow-hidden rounded h-25 cursor-pointer ${
-                  item.spoiler ? "blur hover:blur-none" : ""
-                }`}
-              >
-                {item.media && item.media.url && (
-                  <img
-                    src={item.media.url}
-                    alt="Media"
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-110 active:scale-200 active:transition-[transform] active:duration-100"
-                  />
-                )}
-              </button>
-            ))}
-          </>
-        )}
+        {items.map((item, index) => {
+          const alt = item.description || "Image";
+          const natural = single && !!item.media?.url;
+          return (
+            <button
+              type="button"
+              key={index}
+              onClick={() => item.media?.url && handleImageClick(item.media.url, alt)}
+              className={`media-item relative overflow-hidden rounded ${natural ? "justify-self-start max-w-full" : "h-25"} cursor-pointer ${
+                item.spoiler ? "blur hover:blur-none focus-visible:blur-none" : ""
+              }`}
+            >
+              {item.spoiler && <span className="sr-only">Spoiler </span>}
+              {item.media && item.media.url && (
+                <img
+                  src={item.media.url}
+                  alt={alt}
+                  className={`${natural ? "block w-auto max-w-full h-auto max-h-80" : "w-full h-full object-cover"} transition-transform duration-300 hover:scale-110 active:scale-200 active:transition-[transform] active:duration-100`}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Modal */}
-      {modalOpen && (
-        <div
-          ref={modalRef}
-          className="fixed inset-0 z-1000 bg-black/80 flex items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image preview"
-        >
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-          <div className="absolute inset-0" onClick={handleModalClose} />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleModalClose}
-            className="absolute top-5 right-9 text-gray-100 text-4xl font-bold hover:text-gray-400"
-            aria-label="Close modal"
-            title="Close modal"
-          >
-            &times;
-          </Button>
-          <img
-            src={modalImageSrc}
-            alt="Media preview"
-            className="relative block max-w-[90%] max-h-[90%] rounded shadow-[0_0_20px_rgba(0,0,0,0.5)]"
-          />
-        </div>
-      )}
+      <DismissibleModal
+        isOpen={modalOpen}
+        onClose={handleModalClose}
+        ariaLabelledBy={titleId}
+        className="max-w-4xl"
+      >
+        <h2 id={titleId} className="sr-only">
+          Image preview
+        </h2>
+        <img
+          src={modalImage.src}
+          alt={modalImage.alt}
+          className="block max-w-full max-h-[80vh] mx-auto rounded"
+        />
+      </DismissibleModal>
     </>
   );
 }

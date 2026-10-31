@@ -171,6 +171,7 @@ export interface TicketPermissions {
 
 export interface Panel {
   panel_id: number;
+  name?: string | null;
   message_id: Snowflake;
   channel_id: Snowflake;
   guild_id: Snowflake;
@@ -250,6 +251,12 @@ export interface Panel {
   teams: Array<number>;
   kb_category_ids: number[];
   access_control_list: Array<ACL>;
+
+  message_uses_components_v2: boolean;
+  /** A JSON string on read (the backend stores the raw tree); a save request sends a real array. */
+  message_components: APIMessageTopLevelComponent[] | string | null;
+  welcome_message_uses_components_v2: boolean;
+  welcome_message_components: APIMessageTopLevelComponent[] | string | null;
 }
 
 export interface MultiPanelPanelEntry {
@@ -262,6 +269,7 @@ export interface MultiPanelPanelEntry {
 
 export interface MultiPanel {
   id: number;
+  name: string | null;
   message_id: Snowflake;
   channel_id: Snowflake;
   guild_id: Snowflake;
@@ -269,14 +277,20 @@ export interface MultiPanel {
   select_menu_placeholder?: string;
   panels: Array<MultiPanelPanelEntry>;
   embed: MultiPanelEmbed;
+  uses_components_v2: boolean;
+  /** See the equivalent note on `Panel.message_components` - a JSON string on read, an array on write. */
+  components: APIMessageTopLevelComponent[] | string | null;
 }
 
 export interface MultiPanelRequest {
+  name?: string;
   channel_id: Snowflake;
   embed: MultiPanelEmbed;
   panels: Array<MultiPanelPanelEntry>;
   select_menu: boolean;
   select_menu_placeholder?: string;
+  uses_components_v2: boolean;
+  components: APIMessageTopLevelComponent[] | null;
 }
 
 export interface MultiPanelEmbed {

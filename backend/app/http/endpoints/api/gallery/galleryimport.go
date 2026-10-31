@@ -141,9 +141,13 @@ func ImportHandler(ctx *gin.Context) {
 		buttonStyle = int(*listing.ButtonStyle)
 	}
 
+	// The listing's Name labels the template; Title is end-user copy such as "Need help?".
+	panelName := listing.Name
+
 	panel := database.Panel{
 		ChannelId:                 0, // Will be set if we send a message
 		GuildId:                   guildId,
+		Name:                      &panelName,
 		Title:                     listing.Title,
 		Content:                   listing.Content,
 		Colour:                    listing.Colour,

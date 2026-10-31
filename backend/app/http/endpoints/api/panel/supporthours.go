@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -48,7 +47,7 @@ func GetSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 
@@ -60,7 +59,7 @@ func GetSupportHours(c *gin.Context) {
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
+		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found: %d", panelId))
 		return
 	}
 
@@ -158,7 +157,7 @@ func SetSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 
@@ -215,7 +214,7 @@ func SetSupportHours(c *gin.Context) {
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
+		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found: %d", panelId))
 		return
 	}
 
@@ -227,7 +226,7 @@ func SetSupportHours(c *gin.Context) {
 
 	// Validate timezone
 	if !database.IsValidTimezone(requestBody.Timezone) {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid timezone: %s", requestBody.Timezone)))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid timezone: %s", requestBody.Timezone))
 		return
 	}
 
@@ -380,7 +379,7 @@ func DeleteSupportHours(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 
@@ -392,7 +391,7 @@ func DeleteSupportHours(c *gin.Context) {
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
+		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found: %d", panelId))
 		return
 	}
 
@@ -442,7 +441,7 @@ func IsPanelActive(c *gin.Context) {
 	panelIdStr := c.Param("panelid")
 	panelId, err := strconv.Atoi(panelIdStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorStr(fmt.Sprintf("Invalid panel ID provided: %s", c.Param("panelId"))))
+		c.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid panel ID provided: %s", panelIdStr))
 		return
 	}
 
@@ -454,7 +453,7 @@ func IsPanelActive(c *gin.Context) {
 	}
 
 	if panel.GuildId != guildId {
-		c.JSON(http.StatusNotFound, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
+		c.JSON(http.StatusNotFound, utils.ErrorStr("Panel not found: %d", panelId))
 		return
 	}
 

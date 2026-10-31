@@ -3,16 +3,18 @@ package api
 import (
 	"context"
 	"fmt"
-	"math"
 
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/message"
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/TicketsBot-cloud/gdl/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	"github.com/ticketsbot-cloud/dashboard/backend/config"
+	"github.com/ticketsbot-cloud/dashboard/backend/log"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
+	"go.uber.org/zap"
 )
 
 type multiPanelMessageData struct {
@@ -24,6 +26,9 @@ type multiPanelMessageData struct {
 	SelectMenuPlaceholder *string
 
 	Embed *embed.Embed
+
+	UsesComponentsV2 bool
+	Components       []component.Component
 }
 
 func (d *multiPanelMessageData) applyFooter() {
@@ -43,21 +48,38 @@ func multiPanelDiscordSubPanelError(action, detail string) string {
 }
 
 func multiPanelIntoMessageData(panel database.MultiPanel, footer footerPolicy) multiPanelMessageData {
-	blurple := types.Colour(0x5865f2)
-	custom := &types.CustomEmbed{Colour: &blurple}
-	if panel.Embed != nil && panel.Embed.CustomEmbed != nil {
-		custom = types.NewCustomEmbed(panel.Embed.CustomEmbed, panel.Embed.Fields)
-	}
-
-	return multiPanelMessageData{
+	data := multiPanelMessageData{
 		Footer: footer,
 
 		ChannelId: panel.ChannelId,
 
 		SelectMenu:            panel.SelectMenu,
 		SelectMenuPlaceholder: panel.SelectMenuPlaceholder,
-		Embed:                 custom.IntoDiscordEmbed(),
 	}
+
+	if panel.UsesComponentsV2 {
+		// A corrupt tree renders as an empty one. Falling back to Classic would send an
+		// edit without the V2 flag to a message that has it, which Discord refuses.
+		data.UsesComponentsV2 = true
+
+		components, err := unmarshalComponents(panel.Components)
+		if err != nil {
+			log.Logger.Error("Failed to unmarshal multi-panel components; rendering an empty tree", zap.Int("multi_panel_id", panel.Id), zap.Error(err))
+		} else {
+			data.Components = components
+		}
+	}
+
+	if !data.UsesComponentsV2 {
+		blurple := types.Colour(0x5865f2)
+		custom := &types.CustomEmbed{Colour: &blurple}
+		if panel.Embed != nil && panel.Embed.CustomEmbed != nil {
+			custom = types.NewCustomEmbed(panel.Embed.CustomEmbed, panel.Embed.Fields)
+		}
+		data.Embed = custom.IntoDiscordEmbed()
+	}
+
+	return data
 }
 
 func getEffectiveLabel(panel database.Panel, customLabel *string) string {
@@ -98,86 +120,209 @@ func getEffectiveEmojiAnimated(panel database.Panel, customEmojiName *string, cu
 	return panel.EmojiAnimated
 }
 
-func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
-	d.applyFooter()
+// The dashboard submits a blank description as "", and Discord rejects a select option whose
+// description is present but empty.
+func effectiveDescription(description *string) *string {
+	if description != nil && *description == "" {
+		return nil
+	}
+	return description
+}
 
-	var components []component.Component
-	if d.SelectMenu {
-		options := make([]component.SelectOption, len(panels))
-		for i, pwc := range panels {
-			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
+func buildPanelSelectOptions(panels []database.PanelWithCustomization) []component.SelectOption {
+	options := make([]component.SelectOption, len(panels))
+	for i, pwc := range panels {
+		effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+		effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+		effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+		emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
 
-			options[i] = component.SelectOption{
-				Label:       getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
-				Value:       pwc.CustomId,
-				Description: pwc.Description,
-				Emoji:       emoji,
-			}
+		options[i] = component.SelectOption{
+			Label:       getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
+			Value:       pwc.CustomId,
+			Description: effectiveDescription(pwc.Description),
+			Emoji:       emoji,
 		}
-
-		var placeholder string
-		if d.SelectMenuPlaceholder == nil {
-			placeholder = "Select a topic..."
-		} else {
-			placeholder = *d.SelectMenuPlaceholder
-		}
-
-		components = []component.Component{
-			component.BuildActionRow(
-				component.BuildSelectMenu(
-					component.SelectMenu{
-						CustomId:    "multipanel",
-						Options:     options,
-						Placeholder: placeholder,
-						MinValues:   utils.IntPtr(1),
-						MaxValues:   utils.IntPtr(1),
-						Disabled:    false,
-					}),
-			),
-		}
-	} else {
-		buttons := make([]component.Component, len(panels))
-		for i, pwc := range panels {
-			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
-
-			buttons[i] = component.BuildButton(component.Button{
-				Label:    getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
-				CustomId: pwc.CustomId,
-				Style:    component.ButtonStyle(pwc.ButtonStyle),
-				Emoji:    emoji,
-				Disabled: pwc.Disabled,
-			})
-		}
-
-		var rows []component.Component
-		for i := 0; i <= int(math.Ceil(float64(len(buttons)/5))); i++ {
-			lb := i * 5
-			ub := lb + 5
-
-			if ub >= len(buttons) {
-				ub = len(buttons)
-			}
-
-			if lb >= ub {
-				break
-			}
-
-			row := component.BuildActionRow(buttons[lb:ub]...)
-			rows = append(rows, row)
-		}
-
-		components = rows
 	}
 
-	data := rest.CreateMessageData{
-		Embeds:     []*embed.Embed{d.Embed},
-		Components: components,
+	return options
+}
+
+func (d *multiPanelMessageData) buildPanelDropdown(panels []database.PanelWithCustomization) component.Component {
+	placeholder := "Select a topic..."
+	if d.SelectMenuPlaceholder != nil {
+		placeholder = *d.SelectMenuPlaceholder
+	}
+
+	return component.BuildSelectMenu(component.SelectMenu{
+		CustomId:    panelDropdownCustomId,
+		Options:     buildPanelSelectOptions(panels),
+		Placeholder: placeholder,
+		MinValues:   utils.IntPtr(1),
+		MaxValues:   utils.IntPtr(1),
+	})
+}
+
+func (d *multiPanelMessageData) buildSystemRows(panels []database.PanelWithCustomization) []component.Component {
+	if len(panels) == 0 {
+		return nil
+	}
+
+	if d.SelectMenu {
+		return []component.Component{component.BuildActionRow(d.buildPanelDropdown(panels))}
+	}
+
+	var rows []component.Component
+	for start := 0; start < len(panels); start += maxActionRowChildren {
+		end := min(start+maxActionRowChildren, len(panels))
+
+		buttons := make([]component.Component, 0, end-start)
+		for _, pwc := range panels[start:end] {
+			buttons = append(buttons, component.BuildButton(buildResolvedPanelButton(pwc)))
+		}
+
+		rows = append(rows, component.BuildActionRow(buttons...))
+	}
+
+	return rows
+}
+
+// Anything that cannot be resolved is dropped, so a "panel:" marker can never reach Discord.
+func (d *multiPanelMessageData) buildComponents(panels []database.PanelWithCustomization) (tree, system []component.Component) {
+	if !d.UsesComponentsV2 {
+		return nil, d.buildSystemRows(panels)
+	}
+
+	byId := make(map[int]database.PanelWithCustomization, len(panels))
+	for _, pwc := range panels {
+		byId[pwc.PanelId] = pwc
+	}
+
+	placed := make(map[int]bool)
+	tree = mapComponentTree(d.Components, func(c component.Component) (component.Component, bool) {
+		switch data := c.ComponentData.(type) {
+		case component.Button:
+			if data.CustomId == "" {
+				return c, isResolvableLinkButton(data)
+			}
+
+			panelId, ok := parsePanelPlacement(data.CustomId)
+			if !ok || data.Url != nil || placed[panelId] {
+				return component.Component{}, false
+			}
+
+			pwc, ok := byId[panelId]
+			if !ok {
+				return component.Component{}, false
+			}
+
+			placed[panelId] = true
+			return component.BuildButton(buildResolvedPanelButton(pwc)), true
+		case component.SelectMenu:
+			return c, d.SelectMenu && data.CustomId == panelDropdownCustomId
+		case component.TextDisplay, component.MediaGallery, component.Separator, component.Thumbnail:
+			return c, true
+		default:
+			return component.Component{}, false
+		}
+	})
+
+	unplaced := make([]database.PanelWithCustomization, 0, len(panels))
+	for _, pwc := range panels {
+		if !placed[pwc.PanelId] {
+			unplaced = append(unplaced, pwc)
+		}
+	}
+
+	dropdownPlaced := false
+	tree = mapComponentTree(tree, func(c component.Component) (component.Component, bool) {
+		if _, ok := c.ComponentData.(component.SelectMenu); !ok {
+			return c, true
+		}
+
+		if dropdownPlaced || len(unplaced) == 0 {
+			return component.Component{}, false
+		}
+
+		dropdownPlaced = true
+		return d.buildPanelDropdown(unplaced), true
+	})
+
+	if dropdownPlaced {
+		return tree, nil
+	}
+
+	return tree, d.buildSystemRows(unplaced)
+}
+
+func isResolvableLinkButton(b component.Button) bool {
+	return b.Style == component.ButtonStyleLink && b.Url != nil && *b.Url != ""
+}
+
+// A parent left unable to render without a rejected leaf is dropped too: an action row or
+// container with no children, and a section with no text or no accessory.
+func mapComponentTree(nodes []component.Component, fn func(component.Component) (component.Component, bool)) []component.Component {
+	out := make([]component.Component, 0, len(nodes))
+
+	for _, c := range nodes {
+		switch data := c.ComponentData.(type) {
+		case component.Container:
+			data.Components = mapComponentTree(data.Components, fn)
+			if len(data.Components) == 0 {
+				continue
+			}
+
+			c.ComponentData = data
+		case component.Section:
+			accessory, ok := fn(data.Accessory)
+			if !ok {
+				continue
+			}
+
+			data.Components = mapComponentTree(data.Components, fn)
+			if len(data.Components) == 0 {
+				continue
+			}
+
+			data.Accessory = accessory
+			c.ComponentData = data
+		case component.ActionRow:
+			data.Components = mapComponentTree(data.Components, fn)
+			if len(data.Components) == 0 {
+				continue
+			}
+
+			c.ComponentData = data
+		default:
+			resolved, ok := fn(c)
+			if !ok {
+				continue
+			}
+
+			c = resolved
+		}
+
+		out = append(out, c)
+	}
+
+	return out
+}
+
+func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
+	tree, system := d.buildComponents(panels)
+
+	var data rest.CreateMessageData
+	if d.UsesComponentsV2 {
+		data = rest.CreateMessageData{
+			Flags:      message.SumFlags(message.FlagComponentsV2),
+			Components: append(tree, system...),
+		}
+	} else {
+		d.applyFooter()
+		data = rest.CreateMessageData{
+			Embeds:     []*embed.Embed{d.Embed},
+			Components: system,
+		}
 	}
 
 	// TODO: Use proper context
@@ -189,88 +334,49 @@ func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []databa
 	return msg.Id, nil
 }
 
-func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint64, panels []database.PanelWithCustomization) error {
-	d.applyFooter()
-
-	var components []component.Component
-	if d.SelectMenu {
-		options := make([]component.SelectOption, len(panels))
-		for i, pwc := range panels {
-			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
-
-			options[i] = component.SelectOption{
-				Label:       getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
-				Value:       pwc.CustomId,
-				Description: pwc.Description,
-				Emoji:       emoji,
-			}
-		}
-
-		var placeholder string
-		if d.SelectMenuPlaceholder == nil {
-			placeholder = "Select a topic..."
-		} else {
-			placeholder = *d.SelectMenuPlaceholder
-		}
-
-		components = []component.Component{
-			component.BuildActionRow(
-				component.BuildSelectMenu(
-					component.SelectMenu{
-						CustomId:    "multipanel",
-						Options:     options,
-						Placeholder: placeholder,
-						MinValues:   utils.IntPtr(1),
-						MaxValues:   utils.IntPtr(1),
-						Disabled:    false,
-					}),
-			),
-		}
-	} else {
-		buttons := make([]component.Component, len(panels))
-		for i, pwc := range panels {
-			effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
-			emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
-
-			buttons[i] = component.BuildButton(component.Button{
-				Label:    getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
-				CustomId: pwc.CustomId,
-				Style:    component.ButtonStyle(pwc.ButtonStyle),
-				Emoji:    emoji,
-				Disabled: pwc.Disabled,
-			})
-		}
-
-		var rows []component.Component
-		for i := 0; i <= int(math.Ceil(float64(len(buttons)/5))); i++ {
-			lb := i * 5
-			ub := lb + 5
-
-			if ub >= len(buttons) {
-				ub = len(buttons)
-			}
-
-			if lb >= ub {
-				break
-			}
-
-			row := component.BuildActionRow(buttons[lb:ub]...)
-			rows = append(rows, row)
-		}
-
-		components = rows
+func (d *multiPanelMessageData) buildEditData(components []component.Component) rest.EditMessageData {
+	if d.UsesComponentsV2 {
+		return v2EditData(components)
 	}
 
-	data := rest.EditMessageData{
+	d.applyFooter()
+	return rest.EditMessageData{
 		Embeds:     []*embed.Embed{d.Embed},
 		Components: components,
 	}
+}
+
+// IS_COMPONENTS_V2 can be set but never removed, and an edit that omits flags is validated as
+// a classic message. Embeds must be empty on a V2 message, and without allowed_mentions
+// Discord re-parses mentions with its default allowances.
+func v2EditData(components []component.Component) rest.EditMessageData {
+	return rest.EditMessageData{
+		Embeds:          []*embed.Embed{},
+		Flags:           message.SumFlags(message.FlagComponentsV2),
+		Components:      components,
+		AllowedMentions: &message.AllowedMention{},
+	}
+}
+
+func (d *multiPanelMessageData) edit(ctx *botcontext.BotContext, messageId uint64, panels []database.PanelWithCustomization) error {
+	tree, system := d.buildComponents(panels)
+	data := d.buildEditData(append(tree, system...))
 
 	_, err := rest.EditMessage(context.Background(), ctx.Token, ctx.RateLimiter, d.ChannelId, messageId, data)
 	return err
+}
+
+func buildResolvedPanelButton(pwc database.PanelWithCustomization) component.Button {
+	effectiveEmojiName := getEffectiveEmoji(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+	effectiveEmojiId := getEffectiveEmojiId(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+	effectiveEmojiAnimated := getEffectiveEmojiAnimated(pwc.Panel, pwc.CustomEmojiName, pwc.CustomEmojiId)
+	emoji := types.NewEmoji(effectiveEmojiName, effectiveEmojiId, effectiveEmojiAnimated).IntoGdl()
+
+	return component.Button{
+		Label:    getEffectiveLabel(pwc.Panel, pwc.CustomLabel),
+		CustomId: pwc.CustomId,
+		Style:    component.ButtonStyle(pwc.ButtonStyle),
+		Emoji:    emoji,
+		Disabled: pwc.Disabled,
+	}
 }

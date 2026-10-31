@@ -7,6 +7,8 @@ import SelectMenu from "./container/SelectMenu";
 import MediaGallery from "./container/MediaGallery";
 import Container from "./container/Container";
 import Section from "./container/Section";
+import Separator from "./container/Separator";
+import DiscordContent from "./DiscordContent";
 
 const DiscordComponents: FC<DiscordComponentsProps> = ({
   components,
@@ -111,7 +113,26 @@ const DiscordComponents: FC<DiscordComponentsProps> = ({
           case 12: // MediaGallery
             return <MediaGallery key={index} items={component.items} />;
 
-          // Container component for complex layouts
+          case 10:
+            return (
+              <DiscordContent key={index} content={component.content || ""} entities={entities} />
+            );
+
+          case 13:
+            return (
+              <div key={index} className="my-1 text-sm text-gray-400">
+                {component.name || "File"}
+              </div>
+            );
+
+          case 14:
+            return (
+              <Separator key={index} divider={component.divider} spacing={component.spacing} />
+            );
+
+          case 17: // Renders an empty container too, unlike the default branch
+            return <Container key={index} entities={entities} component={component} />;
+
           default:
             if (component.components && component.components.length > 0) {
               return <Container key={index} entities={entities} component={component} />;

@@ -288,7 +288,7 @@ export const apiClient = {
 
   multiPanels: {
     getByGuild: (guildId: string) =>
-      api.get<{ data: Array<{ id: number; title: string | null }> }>(
+      api.get<{ data: Array<{ id: number; name?: string; title: string | null }> }>(
         `/api/${guildId}/multi-panels`,
       ),
     getById: (guildId: string, id: string) =>

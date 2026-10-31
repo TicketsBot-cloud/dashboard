@@ -119,7 +119,7 @@ func GetTickets(c *gin.Context) {
 
 	panelTitles := make(map[int]string)
 	for _, panel := range panels {
-		panelTitles[panel.PanelId] = panel.Title
+		panelTitles[panel.PanelId] = panelLabel(panel)
 	}
 
 	// Get user objects
@@ -213,7 +213,7 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 
 	panelTitles := make(map[int]string)
 	for _, panel := range panels {
-		panelTitles[panel.PanelId] = panel.Title
+		panelTitles[panel.PanelId] = panelLabel(panel)
 	}
 
 	// Get user objects
@@ -265,6 +265,14 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		Labels:        labelsMap,
 		SelfId:        userId,
 	})
+}
+
+func panelLabel(panel database.Panel) string {
+	if panel.Name != nil && *panel.Name != "" {
+		return *panel.Name
+	}
+
+	return panel.Title
 }
 
 func fetchLabelsForTickets(c *gin.Context, guildId uint64, ticketIds []int) (map[int][]ticketLabelData, error) {

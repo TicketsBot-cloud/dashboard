@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FC } from "react";
+import { flushSync } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
@@ -39,9 +40,10 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
-import { FEATURE_PANELS } from "@/lib/feature-flags";
+import { COMPONENTS_V2_BUILDER_FLAG, FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faTrash, faCrown, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { sortGuildChannels } from "@/lib/guild-channels";
@@ -51,10 +53,22 @@ import {
   TRANSCRIPT_CHANNEL_INFO,
 } from "@/constants/panelChannelInfo";
 import TicketModeInfoModal from "@/components/modals/TicketModeInfoModal";
+import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
+import ComponentsV2Section from "@/components/component-builder/ComponentsV2Section";
+import {
+  PANEL_MESSAGE_RESERVED,
+  fromApiComponents,
+  toApiComponents,
+  validateComponentTree,
+  welcomeReserved,
+  type ClassicConversionSource,
+  type V2Component,
+} from "@/lib/component-tree";
 
 const PRESET_NAMING_SCHEMES = [
   "ticket-%id%",
@@ -107,6 +121,15 @@ const EditPanelsPage: FC = () => {
 
   const [panel, setPanel] = useState<Panel | null>(null);
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
+  const [messageTree, setMessageTree] = useState<V2Component[]>([]);
+  const [welcomeTree, setWelcomeTree] = useState<V2Component[]>([]);
+  const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
+  const { isSubmitting, guard } = useMutationGuard();
+  const hasLoadedOnceRef = useRef(false);
+  // Captured once on first load, so the repost caption and confirmation compare against how the
+  // panel started this session, not against every toggle flip in between.
+  const [storedV2, setStoredV2] = useState({ message: false, welcome: false });
+  const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -140,6 +163,16 @@ const EditPanelsPage: FC = () => {
     }
 
     setPanel(panelData);
+
+    if (!hasLoadedOnceRef.current) {
+      hasLoadedOnceRef.current = true;
+      setStoredV2({
+        message: panelData.message_uses_components_v2,
+        welcome: panelData.welcome_message_uses_components_v2,
+      });
+      setMessageTree(fromApiComponents(panelData.message_components));
+      setWelcomeTree(fromApiComponents(panelData.welcome_message_components));
+    }
   }, [panelData, guildId, navigate]);
 
   useEffect(() => {
@@ -180,6 +213,90 @@ const EditPanelsPage: FC = () => {
     );
   }
 
+  const savePanel = async () => {
+    try {
+      await apiClient.panels.update(
+        guildId,
+        panelId,
+        preparePanelForApi({
+          ...panel,
+          message_components: panel.message_uses_components_v2
+            ? toApiComponents(messageTree)
+            : null,
+          welcome_message_components: panel.welcome_message_uses_components_v2
+            ? toApiComponents(welcomeTree)
+            : null,
+        }),
+        SKIP_ERROR_TOAST,
+      );
+
+      // Save or delete support hours
+      try {
+        if (supportHours) {
+          await apiClient.panels.setSupportHours(guildId, panelId, supportHours);
+        } else if (initialSupportHours) {
+          await apiClient.panels.deleteSupportHours(guildId, panelId);
+        }
+      } catch (err) {
+        console.error("Failed to save support hours:", err);
+        toast.warning("Panel saved but failed to update support hours.");
+      }
+
+      // Otherwise reopening the panel replays the cached pre-save response.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: guildKeys.panel(guildId, panelId) }),
+        queryClient.invalidateQueries({ queryKey: guildKeys.panels(guildId) }),
+      ]);
+
+      toast.success("Panel Edited");
+      navigate(`/manage/${guildId}/panels`);
+    } catch (error) {
+      handleApiError(error, "Failed to save panel. Please try again.");
+      console.error("Failed to edit panel:", error);
+    }
+  };
+
+  // Mirrors when ComponentsV2Section shows the Message format toggle.
+  const formatToggleShown =
+    builderEnabled === true || storedV2.message || panel.message_uses_components_v2;
+
+  const messageClassicSource: ClassicConversionSource = {
+    title: panel.title,
+    body: panel.content,
+    colourHex: embedColourHex(panel.colour),
+    imageUrl: panel.image_url,
+    thumbnailUrl: panel.thumbnail_url,
+  };
+
+  const welcomeReservedCount = welcomeReserved(panel);
+  const welcomeClassicSource: ClassicConversionSource = {
+    title: panel.welcome_message?.title,
+    body: panel.welcome_message?.description,
+    colourHex: embedColourHex(panel.welcome_message?.colour),
+    imageUrl: panel.welcome_message?.image_url,
+    thumbnailUrl: panel.welcome_message?.thumbnail_url,
+    fields: panel.welcome_message?.fields,
+    authorName: panel.welcome_message?.author?.name,
+    authorUrl: panel.welcome_message?.author?.url,
+    footerText: panel.welcome_message?.footer?.text,
+    allowAvatarPlaceholder: true,
+  };
+  const welcomeConversionNotes = [
+    ...(welcomeClassicSource.fields?.length
+      ? ["Field layout is dropped; fields become plain text."]
+      : []),
+    ...(welcomeClassicSource.authorName && panel.welcome_message?.author?.icon_url
+      ? ["The author icon is dropped."]
+      : []),
+    ...(welcomeClassicSource.footerText && panel.welcome_message?.footer?.icon_url
+      ? ["The footer icon is dropped."]
+      : []),
+    ...(welcomeClassicSource.title && panel.welcome_message?.url
+      ? ["The title link is dropped."]
+      : []),
+    ...(panel.welcome_message?.timestamp ? ["The timestamp is dropped."] : []),
+  ];
+
   // Mirrors validateButtonLabelOrEmoji.
   const hasButtonLabel = !!(panel.button_label ?? "").trim();
   const hasButtonEmoji = panel.use_custom_emoji
@@ -190,7 +307,9 @@ const EditPanelsPage: FC = () => {
   const missingCategory = !panel.category_id;
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
   const welcomeMessage = panel.welcome_message;
+  const welcomeIsV2 = panel.welcome_message_uses_components_v2;
   const welcomeMessageEmpty =
+    !welcomeIsV2 &&
     !!welcomeMessage &&
     !welcomeMessage.title?.trim() &&
     !welcomeMessage.description?.trim() &&
@@ -198,7 +317,16 @@ const EditPanelsPage: FC = () => {
     !welcomeMessage.image_url?.trim() &&
     !welcomeMessage.thumbnail_url?.trim();
   const stale = (id?: string) => channelsLoaded && !!id && !existingChannelIds.has(id);
-  const invalidWelcomeMessageUrls = collectEmbedUrlErrors(panel.welcome_message);
+  const invalidWelcomeMessageUrls = welcomeIsV2 ? [] : collectEmbedUrlErrors(panel.welcome_message);
+  const componentTreeInvalid =
+    (panel.message_uses_components_v2 &&
+      validateComponentTree(messageTree, { reserved: PANEL_MESSAGE_RESERVED }).length > 0) ||
+    (welcomeIsV2 &&
+      validateComponentTree(welcomeTree, {
+        reserved: welcomeReservedCount,
+        requireContent: true,
+        allowAvatarPlaceholder: true,
+      }).length > 0);
   const hasMissingRequired =
     missingChannel ||
     missingCategory ||
@@ -209,11 +337,12 @@ const EditPanelsPage: FC = () => {
     stale(panel.transcript_channel_id) ||
     (panel.use_threads && stale(panel.ticket_notification_channel)) ||
     welcomeMessageEmpty ||
-    invalidWelcomeMessageUrls.length > 0;
+    invalidWelcomeMessageUrls.length > 0 ||
+    componentTreeInvalid;
 
   return (
     <MainLayout
-      title={`Panel Editor - ${panel.title}`}
+      title={`Panel Editor - ${panel.name || panel.title}`}
       subtitle="Edit the panel to allow users to open tickets."
     >
       <FeatureLockBanner
@@ -222,41 +351,127 @@ const EditPanelsPage: FC = () => {
         featureLabel="Panel changes"
         existingLabel="panels"
       />
+      <div className="mb-4 bg-gray-800 rounded-xl p-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+        <div>
+          <TextInput
+            label="Panel Name"
+            descriptionId="panel-name-help"
+            placeholder="e.g. Billing support"
+            value={panel.name || ""}
+            onChange={(e) => setPanel((prev) => (prev ? { ...prev, name: e } : prev))}
+            maxLength={100}
+            showCount
+          />
+          <p id="panel-name-help" className="text-xs text-gray-400 mt-1">
+            Used to identify this panel in the dashboard. It isn't shown in Discord.
+          </p>
+        </div>
+        <div>
+          <TextInput
+            label="Panel Title"
+            descriptionId="panel-title-help"
+            placeholder="e.g. Open a ticket"
+            value={panel.title || ""}
+            onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
+            maxLength={80}
+            showCount
+          />
+          <p id="panel-title-help" className="text-xs text-gray-400 mt-1">
+            Shown as the embed title{formatToggleShown ? " in Classic mode" : ""}, and used by
+            /open, the ticket channel topic and the thread notice.
+          </p>
+        </div>
+      </div>
       <Collapsible
         title="Panel Appearance"
         subtitle="Configure the panel's appearance"
         defaultOpen={true}
       >
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
-          <div className="pb-2">
-            <span className="text-xl font-semibold">Panel Properties</span>
-            <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
-              <TextInput
-                label="Panel Title"
-                placeholder="e.g. Open a ticket"
-                value={panel.title || ""}
-                onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
-                maxLength={80}
-                showCount
+          <ComponentsV2Section
+            saveAttempted={saveAttempted}
+            guildId={guildId}
+            isV2={panel.message_uses_components_v2}
+            storedIsV2={storedV2.message}
+            onV2Change={(isV2) =>
+              setPanel((prev) => (prev ? { ...prev, message_uses_components_v2: isV2 } : prev))
+            }
+            tree={messageTree}
+            onTreeChange={setMessageTree}
+            classicSource={messageClassicSource}
+            title="Panel Properties"
+            previewTitle="Panel Preview"
+            reserved={PANEL_MESSAGE_RESERVED}
+            reservedNote="Some space is also kept for the open-ticket button."
+            toggleNote={
+              !storedV2.message && panel.message_uses_components_v2 ? (
+                <p className="text-xs text-gray-400 mt-1">
+                  Once you save this in the new format, switching back to classic will repost the
+                  message.
+                </p>
+              ) : null
+            }
+            preview={
+              <PanelPreview
+                type="panel"
+                data={{ panel, buttons: [panel] }}
+                messageMode="components_v2"
+                componentTree={messageTree}
               />
-              <ColourSelect
-                nullable
-                clearable
-                label="Panel Colour"
-                value={embedColourHex(panel.colour)}
-                onChange={(e) =>
-                  setPanel((prev) => (prev ? { ...prev, colour: embedColourInt(e) } : prev))
-                }
-              />
+            }
+          />
+
+          {!panel.message_uses_components_v2 && (
+            <div className="pb-2">
+              <span className="text-xl font-semibold">Panel Properties</span>
+              <div className="pt-2">
+                <ColourSelect
+                  nullable
+                  clearable
+                  label="Panel Colour"
+                  value={embedColourHex(panel.colour)}
+                  onChange={(e) =>
+                    setPanel((prev) => (prev ? { ...prev, colour: embedColourInt(e) } : prev))
+                  }
+                />
+              </div>
+              <div className="py-2">
+                <Textarea
+                  label="Panel Content"
+                  value={panel.content || ""}
+                  onChange={(e) => setPanel((prev) => (prev ? { ...prev, content: e } : prev))}
+                  max={EMBED_LIMITS.DESCRIPTION}
+                />
+              </div>
+              <div className="py-2">
+                <TextInput
+                  label="Thumbnail URL"
+                  placeholder="e.g. https://example.com/thumbnail.png"
+                  value={panel.thumbnail_url || ""}
+                  onChange={(e) =>
+                    setPanel((prev) => (prev ? { ...prev, thumbnail_url: e } : prev))
+                  }
+                  maxLength={EMBED_LIMITS.URL}
+                />
+                <TextInput
+                  label="Image URL"
+                  placeholder="e.g. https://example.com/image.png"
+                  value={panel.image_url || ""}
+                  onChange={(e) => setPanel((prev) => (prev ? { ...prev, image_url: e } : prev))}
+                  maxLength={EMBED_LIMITS.URL}
+                />
+              </div>
             </div>
-            <div className="py-2">
-              <Textarea
-                label="Panel Content"
-                value={panel.content || ""}
-                onChange={(e) => setPanel((prev) => (prev ? { ...prev, content: e } : prev))}
-                max={EMBED_LIMITS.DESCRIPTION}
-              />
+          )}
+
+          {!panel.message_uses_components_v2 && (
+            <div>
+              <span className="text-xl font-semibold">Panel Preview</span>
+              <PanelPreview type="panel" data={{ panel, buttons: [panel] }} />
             </div>
+          )}
+
+          <div className="md:col-span-2">
             <div className="py-2">
               <Select
                 label="Panel Channel"
@@ -275,22 +490,6 @@ const EditPanelsPage: FC = () => {
                 label="Disable Panel"
                 value={panel.disabled}
                 onChange={(e) => setPanel((prev) => (prev ? { ...prev, disabled: e } : prev))}
-              />
-            </div>
-            <div className="py-2">
-              <TextInput
-                label="Thumbnail URL"
-                placeholder="e.g. https://example.com/thumbnail.png"
-                value={panel.thumbnail_url || ""}
-                onChange={(e) => setPanel((prev) => (prev ? { ...prev, thumbnail_url: e } : prev))}
-                maxLength={EMBED_LIMITS.URL}
-              />
-              <TextInput
-                label="Image URL"
-                placeholder="e.g. https://example.com/image.png"
-                value={panel.image_url || ""}
-                onChange={(e) => setPanel((prev) => (prev ? { ...prev, image_url: e } : prev))}
-                maxLength={EMBED_LIMITS.URL}
               />
             </div>
             <div className="py-2 grid gap-2 grid-cols-1 md:grid-cols-2">
@@ -341,11 +540,6 @@ const EditPanelsPage: FC = () => {
                 }
               />
             </div>
-          </div>
-
-          <div>
-            <span className="text-xl font-semibold">Panel Preview</span>
-            <PanelPreview type="panel" data={{ panel, buttons: [panel] }} />
           </div>
         </div>
       </Collapsible>
@@ -543,253 +737,298 @@ const EditPanelsPage: FC = () => {
           </div>
         )}
         <div className="px-4 grid gap-4 grid-cols-1 sm:grid-cols-1 md:grid-cols-2">
-          <div className="pb-2 mb-5">
-            <span className="text-xl font-semibold">Welcome Message Properties</span>
-            <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
-              <TextInput
-                label="Title"
-                placeholder="e.g. Open a ticket"
-                value={panel.welcome_message?.title || ""}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? { ...prev, welcome_message: { ...prev.welcome_message, title: e } }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.TITLE}
-                showCount
+          <ComponentsV2Section
+            saveAttempted={saveAttempted}
+            guildId={guildId}
+            isV2={panel.welcome_message_uses_components_v2}
+            storedIsV2={storedV2.welcome}
+            onV2Change={(isV2) =>
+              setPanel((prev) =>
+                prev ? { ...prev, welcome_message_uses_components_v2: isV2 } : prev,
+              )
+            }
+            tree={welcomeTree}
+            onTreeChange={setWelcomeTree}
+            classicSource={welcomeClassicSource}
+            conversionNotes={welcomeConversionNotes}
+            title="Welcome Message Properties"
+            previewTitle="Welcome Message Preview"
+            convertSuffix="welcome message"
+            reserved={welcomeReservedCount}
+            reservedNote="Some space is also kept for the close and claim buttons and the answers people give on your form."
+            requireContent
+            allowAvatarPlaceholder
+            preview={
+              <PanelPreview
+                type="welcome"
+                data={{ panel }}
+                brandingFooter={showBrandingFooter}
+                messageMode="components_v2"
+                componentTree={welcomeTree}
               />
-              <ColourSelect
-                nullable
-                clearable={!!panel.welcome_message}
-                label="Colour"
-                value={
-                  panel.welcome_message ? embedColourHex(panel.welcome_message.colour) : "#5865f2"
-                }
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: {
-                            ...prev.welcome_message,
-                            colour: e,
-                          },
-                        }
-                      : prev,
-                  )
-                }
-              />
-            </div>
-            <div className="py-2">
-              <TextInput
-                label="Title URL"
-                placeholder="e.g. https://example.com"
-                value={panel.welcome_message?.url || ""}
-                error={embedUrlError(panel.welcome_message?.url)}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev ? { ...prev, welcome_message: { ...prev.welcome_message, url: e } } : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.URL}
-              />
-            </div>
-            <div className="py-2">
-              <Textarea
-                label="Description"
-                value={panel.welcome_message?.description || ""}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? { ...prev, welcome_message: { ...prev.welcome_message, description: e } }
-                      : prev,
-                  )
-                }
-                max={EMBED_LIMITS.DESCRIPTION}
-              />
-            </div>
+            }
+          />
 
-            <Collapsible title="" subtitle="Author Settings" defaultOpen={false}>
-              <TextInput
-                label="Author Name"
-                placeholder="e.g. Support Team"
-                value={panel.welcome_message?.author?.name || ""}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: {
-                            ...prev.welcome_message,
-                            author: { ...prev.welcome_message?.author, name: e },
-                          },
-                        }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.AUTHOR_NAME}
-                showCount
-              />
-              <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
-                <TextInput
-                  label="Author Icon URL"
-                  placeholder="e.g. https://example.com/icon.png"
-                  value={panel.welcome_message?.author?.icon_url || ""}
-                  error={embedUrlError(panel.welcome_message?.author?.icon_url)}
-                  onChange={(e) =>
-                    setPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            welcome_message: {
-                              ...prev.welcome_message,
-                              author: { ...prev.welcome_message?.author, icon_url: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  maxLength={EMBED_LIMITS.URL}
-                />
-                <TextInput
-                  label="Author URL"
-                  placeholder="e.g. https://example.com"
-                  value={panel.welcome_message?.author?.url || ""}
-                  error={embedUrlError(panel.welcome_message?.author?.url)}
-                  onChange={(e) =>
-                    setPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            welcome_message: {
-                              ...prev.welcome_message,
-                              author: { ...prev.welcome_message?.author, url: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  maxLength={EMBED_LIMITS.URL}
-                />
+          {!panel.welcome_message_uses_components_v2 && (
+            <>
+              <div className="pb-2 mb-5">
+                <span className="text-xl font-semibold">Welcome Message Properties</span>
+                <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+                  <TextInput
+                    label="Title"
+                    placeholder="e.g. Open a ticket"
+                    value={panel.welcome_message?.title || ""}
+                    onChange={(e) =>
+                      setPanel((prev) =>
+                        prev
+                          ? { ...prev, welcome_message: { ...prev.welcome_message, title: e } }
+                          : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.TITLE}
+                    showCount
+                  />
+                  <ColourSelect
+                    nullable
+                    clearable={!!panel.welcome_message}
+                    label="Colour"
+                    value={
+                      panel.welcome_message
+                        ? embedColourHex(panel.welcome_message.colour)
+                        : "#5865f2"
+                    }
+                    onChange={(e) =>
+                      setPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              welcome_message: {
+                                ...prev.welcome_message,
+                                colour: e,
+                              },
+                            }
+                          : prev,
+                      )
+                    }
+                  />
+                </div>
+                <div className="py-2">
+                  <TextInput
+                    label="Title URL"
+                    placeholder="e.g. https://example.com"
+                    value={panel.welcome_message?.url || ""}
+                    error={embedUrlError(panel.welcome_message?.url)}
+                    onChange={(e) =>
+                      setPanel((prev) =>
+                        prev
+                          ? { ...prev, welcome_message: { ...prev.welcome_message, url: e } }
+                          : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.URL}
+                  />
+                </div>
+                <div className="py-2">
+                  <Textarea
+                    label="Description"
+                    value={panel.welcome_message?.description || ""}
+                    onChange={(e) =>
+                      setPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              welcome_message: { ...prev.welcome_message, description: e },
+                            }
+                          : prev,
+                      )
+                    }
+                    max={EMBED_LIMITS.DESCRIPTION}
+                  />
+                </div>
+
+                <Collapsible title="" subtitle="Author Settings" defaultOpen={false}>
+                  <TextInput
+                    label="Author Name"
+                    placeholder="e.g. Support Team"
+                    value={panel.welcome_message?.author?.name || ""}
+                    onChange={(e) =>
+                      setPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              welcome_message: {
+                                ...prev.welcome_message,
+                                author: { ...prev.welcome_message?.author, name: e },
+                              },
+                            }
+                          : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.AUTHOR_NAME}
+                    showCount
+                  />
+                  <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+                    <TextInput
+                      label="Author Icon URL"
+                      placeholder="e.g. https://example.com/icon.png"
+                      value={panel.welcome_message?.author?.icon_url || ""}
+                      error={embedUrlError(panel.welcome_message?.author?.icon_url)}
+                      onChange={(e) =>
+                        setPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                welcome_message: {
+                                  ...prev.welcome_message,
+                                  author: { ...prev.welcome_message?.author, icon_url: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      maxLength={EMBED_LIMITS.URL}
+                    />
+                    <TextInput
+                      label="Author URL"
+                      placeholder="e.g. https://example.com"
+                      value={panel.welcome_message?.author?.url || ""}
+                      error={embedUrlError(panel.welcome_message?.author?.url)}
+                      onChange={(e) =>
+                        setPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                welcome_message: {
+                                  ...prev.welcome_message,
+                                  author: { ...prev.welcome_message?.author, url: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      maxLength={EMBED_LIMITS.URL}
+                    />
+                  </div>
+                </Collapsible>
+                <Collapsible title="" subtitle="Images" defaultOpen={false}>
+                  <TextInput
+                    label="Thumbnail URL"
+                    placeholder="e.g. https://example.com/thumbnail.png"
+                    value={panel.welcome_message?.thumbnail_url || ""}
+                    error={embedUrlError(panel.welcome_message?.thumbnail_url)}
+                    onChange={(e) =>
+                      setPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              welcome_message: { ...prev.welcome_message, thumbnail_url: e },
+                            }
+                          : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.URL}
+                  />
+                  <TextInput
+                    label="Image URL"
+                    placeholder="e.g. https://example.com/image.png"
+                    value={panel.welcome_message?.image_url || ""}
+                    error={embedUrlError(panel.welcome_message?.image_url)}
+                    onChange={(e) =>
+                      setPanel((prev) =>
+                        prev
+                          ? { ...prev, welcome_message: { ...prev.welcome_message, image_url: e } }
+                          : prev,
+                      )
+                    }
+                    maxLength={EMBED_LIMITS.URL}
+                  />
+                </Collapsible>
+                <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
+                  <PremiumGate
+                    isPremium={!!premiumState?.premium}
+                    feature="custom-footer"
+                    description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
+                    variant="overlay"
+                  >
+                    <Textarea
+                      label="Footer Text"
+                      placeholder="e.g. Support hours: 9am-5pm UTC"
+                      value={panel.welcome_message?.footer?.text || ""}
+                      onChange={(e) =>
+                        setPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                welcome_message: {
+                                  ...prev.welcome_message,
+                                  footer: { ...prev.welcome_message?.footer, text: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      max={EMBED_LIMITS.FOOTER_TEXT}
+                    />
+                    <TextInput
+                      label="Footer Icon URL"
+                      placeholder="e.g. https://example.com/footer-icon.png"
+                      value={panel.welcome_message?.footer?.icon_url || ""}
+                      error={embedUrlError(panel.welcome_message?.footer?.icon_url)}
+                      onChange={(e) =>
+                        setPanel((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                welcome_message: {
+                                  ...prev.welcome_message,
+                                  footer: { ...prev.welcome_message?.footer, icon_url: e },
+                                },
+                              }
+                            : prev,
+                        )
+                      }
+                      maxLength={EMBED_LIMITS.URL}
+                    />
+                  </PremiumGate>
+                  <DateTimePicker
+                    label="Footer Timestamp"
+                    value={parseEmbedTimestamp(panel.welcome_message?.timestamp)}
+                    onChange={(date) =>
+                      setPanel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              welcome_message: {
+                                ...prev.welcome_message,
+                                timestamp: serializeEmbedTimestamp(date),
+                              },
+                            }
+                          : prev,
+                      )
+                    }
+                  />
+                </Collapsible>
+                <Collapsible title="" subtitle="Embed Fields" defaultOpen={false}>
+                  <EmbedFieldsEditor
+                    fields={panel.welcome_message?.fields || []}
+                    onChange={(fields) =>
+                      setPanel((prev) =>
+                        prev
+                          ? { ...prev, welcome_message: { ...prev.welcome_message, fields } }
+                          : prev,
+                      )
+                    }
+                  />
+                </Collapsible>
+                <EmbedCharacterTotal embed={panel.welcome_message} />
               </div>
-            </Collapsible>
-            <Collapsible title="" subtitle="Images" defaultOpen={false}>
-              <TextInput
-                label="Thumbnail URL"
-                placeholder="e.g. https://example.com/thumbnail.png"
-                value={panel.welcome_message?.thumbnail_url || ""}
-                error={embedUrlError(panel.welcome_message?.thumbnail_url)}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: { ...prev.welcome_message, thumbnail_url: e },
-                        }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.URL}
-              />
-              <TextInput
-                label="Image URL"
-                placeholder="e.g. https://example.com/image.png"
-                value={panel.welcome_message?.image_url || ""}
-                error={embedUrlError(panel.welcome_message?.image_url)}
-                onChange={(e) =>
-                  setPanel((prev) =>
-                    prev
-                      ? { ...prev, welcome_message: { ...prev.welcome_message, image_url: e } }
-                      : prev,
-                  )
-                }
-                maxLength={EMBED_LIMITS.URL}
-              />
-            </Collapsible>
-            <Collapsible title="" subtitle="Footer Settings" defaultOpen={false}>
-              <PremiumGate
-                isPremium={!!premiumState?.premium}
-                feature="custom-footer"
-                description={`Without premium this footer is replaced with “${BRANDING_FOOTER_TEXT}”.`}
-                variant="overlay"
-              >
-                <Textarea
-                  label="Footer Text"
-                  placeholder="e.g. Support hours: 9am-5pm UTC"
-                  value={panel.welcome_message?.footer?.text || ""}
-                  onChange={(e) =>
-                    setPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            welcome_message: {
-                              ...prev.welcome_message,
-                              footer: { ...prev.welcome_message?.footer, text: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  max={EMBED_LIMITS.FOOTER_TEXT}
-                />
-                <TextInput
-                  label="Footer Icon URL"
-                  placeholder="e.g. https://example.com/footer-icon.png"
-                  value={panel.welcome_message?.footer?.icon_url || ""}
-                  error={embedUrlError(panel.welcome_message?.footer?.icon_url)}
-                  onChange={(e) =>
-                    setPanel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            welcome_message: {
-                              ...prev.welcome_message,
-                              footer: { ...prev.welcome_message?.footer, icon_url: e },
-                            },
-                          }
-                        : prev,
-                    )
-                  }
-                  maxLength={EMBED_LIMITS.URL}
-                />
-              </PremiumGate>
-              <DateTimePicker
-                label="Footer Timestamp"
-                value={parseEmbedTimestamp(panel.welcome_message?.timestamp)}
-                onChange={(date) =>
-                  setPanel((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          welcome_message: {
-                            ...prev.welcome_message,
-                            timestamp: serializeEmbedTimestamp(date),
-                          },
-                        }
-                      : prev,
-                  )
-                }
-              />
-            </Collapsible>
-            <Collapsible title="" subtitle="Embed Fields" defaultOpen={false}>
-              <EmbedFieldsEditor
-                fields={panel.welcome_message?.fields || []}
-                onChange={(fields) =>
-                  setPanel((prev) =>
-                    prev ? { ...prev, welcome_message: { ...prev.welcome_message, fields } } : prev,
-                  )
-                }
-              />
-            </Collapsible>
-            <EmbedCharacterTotal embed={panel.welcome_message} />
-          </div>
 
-          <div>
-            <span className="text-xl font-semibold">Welcome Message Preview</span>
-            <PanelPreview type="welcome" data={{ panel }} brandingFooter={showBrandingFooter} />
-          </div>
+              <div>
+                <span className="text-xl font-semibold">Welcome Message Preview</span>
+                <PanelPreview type="welcome" data={{ panel }} brandingFooter={showBrandingFooter} />
+              </div>
+            </>
+          )}
         </div>
       </Collapsible>
       <Collapsible
@@ -1225,49 +1464,28 @@ const EditPanelsPage: FC = () => {
       <Button
         variant="success"
         className="mt-4 text-sm font-medium"
-        disabled={saveAttempted && hasMissingRequired}
-        visuallyDisabled={isLocked}
+        // Not natively disabled: the button is focused when this flips, and a disabled control drops focus.
+        visuallyDisabled={isLocked || (saveAttempted && hasMissingRequired)}
         aria-describedby={isLocked ? "panel-lock-banner" : undefined}
-        onClick={async () => {
+        onClick={() => {
+          // The guard drops a second save, but the repost dialog would still reopen.
+          if (isSubmitting) return;
+
           if (hasMissingRequired) {
-            setSaveAttempted(true);
+            // Flushed so the field errors it reveals exist when the first problem is located.
+            flushSync(() => setSaveAttempted(true));
             if (!scrollToFirstMissingField()) {
               toast.error("Fill in the required fields before saving.");
             }
             return;
           }
-          try {
-            await apiClient.panels.update(
-              guildId,
-              panelId,
-              preparePanelForApi(panel),
-              SKIP_ERROR_TOAST,
-            );
 
-            // Save or delete support hours
-            try {
-              if (supportHours) {
-                await apiClient.panels.setSupportHours(guildId, panelId, supportHours);
-              } else if (initialSupportHours) {
-                await apiClient.panels.deleteSupportHours(guildId, panelId);
-              }
-            } catch (err) {
-              console.error("Failed to save support hours:", err);
-              toast.warning("Panel saved but failed to update support hours.");
-            }
-
-            // Otherwise reopening the panel replays the cached pre-save response.
-            await Promise.all([
-              queryClient.invalidateQueries({ queryKey: guildKeys.panel(guildId, panelId) }),
-              queryClient.invalidateQueries({ queryKey: guildKeys.panels(guildId) }),
-            ]);
-
-            toast.success("Panel Edited");
-            navigate(`/manage/${guildId}/panels`);
-          } catch (error) {
-            handleApiError(error, "Failed to save panel. Please try again.");
-            console.error("Failed to edit panel:", error);
+          const downgradingFromV2 = storedV2.message && !panel.message_uses_components_v2;
+          if (downgradingFromV2) {
+            setDowngradeConfirmOpen(true);
+            return;
           }
+          guard(savePanel);
         }}
       >
         <FontAwesomeIcon icon={faSave} className="mr-2" /> Save Changes
@@ -1275,6 +1493,19 @@ const EditPanelsPage: FC = () => {
       <TicketModeInfoModal
         isOpen={ticketModeInfoOpen}
         onClose={() => setTicketModeInfoOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={downgradeConfirmOpen}
+        onConfirm={() => {
+          setDowngradeConfirmOpen(false);
+          guard(savePanel);
+        }}
+        onCancel={() => setDowngradeConfirmOpen(false)}
+        title="Switch back to classic?"
+        message="Switching this panel message back to classic mode deletes the current message and posts a new one in its place. The new message loses its position in the channel, and any reactions on the old one are lost. Replies to the old message stay in the channel. Continue?"
+        confirmText="Switch and repost"
+        cancelText="Keep as is"
+        confirmVariant="danger"
       />
     </MainLayout>
   );

@@ -40,7 +40,7 @@ export const MAX_ROW_BUTTONS = 5;
 
 export const PANEL_MESSAGE_RESERVED = 2;
 
-const WELCOME_FORM_RESERVED = 5;
+const WELCOME_FORM_RESERVED = 6;
 
 export type V2ComponentType =
   | "container"

@@ -35,7 +35,7 @@ const (
 	panelDropdownCustomId = "multipanel"
 
 	panelMessageReserved       = 2
-	welcomeFormAnswersReserved = 5
+	welcomeFormAnswersReserved = 6
 	dropdownReserved           = 2
 )
 

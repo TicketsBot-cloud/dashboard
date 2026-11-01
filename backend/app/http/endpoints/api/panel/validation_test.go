@@ -65,12 +65,12 @@ func TestValidateWelcomeMessageComponents(t *testing.T) {
 		{name: "without paid premium", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(1)}, wantErr: "premium"},
 		{name: "empty tree", data: panelBody{WelcomeMessageUsesComponentsV2: true}, paid: true, wantErr: "at least one component"},
 		{name: "empty non-nil tree", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{}}, paid: true, wantErr: "at least one component"},
-		{name: "31 components with all buttons visible", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(31)}, paid: true},
-		{name: "32 components with all buttons visible", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(32)}, paid: true, wantErr: "Too many components"},
-		{name: "35 components with every button hidden", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(35), HideCloseButton: true, HideCloseWithReasonButton: true, HideClaimButton: true}, paid: true},
-		{name: "36 components with every button hidden", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(36), HideCloseButton: true, HideCloseWithReasonButton: true, HideClaimButton: true}, paid: true, wantErr: "Too many components"},
-		{name: "claim is not shown in thread mode", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(32), UseThreads: true}, paid: true},
-		{name: "thread mode with one more", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(33), UseThreads: true}, paid: true, wantErr: "Too many components"},
+		{name: "30 components with all buttons visible", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(30)}, paid: true},
+		{name: "31 components with all buttons visible", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(31)}, paid: true, wantErr: "Too many components"},
+		{name: "34 components with every button hidden", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(34), HideCloseButton: true, HideCloseWithReasonButton: true, HideClaimButton: true}, paid: true},
+		{name: "35 components with every button hidden", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(35), HideCloseButton: true, HideCloseWithReasonButton: true, HideClaimButton: true}, paid: true, wantErr: "Too many components"},
+		{name: "claim is not shown in thread mode", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(31), UseThreads: true}, paid: true},
+		{name: "thread mode with one more", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(32), UseThreads: true}, paid: true, wantErr: "Too many components"},
 		{name: "avatar placeholder as a gallery url", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{gallery(types.AvatarUrlPlaceholder)}}, paid: true},
 		{name: "avatar placeholder as a thumbnail url", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("a"))}}, paid: true},
 		{name: "avatar placeholder as a link button url", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{row(linkBtn("Go", types.AvatarUrlPlaceholder))}}, paid: true, wantErr: "Link button"},
@@ -98,11 +98,11 @@ func TestWelcomeMessageReserved(t *testing.T) {
 		data panelBody
 		want int
 	}{
-		{"all buttons", panelBody{}, 9},
-		{"close only", panelBody{HideCloseWithReasonButton: true, HideClaimButton: true}, 7},
-		{"none", panelBody{HideCloseButton: true, HideCloseWithReasonButton: true, HideClaimButton: true}, 5},
-		{"thread mode drops claim", panelBody{UseThreads: true}, 8},
-		{"thread mode with only claim visible", panelBody{UseThreads: true, HideCloseButton: true, HideCloseWithReasonButton: true}, 5},
+		{"all buttons", panelBody{}, 10},
+		{"close only", panelBody{HideCloseWithReasonButton: true, HideClaimButton: true}, 8},
+		{"none", panelBody{HideCloseButton: true, HideCloseWithReasonButton: true, HideClaimButton: true}, 6},
+		{"thread mode drops claim", panelBody{UseThreads: true}, 9},
+		{"thread mode with only claim visible", panelBody{UseThreads: true, HideCloseButton: true, HideCloseWithReasonButton: true}, 6},
 	}
 
 	for _, tt := range tests {

@@ -546,7 +546,7 @@ export function convertClassicToComponentsV2(
   const segments: string[] = [];
 
   if (source.title && source.title.trim().length > 0) {
-    segments.push(`# ${source.title}`);
+    segments.push(`### ${source.title}`);
   }
 
   for (const segment of splitOnHeadings(source.body ?? "")) {

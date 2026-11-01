@@ -18,6 +18,7 @@ interface ContainerEditorProps {
   allPanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   saveAttempted?: boolean;
+  blockErrors?: Map<string, string[]>;
 }
 
 const ContainerEditor: FC<ContainerEditorProps> = ({
@@ -33,6 +34,7 @@ const ContainerEditor: FC<ContainerEditorProps> = ({
   allPanels,
   selectMenuModeOn,
   saveAttempted,
+  blockErrors,
 }) => {
   const containerLabel =
     getTopLevelContainers(tree).find((c) => c.id === value.id)?.label ?? "Container";
@@ -50,6 +52,7 @@ const ContainerEditor: FC<ContainerEditorProps> = ({
           {value.accentColor && (
             <ColourSelect
               className="flex-1"
+              ariaLabel="Accent colour"
               value={value.accentColor}
               disabled={disabled}
               onChange={(accentColor) => onChange({ ...value, accentColor })}
@@ -78,6 +81,7 @@ const ContainerEditor: FC<ContainerEditorProps> = ({
         allPanels={allPanels}
         selectMenuModeOn={selectMenuModeOn}
         saveAttempted={saveAttempted}
+        blockErrors={blockErrors}
       />
     </div>
   );

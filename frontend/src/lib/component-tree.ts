@@ -31,11 +31,11 @@ export const MAX_COMPONENTS = 40;
 export const MAX_TEXT_CHARACTERS = 4000;
 export const MAX_URL_LENGTH = 512;
 export const MAX_ALT_TEXT_LENGTH = 1024;
+export const MAX_BUTTON_LABEL_LENGTH = 80;
 export const MAX_SECTION_TEXTS = 3;
 export const MAX_GALLERY_ITEMS = 10;
 export const MAX_ROW_BUTTONS = 5;
 
-/** The open-ticket row and its button. */
 export const PANEL_MESSAGE_RESERVED = 2;
 
 const WELCOME_FORM_RESERVED = 5;
@@ -82,6 +82,7 @@ export interface V2TextDisplay extends V2Base {
 }
 
 export interface V2MediaGalleryItem {
+  id: string;
   url: string;
   description?: string;
   spoiler?: boolean;
@@ -107,7 +108,6 @@ export interface V2ButtonRow extends V2Base {
   buttons: V2ButtonRowButton[];
 }
 
-/** Lists every panel not placed elsewhere. */
 export interface V2PanelSelect extends V2Base {
   type: "panel_select";
 }
@@ -194,9 +194,10 @@ function resolvePanelButton(panelId: number, panels: Panel[]): ApiComponent | nu
   return {
     type: DiscordComponentType.Button,
     style: parseInt(p.button_style) || ButtonStyle.Primary,
-    label: p.button_label || "Open Ticket",
+    label: p.button_label || (emoji ? "" : "Open Ticket"),
     custom_id: "preview",
     ...(emoji ? { emoji } : {}),
+    ...(p.disabled ? { disabled: true } : {}),
   };
 }
 
@@ -310,7 +311,6 @@ function buildComponent(block: V2Component, resolve?: PreviewResolver): ApiCompo
           ],
         };
       }
-      // A select with no options is invalid, so the backend drops it too.
       if (resolve.selectOptions.length === 0) return null;
       return {
         type: DiscordComponentType.ActionRow,
@@ -332,7 +332,6 @@ export function toApiComponents(tree: V2Component[]): APIMessageTopLevelComponen
   return tree.map((block) => buildComponent(block)) as unknown as APIMessageTopLevelComponent[];
 }
 
-/** `panels` must be every panel in the multi-panel, since a placement can reference any of them. */
 export function toPreviewComponents(
   tree: V2Component[],
   panels: Panel[],
@@ -349,10 +348,6 @@ export function toPreviewComponents(
     .filter((c): c is ApiComponent => c !== null) as unknown as APIMessageTopLevelComponent[];
 }
 
-/**
- * The panel endpoints return the column as a JSON string; a parsed array (echoed after a create)
- * and null are tolerated too.
- */
 export function fromApiComponents(raw: unknown): V2Component[] {
   let value: unknown = raw;
 
@@ -400,7 +395,6 @@ function fromApiComponent(node: unknown): V2Component | null {
             }))
         : [];
 
-      // A missing accessory can round-trip through storage as an empty object.
       const accessoryRaw = obj.accessory;
       let accessory: V2Accessory | undefined;
       if (accessoryRaw && typeof accessoryRaw === "object") {
@@ -440,6 +434,7 @@ function fromApiComponent(node: unknown): V2Component | null {
         ? obj.items
             .filter((i: ApiComponent) => i?.media?.url)
             .map((i: ApiComponent) => ({
+              id: newId(),
               url: i.media.url,
               description: i.description ?? undefined,
               spoiler: !!i.spoiler,
@@ -491,7 +486,6 @@ function fromApiComponent(node: unknown): V2Component | null {
   }
 }
 
-// Mirrors discord-markdown.ts's RE_FENCE so a "#" line inside a code fence is never a heading.
 const RE_FENCE = /```(?:([A-Za-z0-9+#._-]*)\n)?([\s\S]*?)```\n?/g;
 
 export function splitOnHeadings(body: string): string[] {
@@ -584,7 +578,8 @@ export function convertClassicToComponentsV2(
 
   const mediaItems: V2MediaGalleryItem[] = [];
   for (const url of [source.imageUrl, source.thumbnailUrl]) {
-    if (url && convertibleImageUrl(url, source.allowAvatarPlaceholder)) mediaItems.push({ url });
+    if (url && convertibleImageUrl(url, source.allowAvatarPlaceholder))
+      mediaItems.push({ id: newId(), url });
   }
 
   if (segments.length === 0 && mediaItems.length === 0) {
@@ -647,7 +642,6 @@ export function applyClassicConversion(
   return { converted: true, folded: result.folded };
 }
 
-/** Mirrors the backend's component count. */
 export function countBlocks(tree: V2Component[]): number {
   let count = 0;
   for (const block of tree) {
@@ -673,7 +667,6 @@ interface WelcomeButtonSettings {
   use_threads?: boolean;
 }
 
-/** Claim does not exist in thread mode. */
 export function visibleWelcomeButtons(panel: WelcomeButtonSettings) {
   return {
     close: !panel.hide_close_button,
@@ -688,7 +681,6 @@ export function welcomeReserved(panel: WelcomeButtonSettings): number {
   return WELCOME_FORM_RESERVED + (buttons > 0 ? buttons + 1 : 0);
 }
 
-/** Mirrors the backend: a placed dropdown absorbs every unplaced panel, so nothing is appended. */
 export function multiPanelReserved(opts: {
   selectMenu: boolean;
   hasPlacedSelect: boolean;
@@ -740,7 +732,6 @@ export function removePanelSelectBlock(tree: V2Component[]): V2Component[] {
     );
 }
 
-/** A section that loses its panel accessory is kept and flagged by validation. */
 export function prunePlacedPanels(tree: V2Component[], validIds: Set<number>): V2Component[] {
   const result: V2Component[] = [];
   for (const block of tree) {
@@ -761,18 +752,16 @@ export function prunePlacedPanels(tree: V2Component[], validIds: Set<number>): V
   return result;
 }
 
-// Go's unicode.IsSpace and unicode.IsControl, then the bidi controls the backend also rejects.
+// Go's unicode.IsSpace and unicode.IsControl.
 const RE_URL_SPACE_OR_CONTROL =
   // eslint-disable-next-line no-control-regex
   /[\u0000-\u0020\u007F-\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/;
-const RE_URL_BIDI_CONTROL = /[\u202A-\u202E\u2066-\u2069\u200E\u200F]/;
-// ASCII that Go's url.Parse refuses in a host. Percent escapes are refused outright, which is
-// slightly stricter than Go.
+const RE_URL_BIDI_CONTROL = /\p{Bidi_Control}/u;
+// ASCII that Go's url.Parse refuses in a host.
 const RE_URL_BAD_HOST_CHAR = /[^A-Za-z0-9\-._~!$&'()*+,;=:[\]<>"\u0080-\uFFFF]/;
 const RE_URL_BAD_ESCAPE = /%(?![0-9A-Fa-f]{2})/;
 const RE_IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
 
-/** Go's netip.ParseAddr for IPv6, minus zones: a "%" in the host is refused anyway. */
 function isIpv6(address: string): boolean {
   const lastColon = address.lastIndexOf(":");
   if (lastColon === -1) return false;
@@ -789,10 +778,7 @@ function isIpv6(address: string): boolean {
   return halves.length === 2 ? groups.length < 8 : groups.length === 8;
 }
 
-/**
- * Mirrors the backend's checkUrl. The raw string is inspected rather than `new URL()`, because the
- * browser normalises inputs Go rejects (`https:/host`, `https://@host`, numeric hosts).
- */
+/** Not `new URL()`, which normalises inputs Go rejects (`https:/host`, `https://@host`, numeric hosts). */
 export function validUrl(raw: string): boolean {
   if ([...raw].length > MAX_URL_LENGTH) return false;
   if (RE_URL_SPACE_OR_CONTROL.test(raw) || RE_URL_BIDI_CONTROL.test(raw)) return false;
@@ -836,21 +822,38 @@ export function countCharacters(text: string): number {
   return [...text].length;
 }
 
+export function countTreeText(tree: V2Component[]): number {
+  let count = 0;
+  for (const block of tree) {
+    if (block.type === "container") {
+      count += countTreeText(block.components);
+    } else if (block.type === "section") {
+      for (const child of block.components) count += countCharacters(child.content);
+    } else if (block.type === "text_display") {
+      count += countCharacters(block.content);
+    }
+  }
+  return count;
+}
+
 export const BLANK_TEXT_MESSAGE = "Text cannot be blank.";
 export const LINK_LABEL_MESSAGE = "Every link button needs a label.";
-export const LINK_URL_MESSAGE = `Link button URLs must be a full http:// or https:// address with a domain name, no spaces, and at most ${MAX_URL_LENGTH} characters.`;
-export const MEDIA_URL_MESSAGE = `Image URLs must be a full http:// or https:// address with a domain name, no spaces, and at most ${MAX_URL_LENGTH} characters.`;
+export const LINK_URL_MESSAGE = `Link button URLs must be full http:// or https:// addresses with a domain name, up to ${MAX_URL_LENGTH} characters.`;
+export const MEDIA_URL_MESSAGE = `Image URLs must be full http:// or https:// addresses with a domain name, up to ${MAX_URL_LENGTH} characters.`;
 const WELCOME_MEDIA_URL_MESSAGE = `${MEDIA_URL_MESSAGE} You can also use ${AVATAR_PLACEHOLDER}.`;
 export const EMPTY_PANEL_SELECT_MESSAGE =
-  "The Panel Select block has no panels left to list. Remove a panel button placed elsewhere, or delete this block.";
+  "The Panel Select block has no panels left. Remove a placed panel button or delete this block.";
 
-export const EMPTY_TREE_MESSAGE =
-  "Add at least one block. A Components v2 message cannot be empty.";
+export const EMPTY_TREE_MESSAGE = "Add at least one block.";
+
+// Go's strings.TrimSpace, which unlike trim() strips U+0085 and keeps U+FEFF.
+const RE_NOT_GO_SPACE =
+  /[^\t\n\v\f\r \u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/;
 
 export const blankTextError = (content: string): string | undefined =>
-  content.trim() ? undefined : BLANK_TEXT_MESSAGE;
+  RE_NOT_GO_SPACE.test(content) ? undefined : BLANK_TEXT_MESSAGE;
 export const linkLabelError = (label: string): string | undefined =>
-  label.trim() ? undefined : LINK_LABEL_MESSAGE;
+  RE_NOT_GO_SPACE.test(label) ? undefined : LINK_LABEL_MESSAGE;
 export const linkUrlError = (url: string): string | undefined =>
   validUrl(url) ? undefined : LINK_URL_MESSAGE;
 export const mediaUrlError = (
@@ -866,6 +869,7 @@ export const mediaUrlError = (
 export interface ComponentTreeIssue {
   message: string;
   blockId?: string;
+  atField?: boolean;
 }
 
 export interface TreeValidationOptions {
@@ -880,27 +884,26 @@ export function validateComponentTree(
   opts: TreeValidationOptions = {},
 ): ComponentTreeIssue[] {
   const issues = new Map<string, ComponentTreeIssue>();
-  let textCharacters = 0;
 
-  const add = (message: string, blockId?: string) => {
+  const add = (message: string, blockId?: string, atField?: boolean) => {
     const key = `${blockId ?? ""}|${message}`;
-    if (!issues.has(key)) issues.set(key, { message, blockId });
+    if (!issues.has(key)) issues.set(key, { message, blockId, atField });
   };
 
   const checkLinkButton = (blockId: string, label: string, url: string) => {
     const labelError = linkLabelError(label);
-    if (labelError) add(labelError, blockId);
+    if (labelError) add(labelError, blockId, true);
     const urlError = linkUrlError(url);
-    if (urlError) add(urlError, blockId);
+    if (urlError) add(urlError, blockId, true);
   };
 
   const checkMediaUrl = (blockId: string, url: string) => {
     const error = mediaUrlError(url, opts.allowAvatarPlaceholder);
-    if (error) add(error, blockId);
+    if (error) add(error, blockId, true);
   };
 
   const checkAlt = (blockId: string, alt: string | undefined) => {
-    if (alt && alt.length > MAX_ALT_TEXT_LENGTH) {
+    if (alt && countCharacters(alt) > MAX_ALT_TEXT_LENGTH) {
       add(`Alt text can be at most ${MAX_ALT_TEXT_LENGTH} characters.`, blockId);
     }
   };
@@ -920,9 +923,8 @@ export function validateComponentTree(
             add(`A section needs 1 to ${MAX_SECTION_TEXTS} text blocks.`, block.id);
           }
           for (const child of block.components) {
-            textCharacters += countCharacters(child.content);
             const error = blankTextError(child.content);
-            if (error) add(error, block.id);
+            if (error) add(error, block.id, true);
           }
           if (!block.accessory) {
             add("A section needs an image or button on its side.", block.id);
@@ -934,9 +936,8 @@ export function validateComponentTree(
           }
           break;
         case "text_display": {
-          textCharacters += countCharacters(block.content);
           const error = blankTextError(block.content);
-          if (error) add(error, block.id);
+          if (error) add(error, block.id, true);
           break;
         }
         case "media_gallery":
@@ -955,7 +956,7 @@ export function validateComponentTree(
           }
           break;
         case "panel_select":
-          if (opts.unplacedPanelCount === 0) add(EMPTY_PANEL_SELECT_MESSAGE, block.id);
+          if (opts.unplacedPanelCount === 0) add(EMPTY_PANEL_SELECT_MESSAGE, block.id, true);
           break;
         default:
           break;
@@ -968,20 +969,19 @@ export function validateComponentTree(
   if (opts.requireContent && tree.length === 0) {
     add(EMPTY_TREE_MESSAGE);
   }
-  const total = countBlocks(tree) + (opts.reserved ?? 0);
-  if (total > MAX_COMPONENTS) {
-    add(
-      `This message uses ${total} of ${MAX_COMPONENTS} components, including those added automatically. Remove some blocks.`,
-    );
+  const used = countBlocks(tree);
+  const available = MAX_COMPONENTS - (opts.reserved ?? 0);
+  if (used > available) {
+    add(`Your blocks use ${used} of ${available} components. Remove some blocks.`);
   }
-  if (textCharacters > MAX_TEXT_CHARACTERS) {
-    add(`Text can total at most ${MAX_TEXT_CHARACTERS} characters.`);
+  const textUsed = countTreeText(tree);
+  if (textUsed > MAX_TEXT_CHARACTERS) {
+    add(`Text can total at most ${MAX_TEXT_CHARACTERS} characters (currently ${textUsed}).`);
   }
 
   return [...issues.values()];
 }
 
-// Only two levels hold reorderable blocks: the top level and a single container's children.
 interface BlockLocation {
   list: V2Component[];
   index: number;
@@ -1007,6 +1007,25 @@ export function getTopLevelContainers(tree: V2Component[]): { id: string; label:
     .map((block, index) => ({ block, index }))
     .filter(({ block }) => block.type === "container")
     .map(({ index }) => ({ id: tree[index].id, label: `Container ${index + 1}` }));
+}
+
+export function blockPositionLabels(tree: V2Component[]): Map<string, string> {
+  const labels = new Map<string, string>();
+  const containerLabels = new Map(getTopLevelContainers(tree).map((c) => [c.id, c.label]));
+
+  const visit = (blocks: V2Component[], containerLabel?: string) => {
+    blocks.forEach((block, index) => {
+      const label = blockLabel(block.type);
+      const shellLabel = blocks.length > 1 ? `${label} (${index + 1} of ${blocks.length})` : label;
+      labels.set(block.id, containerLabel ? `${containerLabel}, ${shellLabel}` : shellLabel);
+      if (block.type === "container") {
+        visit(block.components, containerLabels.get(block.id) ?? "Container");
+      }
+    });
+  };
+
+  visit(tree);
+  return labels;
 }
 
 export function moveBlock(

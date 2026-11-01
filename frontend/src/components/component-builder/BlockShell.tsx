@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type FC, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type FC, type ReactNode } from "react";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -25,6 +25,7 @@ interface BlockShellProps {
   onDelete: () => void;
   nested?: boolean;
   disabled?: boolean;
+  errors?: string[];
   children: ReactNode;
 }
 
@@ -44,20 +45,20 @@ const BlockShell: FC<BlockShellProps> = ({
   onDelete,
   nested,
   disabled,
+  errors,
   children,
 }) => {
+  const errorId = useId();
   const upRef = useRef<HTMLButtonElement>(null);
   const downRef = useRef<HTMLButtonElement>(null);
   const pendingFocus = useRef<"up" | "down" | null>(null);
   const [moveTarget, setMoveTarget] = useState("");
   const fullLabel = containerLabel ? `${containerLabel}, ${label}` : label;
-  // A deleted container's id must not stay chosen: moving into it would drop the block.
   const chosenTarget = moveIntoContainerTargets?.some((target) => target.id === moveTarget)
     ? moveTarget
     : "";
 
-  // Reordering moves this block's DOM nodes, which drops focus, and the pressed arrow becomes
-  // disabled at either end of the list.
+  // Reordering moves the DOM nodes and can disable the pressed arrow, both of which drop focus.
   useLayoutEffect(() => {
     const pressed = pendingFocus.current;
     if (!pressed) return;
@@ -72,6 +73,7 @@ const BlockShell: FC<BlockShellProps> = ({
       data-block-id={blockId}
       role="group"
       aria-label={fullLabel}
+      aria-describedby={errors?.length ? errorId : undefined}
       tabIndex={-1}
       className={
         nested
@@ -161,6 +163,13 @@ const BlockShell: FC<BlockShellProps> = ({
           </Button>
         </div>
       </div>
+      {!!errors?.length && (
+        <ul id={errorId} data-missing="true" className="mb-3 space-y-1 text-sm text-red-300">
+          {errors.map((error) => (
+            <li key={error}>{error}</li>
+          ))}
+        </ul>
+      )}
       {children}
     </div>
   );

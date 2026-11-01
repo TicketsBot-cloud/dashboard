@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FC } from "react";
+import { flushSync } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
@@ -124,8 +125,6 @@ const MultiPanelsPage: FC = () => {
   const [componentTree, setComponentTree] = useState<V2Component[]>([]);
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
   const { isSubmitting, guard } = useMutationGuard();
-  // Captured once when the multi-panel first loads, so the resend-confirmation on save only
-  // ever compares against how it started this session, not against every toggle flip in between.
   const originalV2Ref = useRef(false);
   const { data: panels = [] } = useGuildPanels(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
@@ -224,7 +223,7 @@ const MultiPanelsPage: FC = () => {
         unplacedPanelCount,
       }).length > 0
     ) {
-      return "Fix the problems listed under the message builder before saving.";
+      return "Fix the problems in the message builder first.";
     }
 
     return null;
@@ -238,8 +237,6 @@ const MultiPanelsPage: FC = () => {
 
         setMultiPanel({ ...data, embed: data.embed ?? defaultEmbed });
         originalV2Ref.current = data.uses_components_v2;
-        // A panel deleted since the last save leaves its placement behind, and a Classic save after
-        // dropdown mode was turned off leaves the dropdown behind.
         const loaded = prunePlacedPanels(
           fromApiComponents(data.components),
           new Set(data.panels.map((p) => p.panel_id)),
@@ -278,14 +275,13 @@ const MultiPanelsPage: FC = () => {
   const resolvedPanels = getPreviewButtons();
   const placedPanelIds = getPlacedPanelIds(componentTree);
   const hasPlacedSelect = hasPanelSelectBlock(componentTree);
-  // A placed dropdown absorbs every unplaced panel, so the backend appends no default row.
   const defaultRowPanels = hasPlacedSelect
     ? []
     : resolvedPanels.filter((p) => !placedPanelIds.has(p.panel_id));
 
   const toPickerPanel = (p: (typeof resolvedPanels)[number]) => ({
     panel_id: p.panel_id,
-    label: p.button_label || "Open Ticket",
+    label: p.name || p.title || `Panel ${p.panel_id}`,
   });
   const unplacedPickerPanels = resolvedPanels
     .filter((p) => !placedPanelIds.has(p.panel_id))
@@ -299,6 +295,12 @@ const MultiPanelsPage: FC = () => {
     hasPlacedSelect,
     panelCount: multiPanel?.panels.length ?? 0,
     placedCount: placedPanelIds.size,
+  });
+  const conversionReserved = multiPanelReserved({
+    selectMenu: !!multiPanel?.select_menu,
+    hasPlacedSelect: false,
+    panelCount: multiPanel?.panels.length ?? 0,
+    placedCount: 0,
   });
 
   const classicSource: ClassicConversionSource = {
@@ -346,7 +348,7 @@ const MultiPanelsPage: FC = () => {
           showCount
         />
         <p id="multi-panel-name-help" className="text-xs text-gray-400 mt-1">
-          Used to identify this multi-panel in the dashboard. It isn't shown in Discord.
+          Only shown in the dashboard.
         </p>
       </div>
       <Collapsible
@@ -509,13 +511,12 @@ const MultiPanelsPage: FC = () => {
             previewTitle="Panel Preview"
             reserved={reserved}
             reservedNote={
-              reserved === 0
-                ? undefined
-                : "Some space is also kept for the panel selection buttons or dropdown."
+              reserved === 0 ? undefined : "Some space is kept for the panel buttons or dropdown."
             }
             placement={{
               availablePanels: unplacedPickerPanels,
               unplacedPanelCount,
+              conversionReserved,
               allPanels: resolvedPanels.map(toPickerPanel),
               selectMenuModeOn: !!multiPanel?.select_menu,
             }}
@@ -800,7 +801,8 @@ const MultiPanelsPage: FC = () => {
 
           const blocker = saveBlocker();
           if (blocker) {
-            setSaveAttempted(true);
+            // Flushed so the field errors it reveals exist when the first problem is located.
+            flushSync(() => setSaveAttempted(true));
             scrollToFirstMissingField();
             toast.error(blocker);
             return;
@@ -828,7 +830,7 @@ const MultiPanelsPage: FC = () => {
         }}
         onCancel={() => setDowngradeConfirmOpen(false)}
         title="Switch back to classic?"
-        message="Switching this multi-panel back to classic mode deletes the current message and posts a new one in its place. The new message loses its position in the channel, and any reactions on the old one are lost. Replies to the old message stay in the channel. Continue?"
+        message="This deletes the current message and posts a new one, which loses its place in the channel and its reactions."
         confirmText="Switch and repost"
         cancelText="Keep as is"
         confirmVariant="danger"

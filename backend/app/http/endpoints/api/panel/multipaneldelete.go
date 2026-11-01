@@ -40,6 +40,11 @@ func MultiPanelDelete(c *gin.Context) {
 	}
 
 	panel, ok, err := dbclient.Client.MultiPanels.Get(c, multiPanelId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to delete multi-panel"))
+		return
+	}
+
 	if !ok {
 		c.JSON(404, utils.ErrorStr("No panel with matching ID found"))
 		return

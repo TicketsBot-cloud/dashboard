@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/TicketsBot-cloud/database"
@@ -16,6 +17,8 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 	"go.uber.org/zap"
 )
+
+var errEmptyMultiPanel = errors.New("multi-panel message has nothing left to show")
 
 type multiPanelMessageData struct {
 	Footer footerPolicy
@@ -58,13 +61,12 @@ func multiPanelIntoMessageData(panel database.MultiPanel, footer footerPolicy) m
 	}
 
 	if panel.UsesComponentsV2 {
-		// A corrupt tree renders as an empty one. Falling back to Classic would send an
-		// edit without the V2 flag to a message that has it, which Discord refuses.
+		// Classic would edit a V2 message without its flag, which Discord refuses.
 		data.UsesComponentsV2 = true
 
 		components, err := unmarshalComponents(panel.Components)
 		if err != nil {
-			log.Logger.Error("Failed to unmarshal multi-panel components; rendering an empty tree", zap.Int("multi_panel_id", panel.Id), zap.Error(err))
+			log.Logger.Error("Failed to unmarshal multi-panel components", zap.Int("multi_panel_id", panel.Id), zap.Error(err))
 		} else {
 			data.Components = components
 		}
@@ -120,8 +122,6 @@ func getEffectiveEmojiAnimated(panel database.Panel, customEmojiName *string, cu
 	return panel.EmojiAnimated
 }
 
-// The dashboard submits a blank description as "", and Discord rejects a select option whose
-// description is present but empty.
 func effectiveDescription(description *string) *string {
 	if description != nil && *description == "" {
 		return nil
@@ -187,7 +187,6 @@ func (d *multiPanelMessageData) buildSystemRows(panels []database.PanelWithCusto
 	return rows
 }
 
-// Anything that cannot be resolved is dropped, so a "panel:" marker can never reach Discord.
 func (d *multiPanelMessageData) buildComponents(panels []database.PanelWithCustomization) (tree, system []component.Component) {
 	if !d.UsesComponentsV2 {
 		return nil, d.buildSystemRows(panels)
@@ -259,8 +258,6 @@ func isResolvableLinkButton(b component.Button) bool {
 	return b.Style == component.ButtonStyleLink && b.Url != nil && *b.Url != ""
 }
 
-// A parent left unable to render without a rejected leaf is dropped too: an action row or
-// container with no children, and a section with no text or no accessory.
 func mapComponentTree(nodes []component.Component, fn func(component.Component) (component.Component, bool)) []component.Component {
 	out := make([]component.Component, 0, len(nodes))
 
@@ -308,11 +305,20 @@ func mapComponentTree(nodes []component.Component, fn func(component.Component) 
 	return out
 }
 
+func (d *multiPanelMessageData) rendersEmpty(panels []database.PanelWithCustomization) bool {
+	tree, system := d.buildComponents(panels)
+	return d.UsesComponentsV2 && len(tree)+len(system) == 0
+}
+
 func (d *multiPanelMessageData) send(ctx *botcontext.BotContext, panels []database.PanelWithCustomization) (uint64, error) {
 	tree, system := d.buildComponents(panels)
 
 	var data rest.CreateMessageData
 	if d.UsesComponentsV2 {
+		if len(tree)+len(system) == 0 {
+			return 0, errEmptyMultiPanel
+		}
+
 		data = rest.CreateMessageData{
 			Flags:      message.SumFlags(message.FlagComponentsV2),
 			Components: append(tree, system...),
@@ -346,9 +352,6 @@ func (d *multiPanelMessageData) buildEditData(components []component.Component) 
 	}
 }
 
-// IS_COMPONENTS_V2 can be set but never removed, and an edit that omits flags is validated as
-// a classic message. Embeds must be empty on a V2 message, and without allowed_mentions
-// Discord re-parses mentions with its default allowances.
 func v2EditData(components []component.Component) rest.EditMessageData {
 	return rest.EditMessageData{
 		Embeds:          []*embed.Embed{},

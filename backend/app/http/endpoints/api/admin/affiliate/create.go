@@ -122,11 +122,11 @@ func CreateHandler(ctx *gin.Context) {
 		ResourceType: database.AuditResourceAffiliate,
 		ResourceId:   audit.StringPtr(affiliateCode.Id.String()),
 		NewData: map[string]any{
-			"target_user_id":       body.UserId,
-			"code":                 body.Code,
+			"target_user_id":        body.UserId,
+			"code":                  body.Code,
 			"discount_basis_points": body.DiscountBasisPoints,
-			"credit_percentage":    body.CreditPercentage,
-			"polar_discount_id":   polarDiscountId,
+			"credit_percentage":     body.CreditPercentage,
+			"polar_discount_id":     polarDiscountId,
 		},
 	})
 

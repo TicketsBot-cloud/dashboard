@@ -28,8 +28,7 @@ func bindJSONWithKeys(c *gin.Context, obj any) (map[string]bool, error) {
 	return jsonKeys(body)
 }
 
-// Dashboards from before Components V2 send back the GET response, where trees are JSON strings.
-// Dropping those keeps the stored tree; parsing them would get past LimitJSONBody's depth check.
+// Dashboards from before Components V2 echo the GET response, where trees are JSON strings.
 func dropStringTrees(body []byte) ([]byte, error) {
 	var fields map[string]json.RawMessage
 	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&fields); err != nil {
@@ -54,6 +53,23 @@ func dropStringTrees(body []byte) ([]byte, error) {
 	return json.Marshal(fields)
 }
 
+func bindPanelCreateBody(c *gin.Context, data *panelBody) error {
+	keys, err := bindJSONWithKeys(c, data)
+	if err != nil {
+		return err
+	}
+
+	if !keys["message_components"] {
+		data.MessageUsesComponentsV2 = false
+	}
+
+	if !keys["welcome_message_components"] {
+		data.WelcomeMessageUsesComponentsV2 = false
+	}
+
+	return nil
+}
+
 // Lower-cased because binding matches field names case-insensitively.
 func jsonKeys(body []byte) (map[string]bool, error) {
 	var fields map[string]json.RawMessage
@@ -69,9 +85,6 @@ func jsonKeys(body []byte) (map[string]bool, error) {
 	return keys, nil
 }
 
-// API clients from before Components V2 and Name leave these keys out. Reading their absence as
-// false or null would turn a V2 message back to Classic and clear the name on every save. A Classic
-// message's retained tree is never parsed, so it can't fail a save that doesn't use it.
 func (p *panelBody) keepStoredWhenAbsent(keys map[string]bool, stored database.Panel) error {
 	if !keys["message_uses_components_v2"] {
 		p.MessageUsesComponentsV2 = stored.MessageUsesComponentsV2
@@ -103,6 +116,15 @@ func (p *panelBody) keepStoredWhenAbsent(keys map[string]bool, stored database.P
 		p.Name = stored.Name
 	}
 
+	return nil
+}
+
+func (p *panelBody) mergeStored(keys map[string]bool, existing database.Panel) error {
+	if err := p.keepStoredWhenAbsent(keys, existing); err != nil {
+		return err
+	}
+
+	p.retainClassicFields(existing, keys["colour"])
 	return nil
 }
 

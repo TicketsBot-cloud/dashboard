@@ -12,11 +12,13 @@ interface ComponentTreeBuilderProps {
   budgetUsed: number;
   budgetMax: number;
   budgetReservedNote?: string;
+  textUsed: number;
   disabled?: boolean;
   availablePanels?: PickerPanel[];
   allPanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   saveAttempted?: boolean;
+  blockErrors?: Map<string, string[]>;
 }
 
 const ComponentTreeBuilder: FC<ComponentTreeBuilderProps> = ({
@@ -26,17 +28,18 @@ const ComponentTreeBuilder: FC<ComponentTreeBuilderProps> = ({
   budgetUsed,
   budgetMax,
   budgetReservedNote,
+  textUsed,
   disabled,
   availablePanels,
   allPanels,
   selectMenuModeOn,
   saveAttempted,
+  blockErrors,
 }) => {
   const [announcement, setAnnouncement] = useState("");
   const announceFrame = useRef(0);
 
-  // Live regions only speak when their text changes, so an identical repeat (moving the same
-  // block twice) is cleared first and set again a frame later.
+  // Live regions only speak on a change, so a repeat is cleared and set again a frame later.
   const announce = useCallback((message: string) => {
     cancelAnimationFrame(announceFrame.current);
     setAnnouncement("");
@@ -53,7 +56,12 @@ const ComponentTreeBuilder: FC<ComponentTreeBuilderProps> = ({
 
   return (
     <div>
-      <ComponentBudgetMeter used={budgetUsed} max={budgetMax} reservedNote={budgetReservedNote} />
+      <ComponentBudgetMeter
+        used={budgetUsed}
+        max={budgetMax}
+        reservedNote={budgetReservedNote}
+        textUsed={textUsed}
+      />
       <div className="mt-3">
         <BlockList
           blocks={components}
@@ -68,6 +76,7 @@ const ComponentTreeBuilder: FC<ComponentTreeBuilderProps> = ({
           allPanels={allPanels}
           selectMenuModeOn={selectMenuModeOn}
           saveAttempted={saveAttempted}
+          blockErrors={blockErrors}
         />
       </div>
       <div aria-live="polite" className="sr-only">

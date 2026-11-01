@@ -13,8 +13,6 @@ import (
 
 var errJSONTooDeep = errors.New("json nesting too deep")
 
-// gdl's Component.UnmarshalJSON re-parses every subtree, so its cost is quadratic in nesting
-// depth; an over-deep body must be rejected before it ever reaches that code.
 func LimitJSONBody(maxBytes int64, maxDepth int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.ContentLength > maxBytes {
@@ -51,8 +49,6 @@ func abortBodyTooLarge(c *gin.Context) {
 	c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, utils.ErrorStr("Request is too large."))
 }
 
-// checkJSONDepth streams tokens rather than unmarshalling, and stops at the first token that
-// exceeds maxDepth, so a hostile body costs at most maxDepth+1 levels of work.
 func checkJSONDepth(body []byte, maxDepth int) error {
 	decoder := json.NewDecoder(bytes.NewReader(body))
 

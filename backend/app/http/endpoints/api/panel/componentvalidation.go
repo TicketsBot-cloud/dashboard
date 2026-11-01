@@ -15,11 +15,9 @@ import (
 const (
 	maxAccentColour = 0xFFFFFF
 
-	// Discord allows 40 components in total in a Components V2 message, counting every
-	// nested component, with no per-level cap.
 	maxMessageComponents = 40
 
-	// Discord counts only text display content (section text included) towards this.
+	// Not in Discord's docs: observed to count only text display content (section text included).
 	maxTreeTextLength         = 4000
 	maxComponentUrlLength     = 512
 	maxMediaDescriptionLength = 1024
@@ -28,25 +26,20 @@ const (
 	maxSectionTextDisplays    = 3
 	maxGalleryItems           = 10
 
-	// A panel placed inside a multi-panel tree is a button carrying this custom_id prefix
-	// followed by the decimal panel id. It is a marker only and is replaced by the real
-	// panel button before anything is sent to Discord.
+	// Marks a panel placed in a multi-panel tree; replaced by the real panel button before sending.
 	panelPlacementPrefix = "panel:"
 
-	// The same custom_id the live dropdown uses, so a placed dropdown node and the real
-	// select menu are interchangeable.
 	panelDropdownCustomId = "multipanel"
 
-	panelMessageReserved       = 2 // action row + open ticket button
+	panelMessageReserved       = 2
 	welcomeFormAnswersReserved = 5
-	dropdownReserved           = 2 // action row + select menu
+	dropdownReserved           = 2
 )
 
 type treeRules struct {
-	validPanelIds map[int]bool
-	dropdownMode  bool
-	reserved      int
-	// The worker resolves the opener's avatar only when it sends a welcome message.
+	validPanelIds          map[int]bool
+	dropdownMode           bool
+	reserved               int
 	allowAvatarPlaceholder bool
 }
 
@@ -64,8 +57,6 @@ type treeResult struct {
 	count        int
 }
 
-// A caller that only learns the reservation from the tree itself passes reserved 0 and then
-// calls checkComponentBudget.
 func validateComponentTree(tree []component.Component, rules treeRules) (treeResult, error) {
 	v := &treeValidator{rules: rules, placed: make(map[int]bool)}
 
@@ -108,11 +99,11 @@ func (v *treeValidator) node(c component.Component, inContainer bool) error {
 	switch d := c.ComponentData.(type) {
 	case component.Container:
 		if inContainer {
-			return validation.NewInvalidInputError("Container: a container cannot be placed inside another container")
+			return validation.NewInvalidInputError("Container: cannot be placed inside another container")
 		}
 
 		if len(d.Components) == 0 {
-			return validation.NewInvalidInputError("Container: a container cannot be empty")
+			return validation.NewInvalidInputError("Container: cannot be empty")
 		}
 
 		if d.AccentColor != nil && (*d.AccentColor < 0 || *d.AccentColor > maxAccentColour) {
@@ -141,9 +132,9 @@ func (v *treeValidator) node(c component.Component, inContainer bool) error {
 	case component.ActionRow:
 		return v.actionRow(d)
 	case component.Thumbnail:
-		return validation.NewInvalidInputError("Thumbnail: a thumbnail can only be used as a section's accessory")
+		return validation.NewInvalidInputError("Thumbnail: can only be used as a section's accessory")
 	case component.File:
-		return validation.NewInvalidInputError("File: file components are not supported")
+		return validation.NewInvalidInputError("File: not supported")
 	case component.Button, component.SelectMenu:
 		return validation.NewInvalidInputError("Buttons and dropdowns must be placed inside an action row")
 	default:
@@ -153,13 +144,13 @@ func (v *treeValidator) node(c component.Component, inContainer bool) error {
 
 func (v *treeValidator) section(s component.Section) error {
 	if len(s.Components) < 1 || len(s.Components) > maxSectionTextDisplays {
-		return validation.NewInvalidInputErrorf("Section: a section needs between 1 and %d text displays", maxSectionTextDisplays)
+		return validation.NewInvalidInputErrorf("Section: needs between 1 and %d text displays", maxSectionTextDisplays)
 	}
 
 	for _, child := range s.Components {
 		td, ok := child.ComponentData.(component.TextDisplay)
 		if !ok {
-			return validation.NewInvalidInputError("Section: a section can only contain text displays")
+			return validation.NewInvalidInputError("Section: can only contain text displays")
 		}
 
 		if err := v.add(1); err != nil {
@@ -181,7 +172,7 @@ func (v *treeValidator) section(s component.Section) error {
 	case component.Button:
 		return v.button(accessory)
 	case nil:
-		return validation.NewInvalidInputError("Section: a section needs an accessory, either a thumbnail or a button")
+		return validation.NewInvalidInputError("Section: needs a thumbnail or button accessory")
 	default:
 		return validation.NewInvalidInputError("Section: the accessory must be a thumbnail or a button")
 	}
@@ -189,7 +180,11 @@ func (v *treeValidator) section(s component.Section) error {
 
 func (v *treeValidator) textDisplay(t component.TextDisplay) error {
 	if strings.TrimSpace(t.Content) == "" {
-		return validation.NewInvalidInputError("Text display: text cannot be blank")
+		return validation.NewInvalidInputError("Text display: cannot be blank")
+	}
+
+	if strings.ContainsRune(t.Content, 0) {
+		return validation.NewInvalidInputError("Text display: cannot contain null characters")
 	}
 
 	v.textLength += utf8.RuneCountInString(t.Content)
@@ -206,7 +201,7 @@ func (v *treeValidator) thumbnail(t component.Thumbnail) error {
 
 func (v *treeValidator) mediaGallery(g component.MediaGallery) error {
 	if len(g.Items) < 1 || len(g.Items) > maxGalleryItems {
-		return validation.NewInvalidInputErrorf("Media gallery: a gallery needs between 1 and %d items", maxGalleryItems)
+		return validation.NewInvalidInputErrorf("Media gallery: needs between 1 and %d items", maxGalleryItems)
 	}
 
 	for _, item := range g.Items {
@@ -224,11 +219,11 @@ func (v *treeValidator) mediaGallery(g component.MediaGallery) error {
 
 func (v *treeValidator) actionRow(row component.ActionRow) error {
 	if len(row.Components) == 0 {
-		return validation.NewInvalidInputError("Action row: an action row cannot be empty")
+		return validation.NewInvalidInputError("Action row: cannot be empty")
 	}
 
 	if len(row.Components) > maxActionRowChildren {
-		return validation.NewInvalidInputErrorf("Action row: an action row cannot contain more than %d buttons", maxActionRowChildren)
+		return validation.NewInvalidInputErrorf("Action row: cannot contain more than %d buttons", maxActionRowChildren)
 	}
 
 	if err := v.add(len(row.Components)); err != nil {
@@ -243,14 +238,14 @@ func (v *treeValidator) actionRow(row component.ActionRow) error {
 			}
 		case component.SelectMenu:
 			if len(row.Components) != 1 {
-				return validation.NewInvalidInputError("Action row: the panel dropdown must be the only component in its action row")
+				return validation.NewInvalidInputError("Action row: the panel dropdown must be alone in its row")
 			}
 
 			if err := v.dropdown(d); err != nil {
 				return err
 			}
 		default:
-			return validation.NewInvalidInputError("Action row: an action row can only contain link buttons, panel buttons or the panel dropdown")
+			return validation.NewInvalidInputError("Action row: can only contain link buttons, panel buttons or the panel dropdown")
 		}
 	}
 
@@ -259,7 +254,7 @@ func (v *treeValidator) actionRow(row component.ActionRow) error {
 
 func (v *treeValidator) button(b component.Button) error {
 	if b.Url != nil && b.CustomId != "" {
-		return validation.NewInvalidInputError("Button: a button is either a link button or a panel button, never both")
+		return validation.NewInvalidInputError("Button: cannot be both a link button and a panel button")
 	}
 
 	if b.Url != nil || b.Style == component.ButtonStyleLink {
@@ -268,11 +263,11 @@ func (v *treeValidator) button(b component.Button) error {
 
 	panelId, ok := parsePanelPlacement(b.CustomId)
 	if !ok {
-		return validation.NewInvalidInputError("Button: buttons must be link buttons or panel buttons")
+		return validation.NewInvalidInputError("Button: must be a link button or a panel button")
 	}
 
 	if v.rules.validPanelIds == nil {
-		return validation.NewInvalidInputError("Panel button: panels can only be placed in a multi-panel message")
+		return validation.NewInvalidInputError("Panel button: can only be placed in a multi-panel")
 	}
 
 	if !v.rules.validPanelIds[panelId] {
@@ -289,17 +284,15 @@ func (v *treeValidator) button(b component.Button) error {
 
 func (v *treeValidator) linkButton(b component.Button) error {
 	if b.Style != component.ButtonStyleLink || b.Url == nil {
-		return validation.NewInvalidInputError("Link button: a link button needs the link style and a URL")
+		return validation.NewInvalidInputError("Link button: needs the link style and a URL")
 	}
 
 	if b.SkuId != nil {
-		return validation.NewInvalidInputError("Link button: a link button cannot have a SKU")
+		return validation.NewInvalidInputError("Link button: cannot have a SKU")
 	}
 
-	// The editor cannot set one, and resolving a custom emoji needs the bot's view of the
-	// guild, which tree validation does not have.
 	if b.Emoji != nil {
-		return validation.NewInvalidInputError("Link button: link buttons cannot have an emoji")
+		return validation.NewInvalidInputError("Link button: cannot have an emoji")
 	}
 
 	if err := checkUrl("Link button", *b.Url); err != nil {
@@ -315,6 +308,10 @@ func (v *treeValidator) linkButton(b component.Button) error {
 		return validation.NewInvalidInputErrorf("Link button: the label must be %d characters or fewer", maxButtonLabelLength)
 	}
 
+	if strings.ContainsRune(b.Label, 0) {
+		return validation.NewInvalidInputError("Link button: the label cannot contain null characters")
+	}
+
 	return nil
 }
 
@@ -324,11 +321,11 @@ func (v *treeValidator) dropdown(s component.SelectMenu) error {
 	}
 
 	if v.rules.validPanelIds == nil || !v.rules.dropdownMode {
-		return validation.NewInvalidInputError("Dropdown: the panel dropdown can only be placed in a multi-panel that uses a dropdown")
+		return validation.NewInvalidInputError("Dropdown: can only be placed in a multi-panel that uses a dropdown")
 	}
 
 	if v.selectPlaced {
-		return validation.NewInvalidInputError("Dropdown: the panel dropdown can only be placed once")
+		return validation.NewInvalidInputError("Dropdown: can only be placed once")
 	}
 
 	v.selectPlaced = true
@@ -348,8 +345,16 @@ func (v *treeValidator) checkMediaUrl(kind, raw string) error {
 }
 
 func checkMediaDescription(kind string, description *string) error {
-	if description != nil && utf8.RuneCountInString(*description) > maxMediaDescriptionLength {
+	if description == nil {
+		return nil
+	}
+
+	if utf8.RuneCountInString(*description) > maxMediaDescriptionLength {
 		return validation.NewInvalidInputErrorf("%s: the alt text must be %d characters or fewer", kind, maxMediaDescriptionLength)
+	}
+
+	if strings.ContainsRune(*description, 0) {
+		return validation.NewInvalidInputErrorf("%s: the alt text cannot contain null characters", kind)
 	}
 
 	return nil
@@ -382,7 +387,6 @@ func checkUrl(kind, raw string) error {
 	return nil
 }
 
-// Discord refuses dotless hosts and empty labels. A trailing dot (fully qualified) is fine.
 func hasDottedHostname(host string) bool {
 	labels := strings.Split(strings.TrimSuffix(host, "."), ".")
 	if len(labels) < 2 {
@@ -398,14 +402,10 @@ func hasDottedHostname(host string) bool {
 	return true
 }
 
-// isBidiControl matches the invisible directional overrides that make a link read as a
-// different address from the one it opens.
 func isBidiControl(r rune) bool {
-	return (r >= 0x202A && r <= 0x202E) || (r >= 0x2066 && r <= 0x2069) || r == 0x200E || r == 0x200F
+	return unicode.Is(unicode.Bidi_Control, r)
 }
 
-// parsePanelPlacement accepts only the canonical decimal form, so "panel:05" and "panel:5"
-// cannot both pass as separate placements of the same panel.
 func parsePanelPlacement(customId string) (int, bool) {
 	raw, ok := strings.CutPrefix(customId, panelPlacementPrefix)
 	if !ok || raw == "" || len(raw) > 9 {
@@ -420,9 +420,6 @@ func parsePanelPlacement(customId string) (int, bool) {
 	return id, true
 }
 
-// normaliseComponentTree rebuilds a validated tree keeping only the fields the editor can
-// set, so client-supplied extras are neither stored nor forwarded to Discord. It must run
-// after validateComponentTree: it assumes every node is a supported type.
 func normaliseComponentTree(tree []component.Component) []component.Component {
 	if tree == nil {
 		return nil
@@ -474,7 +471,6 @@ func normaliseButton(b component.Button) component.Button {
 		return component.Button{Label: b.Label, Style: component.ButtonStyleLink, Url: b.Url, Disabled: b.Disabled}
 	}
 
-	// The style is cosmetic here: the real panel button replaces this node when sent.
 	return component.Button{Style: panelButtonStyleOrDefault(b.Style), CustomId: b.CustomId}
 }
 

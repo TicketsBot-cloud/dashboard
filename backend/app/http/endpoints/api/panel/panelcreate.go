@@ -124,48 +124,33 @@ func CreatePanel(c *gin.Context) {
 
 	var data panelBody
 
-	if err := c.ShouldBindJSON(&data); err != nil {
+	if err := bindPanelCreateBody(c, &data); err != nil {
 		c.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		return
 	}
 
 	data.MessageId = 0
 
-	// Voting premium unlocks fields but not quota or Components V2, so this lookup excludes it.
 	quotaTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, false, botContext.Token, botContext.RateLimiter)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
 		return
 	}
 
-	if data.entersComponentsV2(database.Panel{}) {
-		flagTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
-			return
-		}
-
-		if !componentsV2BuilderEnabled(c, userId, guildId, flagTier) {
-			c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))
-			return
-		}
-	}
-
-	hasPaid := quotaTier > premium.None
-	if (data.MessageUsesComponentsV2 || data.WelcomeMessageUsesComponentsV2) && !hasPaid {
-		c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))
+	hasPaid, ok := componentsV2Gate(c, userId, guildId, botContext, data.entersComponentsV2(database.Panel{}), data.usesComponentsV2(), nil, &quotaTier, "Failed to verify premium status")
+	if !ok {
 		return
 	}
 
 	if quotaTier == premium.None {
-		panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+		panelCount, err := dbclient.Client.Panel.GetPanelCount(c, guildId)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch existing panels"))
 			return
 		}
 
-		if len(panels) >= freePanelLimit {
-			c.JSON(402, utils.ErrorStr("Panel quota exceeded: You have %d/%d panels. Purchase premium to unlock more panels.", len(panels), freePanelLimit))
+		if panelCount >= freePanelLimit {
+			c.JSON(402, utils.ErrorStr("Panel quota exceeded: You have %d/%d panels. Purchase premium to unlock more panels.", panelCount, freePanelLimit))
 			return
 		}
 	}
@@ -173,7 +158,6 @@ func CreatePanel(c *gin.Context) {
 	// Apply defaults
 	ApplyPanelDefaults(&data)
 
-	// Validation skips these in V2 mode because the editor hides them, but they are still stored.
 	if data.MessageUsesComponentsV2 {
 		data.ImageUrl = validClassicUrlOrNil(data.ImageUrl)
 		data.ThumbnailUrl = validClassicUrlOrNil(data.ThumbnailUrl)
@@ -291,8 +275,6 @@ func CreatePanel(c *gin.Context) {
 		return
 	}
 
-	// Any return before the panel row exists would leave the message in the channel with
-	// nothing behind it.
 	stored := false
 	defer func() {
 		if !stored {
@@ -315,9 +297,6 @@ func CreatePanel(c *gin.Context) {
 		}
 	}
 
-	// The classic welcome embed is kept alongside a Components V2 welcome message so
-	// switching back to Classic does not lose it. dropHiddenClassicEmbed has already
-	// discarded an unusable one.
 	welcomeEmbed := data.WelcomeMessage
 
 	var welcomeMessageEmbed *int

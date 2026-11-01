@@ -10,6 +10,7 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 )
 
 func TestJsonKeys(t *testing.T) {
@@ -21,7 +22,7 @@ func TestJsonKeys(t *testing.T) {
 	}{
 		{name: "top-level keys only", body: `{"name":"x","welcome_message":{"title":"y"}}`, want: map[string]bool{"name": true, "welcome_message": true}},
 		{name: "null counts as present", body: `{"name":null,"message_components":null}`, want: map[string]bool{"name": true, "message_components": true}},
-		{name: "keys are matched case-insensitively, as binding does", body: `{"Name":"x","MESSAGE_USES_COMPONENTS_V2":true}`, want: map[string]bool{"name": true, "message_uses_components_v2": true}},
+		{name: "keys match case-insensitively", body: `{"Name":"x","MESSAGE_USES_COMPONENTS_V2":true}`, want: map[string]bool{"name": true, "message_uses_components_v2": true}},
 		{name: "only the first value is read, as binding does", body: `{"name":"x"} {"title":"y"}`, want: map[string]bool{"name": true}},
 		{name: "null body has no keys", body: `null`, want: map[string]bool{}},
 		{name: "malformed", body: `{"name":`, wantErr: true},
@@ -92,7 +93,7 @@ func TestPanelKeepStoredWhenAbsent(t *testing.T) {
 		require.JSONEq(t, welcomeTree, *got)
 	})
 
-	t.Run("present keys keep the request's values, including false and null", func(t *testing.T) {
+	t.Run("present keys keep the request's values", func(t *testing.T) {
 		data := panelBody{WelcomeMessageComponents: texts(1)}
 		keys := map[string]bool{
 			"message_uses_components_v2":         true,
@@ -124,7 +125,7 @@ func TestPanelKeepStoredWhenAbsent(t *testing.T) {
 		require.Equal(t, panelBody{}, data)
 	})
 
-	t.Run("a corrupt stored V2 tree fails only when its key is absent", func(t *testing.T) {
+	t.Run("corrupt stored V2 tree", func(t *testing.T) {
 		corrupt := database.Panel{MessageUsesComponentsV2: true, MessageComponents: strPtr("{not json")}
 
 		var data panelBody
@@ -159,7 +160,7 @@ func TestMultiPanelKeepStoredWhenAbsent(t *testing.T) {
 		require.JSONEq(t, tree, *got)
 	})
 
-	t.Run("present keys keep the request's values, including false and null", func(t *testing.T) {
+	t.Run("present keys keep the request's values", func(t *testing.T) {
 		var data multiPanelCreateData
 		keys := map[string]bool{"uses_components_v2": true, "components": true, "name": true}
 
@@ -173,7 +174,7 @@ func TestMultiPanelKeepStoredWhenAbsent(t *testing.T) {
 		require.Equal(t, multiPanelCreateData{}, data)
 	})
 
-	t.Run("a corrupt stored V2 tree fails only when its key is absent", func(t *testing.T) {
+	t.Run("corrupt stored V2 tree", func(t *testing.T) {
 		corrupt := database.MultiPanel{UsesComponentsV2: true, Components: strPtr(`{"a":1}`)}
 
 		var data multiPanelCreateData
@@ -199,7 +200,7 @@ func TestOldClientBodyKeepsStoredComponentsV2AndName(t *testing.T) {
 		var data panelBody
 		keys, err := bindTestBody(t, `{"title":"Help","content":"Open a ticket","channel_id":"1","welcome_message":null}`, &data)
 		require.NoError(t, err)
-		require.NoError(t, data.keepStoredWhenAbsent(keys, stored))
+		require.NoError(t, data.mergeStored(keys, stored))
 
 		require.True(t, data.MessageUsesComponentsV2)
 		require.Len(t, data.MessageComponents, 1)
@@ -225,33 +226,40 @@ func TestOldClientBodyKeepsStoredComponentsV2AndName(t *testing.T) {
 	})
 }
 
-// The body a dashboard from before Components V2 sends: the GET response minus its read-only keys.
+func echoedGetBody(t *testing.T, stored database.Panel) string {
+	t.Helper()
+
+	raw, err := json.Marshal(stored)
+	require.NoError(t, err)
+
+	var echo map[string]any
+	require.NoError(t, json.Unmarshal(raw, &echo))
+	for _, key := range []string{"panel_id", "guild_id", "welcome_message_embed", "force_disabled", "emoji_name", "emoji_id", "emoji_animated"} {
+		delete(echo, key)
+	}
+	require.IsType(t, "", echo["message_components"])
+
+	body, err := json.Marshal(echo)
+	require.NoError(t, err)
+
+	return string(body)
+}
+
 func TestEchoedGetBodyKeepsStoredTrees(t *testing.T) {
 	tree := `[{"type":10,"content":"stored"}]`
 
 	t.Run("panel", func(t *testing.T) {
 		stored := database.Panel{PanelId: 1, Title: "Help", MessageUsesComponentsV2: true, MessageComponents: &tree, WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: &tree, Name: strPtr("Billing")}
-		raw, err := json.Marshal(stored)
-		require.NoError(t, err)
-
-		var echo map[string]any
-		require.NoError(t, json.Unmarshal(raw, &echo))
-		for _, key := range []string{"panel_id", "guild_id", "welcome_message_embed", "force_disabled", "emoji_name", "emoji_id", "emoji_animated"} {
-			delete(echo, key)
-		}
-		require.IsType(t, "", echo["message_components"])
-		body, err := json.Marshal(echo)
-		require.NoError(t, err)
 
 		var data panelBody
-		keys, err := bindTestBody(t, string(body), &data)
+		keys, err := bindTestBody(t, echoedGetBody(t, stored), &data)
 		require.NoError(t, err)
 		require.False(t, keys["message_components"])
 		require.False(t, keys["welcome_message_components"])
 		require.True(t, keys["message_uses_components_v2"])
 		require.True(t, keys["name"])
 
-		require.NoError(t, data.keepStoredWhenAbsent(keys, stored))
+		require.NoError(t, data.mergeStored(keys, stored))
 		require.True(t, data.MessageUsesComponentsV2)
 		require.Len(t, data.MessageComponents, 1)
 		require.Len(t, data.WelcomeMessageComponents, 1)
@@ -287,6 +295,88 @@ func TestEchoedGetBodyKeepsStoredTrees(t *testing.T) {
 		require.Error(t, err)
 
 		_, err = bindTestBody(t, `[]`, &data)
+		require.Error(t, err)
+	})
+}
+
+func TestPanelMergeStored(t *testing.T) {
+	tree := `[{"type":10,"content":"stored"}]`
+	stored := database.Panel{MessageUsesComponentsV2: true, MessageComponents: &tree, Content: "Stored content", Colour: utils.Ptr[int32](0x123456)}
+
+	tests := []struct {
+		name string
+		body string
+		want *uint32
+	}{
+		{name: "an omitted colour keeps the stored one", body: `{"title":"Help"}`, want: utils.Ptr[uint32](0x123456)},
+		{name: "a null colour clears it", body: `{"title":"Help","colour":null}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var data panelBody
+			keys, err := bindTestBody(t, tt.body, &data)
+			require.NoError(t, err)
+
+			require.NoError(t, data.mergeStored(keys, stored))
+			require.True(t, data.MessageUsesComponentsV2)
+			require.Equal(t, "Stored content", data.Content)
+			require.Equal(t, tt.want, data.Colour)
+		})
+	}
+
+	t.Run("a corrupt stored V2 tree fails the merge", func(t *testing.T) {
+		corrupt := database.Panel{MessageUsesComponentsV2: true, MessageComponents: strPtr("{not json")}
+
+		var data panelBody
+		require.Error(t, data.mergeStored(map[string]bool{}, corrupt))
+	})
+}
+
+func TestBindPanelCreateBody(t *testing.T) {
+	bind := func(t *testing.T, body string) (panelBody, error) {
+		t.Helper()
+
+		gin.SetMode(gin.TestMode)
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+
+		var data panelBody
+		err := bindPanelCreateBody(c, &data)
+		return data, err
+	}
+
+	t.Run("an echoed V2 source is created Classic", func(t *testing.T) {
+		tree := `[{"type":10,"content":"stored"}]`
+		source := database.Panel{PanelId: 1, Title: "Help", MessageUsesComponentsV2: true, MessageComponents: &tree, WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: &tree, Name: strPtr("Billing")}
+
+		data, err := bind(t, echoedGetBody(t, source))
+		require.NoError(t, err)
+		require.False(t, data.MessageUsesComponentsV2)
+		require.False(t, data.WelcomeMessageUsesComponentsV2)
+		require.Nil(t, data.MessageComponents)
+		require.Nil(t, data.WelcomeMessageComponents)
+		require.Equal(t, "Help", data.Title)
+	})
+
+	t.Run("array trees keep V2", func(t *testing.T) {
+		data, err := bind(t, `{"message_uses_components_v2":true,"message_components":[{"type":10,"content":"new"}],"welcome_message_uses_components_v2":true,"welcome_message_components":[{"type":10,"content":"welcome"}]}`)
+		require.NoError(t, err)
+		require.True(t, data.MessageUsesComponentsV2)
+		require.True(t, data.WelcomeMessageUsesComponentsV2)
+		require.Len(t, data.MessageComponents, 1)
+		require.Len(t, data.WelcomeMessageComponents, 1)
+	})
+
+	t.Run("each message is decided on its own", func(t *testing.T) {
+		data, err := bind(t, `{"message_uses_components_v2":true,"message_components":[{"type":10,"content":"new"}],"welcome_message_uses_components_v2":true}`)
+		require.NoError(t, err)
+		require.True(t, data.MessageUsesComponentsV2)
+		require.False(t, data.WelcomeMessageUsesComponentsV2)
+	})
+
+	t.Run("malformed JSON fails", func(t *testing.T) {
+		_, err := bind(t, `{"title":`)
 		require.Error(t, err)
 	})
 }

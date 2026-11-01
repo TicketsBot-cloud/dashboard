@@ -51,10 +51,9 @@ const multiPanelNameMaxLength = 100
 const panelNameMaxLength = 100
 
 type PanelValidationContext struct {
-	Data      panelBody
-	GuildId   uint64
-	IsPremium bool
-	// HasPaidPremium excludes voting premium, which unlocks fields but not Components V2.
+	Data           panelBody
+	GuildId        uint64
+	IsPremium      bool
 	HasPaidPremium bool
 	BotContext     *botcontext.BotContext
 	Channels       []channel.Channel
@@ -112,6 +111,10 @@ func normaliseMultiPanelName(raw string) (*string, error) {
 		return nil, validation.NewInvalidInputErrorf("Multi-panel name must be %d characters or fewer", multiPanelNameMaxLength)
 	}
 
+	if strings.ContainsRune(name, 0) {
+		return nil, validation.NewInvalidInputError("Multi-panel name cannot contain null characters")
+	}
+
 	return &name, nil
 }
 
@@ -130,8 +133,17 @@ func (p panelBody) trimmedName() *string {
 
 func validateName(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		if name := ctx.Data.trimmedName(); name != nil && utf8.RuneCountInString(*name) > panelNameMaxLength {
+		name := ctx.Data.trimmedName()
+		if name == nil {
+			return nil
+		}
+
+		if utf8.RuneCountInString(*name) > panelNameMaxLength {
 			return validation.NewInvalidInputErrorf("Panel name must be %d characters or fewer", panelNameMaxLength)
+		}
+
+		if strings.ContainsRune(*name, 0) {
+			return validation.NewInvalidInputError("Panel name cannot contain null characters")
 		}
 
 		return nil
@@ -554,8 +566,6 @@ func validateEmbed(e *types.CustomEmbed) error {
 	return validateEmbedContent(e)
 }
 
-// The user cannot see this embed in V2 mode, so an unusable one is dropped (nil, meaning
-// "leave what is stored") instead of failing the save.
 func classicEmbedForV2(e *types.CustomEmbed) *types.CustomEmbed {
 	if e == nil || !embedHasContent(e) || validateEmbedContent(e) != nil || validate.Struct(e) != nil {
 		return nil
@@ -564,17 +574,12 @@ func classicEmbedForV2(e *types.CustomEmbed) *types.CustomEmbed {
 	return e
 }
 
-// dropHiddenClassicEmbed must run before validate.Struct(p), which would otherwise reject
-// the welcome embed's struct tags for an embed the user cannot see.
 func (p *panelBody) dropHiddenClassicEmbed() {
 	if p.WelcomeMessageUsesComponentsV2 {
 		p.WelcomeMessage = classicEmbedForV2(p.WelcomeMessage)
 	}
 }
 
-// The editor hides these fields in V2 mode, so a missing or invalid value keeps the stored one
-// for a switch back to Classic. Only an omitted colour counts as missing, since null means no
-// colour. It must run before ApplyPanelDefaults.
 func (p *panelBody) retainClassicFields(existing database.Panel, colourSent bool) {
 	if !p.MessageUsesComponentsV2 {
 		return
@@ -600,7 +605,6 @@ func suppliedClassicUrlOr(supplied, existing *string) *string {
 	return existing
 }
 
-// validClassicUrlOrNil is for a V2 create, where there is nothing stored to fall back to.
 func validClassicUrlOrNil(url *string) *string {
 	return suppliedClassicUrlOr(url, nil)
 }
@@ -791,7 +795,6 @@ func validateWelcomeMessageComponents(ctx PanelValidationContext) validation.Val
 	}
 }
 
-// The worker appends the form answers and the visible buttons at ticket open.
 func welcomeMessageReserved(data panelBody) int {
 	visible := 0
 	if !data.HideCloseButton {
@@ -800,7 +803,6 @@ func welcomeMessageReserved(data panelBody) int {
 	if !data.HideCloseWithReasonButton {
 		visible++
 	}
-	// Claim is not offered in thread mode.
 	if !data.HideClaimButton && !data.UseThreads {
 		visible++
 	}

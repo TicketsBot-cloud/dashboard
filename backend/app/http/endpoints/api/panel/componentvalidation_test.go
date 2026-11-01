@@ -93,8 +93,9 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "text display", tree: []component.Component{text("hello")}},
 		{name: "blank text display", tree: []component.Component{text("   \n\t")}, wantErr: "Text display"},
 		{name: "empty text display", tree: []component.Component{text("")}, wantErr: "Text display"},
+		{name: "text display with a null byte", tree: []component.Component{text("a\x00b")}, wantErr: "null characters"},
+		{name: "text display with other control characters", tree: []component.Component{text("a\tb\nc\x01")}},
 
-		// Component count, no reservation.
 		{name: "40 components", tree: texts(40)},
 		{name: "41 components", tree: texts(41), wantErr: "Too many components"},
 		{name: "38 components with 2 reserved", tree: texts(38), rules: treeRules{reserved: 2}},
@@ -103,15 +104,13 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "nested components all count", tree: []component.Component{container(texts(20)...), container(texts(19)...)}, wantErr: "Too many components"},
 		{name: "nested components exactly at limit", tree: []component.Component{container(texts(20)...), container(texts(18)...)}},
 
-		// Total text.
 		{name: "4000 characters of text", tree: []component.Component{text(strings.Repeat("a", 2000)), text(strings.Repeat("b", 2000))}},
 		{name: "4001 characters of text", tree: []component.Component{text(strings.Repeat("a", 2000)), text(strings.Repeat("b", 2001))}, wantErr: "4000"},
-		{name: "link button labels do not count towards the text total", tree: []component.Component{text(strings.Repeat("a", 4000)), row(linkBtn("Go", "https://example.com"))}},
+		{name: "link button labels excluded from the text total", tree: []component.Component{text(strings.Repeat("a", 4000)), row(linkBtn("Go", "https://example.com"))}},
 		{name: "section text counts towards the text total", tree: []component.Component{section(thumb("https://example.com/a.png"), text(strings.Repeat("a", 2000))), text(strings.Repeat("b", 2000))}},
 		{name: "section text over the text total", tree: []component.Component{section(thumb("https://example.com/a.png"), text(strings.Repeat("a", 2001))), text(strings.Repeat("b", 2000))}, wantErr: "4000"},
 		{name: "multibyte characters are counted as characters", tree: []component.Component{text(strings.Repeat("é", 4000))}},
 
-		// URLs.
 		{name: "link button url at 512", tree: []component.Component{row(linkBtn("Go", urlOfLength(512)))}},
 		{name: "link button url at 513", tree: []component.Component{row(linkBtn("Go", urlOfLength(513)))}, wantErr: "512"},
 		{name: "http url", tree: []component.Component{row(linkBtn("Go", "http://example.com"))}},
@@ -140,12 +139,13 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "url with a right to left override", tree: []component.Component{row(linkBtn("Go", "https://a.com/\u202Efdp.exe"))}, wantErr: "spaces or control"},
 		{name: "url with a bidi isolate", tree: []component.Component{row(linkBtn("Go", "https://a.com/\u2066"))}, wantErr: "spaces or control"},
 		{name: "url with a left to right mark", tree: []component.Component{row(linkBtn("Go", "https://a.com/\u200E"))}, wantErr: "spaces or control"},
+		{name: "url with a right to left mark", tree: []component.Component{row(linkBtn("Go", "https://a.com/\u200F"))}, wantErr: "spaces or control"},
+		{name: "url with an arabic letter mark", tree: []component.Component{row(linkBtn("Go", "https://a.com/\u061C"))}, wantErr: "spaces or control"},
 		{name: "url with non bidi unicode", tree: []component.Component{row(linkBtn("Go", "https://a.com/caf\u00e9"))}},
 		{name: "url with userinfo", tree: []component.Component{row(linkBtn("Go", "https://user:pw@evil.com/"))}, wantErr: "username"},
 		{name: "url with a username only", tree: []component.Component{row(linkBtn("Go", "https://user@evil.com/"))}, wantErr: "username"},
 		{name: "media url with userinfo", tree: []component.Component{gallery("https://user:pw@evil.com/a.png")}, wantErr: "Media gallery"},
 
-		// Container accent colour and separator spacing.
 		{name: "container without an accent colour", tree: []component.Component{container(text("a"))}},
 		{name: "container accent colour at 0", tree: []component.Component{containerWithColour(0, text("a"))}},
 		{name: "container accent colour at 0xFFFFFF", tree: []component.Component{containerWithColour(0xFFFFFF, text("a"))}},
@@ -159,9 +159,9 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "separator spacing negative", tree: []component.Component{separatorWithSpacing(intPtr(-1))}, wantErr: "spacing"},
 		{name: "link button with an emoji", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStyleLink, Url: strPtr("https://example.com"), Emoji: &emoji.Emoji{Name: "x"}}))}, wantErr: "emoji"},
 
-		// Thumbnail and gallery.
 		{name: "thumbnail with alt text at 1024", tree: []component.Component{section(component.BuildThumbnail(component.Thumbnail{Media: component.UnfurledMediaItem{Url: "https://example.com/a.png"}, Description: longAlt(1024)}), text("hi"))}},
 		{name: "thumbnail with alt text at 1025", tree: []component.Component{section(component.BuildThumbnail(component.Thumbnail{Media: component.UnfurledMediaItem{Url: "https://example.com/a.png"}, Description: longAlt(1025)}), text("hi"))}, wantErr: "Thumbnail"},
+		{name: "thumbnail alt text with a null byte", tree: []component.Component{section(component.BuildThumbnail(component.Thumbnail{Media: component.UnfurledMediaItem{Url: "https://example.com/a.png"}, Description: strPtr("a\x00")}), text("hi"))}, wantErr: "null characters"},
 		{name: "thumbnail with bad url", tree: []component.Component{section(thumb("not a url"), text("hi"))}, wantErr: "Thumbnail"},
 		{name: "thumbnail with no url", tree: []component.Component{section(thumb(""), text("hi"))}, wantErr: "Thumbnail"},
 		{name: "standalone thumbnail", tree: []component.Component{thumb("https://example.com/a.png")}, wantErr: "Thumbnail"},
@@ -176,14 +176,15 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "avatar placeholder in a gallery by default", tree: []component.Component{gallery(types.AvatarUrlPlaceholder)}, wantErr: "Media gallery"},
 		{name: "avatar placeholder in a thumbnail by default", tree: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("hi"))}, wantErr: "Thumbnail"},
 		{name: "avatar placeholder in a link button even where allowed", tree: []component.Component{row(linkBtn("Go", types.AvatarUrlPlaceholder))}, rules: treeRules{allowAvatarPlaceholder: true}, wantErr: "Link button"},
-		{name: "allowing the placeholder still rejects other bad media urls", tree: []component.Component{gallery("not a url")}, rules: treeRules{allowAvatarPlaceholder: true}, wantErr: "Media gallery"},
+		{name: "other bad media urls with the placeholder allowed", tree: []component.Component{gallery("not a url")}, rules: treeRules{allowAvatarPlaceholder: true}, wantErr: "Media gallery"},
 		{name: "gallery item alt text at 1025", tree: []component.Component{component.BuildMediaGallery(component.MediaGallery{Items: []component.MediaGalleryItem{{Media: component.UnfurledMediaItem{Url: "https://example.com/1.png"}, Description: longAlt(1025)}}})}, wantErr: "Media gallery"},
+		{name: "gallery item alt text with a null byte", tree: []component.Component{component.BuildMediaGallery(component.MediaGallery{Items: []component.MediaGalleryItem{{Media: component.UnfurledMediaItem{Url: "https://example.com/1.png"}, Description: strPtr("a\x00")}}})}, wantErr: "null characters"},
 
-		// Section.
 		{name: "section with 1 text display", tree: []component.Component{section(thumb("https://example.com/a.png"), texts(1)...)}},
 		{name: "section with 3 text displays", tree: []component.Component{section(thumb("https://example.com/a.png"), texts(3)...)}},
 		{name: "section with 4 text displays", tree: []component.Component{section(thumb("https://example.com/a.png"), texts(4)...)}, wantErr: "Section"},
 		{name: "section with 0 text displays", tree: []component.Component{section(thumb("https://example.com/a.png"))}, wantErr: "Section"},
+		{name: "section text with a null byte", tree: []component.Component{section(thumb("https://example.com/a.png"), text("a\x00"))}, wantErr: "null characters"},
 		{name: "section with a non text child", tree: []component.Component{section(thumb("https://example.com/a.png"), text("a"), gallery("https://example.com/1.png"))}, wantErr: "Section"},
 		{name: "section without accessory", tree: []component.Component{section(component.Component{}, text("a"))}, wantErr: "accessory"},
 		{name: "section with text display accessory", tree: []component.Component{section(text("x"), text("a"))}, wantErr: "accessory"},
@@ -192,7 +193,6 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "section with panel button accessory outside a multi-panel", tree: []component.Component{section(panelBtn(1), text("a"))}, wantErr: "Panel button"},
 		{name: "section with a dropdown accessory", tree: []component.Component{section(dropdownNode(), text("a"))}, rules: multiPanelRules, wantErr: "accessory"},
 
-		// File, container.
 		{name: "file", tree: []component.Component{component.BuildFile(component.File{File: component.UnfurledMediaItem{Url: "https://example.com/a.pdf"}})}, wantErr: "File"},
 		{name: "container with text", tree: []component.Component{container(text("a"))}},
 		{name: "empty container", tree: []component.Component{container()}, wantErr: "Container"},
@@ -200,13 +200,13 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "container holding rows, sections and galleries", tree: []component.Component{container(text("a"), section(thumb("https://example.com/a.png"), text("b")), gallery("https://example.com/1.png"), row(linkBtn("Go", "https://example.com")), component.BuildSeparator(component.Separator{}))}},
 		{name: "separator", tree: []component.Component{component.BuildSeparator(component.Separator{})}},
 
-		// Buttons.
 		{name: "link button", tree: []component.Component{row(linkBtn("Go", "https://example.com"))}},
 		{name: "link button with blank label", tree: []component.Component{row(linkBtn("   ", "https://example.com"))}, wantErr: "Link button"},
 		{name: "link button label at 80", tree: []component.Component{row(linkBtn(strings.Repeat("a", 80), "https://example.com"))}},
 		{name: "link button label at 81", tree: []component.Component{row(linkBtn(strings.Repeat("a", 81), "https://example.com"))}, wantErr: "Link button"},
-		{name: "link style button with a custom id", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStyleLink, Url: strPtr("https://example.com"), CustomId: "x"}))}, wantErr: "never both"},
-		{name: "link button with a panel custom id", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStyleLink, Url: strPtr("https://example.com"), CustomId: "panel:1"}))}, rules: multiPanelRules, wantErr: "never both"},
+		{name: "link button label with a null byte", tree: []component.Component{row(linkBtn("G\x00o", "https://example.com"))}, wantErr: "null characters"},
+		{name: "link style button with a custom id", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStyleLink, Url: strPtr("https://example.com"), CustomId: "x"}))}, wantErr: "both a link button and a panel button"},
+		{name: "link button with a panel custom id", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStyleLink, Url: strPtr("https://example.com"), CustomId: "panel:1"}))}, rules: multiPanelRules, wantErr: "both a link button and a panel button"},
 		{name: "link style without a url", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStyleLink}))}, wantErr: "Link button"},
 		{name: "url on a non link style", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStylePrimary, Url: strPtr("https://example.com")}))}, wantErr: "Link button"},
 		{name: "link button with a sku", tree: []component.Component{row(component.BuildButton(component.Button{Label: "Go", Style: component.ButtonStyleLink, Url: strPtr("https://example.com"), SkuId: new(uint64)}))}, wantErr: "Link button"},
@@ -224,23 +224,20 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "panel marker with an overflowing id", tree: []component.Component{row(component.BuildButton(component.Button{Style: component.ButtonStylePrimary, CustomId: "panel:99999999999999999999"}))}, rules: multiPanelRules, wantErr: "Button"},
 		{name: "bare button outside a row", tree: []component.Component{linkBtn("Go", "https://example.com")}, wantErr: "action row"},
 
-		// Dropdown.
 		{name: "placed dropdown", tree: []component.Component{row(dropdownNode())}, rules: multiPanelRules},
 		{name: "placed dropdown without dropdown mode", tree: []component.Component{row(dropdownNode())}, rules: treeRules{validPanelIds: map[int]bool{1: true}}, wantErr: "Dropdown"},
 		{name: "placed dropdown outside a multi-panel", tree: []component.Component{row(dropdownNode())}, wantErr: "Dropdown"},
 		{name: "placed dropdown twice", tree: []component.Component{row(dropdownNode()), row(dropdownNode())}, rules: multiPanelRules, wantErr: "only be placed once"},
 		{name: "dropdown with another custom id", tree: []component.Component{row(component.BuildSelectMenu(component.SelectMenu{CustomId: "other"}))}, rules: multiPanelRules, wantErr: "Dropdown"},
-		{name: "dropdown sharing a row", tree: []component.Component{row(dropdownNode(), panelBtn(1))}, rules: multiPanelRules, wantErr: "only component"},
+		{name: "dropdown sharing a row", tree: []component.Component{row(dropdownNode(), panelBtn(1))}, rules: multiPanelRules, wantErr: "alone in its row"},
 		{name: "bare dropdown outside a row", tree: []component.Component{dropdownNode()}, rules: multiPanelRules, wantErr: "action row"},
 
-		// Action row.
 		{name: "empty action row", tree: []component.Component{row()}, wantErr: "Action row"},
 		{name: "action row of 5", tree: []component.Component{row(linkBtn("1", "https://example.com"), linkBtn("2", "https://example.com"), linkBtn("3", "https://example.com"), linkBtn("4", "https://example.com"), linkBtn("5", "https://example.com"))}},
 		{name: "action row of 6", tree: []component.Component{row(linkBtn("1", "https://example.com"), linkBtn("2", "https://example.com"), linkBtn("3", "https://example.com"), linkBtn("4", "https://example.com"), linkBtn("5", "https://example.com"), linkBtn("6", "https://example.com"))}, wantErr: "Action row"},
 		{name: "action row mixing link and panel buttons", tree: []component.Component{row(linkBtn("1", "https://example.com"), panelBtn(1))}, rules: multiPanelRules},
 		{name: "action row holding text", tree: []component.Component{row(text("x"))}, wantErr: "Action row"},
 
-		// Interactive and unsupported types.
 		{name: "text input", tree: []component.Component{component.Component{Type: component.ComponentInputText, ComponentData: component.InputText{}}}, wantErr: "not allowed"},
 		{name: "label", tree: []component.Component{component.BuildLabel(component.Label{Label: "x"})}, wantErr: "not allowed"},
 		{name: "user select in a row", tree: []component.Component{row(component.Component{Type: component.ComponentUserSelect, ComponentData: component.UserSelect{}})}, rules: multiPanelRules, wantErr: "Action row"},
@@ -275,7 +272,6 @@ func TestValidateComponentTree_Result(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, map[int]bool{1: true, 3: true}, result.placed)
 	require.True(t, result.dropdownUsed)
-	// text, container, row, 2 buttons, section, text, accessory, row, select
 	require.Equal(t, 10, result.count)
 }
 
@@ -371,7 +367,7 @@ func TestNormaliseComponentTree(t *testing.T) {
 			want: component.BuildButton(component.Button{CustomId: "panel:3", Style: component.ButtonStyleDanger}),
 		},
 		{
-			name: "placement button with an unsupported style becomes primary",
+			name: "unsupported placement style becomes primary",
 			in:   component.BuildButton(component.Button{CustomId: "panel:3", Style: component.ButtonStylePremium}),
 			want: component.BuildButton(component.Button{CustomId: "panel:3", Style: component.ButtonStylePrimary}),
 		},

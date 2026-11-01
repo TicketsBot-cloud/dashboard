@@ -1,9 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 
-/**
- * Waits for the commit: the removed row's button is gone by then, and the target may only just have
- * become enabled.
- */
+/** Focuses after the commit, once the removed row is gone and the target may have become enabled. */
 export function useFocusAfterRemove<T extends HTMLElement>() {
   const targetRef = useRef<T>(null);
   const requested = useRef(false);

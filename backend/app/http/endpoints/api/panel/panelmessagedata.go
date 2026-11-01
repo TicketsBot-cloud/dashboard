@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/guild/emoji"
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
 	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	"github.com/ticketsbot-cloud/dashboard/backend/config"
@@ -51,8 +53,6 @@ func marshalComponents(components []component.Component) (*string, error) {
 	return &s, nil
 }
 
-// componentsToStore keeps the stored tree through a Classic save, so switching back to
-// Components V2 does not lose it, the same way the classic fields survive a V2 save.
 func componentsToStore(usesComponentsV2 bool, tree []component.Component, stored *string) (*string, error) {
 	if !usesComponentsV2 {
 		return stored, nil
@@ -105,13 +105,12 @@ func panelIntoMessageData(panel database.Panel, showBranding bool) panelMessageD
 	}
 
 	if panel.MessageUsesComponentsV2 {
-		// A corrupt tree renders as an empty one. Falling back to Classic would send an
-		// edit without the V2 flag to a message that has it, which Discord refuses.
+		// Classic would edit a V2 message without its flag, which Discord refuses.
 		data.UsesComponentsV2 = true
 
 		components, err := unmarshalComponents(panel.MessageComponents)
 		if err != nil {
-			log.Logger.Error("Failed to unmarshal panel message components; rendering an empty tree", zap.Int("panel_id", panel.PanelId), zap.Error(err))
+			log.Logger.Error("Failed to unmarshal panel message components", zap.Int("panel_id", panel.PanelId), zap.Error(err))
 		} else {
 			data.Components = components
 		}
@@ -197,6 +196,30 @@ func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) erro
 
 	_, err := rest.EditMessage(ctx, c.Token, c.RateLimiter, p.ChannelId, messageId, data)
 	return err
+}
+
+// A failed save can leave a V2 message under a Classic row, which only a repost can fix.
+func shouldRepost(err error, classicEdit bool, isComponentsV2 func() bool) bool {
+	var unwrapped request.RestError
+	if !errors.As(err, &unwrapped) {
+		return false
+	}
+
+	if unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005 {
+		return true
+	}
+
+	return classicEdit && unwrapped.StatusCode == 400 && isComponentsV2()
+}
+
+func liveComponentsV2(c *botcontext.BotContext, channelId, messageId uint64) func() bool {
+	return func() bool {
+		ctx, cancel := app.DefaultContext()
+		defer cancel()
+
+		msg, err := rest.GetChannelMessage(ctx, c.Token, c.RateLimiter, channelId, messageId)
+		return err == nil && msg.Flags&int(message.FlagComponentsV2) != 0
+	}
 }
 
 // Uses its own context because the request's may already be cancelled.

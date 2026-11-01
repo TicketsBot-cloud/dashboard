@@ -11,7 +11,9 @@ import {
   EMPTY_TREE_MESSAGE,
   MAX_COMPONENTS,
   applyClassicConversion,
+  blockPositionLabels,
   countBlocks,
+  countTreeText,
   hasConvertibleClassicContent,
   validateComponentTree,
   type ClassicConversionSource,
@@ -25,8 +27,8 @@ import type { PickerPanel } from "./picker-panels";
 interface PlacementProps {
   availablePanels: PickerPanel[];
   allPanels: PickerPanel[];
-  /** From the multi-panel's own panel list, so it is right before guild panels have loaded. */
   unplacedPanelCount: number;
+  conversionReserved: number;
   selectMenuModeOn: boolean;
 }
 
@@ -78,9 +80,8 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
 
-  // The flag only hides the way into Components v2. A message stored in it can always switch back
-  // and forth, so this follows the loaded mode rather than the current one.
   const canEnterV2 = builderEnabled === true || storedIsV2;
+  const needsPremium = isV2 && storedIsV2 && premiumState?.premium === false;
   const hasClassicContent = hasConvertibleClassicContent(classicSource);
   const issues = validateComponentTree(tree, {
     requireContent,
@@ -88,18 +89,25 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
     allowAvatarPlaceholder,
     unplacedPanelCount: placement?.unplacedPanelCount,
   }).filter((issue) => saveAttempted || issue.message !== EMPTY_TREE_MESSAGE);
-  const errors = [...new Set(issues.map((issue) => issue.message))];
+  const blockLabels = blockPositionLabels(tree);
+  const errors = issues.map(({ message, blockId }) => {
+    const label = blockId && blockLabels.get(blockId);
+    return { key: `${blockId ?? ""}|${message}`, text: label ? `${label}: ${message}` : message };
+  });
+  const blockErrors = new Map<string, string[]>();
+  for (const { message, blockId, atField } of issues) {
+    if (!blockId || atField) continue;
+    blockErrors.set(blockId, [...(blockErrors.get(blockId) ?? []), message]);
+  }
 
   const runConversion = () => {
     const { converted, folded } = applyClassicConversion(
       classicSource,
-      MAX_COMPONENTS - reserved,
+      MAX_COMPONENTS - (placement?.conversionReserved ?? reserved),
       onTreeChange,
     );
     if (!converted) {
-      toast.warning(
-        "Nothing could be converted. Check your classic content's image and thumbnail URLs.",
-      );
+      toast.warning("Nothing could be converted. Check the image and thumbnail URLs.");
       return;
     }
     if (folded) {
@@ -119,12 +127,26 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
             legendSuffix={convertSuffix}
           />
           {toggleNote}
+          {!isV2 && tree.length > 0 && (
+            <p className="text-xs text-gray-400 mt-1">
+              Changes to your blocks are only saved in Components v2.
+            </p>
+          )}
+          {needsPremium && (
+            <p className="mt-2 flex items-start gap-2 px-3 py-2 bg-amber-900/30 border border-amber-500/40 rounded text-amber-300 text-sm">
+              <FontAwesomeIcon icon={faExclamationTriangle} className="mt-1" aria-hidden="true" />
+              <span>
+                Components v2 messages require Premium. Switch this message to Classic to save.
+              </span>
+            </p>
+          )}
         </div>
       )}
 
       {isV2 && (
         <BuildPreviewTabs
           className="md:col-span-2 mb-1"
+          labelSuffix={convertSuffix}
           build={
             <div className="pb-2 mb-5">
               <div className="flex items-center justify-between">
@@ -147,7 +169,7 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
               </div>
               {!hasClassicContent && (
                 <p id={hintId} className="text-xs text-gray-400 mt-1">
-                  Add a title, description or image in Classic mode first, then convert it here.
+                  Add a title, description or image in Classic mode first.
                 </p>
               )}
               <div className="mt-2">
@@ -158,10 +180,12 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
                   budgetUsed={countBlocks(tree)}
                   budgetMax={MAX_COMPONENTS - reserved}
                   budgetReservedNote={reservedNote}
+                  textUsed={countTreeText(tree)}
                   availablePanels={placement?.availablePanels}
                   allPanels={placement?.allPanels}
                   selectMenuModeOn={placement?.selectMenuModeOn}
                   saveAttempted={saveAttempted}
+                  blockErrors={blockErrors}
                 />
               </div>
               <div
@@ -188,7 +212,7 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
                       </p>
                       <ul className="mt-1 space-y-1">
                         {errors.map((error) => (
-                          <li key={error}>{error}</li>
+                          <li key={error.key}>{error.text}</li>
                         ))}
                       </ul>
                     </div>
@@ -218,18 +242,11 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
         title="Convert from classic?"
         message={
           <>
-            <p>
-              This replaces the current block layout with a fresh conversion of your classic
-              content. Continue?
-            </p>
+            <p>This replaces your blocks with a conversion of your classic content.</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
               {conversionNotes.map((note) => (
                 <li key={note}>{note}</li>
               ))}
-              <li>
-                Any blocks you&apos;ve added manually in the builder that aren&apos;t part of the
-                classic content will be discarded.
-              </li>
             </ul>
           </>
         }

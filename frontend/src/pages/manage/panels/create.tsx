@@ -278,7 +278,6 @@ const PanelsPage: FC = () => {
     );
   }
 
-  // Mirrors when ComponentsV2Section shows the Message format toggle.
   const formatToggleShown = builderEnabled === true || panel.message_uses_components_v2;
 
   const messageClassicSource: ClassicConversionSource = {
@@ -329,6 +328,14 @@ const PanelsPage: FC = () => {
   const missingThreadChannel = panel.use_threads && !panel.ticket_notification_channel;
   const welcomeMessage = panel.welcome_message;
   const welcomeIsV2 = panel.welcome_message_uses_components_v2;
+  const v2Unavailable =
+    builderEnabled === false
+      ? "Components v2 messages aren't available for this server yet. Switch this message back to Classic to save."
+      : premiumState?.premium === false
+        ? "Components v2 messages require premium. Switch this message back to Classic to save."
+        : null;
+  const messageV2Blocked = !!v2Unavailable && panel.message_uses_components_v2;
+  const welcomeV2Blocked = !!v2Unavailable && welcomeIsV2;
   const welcomeMessageEmpty =
     !welcomeIsV2 &&
     !!welcomeMessage &&
@@ -359,7 +366,19 @@ const PanelsPage: FC = () => {
     (panel.use_threads && stale(panel.ticket_notification_channel)) ||
     welcomeMessageEmpty ||
     invalidWelcomeMessageUrls.length > 0 ||
-    componentTreeInvalid;
+    componentTreeInvalid ||
+    messageV2Blocked ||
+    welcomeV2Blocked;
+
+  const v2UnavailableNote = (
+    <div
+      data-missing="true"
+      className="mt-2 flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded text-red-400 text-sm"
+    >
+      <FontAwesomeIcon icon={faExclamationTriangle} />
+      <span>{v2Unavailable}</span>
+    </div>
+  );
 
   return (
     <MainLayout
@@ -388,7 +407,7 @@ const PanelsPage: FC = () => {
             showCount
           />
           <p id="panel-name-help" className="text-xs text-gray-400 mt-1">
-            Used to identify this panel in the dashboard. It isn't shown in Discord.
+            Only shown in the dashboard.
           </p>
         </div>
         <div>
@@ -427,7 +446,8 @@ const PanelsPage: FC = () => {
             title="Panel Properties"
             previewTitle="Panel Preview"
             reserved={PANEL_MESSAGE_RESERVED}
-            reservedNote="Some space is also kept for the open-ticket button."
+            reservedNote="Some space is kept for the open-ticket button."
+            toggleNote={messageV2Blocked ? v2UnavailableNote : null}
             preview={
               <PanelPreview
                 type="panel"
@@ -778,9 +798,10 @@ const PanelsPage: FC = () => {
             previewTitle="Welcome Message Preview"
             convertSuffix="welcome message"
             reserved={welcomeReservedCount}
-            reservedNote="Some space is also kept for the close and claim buttons and the answers people give on your form."
+            reservedNote="Some space is kept for the close and claim buttons and form answers."
             requireContent
             allowAvatarPlaceholder
+            toggleNote={welcomeV2Blocked ? v2UnavailableNote : null}
             preview={
               <PanelPreview
                 type="welcome"

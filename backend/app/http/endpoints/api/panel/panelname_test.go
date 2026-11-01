@@ -23,6 +23,7 @@ func TestPanelName(t *testing.T) {
 		{name: "exactly 100 characters", in: str(strings.Repeat("a", 100)), want: str(strings.Repeat("a", 100))},
 		{name: "100 multi-byte characters", in: str(strings.Repeat("é", 100)), want: str(strings.Repeat("é", 100))},
 		{name: "101 characters", in: str(strings.Repeat("a", 101)), wantErr: true},
+		{name: "null byte", in: str("Bill\x00ing"), wantErr: true},
 		{name: "100 characters plus padding", in: str(" " + strings.Repeat("a", 100) + " "), want: str(strings.Repeat("a", 100))},
 	}
 

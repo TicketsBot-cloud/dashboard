@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import { useId, type FC } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import Button from "@/components/Button";
@@ -28,6 +28,7 @@ const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({
   saveAttempted = false,
   allowAvatarPlaceholder,
 }) => {
+  const countId = useId();
   const { shows, touch } = useTouchedFields(saveAttempted);
   const { targetRef: addRef, request: focusAddButton } = useFocusAfterRemove<HTMLButtonElement>();
   const updateItem = (index: number, update: Partial<V2MediaGalleryItem>) => {
@@ -42,23 +43,30 @@ const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({
 
   const addItem = () => {
     if (value.items.length >= MAX_GALLERY_ITEMS) return;
-    onChange({ ...value, items: [...value.items, { url: "" }] });
+    onChange({ ...value, items: [...value.items, { id: crypto.randomUUID(), url: "" }] });
   };
 
   return (
     <div className="flex flex-col gap-3">
       {value.items.map((item, i) => (
-        <div key={i} className="p-3 rounded bg-gray-600 flex flex-col gap-2">
+        <div
+          key={item.id}
+          role="group"
+          aria-label={`Image ${i + 1}`}
+          className="p-3 rounded bg-gray-900/40 flex flex-col gap-2"
+        >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
                 label="Image URL"
                 value={item.url}
                 onChange={(url) => updateItem(i, { url })}
-                onBlur={() => touch(`${i}:url`)}
+                onBlur={() => touch(`${item.id}:url`)}
                 maxLength={MAX_URL_LENGTH}
                 error={
-                  shows(`${i}:url`) ? mediaUrlError(item.url, allowAvatarPlaceholder) : undefined
+                  shows(`${item.id}:url`)
+                    ? mediaUrlError(item.url, allowAvatarPlaceholder)
+                    : undefined
                 }
               />
               <TextInput
@@ -91,12 +99,13 @@ const MediaGalleryEditor: FC<MediaGalleryEditorProps> = ({
           ref={addRef}
           variant="secondary"
           onClick={addItem}
-          disabled={value.items.length >= MAX_GALLERY_ITEMS}
+          visuallyDisabled={value.items.length >= MAX_GALLERY_ITEMS}
+          aria-describedby={countId}
           className="text-sm font-medium w-fit"
         >
           <FontAwesomeIcon icon={faPlus} /> Add item
         </Button>
-        <span className="text-xs">
+        <span id={countId} className="text-xs">
           {value.items.length}/{MAX_GALLERY_ITEMS} items
         </span>
       </div>

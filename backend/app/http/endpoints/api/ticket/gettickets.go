@@ -111,7 +111,7 @@ func GetTickets(c *gin.Context) {
 		return
 	}
 
-	panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+	panels, err := dbclient.Client.Panel.GetByGuildWithoutComponents(c, guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panels for guild from database"))
 		return
@@ -205,7 +205,7 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		}
 	}
 
-	panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+	panels, err := dbclient.Client.Panel.GetByGuildWithoutComponents(c, guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panels for guild from database"))
 		return

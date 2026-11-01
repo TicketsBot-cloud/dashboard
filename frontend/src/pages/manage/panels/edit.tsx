@@ -126,8 +126,6 @@ const EditPanelsPage: FC = () => {
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
   const { isSubmitting, guard } = useMutationGuard();
   const hasLoadedOnceRef = useRef(false);
-  // Captured once on first load, so the repost caption and confirmation compare against how the
-  // panel started this session, not against every toggle flip in between.
   const [storedV2, setStoredV2] = useState({ message: false, welcome: false });
   const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const [saveAttempted, setSaveAttempted] = useState(false);
@@ -256,7 +254,6 @@ const EditPanelsPage: FC = () => {
     }
   };
 
-  // Mirrors when ComponentsV2Section shows the Message format toggle.
   const formatToggleShown =
     builderEnabled === true || storedV2.message || panel.message_uses_components_v2;
 
@@ -363,7 +360,7 @@ const EditPanelsPage: FC = () => {
             showCount
           />
           <p id="panel-name-help" className="text-xs text-gray-400 mt-1">
-            Used to identify this panel in the dashboard. It isn't shown in Discord.
+            Only shown in the dashboard.
           </p>
         </div>
         <div>
@@ -402,12 +399,11 @@ const EditPanelsPage: FC = () => {
             title="Panel Properties"
             previewTitle="Panel Preview"
             reserved={PANEL_MESSAGE_RESERVED}
-            reservedNote="Some space is also kept for the open-ticket button."
+            reservedNote="Some space is kept for the open-ticket button."
             toggleNote={
               !storedV2.message && panel.message_uses_components_v2 ? (
                 <p className="text-xs text-gray-400 mt-1">
-                  Once you save this in the new format, switching back to classic will repost the
-                  message.
+                  After saving in Components v2, switching back to Classic reposts the message.
                 </p>
               ) : null
             }
@@ -755,7 +751,7 @@ const EditPanelsPage: FC = () => {
             previewTitle="Welcome Message Preview"
             convertSuffix="welcome message"
             reserved={welcomeReservedCount}
-            reservedNote="Some space is also kept for the close and claim buttons and the answers people give on your form."
+            reservedNote="Some space is kept for the close and claim buttons and form answers."
             requireContent
             allowAvatarPlaceholder
             preview={
@@ -1502,7 +1498,7 @@ const EditPanelsPage: FC = () => {
         }}
         onCancel={() => setDowngradeConfirmOpen(false)}
         title="Switch back to classic?"
-        message="Switching this panel message back to classic mode deletes the current message and posts a new one in its place. The new message loses its position in the channel, and any reactions on the old one are lost. Replies to the old message stay in the channel. Continue?"
+        message="This deletes the current message and posts a new one, which loses its place in the channel and its reactions."
         confirmText="Switch and repost"
         cancelText="Keep as is"
         confirmVariant="danger"

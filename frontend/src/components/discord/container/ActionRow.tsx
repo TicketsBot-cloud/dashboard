@@ -9,6 +9,7 @@ interface ActionRowProps {
     emoji?: { name: string };
     label?: string;
     url?: string;
+    disabled?: boolean;
     placeholder?: string;
     options?: Array<{
       value: string;
@@ -34,6 +35,7 @@ export default function ActionRow({ components = [] }: ActionRowProps) {
                   emoji={component.emoji}
                   label={component.label}
                   url={component.url}
+                  disabled={component.disabled}
                 />
               );
             } else if (component.type === 3) {

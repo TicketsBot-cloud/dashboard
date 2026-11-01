@@ -253,7 +253,7 @@ export interface Panel {
   access_control_list: Array<ACL>;
 
   message_uses_components_v2: boolean;
-  /** A JSON string on read (the backend stores the raw tree); a save request sends a real array. */
+  /** A JSON string on read, an array on write. */
   message_components: APIMessageTopLevelComponent[] | string | null;
   welcome_message_uses_components_v2: boolean;
   welcome_message_components: APIMessageTopLevelComponent[] | string | null;
@@ -278,7 +278,7 @@ export interface MultiPanel {
   panels: Array<MultiPanelPanelEntry>;
   embed: MultiPanelEmbed;
   uses_components_v2: boolean;
-  /** See the equivalent note on `Panel.message_components` - a JSON string on read, an array on write. */
+  /** A JSON string on read, an array on write. */
   components: APIMessageTopLevelComponent[] | string | null;
 }
 

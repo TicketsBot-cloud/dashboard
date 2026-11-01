@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -91,4 +92,51 @@ func TestLimitJSONBody_DeclaredContentLengthOverLimit(t *testing.T) {
 
 	require.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
 	require.False(t, reached)
+}
+
+type countingReader struct {
+	io.Reader
+	read int
+}
+
+func (r *countingReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.read += n
+	return n, err
+}
+
+func TestLimitJSONBody_UnknownContentLengthOverLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	const maxBytes = 256 * 1024
+
+	tests := []struct {
+		name string
+		size int
+	}{
+		{"one byte over the size limit", maxBytes + 1},
+		{"1 MiB", 1024 * 1024},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var reached bool
+			router := gin.New()
+			router.POST("/", LimitJSONBody(maxBytes, 16), func(c *gin.Context) {
+				reached = true
+				c.Status(http.StatusOK)
+			})
+
+			// Not a *strings.Reader, so httptest leaves ContentLength at -1 like a chunked request.
+			body := &countingReader{Reader: strings.NewReader(`{"a":"` + strings.Repeat("x", tt.size-len(`{"a":""}`)) + `"}`)}
+			req := httptest.NewRequest(http.MethodPost, "/", body)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			require.Equal(t, int64(-1), req.ContentLength)
+			require.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+			require.False(t, reached)
+			require.LessOrEqual(t, body.read, maxBytes+1)
+		})
+	}
 }

@@ -41,7 +41,7 @@ func ListPanels(c *gin.Context) {
 
 	g.Go(func() error {
 		var err error
-		panels, err = dbclient.Client.Panel.GetByGuild(ctx, guildId)
+		panels, err = dbclient.Client.Panel.GetByGuildWithoutComponents(ctx, guildId)
 		return err
 	})
 
@@ -112,7 +112,6 @@ func ListPanels(c *gin.Context) {
 	for i, p := range panels {
 		hasSH := supportHoursSet[p.PanelId]
 
-		// Title was the list label before Name existed and still is for a panel without one.
 		displayName := p.Title
 		if p.Name != nil && *p.Name != "" {
 			displayName = *p.Name

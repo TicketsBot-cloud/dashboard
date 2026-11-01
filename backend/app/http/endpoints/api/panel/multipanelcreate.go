@@ -18,7 +18,6 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
@@ -85,13 +84,12 @@ func validateMultiPanelComponents(data multiPanelCreateData) error {
 
 	unplaced := len(validPanelIds) - len(result.placed)
 	if result.dropdownUsed && unplaced == 0 {
-		return validation.NewInvalidInputError("Dropdown: every panel is already placed as a button, so the dropdown would have nothing to list")
+		return validation.NewInvalidInputError("Dropdown: every panel is already placed as a button")
 	}
 
 	return checkComponentBudget(result.count, multiPanelReserved(data.SelectMenu, result.dropdownUsed, unplaced))
 }
 
-// multiPanelReserved is exactly what buildComponents appends after the authored tree.
 func multiPanelReserved(dropdownMode, dropdownPlaced bool, unplaced int) int {
 	switch {
 	case unplaced == 0 || dropdownPlaced:
@@ -104,7 +102,6 @@ func multiPanelReserved(dropdownMode, dropdownPlaced bool, unplaced int) int {
 	}
 }
 
-// Removing a panel from the list must not fail the save over a placement the user cannot see.
 func (d *multiPanelCreateData) stripUnknownPlacements() {
 	known := make(map[int]bool, len(d.Panels))
 	for _, p := range d.Panels {
@@ -186,31 +183,11 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
-	if data.entersComponentsV2(database.MultiPanel{}) {
-		tier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
-			return
-		}
-
-		if !componentsV2BuilderEnabled(c, userId, guildId, tier) {
-			c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))
-			return
-		}
+	if _, ok := componentsV2Gate(c, userId, guildId, botContext, data.entersComponentsV2(database.MultiPanel{}), data.UsesComponentsV2, nil, nil, "Failed to verify premium status"); !ok {
+		return
 	}
 
 	if data.UsesComponentsV2 {
-		paid, err := hasPaidPremium(c, guildId, botContext)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
-			return
-		}
-
-		if !paid {
-			c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))
-			return
-		}
-
 		data.Embed = classicEmbedForV2(data.Embed)
 		data.stripUnknownPlacements()
 	} else if data.Embed == nil {
@@ -294,8 +271,6 @@ func MultiPanelCreate(c *gin.Context) {
 		return
 	}
 
-	// Any return before the row exists would leave the message in the channel with nothing
-	// behind it.
 	stored := false
 	defer func() {
 		if !stored {
@@ -433,7 +408,7 @@ func (d *multiPanelCreateData) validatePanels(guildId uint64) (panels []database
 		return
 	}
 
-	existingPanels, err := dbclient.Client.Panel.GetByGuild(context.Background(), guildId)
+	existingPanels, err := dbclient.Client.Panel.GetByGuildWithoutComponents(context.Background(), guildId)
 	if err != nil {
 		return nil, err
 	}

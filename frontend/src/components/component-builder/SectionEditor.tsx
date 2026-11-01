@@ -10,6 +10,7 @@ import { useFocusAfterRemove } from "@/hooks/useFocusAfterRemove";
 import { useTouchedFields } from "@/hooks/useTouchedFields";
 import {
   MAX_ALT_TEXT_LENGTH,
+  MAX_BUTTON_LABEL_LENGTH,
   MAX_SECTION_TEXTS,
   MAX_TEXT_CHARACTERS,
   MAX_URL_LENGTH,
@@ -40,6 +41,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
   saveAttempted = false,
 }) => {
   const hintId = useId();
+  const countId = useId();
   const { shows, touch } = useTouchedFields(saveAttempted);
   const { targetRef: addTextRef, request: focusAddText } = useFocusAfterRemove<HTMLButtonElement>();
   const { targetRef: firstAccessoryRef, request: focusAccessoryChoices } =
@@ -110,12 +112,13 @@ const SectionEditor: FC<SectionEditorProps> = ({
           ref={addTextRef}
           variant="dashed"
           onClick={addText}
-          disabled={value.components.length >= MAX_SECTION_TEXTS}
+          visuallyDisabled={value.components.length >= MAX_SECTION_TEXTS}
+          aria-describedby={countId}
           className="text-sm font-medium w-fit"
         >
           <FontAwesomeIcon icon={faPlus} /> Add text
         </Button>
-        <span className="text-xs">
+        <span id={countId} className="text-xs">
           {value.components.length}/{MAX_SECTION_TEXTS} texts
         </span>
       </div>
@@ -166,7 +169,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
       )}
 
       {thumbnailAccessory && (
-        <div ref={accessoryRef} className="p-3 rounded bg-gray-600 flex flex-col gap-2">
+        <div ref={accessoryRef} className="p-3 rounded bg-gray-900/40 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
@@ -220,7 +223,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
       )}
 
       {linkButtonAccessory && (
-        <div ref={accessoryRef} className="p-3 rounded bg-gray-600 flex flex-col gap-2">
+        <div ref={accessoryRef} className="p-3 rounded bg-gray-900/40 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-2">
               <TextInput
@@ -230,7 +233,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
                   onChange({ ...value, accessory: { ...linkButtonAccessory, label } })
                 }
                 onBlur={() => touch("accessory:label")}
-                maxLength={80}
+                maxLength={MAX_BUTTON_LABEL_LENGTH}
                 error={
                   shows("accessory:label") ? linkLabelError(linkButtonAccessory.label) : undefined
                 }
@@ -266,7 +269,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
       )}
 
       {panelButtonAccessory && (
-        <div ref={accessoryRef} className="p-3 rounded bg-gray-600 flex flex-col gap-2">
+        <div ref={accessoryRef} className="p-3 rounded bg-gray-900/40 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 flex items-center gap-2">
               <Select

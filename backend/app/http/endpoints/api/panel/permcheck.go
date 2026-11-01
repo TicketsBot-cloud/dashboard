@@ -52,7 +52,7 @@ func PermCheckHandler(c *gin.Context) {
 
 	g1.Go(func() error {
 		var err error
-		panels, err = dbclient.Client.Panel.GetByGuild(ctx1, guildId)
+		panels, err = dbclient.Client.Panel.GetByGuildWithoutComponents(ctx1, guildId)
 		return err
 	})
 

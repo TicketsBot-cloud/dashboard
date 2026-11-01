@@ -51,10 +51,10 @@ interface BlockListProps {
   disabled?: boolean;
   budgetMax: number;
   availablePanels?: PickerPanel[];
-  /** Every panel in the multi-panel, so a block can look up the panel it already holds. */
   allPanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   saveAttempted?: boolean;
+  blockErrors?: Map<string, string[]>;
 }
 
 const BlockList: FC<BlockListProps> = ({
@@ -72,6 +72,7 @@ const BlockList: FC<BlockListProps> = ({
   allPanels,
   selectMenuModeOn,
   saveAttempted,
+  blockErrors,
 }) => {
   const addMenuFocusId = useId();
   const topLevelContainers = nested ? [] : getTopLevelContainers(tree);
@@ -137,6 +138,7 @@ const BlockList: FC<BlockListProps> = ({
             onDelete={handleDelete}
             nested={nested}
             disabled={disabled}
+            errors={saveAttempted ? blockErrors?.get(block.id) : undefined}
           >
             {block.type === "container" && (
               <ContainerEditor
@@ -152,6 +154,7 @@ const BlockList: FC<BlockListProps> = ({
                 allPanels={allPanels}
                 selectMenuModeOn={selectMenuModeOn}
                 saveAttempted={saveAttempted}
+                blockErrors={blockErrors}
               />
             )}
             {block.type === "section" && (
@@ -220,6 +223,9 @@ const BlockList: FC<BlockListProps> = ({
             onAnnounce(`Added ${blockLabel(type)}${containerLabel ? ` to ${containerLabel}` : ""}`);
           }}
         />
+      )}
+      {budgetExhausted && !disabled && !nested && (
+        <p className="text-xs text-gray-400">No space left for more blocks.</p>
       )}
     </div>
   );

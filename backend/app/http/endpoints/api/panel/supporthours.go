@@ -177,7 +177,7 @@ func SetSupportHours(c *gin.Context) {
 	// For free users, check if they already have support hours on another panel
 	if premiumTier == premium.None {
 		// Get all panels with support hours for this guild
-		allPanels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+		allPanels, err := dbclient.Client.Panel.GetByGuildWithoutComponents(c, guildId)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return

@@ -12,11 +12,11 @@ import (
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v4"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
-	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -75,31 +75,11 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
-	if data.entersComponentsV2(multiPanel) {
-		tier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
-			return
-		}
-
-		if !componentsV2BuilderEnabled(c, userId, guildId, tier) {
-			c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))
-			return
-		}
+	if _, ok := componentsV2Gate(c, userId, guildId, botContext, data.entersComponentsV2(multiPanel), data.UsesComponentsV2, nil, nil, "Failed to verify premium status"); !ok {
+		return
 	}
 
 	if data.UsesComponentsV2 {
-		paid, err := hasPaidPremium(c, guildId, botContext)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to verify premium status"))
-			return
-		}
-
-		if !paid {
-			c.JSON(402, utils.ErrorStr(componentsV2PremiumMessage))
-			return
-		}
-
 		data.Embed = classicEmbedForV2(data.Embed)
 		data.stripUnknownPlacements()
 	} else if data.Embed == nil {
@@ -184,24 +164,8 @@ func MultiPanelUpdate(c *gin.Context) {
 	messageData := data.IntoMessageData(footer)
 	var messageId uint64
 
-	// Discord does not allow unsetting IS_COMPONENTS_V2 via edit, so a downgrade back to
-	// Classic must resend rather than edit in place, same as a channel change.
-	downgradingFromV2 := multiPanel.UsesComponentsV2 && !data.UsesComponentsV2
-
-	// Check if channel changed
-	if multiPanel.ChannelId != data.ChannelId || downgradingFromV2 {
-		ctx, cancel := app.DefaultContext()
-		defer cancel()
-
-		if err := rest.DeleteMessage(ctx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
-			var unwrapped request.RestError
-			if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-				return
-			}
-		}
-		cancel()
-
+	reposted := resendsMessage(multiPanel.ChannelId, data.ChannelId, multiPanel.UsesComponentsV2, data.UsesComponentsV2)
+	if reposted {
 		messageId, err = messageData.send(botContext, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
@@ -222,13 +186,8 @@ func MultiPanelUpdate(c *gin.Context) {
 		err = messageData.edit(botContext, multiPanel.MessageId, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
-			// Gone (404/10008), or authored by a different bot and so uneditable (50005):
-			// delete the old message if we can (ignoring failure) and resend.
-			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005) {
-				delCtx, delCancel := app.DefaultContext()
-				_ = rest.DeleteMessage(delCtx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
-				delCancel()
-
+			if shouldRepost(err, !messageData.UsesComponentsV2, liveComponentsV2(botContext, multiPanel.ChannelId, multiPanel.MessageId)) {
+				reposted = true
 				messageId, err = messageData.send(botContext, panelsWithCustom)
 				if err != nil {
 					var unwrapped2 request.RestError
@@ -259,6 +218,13 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
+	stored := false
+	defer func() {
+		if reposted && !stored {
+			discardMessage(botContext, data.ChannelId, messageId)
+		}
+	}()
+
 	// update DB
 	componentsJSON, err := componentsToStore(data.UsesComponentsV2, data.Components, multiPanel.Components)
 	if err != nil {
@@ -284,19 +250,32 @@ func MultiPanelUpdate(c *gin.Context) {
 		Name:                  name,
 	}
 
-	if err = dbclient.Client.MultiPanels.Update(c, multiPanel.Id, updated); err != nil {
+	err = dbclient.Client.MultiPanels.BeginFunc(c, func(tx pgx.Tx) error {
+		if err := dbclient.Client.MultiPanels.UpdateWithTx(c, tx, multiPanel.Id, updated); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.MultiPanels.UpdateComponentsV2WithTx(c, tx, multiPanel.Id, updated.UsesComponentsV2, updated.Components); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.MultiPanels.SetNameWithTx(c, tx, multiPanel.Id, updated.Name); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
 	}
 
-	if err := dbclient.Client.MultiPanels.UpdateComponentsV2(c, multiPanel.Id, updated.UsesComponentsV2, updated.Components); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-		return
-	}
-
-	if err := dbclient.Client.MultiPanels.SetName(c, multiPanel.Id, updated.Name); err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-		return
+	stored = true
+	if reposted {
+		ctx, cancel := app.DefaultContext()
+		_ = rest.DeleteMessage(ctx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
+		cancel()
 	}
 
 	// TODO: one query for ACID purposes

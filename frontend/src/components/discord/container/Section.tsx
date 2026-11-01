@@ -23,6 +23,7 @@ interface SectionProps {
     emoji?: { name: string };
     label?: string;
     url?: string;
+    disabled?: boolean;
   } | null;
 }
 
@@ -54,6 +55,7 @@ export default function Section({ textComponents = [], accessory = null, entitie
             emoji={accessory.emoji}
             label={accessory.label}
             url={accessory.url}
+            disabled={accessory.disabled}
           />
         )}
       </div>

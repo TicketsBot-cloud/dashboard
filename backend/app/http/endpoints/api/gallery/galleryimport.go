@@ -85,14 +85,14 @@ func ImportHandler(ctx *gin.Context) {
 	}
 
 	if premiumTier == premium.None {
-		panels, err := dbclient.Client.Panel.GetByGuild(ctx, guildId)
+		panelCount, err := dbclient.Client.Panel.GetPanelCount(ctx, guildId)
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch existing panels"))
 			return
 		}
 
-		if len(panels) >= freePanelLimit {
-			ctx.JSON(http.StatusPaymentRequired, utils.ErrorStr("Panel quota exceeded: You have %d/%d panels. Purchase premium to unlock more panels.", len(panels), freePanelLimit))
+		if panelCount >= freePanelLimit {
+			ctx.JSON(http.StatusPaymentRequired, utils.ErrorStr("Panel quota exceeded: You have %d/%d panels. Purchase premium to unlock more panels.", panelCount, freePanelLimit))
 			return
 		}
 	}
@@ -141,7 +141,6 @@ func ImportHandler(ctx *gin.Context) {
 		buttonStyle = int(*listing.ButtonStyle)
 	}
 
-	// The listing's Name labels the template; Title is end-user copy such as "Need help?".
 	panelName := listing.Name
 
 	panel := database.Panel{

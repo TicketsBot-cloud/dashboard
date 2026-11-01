@@ -122,6 +122,11 @@ func DeletePanel(c *gin.Context) {
 
 		messageData := multiPanelIntoMessageData(multiPanel, footer)
 		messageId, err := messageData.send(botContext, panels)
+		if errors.Is(err, errEmptyMultiPanel) {
+			_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
+			continue
+		}
+
 		if err != nil {
 			var unwrapped request.RestError
 			if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {

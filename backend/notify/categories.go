@@ -13,10 +13,10 @@ const (
 const CategoryGroupAdmin = "admin"
 
 type CategoryInfo struct {
-	Key         string `json:"key"`
-	Label       string `json:"label"`
-	Description string `json:"description"`
-	MinTier admin.AdminTier `json:"min_tier"`
+	Key         string          `json:"key"`
+	Label       string          `json:"label"`
+	Description string          `json:"description"`
+	MinTier     admin.AdminTier `json:"min_tier"`
 }
 
 var AllCategories = []CategoryInfo{

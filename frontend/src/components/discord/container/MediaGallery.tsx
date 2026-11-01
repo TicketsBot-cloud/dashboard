@@ -32,7 +32,6 @@ export default function MediaGallery({ items = [] }: MediaGalleryProps) {
     };
   }, [modalOpen]);
 
-  // Discord shows a single item in its own proportions rather than as a cropped tile.
   const single = items.length === 1;
 
   return (

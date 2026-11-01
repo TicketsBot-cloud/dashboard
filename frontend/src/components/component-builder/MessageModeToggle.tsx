@@ -19,13 +19,13 @@ const OPTIONS: { mode: MessageMode; icon: typeof faListUl; title: string; descri
       mode: "classic",
       icon: faListUl,
       title: "Classic",
-      description: "A single coloured embed with a title, description and fields.",
+      description: "An embed with a title, description and fields.",
     },
     {
       mode: "components_v2",
       icon: faLayerGroup,
       title: "Components v2",
-      description: "Build the message block by block, in any order you like.",
+      description: "Build the message from blocks.",
     },
   ];
 
@@ -51,7 +51,6 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({
           const locked = isV2 && !isPremium;
           const selected = mode === option.mode;
           const unavailable = isV2 && !canEnterV2 && !selected;
-          // Only the icon and description dim, so the label and Premium badge keep full contrast.
           const dim = !selected && (locked || unavailable) ? "opacity-50" : "";
 
           return (
@@ -74,15 +73,10 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({
                 onChange={() => onChange(option.mode)}
               />
               {locked && (
-                <span
-                  className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/15 px-2 py-0.5 text-[10px] font-medium text-amber-400"
-                  title="Components v2 messages require Premium or Whitelabel."
-                >
+                <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
                   <FontAwesomeIcon icon={faCrown} aria-hidden="true" />
                   Premium
-                  <span className="sr-only">
-                    (requires Premium or Whitelabel - unavailable on your current plan)
-                  </span>
+                  <span className="sr-only">(requires Premium or Whitelabel)</span>
                 </span>
               )}
               <div

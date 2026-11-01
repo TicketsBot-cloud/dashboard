@@ -415,7 +415,7 @@ var (
 	reChannelMention = regexp.MustCompile(`^<#(\d+)>`)
 	reAngleLink      = regexp.MustCompile(`^<(https?://[^\s<>]+)>`)
 	reGlobalMention  = regexp.MustCompile(`^@(everyone|here)\b`)
-	reMaskedLink = regexp.MustCompile(`^\[((?:[^\][]|\[[^\]]*\])+)\]\((?:<(https?://[^\s<>]+)>|((?:[^()\s]|\([^()\s]*\))+))\)`)
+	reMaskedLink     = regexp.MustCompile(`^\[((?:[^\][]|\[[^\]]*\])+)\]\((?:<(https?://[^\s<>]+)>|((?:[^()\s]|\([^()\s]*\))+))\)`)
 	// The final class excludes trailing punctuation, so `(https://example.com/x.)`
 	// keeps the `.)`.
 	reBareLink = regexp.MustCompile(`^https?://[^\s<]*[^<.,:;"')\]\s]`)

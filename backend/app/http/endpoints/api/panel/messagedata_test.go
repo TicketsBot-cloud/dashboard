@@ -2,6 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -9,7 +13,11 @@ import (
 	"github.com/TicketsBot-cloud/gdl/objects/channel/embed"
 	"github.com/TicketsBot-cloud/gdl/objects/channel/message"
 	"github.com/TicketsBot-cloud/gdl/objects/interaction/component"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/stretchr/testify/require"
+	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
+	"github.com/ticketsbot-cloud/dashboard/backend/config"
 	"github.com/ticketsbot-cloud/dashboard/backend/log"
 	"go.uber.org/zap"
 )
@@ -42,13 +50,13 @@ func TestV2EditData(t *testing.T) {
 
 	require.EqualValues(t, message.FlagComponentsV2, decoded["flags"])
 	require.Equal(t, []any{}, decoded["embeds"], "a V2 edit must send an explicit empty embeds array")
-	require.Equal(t, "", decoded["content"])
+	require.Empty(t, decoded["content"])
 	require.Equal(t, map[string]any{"replied_user": false}, decoded["allowed_mentions"], "an empty allowed_mentions object allows no mentions")
 	require.Len(t, decoded["components"], 1)
 }
 
 func TestPanelMessageData_BuildEditData(t *testing.T) {
-	t.Run("v2 appends the open ticket row to the authored tree", func(t *testing.T) {
+	t.Run("v2 appends the open ticket row", func(t *testing.T) {
 		p := &panelMessageData{
 			UsesComponentsV2: true,
 			Components:       []component.Component{text("hello")},
@@ -93,14 +101,204 @@ func TestMultiPanelMessageData_BuildEditData(t *testing.T) {
 	})
 
 	t.Run("classic is unchanged", func(t *testing.T) {
-		d := &multiPanelMessageData{Embed: embed.NewEmbed()}
-		data := d.buildEditData([]component.Component{row(linkBtn("Go", "https://example.com"))})
+		branding := fmt.Sprintf("Powered by %s", config.Conf.Bot.PoweredBy)
 
+		tests := []struct {
+			name       string
+			footer     footerPolicy
+			wantFooter *string
+		}{
+			{"branding", footerPolicy{ShowBranding: true}, &branding},
+			{"no custom footer", footerPolicy{}, nil},
+			{"custom footer", footerPolicy{AllowCustom: true}, strPtr("custom")},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				d := &multiPanelMessageData{Footer: tt.footer, Embed: embed.NewEmbed().SetFooter("custom", "")}
+				data := d.buildEditData([]component.Component{row(linkBtn("Go", "https://example.com"))})
+
+				require.Zero(t, data.Flags)
+				require.Nil(t, data.AllowedMentions)
+				require.Len(t, data.Embeds, 1)
+				require.Len(t, data.Components, 1)
+
+				if tt.wantFooter == nil {
+					require.Nil(t, data.Embeds[0].Footer)
+					return
+				}
+
+				require.NotNil(t, data.Embeds[0].Footer)
+				require.Equal(t, *tt.wantFooter, data.Embeds[0].Footer.Text)
+			})
+		}
+	})
+}
+
+type sentRequest struct {
+	method, path string
+	body         []byte
+}
+
+type fakeTransport func(*http.Request) (*http.Response, error)
+
+func (f fakeTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func useTransport(t *testing.T, transport fakeTransport) {
+	prev := request.Client.Transport
+	request.Client.Transport = transport
+	t.Cleanup(func() { request.Client.Transport = prev })
+}
+
+func captureSends(t *testing.T) *[]sentRequest {
+	var sent []sentRequest
+	useTransport(t, func(r *http.Request) (*http.Response, error) {
+		var body []byte
+		if r.Body != nil {
+			body, _ = io.ReadAll(r.Body)
+		}
+
+		sent = append(sent, sentRequest{method: r.Method, path: r.URL.Path, body: body})
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"id":"42"}`)), Request: r}, nil
+	})
+
+	return &sent
+}
+
+func createdMessage(t *testing.T, sent []sentRequest) (rest.CreateMessageData, string) {
+	t.Helper()
+
+	require.Len(t, sent, 1)
+	require.Equal(t, http.MethodPost, sent[0].method)
+	require.Equal(t, "/api/v10/channels/7/messages", sent[0].path)
+
+	var data rest.CreateMessageData
+	require.NoError(t, json.Unmarshal(sent[0].body, &data))
+	return data, string(sent[0].body)
+}
+
+func TestPanelMessageData_Send(t *testing.T) {
+	t.Run("v2", func(t *testing.T) {
+		sent := captureSends(t)
+
+		p := &panelMessageData{ChannelId: 7, UsesComponentsV2: true, Components: []component.Component{text("hello")}, ButtonLabel: "Open a ticket", CustomId: "open_ticket", ButtonStyle: component.ButtonStylePrimary}
+		id, err := p.send(&botcontext.BotContext{})
+		require.NoError(t, err)
+		require.EqualValues(t, 42, id)
+
+		data, _ := createdMessage(t, *sent)
+		require.Equal(t, message.SumFlags(message.FlagComponentsV2), data.Flags)
+		require.Empty(t, data.Embeds)
+		require.Len(t, data.Components, 2)
+		require.Equal(t, component.ComponentTextDisplay, data.Components[0].Type)
+
+		buttons := rowButtons(t, data.Components[1])
+		require.Len(t, buttons, 1)
+		require.Equal(t, "open_ticket", buttons[0].CustomId)
+	})
+
+	t.Run("classic", func(t *testing.T) {
+		sent := captureSends(t)
+
+		p := &panelMessageData{ChannelId: 7, Title: "Support", ButtonLabel: "Open a ticket", CustomId: "open_ticket", ButtonStyle: component.ButtonStylePrimary}
+		_, err := p.send(&botcontext.BotContext{})
+		require.NoError(t, err)
+
+		data, _ := createdMessage(t, *sent)
 		require.Zero(t, data.Flags)
-		require.Nil(t, data.AllowedMentions)
 		require.Len(t, data.Embeds, 1)
 		require.Len(t, data.Components, 1)
 	})
+}
+
+func TestMultiPanelMessageData_Send(t *testing.T) {
+	panels := []database.PanelWithCustomization{testPanel(1, "One", "c1"), testPanel(2, "Two", "c2"), testPanel(3, "Three", "c3")}
+
+	t.Run("v2", func(t *testing.T) {
+		sent := captureSends(t)
+
+		d := &multiPanelMessageData{ChannelId: 7, UsesComponentsV2: true, Components: []component.Component{text("intro"), row(panelBtn(2))}}
+		id, err := d.send(&botcontext.BotContext{}, panels)
+		require.NoError(t, err)
+		require.EqualValues(t, 42, id)
+
+		data, raw := createdMessage(t, *sent)
+		require.NotContains(t, raw, "panel:")
+		require.Equal(t, message.SumFlags(message.FlagComponentsV2), data.Flags)
+		require.Empty(t, data.Embeds)
+		require.Len(t, data.Components, 3)
+		require.Equal(t, component.ComponentTextDisplay, data.Components[0].Type)
+
+		placed := rowButtons(t, data.Components[1])
+		require.Len(t, placed, 1)
+		require.Equal(t, "c2", placed[0].CustomId)
+
+		appended := rowButtons(t, data.Components[2])
+		require.Len(t, appended, 2)
+		require.Equal(t, "c1", appended[0].CustomId)
+		require.Equal(t, "c3", appended[1].CustomId)
+	})
+
+	t.Run("classic", func(t *testing.T) {
+		sent := captureSends(t)
+
+		d := &multiPanelMessageData{ChannelId: 7, Embed: embed.NewEmbed().SetTitle("Pick a topic")}
+		_, err := d.send(&botcontext.BotContext{}, panels)
+		require.NoError(t, err)
+
+		data, _ := createdMessage(t, *sent)
+		require.Zero(t, data.Flags)
+		require.Len(t, data.Embeds, 1)
+		require.Len(t, data.Components, 1)
+		require.Len(t, rowButtons(t, data.Components[0]), 3)
+	})
+
+	t.Run("v2 with only appended panels", func(t *testing.T) {
+		sent := captureSends(t)
+
+		d := &multiPanelMessageData{ChannelId: 7, UsesComponentsV2: true}
+		_, err := d.send(&botcontext.BotContext{}, panels)
+		require.NoError(t, err)
+
+		data, _ := createdMessage(t, *sent)
+		require.Len(t, data.Components, 1)
+		require.Len(t, rowButtons(t, data.Components[0]), 3)
+	})
+
+	t.Run("v2 with nothing left to show", func(t *testing.T) {
+		useTransport(t, func(r *http.Request) (*http.Response, error) {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			return nil, errors.New("unexpected request")
+		})
+
+		d := &multiPanelMessageData{ChannelId: 7, UsesComponentsV2: true, Components: []component.Component{row(panelBtn(1), panelBtn(2))}}
+		_, err := d.send(&botcontext.BotContext{}, nil)
+		require.ErrorIs(t, err, errEmptyMultiPanel)
+	})
+}
+
+func TestMultiPanelMessageData_RendersEmpty(t *testing.T) {
+	tests := []struct {
+		name   string
+		data   multiPanelMessageData
+		panels []database.PanelWithCustomization
+		want   bool
+	}{
+		{name: "row of placements", data: multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{row(panelBtn(1), panelBtn(2))}}, want: true},
+		{name: "sections with panel accessories", data: multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{container(section(panelBtn(1), text("a")))}}, want: true},
+		{name: "empty tree", data: multiPanelMessageData{UsesComponentsV2: true}, want: true},
+		{name: "placed dropdown", data: multiPanelMessageData{UsesComponentsV2: true, SelectMenu: true, Components: []component.Component{row(dropdownNode())}}, want: true},
+		{name: "text and placements", data: multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{text("a"), row(panelBtn(1))}}},
+		{name: "a placed panel left", data: multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{row(panelBtn(1))}}, panels: []database.PanelWithCustomization{testPanel(1, "One", "c1")}},
+		{name: "panels left to append", data: multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{row(panelBtn(2))}}, panels: []database.PanelWithCustomization{testPanel(1, "One", "c1")}},
+		{name: "classic", data: multiPanelMessageData{Embed: embed.NewEmbed()}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, tt.data.rendersEmpty(tt.panels))
+		})
+	}
 }
 
 func rowButtons(t *testing.T, c component.Component) []component.Button {
@@ -176,10 +374,23 @@ func TestBuildComponents_Classic(t *testing.T) {
 	})
 }
 
+func TestBuildPanelSelectOptions(t *testing.T) {
+	blank := testPanel(1, "One", "c1")
+	blank.Description = strPtr("")
+	described := testPanel(2, "Two", "c2")
+	described.Description = strPtr("About two")
+
+	options := buildPanelSelectOptions([]database.PanelWithCustomization{blank, described, testPanel(3, "Three", "c3")})
+	require.Len(t, options, 3)
+	require.Nil(t, options[0].Description)
+	require.Equal(t, strPtr("About two"), options[1].Description)
+	require.Nil(t, options[2].Description)
+}
+
 func TestBuildComponents_V2(t *testing.T) {
 	panels := []database.PanelWithCustomization{testPanel(1, "One", "c1"), testPanel(2, "Two", "c2"), testPanel(3, "Three", "c3")}
 
-	t.Run("placed panels are resolved and the rest are appended", func(t *testing.T) {
+	t.Run("placed panels resolved, rest appended", func(t *testing.T) {
 		d := multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{text("intro"), row(panelBtn(2))}}
 
 		tree, system := d.buildComponents(panels)
@@ -231,7 +442,7 @@ func TestBuildComponents_V2(t *testing.T) {
 		require.Nil(t, system)
 	})
 
-	t.Run("placed dropdown lists only unplaced panels, wherever the buttons sit", func(t *testing.T) {
+	t.Run("placed dropdown lists only unplaced panels", func(t *testing.T) {
 		d := multiPanelMessageData{
 			UsesComponentsV2: true,
 			SelectMenu:       true,
@@ -249,7 +460,7 @@ func TestBuildComponents_V2(t *testing.T) {
 		require.Equal(t, "c3", sm.Options[1].Value)
 	})
 
-	t.Run("placed and appended dropdowns share the configured placeholder", func(t *testing.T) {
+	t.Run("dropdowns share the configured placeholder", func(t *testing.T) {
 		placeholder := strPtr("Choose")
 
 		placed := multiPanelMessageData{UsesComponentsV2: true, SelectMenu: true, SelectMenuPlaceholder: placeholder, Components: []component.Component{row(dropdownNode())}}
@@ -271,7 +482,7 @@ func TestBuildComponents_V2(t *testing.T) {
 		require.Len(t, sm.Options, 2)
 	})
 
-	t.Run("a dropdown with nothing left to list is dropped with its row", func(t *testing.T) {
+	t.Run("empty dropdown dropped with its row", func(t *testing.T) {
 		d := multiPanelMessageData{
 			UsesComponentsV2: true,
 			SelectMenu:       true,
@@ -301,7 +512,7 @@ func TestBuildComponents_V2(t *testing.T) {
 		require.Len(t, tree, 1)
 	})
 
-	t.Run("a placement of a panel no longer in the multi-panel is dropped with what it empties", func(t *testing.T) {
+	t.Run("stale placement dropped with what it empties", func(t *testing.T) {
 		d := multiPanelMessageData{
 			UsesComponentsV2: true,
 			Components: []component.Component{
@@ -327,7 +538,7 @@ func TestBuildComponents_V2(t *testing.T) {
 		require.Len(t, tree, 1)
 	})
 
-	t.Run("a link button and a section with a link accessory are kept", func(t *testing.T) {
+	t.Run("link button and link accessory kept", func(t *testing.T) {
 		d := multiPanelMessageData{UsesComponentsV2: true, Components: []component.Component{
 			row(linkBtn("Docs", "https://example.com")),
 			section(linkBtn("More", "https://example.com/more"), text("side")),
@@ -463,7 +674,7 @@ func TestComponentsToStore(t *testing.T) {
 		{name: "classic keeps the stored tree", tree: texts(1), stored: &stored, want: &stored},
 		{name: "classic ignores a submitted tree", tree: []component.Component{text("submitted")}, stored: &stored, want: &stored},
 		{name: "classic with nothing stored stays null", tree: texts(1), stored: nil, want: nil},
-		{name: "classic with no submitted tree keeps the stored tree", tree: nil, stored: &stored, want: &stored},
+		{name: "classic keeps the stored tree", tree: nil, stored: &stored, want: &stored},
 		{name: "v2 replaces the stored tree", usesV2: true, tree: []component.Component{text("submitted")}, stored: &stored, want: strPtr(`[{"type":10,"content":"submitted"}]`)},
 		{name: "v2 with no tree stores an empty array", usesV2: true, tree: nil, stored: &stored, want: strPtr("[]")},
 		{name: "v2 with nothing stored", usesV2: true, tree: []component.Component{text("submitted")}, want: strPtr(`[{"type":10,"content":"submitted"}]`)},

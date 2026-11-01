@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FC } from "react";
+import { flushSync } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
 import { collectEmbedUrlErrors, embedUrlError } from "@/lib/embed-url";
@@ -218,7 +219,7 @@ const MultiPanelsPage: FC = () => {
         unplacedPanelCount,
       }).length > 0
     ) {
-      return "Fix the problems listed under the message builder before saving.";
+      return "Fix the problems in the message builder first.";
     }
 
     return null;
@@ -227,6 +228,8 @@ const MultiPanelsPage: FC = () => {
   const validateMultiPanel = () => {
     const blocker = saveBlocker();
     if (blocker || !multiPanel.channel_id) {
+      // Flushed so the field errors it reveals exist when the first problem is located.
+      flushSync(() => setSaveAttempted(true));
       scrollToFirstMissingField();
       if (blocker) toast.error(blocker);
       return null;
@@ -243,14 +246,13 @@ const MultiPanelsPage: FC = () => {
   const resolvedPanels = getPreviewButtons();
   const placedPanelIds = getPlacedPanelIds(componentTree);
   const hasPlacedSelect = hasPanelSelectBlock(componentTree);
-  // A placed dropdown absorbs every unplaced panel, so the backend appends no default row.
   const defaultRowPanels = hasPlacedSelect
     ? []
     : resolvedPanels.filter((p) => !placedPanelIds.has(p.panel_id));
 
   const toPickerPanel = (p: (typeof resolvedPanels)[number]) => ({
     panel_id: p.panel_id,
-    label: p.button_label || "Open Ticket",
+    label: p.name || p.title || `Panel ${p.panel_id}`,
   });
   const unplacedPickerPanels = resolvedPanels
     .filter((p) => !placedPanelIds.has(p.panel_id))
@@ -264,6 +266,12 @@ const MultiPanelsPage: FC = () => {
     hasPlacedSelect,
     panelCount: multiPanel.panels.length,
     placedCount: placedPanelIds.size,
+  });
+  const conversionReserved = multiPanelReserved({
+    selectMenu: multiPanel.select_menu,
+    hasPlacedSelect: false,
+    panelCount: multiPanel.panels.length,
+    placedCount: 0,
   });
 
   const classicSource: ClassicConversionSource = {
@@ -311,7 +319,7 @@ const MultiPanelsPage: FC = () => {
           showCount
         />
         <p id="multi-panel-name-help" className="text-xs text-gray-400 mt-1">
-          Used to identify this multi-panel in the dashboard. It isn't shown in Discord.
+          Only shown in the dashboard.
         </p>
       </div>
       <Collapsible
@@ -474,13 +482,12 @@ const MultiPanelsPage: FC = () => {
             previewTitle="Panel Preview"
             reserved={reserved}
             reservedNote={
-              reserved === 0
-                ? undefined
-                : "Some space is also kept for the panel selection buttons or dropdown."
+              reserved === 0 ? undefined : "Some space is kept for the panel buttons or dropdown."
             }
             placement={{
               availablePanels: unplacedPickerPanels,
               unplacedPanelCount,
+              conversionReserved,
               allPanels: resolvedPanels.map(toPickerPanel),
               selectMenuModeOn: multiPanel.select_menu,
             }}
@@ -752,10 +759,7 @@ const MultiPanelsPage: FC = () => {
         aria-describedby={isLocked ? "multipanel-lock-banner" : undefined}
         onClick={() => {
           const payload = validateMultiPanel();
-          if (!payload) {
-            setSaveAttempted(true);
-            return;
-          }
+          if (!payload) return;
 
           guard(async () => {
             try {

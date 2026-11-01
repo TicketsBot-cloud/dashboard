@@ -52,7 +52,6 @@ func TestValidateMessageComponents_VotingPremiumIsNotEnough(t *testing.T) {
 }
 
 func TestValidateWelcomeMessageComponents(t *testing.T) {
-	// Defaults: all three buttons visible, so 5 + 3 + 1 = 9 reserved.
 	tests := []struct {
 		name    string
 		data    panelBody
@@ -60,7 +59,7 @@ func TestValidateWelcomeMessageComponents(t *testing.T) {
 		wantErr string
 	}{
 		{name: "classic mode skips everything", data: panelBody{}},
-		{name: "classic mode without premium ignores a tree that would fail", data: panelBody{WelcomeMessageComponents: append(texts(60), gallery("not a url"))}},
+		{name: "classic without premium ignores the tree", data: panelBody{WelcomeMessageComponents: append(texts(60), gallery("not a url"))}},
 		{name: "without paid premium", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: texts(1)}, wantErr: "premium"},
 		{name: "empty tree", data: panelBody{WelcomeMessageUsesComponentsV2: true}, paid: true, wantErr: "at least one component"},
 		{name: "empty non-nil tree", data: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessageComponents: []component.Component{}}, paid: true, wantErr: "at least one component"},
@@ -133,7 +132,7 @@ func TestClassicValidatorsAreSkippedInV2(t *testing.T) {
 		require.NoError(t, validateWelcomeMessage(v2)())
 	})
 
-	t.Run("the welcome embed check follows the welcome flag, not the message flag", func(t *testing.T) {
+	t.Run("welcome embed check follows the welcome flag", func(t *testing.T) {
 		ctx := PanelValidationContext{Data: panelBody{WelcomeMessage: emptyEmbed, MessageUsesComponentsV2: true}}
 		require.Error(t, validateWelcomeMessage(ctx)())
 	})
@@ -155,8 +154,8 @@ func TestClassicEmbedForV2(t *testing.T) {
 		{"embed over the character limit", &types.CustomEmbed{Description: strPtr(strings.Repeat("a", 4096)), Title: strPtr(strings.Repeat("b", 2000))}, false},
 		{"embed with fields only", &types.CustomEmbed{Fields: []types.Field{{Name: "a", Value: "b"}}}, true},
 		{"embed title at 256 characters", &types.CustomEmbed{Title: strPtr(strings.Repeat("a", 256))}, true},
-		{"embed title over 256 characters fails its struct tags", &types.CustomEmbed{Title: strPtr(strings.Repeat("a", 257))}, false},
-		{"embed field with an empty name fails its struct tags", &types.CustomEmbed{Fields: []types.Field{{Name: "", Value: "b"}}}, false},
+		{"embed title over 256 characters", &types.CustomEmbed{Title: strPtr(strings.Repeat("a", 257))}, false},
+		{"embed field with an empty name", &types.CustomEmbed{Fields: []types.Field{{Name: "", Value: "b"}}}, false},
 	}
 
 	for _, tt := range tests {
@@ -186,6 +185,7 @@ func TestNormaliseMultiPanelName(t *testing.T) {
 		{"100 characters plus padding", "  " + strings.Repeat("a", 100) + "  ", strPtr(strings.Repeat("a", 100)), false},
 		{"100 multibyte characters", strings.Repeat("é", 100), strPtr(strings.Repeat("é", 100)), false},
 		{"101 multibyte characters", strings.Repeat("é", 101), nil, true},
+		{"null byte", "Ma\x00in", nil, true},
 	}
 
 	for _, tt := range tests {
@@ -220,10 +220,9 @@ func TestValidateMultiPanelComponents(t *testing.T) {
 	}{
 		{name: "classic mode skips the tree", data: multiPanelCreateData{Panels: threePanels, Components: texts(60)}},
 
-		// Button mode appends ceil(unplaced / 5) rows plus the buttons.
 		{name: "button mode, 3 unplaced reserves 4", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: texts(36)}},
 		{name: "button mode, 3 unplaced and one over", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: texts(37)}, wantErr: "Too many components"},
-		{name: "button mode, placing a panel frees a slot but keeps the placed button", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: append(texts(33), row(panelBtn(1)))}},
+		{name: "button mode, placing a panel keeps its button", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: append(texts(33), row(panelBtn(1)))}},
 		{name: "button mode, placing a panel uses the full budget", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: append(texts(35), row(panelBtn(1)))}},
 		{name: "button mode, placing a panel one over", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: append(texts(36), row(panelBtn(1)))}, wantErr: "Too many components"},
 		{name: "button mode, everything placed reserves nothing", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: append(texts(36), row(panelBtn(1), panelBtn(2), panelBtn(3)))}},
@@ -232,13 +231,12 @@ func TestValidateMultiPanelComponents(t *testing.T) {
 		{name: "button mode, 6 unplaced and one over", data: multiPanelCreateData{UsesComponentsV2: true, Panels: panelConfigs(1, 2, 3, 4, 5, 6), Components: texts(33)}, wantErr: "Too many components"},
 		{name: "button mode, 5 unplaced reserves 1 row", data: multiPanelCreateData{UsesComponentsV2: true, Panels: panelConfigs(1, 2, 3, 4, 5), Components: texts(34)}},
 
-		// Dropdown mode appends row plus select, unless a dropdown is placed.
 		{name: "dropdown mode reserves 2", data: multiPanelCreateData{UsesComponentsV2: true, SelectMenu: true, Panels: threePanels, Components: texts(38)}},
 		{name: "dropdown mode reserves 2, one over", data: multiPanelCreateData{UsesComponentsV2: true, SelectMenu: true, Panels: threePanels, Components: texts(39)}, wantErr: "Too many components"},
 		{name: "placed dropdown reserves nothing extra", data: multiPanelCreateData{UsesComponentsV2: true, SelectMenu: true, Panels: threePanels, Components: append(texts(38), row(dropdownNode()))}},
 		{name: "placed dropdown over the limit", data: multiPanelCreateData{UsesComponentsV2: true, SelectMenu: true, Panels: threePanels, Components: append(texts(39), row(dropdownNode()))}, wantErr: "Too many components"},
 		{name: "dropdown mode with every panel placed reserves nothing", data: multiPanelCreateData{UsesComponentsV2: true, SelectMenu: true, Panels: threePanels, Components: append(texts(36), row(panelBtn(1), panelBtn(2), panelBtn(3)))}},
-		{name: "placed dropdown with every panel placed as a button", data: multiPanelCreateData{UsesComponentsV2: true, SelectMenu: true, Panels: threePanels, Components: []component.Component{row(panelBtn(1), panelBtn(2), panelBtn(3)), row(dropdownNode())}}, wantErr: "nothing to list"},
+		{name: "placed dropdown with every panel placed as a button", data: multiPanelCreateData{UsesComponentsV2: true, SelectMenu: true, Panels: threePanels, Components: []component.Component{row(panelBtn(1), panelBtn(2), panelBtn(3)), row(dropdownNode())}}, wantErr: "already placed as a button"},
 		{name: "placed dropdown in button mode", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels, Components: []component.Component{row(dropdownNode())}}, wantErr: "Dropdown"},
 
 		{name: "empty tree", data: multiPanelCreateData{UsesComponentsV2: true, Panels: threePanels}},
@@ -299,7 +297,7 @@ func TestStripUnknownPlacements(t *testing.T) {
 		{"a section whose accessory is removed goes with it", panelConfigs(1), []component.Component{section(panelBtn(2), text("a"))}, 0},
 		{"a section with a known accessory stays", panelConfigs(2), []component.Component{section(panelBtn(2), text("a"))}, 1},
 		{"link buttons and the dropdown are untouched", panelConfigs(1), []component.Component{row(linkBtn("Go", "https://example.com")), row(dropdownNode())}, 2},
-		{"a malformed marker is left for validation to reject", panelConfigs(1), []component.Component{row(component.BuildButton(component.Button{CustomId: "panel:abc"}))}, 1},
+		{"malformed marker left for validation", panelConfigs(1), []component.Component{row(component.BuildButton(component.Button{CustomId: "panel:abc"}))}, 1},
 		{"empty tree", panelConfigs(1), nil, 0},
 	}
 
@@ -347,7 +345,7 @@ func TestValidateDropdownLabels(t *testing.T) {
 		require.ErrorContains(t, validateDropdownLabels(panels, configs), "Ten")
 	})
 
-	t.Run("an empty custom label falls back to the button label", func(t *testing.T) {
+	t.Run("empty custom label falls back", func(t *testing.T) {
 		configs := []panelConfiguration{{PanelId: 10, CustomLabel: strPtr("")}, {PanelId: 20, CustomLabel: strPtr("")}}
 
 		require.Error(t, validateDropdownLabels(panels, configs))
@@ -367,8 +365,8 @@ func TestDropHiddenClassicEmbed(t *testing.T) {
 		{name: "v2 welcome with an invalid hidden embed is dropped", body: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessage: invalid()}},
 		{name: "v2 welcome with a valid hidden embed is kept", body: panelBody{WelcomeMessageUsesComponentsV2: true, WelcomeMessage: valid()}, wantKept: true},
 		{name: "v2 welcome with no embed", body: panelBody{WelcomeMessageUsesComponentsV2: true}},
-		{name: "classic welcome with an invalid embed is still rejected", body: panelBody{WelcomeMessage: invalid()}, wantKept: true, wantErr: true},
-		{name: "the message flag alone does not drop the welcome embed", body: panelBody{MessageUsesComponentsV2: true, WelcomeMessage: invalid()}, wantKept: true, wantErr: true},
+		{name: "classic welcome with an invalid embed", body: panelBody{WelcomeMessage: invalid()}, wantKept: true, wantErr: true},
+		{name: "message flag alone keeps the welcome embed", body: panelBody{MessageUsesComponentsV2: true, WelcomeMessage: invalid()}, wantKept: true, wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -436,7 +434,7 @@ func TestRetainClassicFields(t *testing.T) {
 			want: panelBody{Title: "", Content: "", Colour: nil},
 		},
 		{
-			name: "v2 request omitting everything keeps the stored hidden fields but not the title",
+			name: "v2 request omitting everything",
 			in:   panelBody{MessageUsesComponentsV2: true},
 			want: panelBody{MessageUsesComponentsV2: true, Content: "Stored content", Colour: storedColour, ImageUrl: stored.ImageUrl, ThumbnailUrl: stored.ThumbnailUrl},
 		},
@@ -493,14 +491,14 @@ func TestRetainClassicFields(t *testing.T) {
 		})
 	}
 
-	t.Run("nothing stored and nothing valid supplied leaves urls nil", func(t *testing.T) {
+	t.Run("nothing stored or supplied leaves urls nil", func(t *testing.T) {
 		body := panelBody{MessageUsesComponentsV2: true, ImageUrl: strPtr("nope")}
 		body.retainClassicFields(database.Panel{Title: "t", Content: "c"}, false)
 		require.Nil(t, body.ImageUrl)
 		require.Nil(t, body.ThumbnailUrl)
 	})
 
-	t.Run("nothing stored and no colour supplied leaves the colour nil", func(t *testing.T) {
+	t.Run("nothing stored or supplied leaves colour nil", func(t *testing.T) {
 		body := panelBody{MessageUsesComponentsV2: true}
 		body.retainClassicFields(database.Panel{Title: "t", Content: "c"}, false)
 		require.Nil(t, body.Colour)

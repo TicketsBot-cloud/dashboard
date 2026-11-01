@@ -7,6 +7,7 @@ import TextInput from "@/components/TextInput";
 import { useFocusAfterRemove } from "@/hooks/useFocusAfterRemove";
 import { useTouchedFields } from "@/hooks/useTouchedFields";
 import {
+  MAX_BUTTON_LABEL_LENGTH,
   MAX_ROW_BUTTONS,
   MAX_URL_LENGTH,
   linkLabelError,
@@ -90,7 +91,12 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
             : (unplacedPanels ?? []);
 
         return (
-          <div key={b.id} className="p-3 rounded bg-gray-600 flex items-start gap-2">
+          <div
+            key={b.id}
+            role="group"
+            aria-label={`Button ${i + 1}`}
+            className="p-3 rounded bg-gray-900/40 flex items-start gap-2"
+          >
             <div className="flex-1 flex flex-col gap-2">
               {unplacedPanels !== undefined && (
                 <div
@@ -158,7 +164,7 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
                     value={b.label}
                     onChange={(label) => updateLinkField(i, { label })}
                     onBlur={() => touch(`${b.id}:label`)}
-                    maxLength={80}
+                    maxLength={MAX_BUTTON_LABEL_LENGTH}
                     error={shows(`${b.id}:label`) ? linkLabelError(b.label) : undefined}
                   />
                   <TextInput
@@ -190,7 +196,8 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
           ref={addRef}
           variant="dashed"
           onClick={addButton}
-          disabled={value.buttons.length >= MAX_ROW_BUTTONS}
+          visuallyDisabled={value.buttons.length >= MAX_ROW_BUTTONS}
+          aria-describedby={`${hintId}-count`}
           title={
             value.buttons.length >= MAX_ROW_BUTTONS
               ? `Maximum of ${MAX_ROW_BUTTONS} buttons per row`
@@ -200,7 +207,7 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
         >
           <FontAwesomeIcon icon={faPlus} /> Add button
         </Button>
-        <span className="text-xs">
+        <span id={`${hintId}-count`} className="text-xs">
           {value.buttons.length}/{MAX_ROW_BUTTONS} buttons
         </span>
       </div>

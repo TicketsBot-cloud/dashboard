@@ -34,7 +34,6 @@ interface PanelPreviewProps {
   brandingFooter?: boolean;
   messageMode?: "classic" | "components_v2";
   componentTree?: V2Component[];
-  /** Every panel in the multi-panel, so placed panels in the tree resolve to real buttons. */
   panelsForPreview?: Panel[];
 }
 

@@ -28,7 +28,6 @@ interface AddBlockMenuProps {
   availablePanels?: PickerPanel[];
   selectMenuModeOn?: boolean;
   containerLabel?: string;
-  /** Lets a delete that empties the list move focus to this trigger. */
   focusId?: string;
 }
 
@@ -93,8 +92,7 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
     );
     const leaving = e.shiftKey ? e.target === items[0] : e.target === items[items.length - 1];
     if (!leaving) return;
-    // The popup is portaled to the end of the page, so tabbing out of it would land somewhere
-    // unrelated to the trigger.
+    // The popup is portaled to the end of the page, so Tab would leave it somewhere unrelated.
     e.preventDefault();
     setIsOpen(false);
     triggerRef.current?.focus();
@@ -102,8 +100,7 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
 
   const handlePopupBlur = (e: ReactFocusEvent<HTMLDivElement>) => {
     const next = e.relatedTarget;
-    // A null relatedTarget is a click on non-focusable popup chrome or a window switch, not a
-    // deliberate move away.
+    // A null relatedTarget is a click on non-focusable popup chrome or a window switch.
     if (!(next instanceof Node)) return;
     if (dropdownRef.current?.contains(next) || triggerRef.current?.contains(next)) return;
     setIsOpen(false);

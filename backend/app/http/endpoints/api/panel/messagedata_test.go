@@ -75,6 +75,27 @@ func TestPanelMessageData_BuildEditData(t *testing.T) {
 		require.Equal(t, component.ComponentActionRow, data.Components[1].Type)
 	})
 
+	t.Run("v2 resolves a placed panel button in place", func(t *testing.T) {
+		tree := []component.Component{container(section(ownPanelBtn(), text("hello")))}
+		p := &panelMessageData{
+			UsesComponentsV2: true,
+			Components:       tree,
+			ButtonLabel:      "Open a ticket",
+			CustomId:         "open_ticket",
+			ButtonStyle:      component.ButtonStyleSuccess,
+			ButtonDisabled:   true,
+		}
+
+		data := p.buildEditData()
+
+		require.Len(t, data.Components, 1)
+		sent := data.Components[0].ComponentData.(component.Container).Components[0].ComponentData.(component.Section)
+		require.Equal(t, p.button(), sent.Accessory.ComponentData)
+
+		stored := tree[0].ComponentData.(component.Container).Components[0].ComponentData.(component.Section)
+		require.Equal(t, ownPanelCustomId, stored.Accessory.ComponentData.(component.Button).CustomId)
+	})
+
 	t.Run("classic is unchanged", func(t *testing.T) {
 		p := &panelMessageData{Title: "Support", ButtonLabel: "Open a ticket", CustomId: "open_ticket"}
 
@@ -195,6 +216,24 @@ func TestPanelMessageData_Send(t *testing.T) {
 		buttons := rowButtons(t, data.Components[1])
 		require.Len(t, buttons, 1)
 		require.Equal(t, "open_ticket", buttons[0].CustomId)
+	})
+
+	t.Run("v2 with the panel button placed", func(t *testing.T) {
+		sent := captureSends(t)
+
+		p := &panelMessageData{ChannelId: 7, UsesComponentsV2: true, Components: []component.Component{text("hello"), row(linkBtn("Docs", "https://example.com"), ownPanelBtn())}, ButtonLabel: "Open a ticket", CustomId: "open_ticket", ButtonStyle: component.ButtonStylePrimary}
+		_, err := p.send(&botcontext.BotContext{})
+		require.NoError(t, err)
+
+		data, body := createdMessage(t, *sent)
+		require.Len(t, data.Components, 2)
+		require.NotContains(t, body, ownPanelCustomId)
+
+		buttons := rowButtons(t, data.Components[1])
+		require.Len(t, buttons, 2)
+		require.Equal(t, "Docs", buttons[0].Label)
+		require.Equal(t, "open_ticket", buttons[1].CustomId)
+		require.Equal(t, "Open a ticket", buttons[1].Label)
 	})
 
 	t.Run("classic", func(t *testing.T) {

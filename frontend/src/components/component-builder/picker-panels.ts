@@ -1,4 +1,11 @@
+import { THIS_PANEL_ID } from "@/lib/component-tree";
+
 export type PickerPanel = { panel_id: number; label: string };
+
+export const THIS_PANEL_PICKER: PickerPanel = {
+  panel_id: THIS_PANEL_ID,
+  label: "This panel's button",
+};
 
 export function withOwnPanel(
   unplaced: PickerPanel[],

@@ -35,6 +35,10 @@ func panelBtn(id int) component.Component {
 	return component.BuildButton(component.Button{Label: "ignored", Style: component.ButtonStylePrimary, CustomId: fmt.Sprintf("panel:%d", id)})
 }
 
+func ownPanelBtn() component.Component {
+	return component.BuildButton(component.Button{Style: component.ButtonStylePrimary, CustomId: ownPanelCustomId})
+}
+
 func dropdownNode() component.Component {
 	return component.BuildSelectMenu(component.SelectMenu{CustomId: "multipanel", Placeholder: "ignored"})
 }
@@ -79,6 +83,8 @@ func separatorWithSpacing(spacing *int) component.Component {
 }
 
 var multiPanelRules = treeRules{validPanelIds: map[int]bool{1: true, 2: true, 3: true}, dropdownMode: true}
+
+var panelMessageRules = treeRules{ownPanel: true}
 
 func TestValidateComponentTree(t *testing.T) {
 	longAlt := func(n int) *string { return strPtr(strings.Repeat("a", n)) }
@@ -222,6 +228,11 @@ func TestValidateComponentTree(t *testing.T) {
 		{name: "panel marker with a sign", tree: []component.Component{row(component.BuildButton(component.Button{Style: component.ButtonStylePrimary, CustomId: "panel:+1"}))}, rules: multiPanelRules, wantErr: "Button"},
 		{name: "panel marker with id zero", tree: []component.Component{row(component.BuildButton(component.Button{Style: component.ButtonStylePrimary, CustomId: "panel:0"}))}, rules: multiPanelRules, wantErr: "Button"},
 		{name: "panel marker with an overflowing id", tree: []component.Component{row(component.BuildButton(component.Button{Style: component.ButtonStylePrimary, CustomId: "panel:99999999999999999999"}))}, rules: multiPanelRules, wantErr: "Button"},
+		{name: "own panel button in a row", tree: []component.Component{row(linkBtn("Go", "https://example.com"), ownPanelBtn())}, rules: panelMessageRules},
+		{name: "own panel button beside a section", tree: []component.Component{container(section(ownPanelBtn(), text("a")))}, rules: panelMessageRules},
+		{name: "own panel button placed twice", tree: []component.Component{row(ownPanelBtn()), section(ownPanelBtn(), text("a"))}, rules: panelMessageRules, wantErr: "only be placed once"},
+		{name: "own panel button outside a panel message", tree: []component.Component{row(ownPanelBtn())}, wantErr: "Button"},
+		{name: "another panel in a panel message", tree: []component.Component{row(panelBtn(1))}, rules: panelMessageRules, wantErr: "Panel button"},
 		{name: "bare button outside a row", tree: []component.Component{linkBtn("Go", "https://example.com")}, wantErr: "action row"},
 
 		{name: "placed dropdown", tree: []component.Component{row(dropdownNode())}, rules: multiPanelRules},
@@ -272,7 +283,14 @@ func TestValidateComponentTree_Result(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, map[int]bool{1: true, 3: true}, result.placed)
 	require.True(t, result.dropdownUsed)
+	require.False(t, result.ownPlaced)
 	require.Equal(t, 10, result.count)
+
+	result, err = validateComponentTree([]component.Component{section(ownPanelBtn(), text("a"))}, panelMessageRules)
+	require.NoError(t, err)
+	require.True(t, result.ownPlaced)
+	require.Empty(t, result.placed)
+	require.Equal(t, 3, result.count)
 }
 
 func TestParsePanelPlacement(t *testing.T) {

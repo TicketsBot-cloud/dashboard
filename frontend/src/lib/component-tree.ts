@@ -26,6 +26,8 @@ const ButtonStyle = {
 // The backend resolves these placeholder custom IDs into the real panel buttons and dropdown.
 const PANEL_CUSTOM_ID_PREFIX = "panel:";
 const PANEL_SELECT_CUSTOM_ID = "multipanel";
+// A new panel has no id yet.
+export const THIS_PANEL_ID = 0;
 
 export const MAX_COMPONENTS = 40;
 export const MAX_TEXT_CHARACTERS = 4000;

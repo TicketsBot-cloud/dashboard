@@ -110,7 +110,7 @@ const AddBlockMenu: FC<AddBlockMenuProps> = ({
 
   const layoutTypes = LAYOUT_TYPES.filter((t) => {
     if (exclude.includes(t)) return false;
-    if (t === "panel_select" && availablePanels === undefined) return false;
+    if (t === "panel_select" && selectMenuModeOn === undefined) return false;
     return true;
   });
   const contentTypes = CONTENT_TYPES.filter((t) => !exclude.includes(t));

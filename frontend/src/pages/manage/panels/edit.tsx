@@ -60,8 +60,11 @@ import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 import ComponentsV2Section from "@/components/component-builder/ComponentsV2Section";
+import { THIS_PANEL_PICKER } from "@/components/component-builder/picker-panels";
 import {
   PANEL_MESSAGE_RESERVED,
+  THIS_PANEL_ID,
+  getPlacedPanelIds,
   fromApiComponents,
   toApiComponents,
   validateComponentTree,
@@ -256,6 +259,8 @@ const EditPanelsPage: FC = () => {
 
   const formatToggleShown =
     builderEnabled === true || storedV2.message || panel.message_uses_components_v2;
+  const thisPanelPlaced = getPlacedPanelIds(messageTree).has(THIS_PANEL_ID);
+  const messageReserved = thisPanelPlaced ? 0 : PANEL_MESSAGE_RESERVED;
 
   const messageClassicSource: ClassicConversionSource = {
     title: panel.title,
@@ -317,7 +322,7 @@ const EditPanelsPage: FC = () => {
   const invalidWelcomeMessageUrls = welcomeIsV2 ? [] : collectEmbedUrlErrors(panel.welcome_message);
   const componentTreeInvalid =
     (panel.message_uses_components_v2 &&
-      validateComponentTree(messageTree, { reserved: PANEL_MESSAGE_RESERVED }).length > 0) ||
+      validateComponentTree(messageTree, { reserved: messageReserved }).length > 0) ||
     (welcomeIsV2 &&
       validateComponentTree(welcomeTree, {
         reserved: welcomeReservedCount,
@@ -398,8 +403,10 @@ const EditPanelsPage: FC = () => {
             classicSource={messageClassicSource}
             title="Panel Properties"
             previewTitle="Panel Preview"
-            reserved={PANEL_MESSAGE_RESERVED}
-            reservedNote="Some space is kept for the open-ticket button."
+            reserved={messageReserved}
+            reservedNote={
+              thisPanelPlaced ? undefined : "Some space is kept for the open-ticket button."
+            }
             toggleNote={
               !storedV2.message && panel.message_uses_components_v2 ? (
                 <p className="text-xs text-gray-400 mt-1">
@@ -407,12 +414,19 @@ const EditPanelsPage: FC = () => {
                 </p>
               ) : null
             }
+            placement={{
+              availablePanels: thisPanelPlaced ? [] : [THIS_PANEL_PICKER],
+              allPanels: [THIS_PANEL_PICKER],
+              unplacedPanelCount: thisPanelPlaced ? 0 : 1,
+              conversionReserved: PANEL_MESSAGE_RESERVED,
+            }}
             preview={
               <PanelPreview
                 type="panel"
-                data={{ panel, buttons: [panel] }}
+                data={{ panel, buttons: thisPanelPlaced ? [] : [panel] }}
                 messageMode="components_v2"
                 componentTree={messageTree}
+                panelsForPreview={[{ ...panel, panel_id: THIS_PANEL_ID }]}
               />
             }
           />

@@ -23,7 +23,7 @@ import {
   type V2TextChild,
 } from "@/lib/component-tree";
 import PanelButtonTag from "./PanelButtonTag";
-import type { PickerPanel } from "./picker-panels";
+import { THIS_PANEL_PICKER, type PickerPanel } from "./picker-panels";
 
 interface SectionEditorProps {
   value: V2Section;
@@ -147,9 +147,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
               visuallyDisabled={availablePanels.length === 0}
               aria-describedby={availablePanels.length === 0 ? hintId : undefined}
               title={
-                availablePanels.length === 0
-                  ? "Every panel is already placed as a button"
-                  : undefined
+                availablePanels.length === 0 ? "Every panel button is already placed" : undefined
               }
               onClick={() => {
                 const panelId = availablePanels[0]?.panel_id;
@@ -162,7 +160,7 @@ const SectionEditor: FC<SectionEditorProps> = ({
           )}
           {availablePanels !== undefined && availablePanels.length === 0 && (
             <span id={hintId} hidden>
-              Every panel is already placed as a button
+              Every panel button is already placed
             </span>
           )}
         </div>
@@ -272,25 +270,31 @@ const SectionEditor: FC<SectionEditorProps> = ({
         <div ref={accessoryRef} className="p-3 rounded bg-gray-900/40 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 flex items-center gap-2">
-              <Select
-                className="flex-1"
-                label="Ticket panel"
-                hideLabel
-                placeholder="Select a panel..."
-                value={String(panelButtonAccessory.panel_id)}
-                options={(availablePanels ?? []).map((p) => ({
-                  key: String(p.panel_id),
-                  label: p.label,
-                }))}
-                onChange={(key) => {
-                  if (key === null) return;
-                  onChange({
-                    ...value,
-                    accessory: { ...panelButtonAccessory, panel_id: Number(key) },
-                  });
-                }}
+              {panelButtonAccessory.panel_id === THIS_PANEL_PICKER.panel_id ? (
+                <span className="flex-1 text-sm text-gray-200">{THIS_PANEL_PICKER.label}</span>
+              ) : (
+                <Select
+                  className="flex-1"
+                  label="Ticket panel"
+                  hideLabel
+                  placeholder="Select a panel..."
+                  value={String(panelButtonAccessory.panel_id)}
+                  options={(availablePanels ?? []).map((p) => ({
+                    key: String(p.panel_id),
+                    label: p.label,
+                  }))}
+                  onChange={(key) => {
+                    if (key === null) return;
+                    onChange({
+                      ...value,
+                      accessory: { ...panelButtonAccessory, panel_id: Number(key) },
+                    });
+                  }}
+                />
+              )}
+              <PanelButtonTag
+                thisPanel={panelButtonAccessory.panel_id === THIS_PANEL_PICKER.panel_id}
               />
-              <PanelButtonTag />
             </div>
             <Button
               variant="ghost"

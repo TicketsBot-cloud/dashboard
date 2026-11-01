@@ -29,7 +29,7 @@ interface PlacementProps {
   allPanels: PickerPanel[];
   unplacedPanelCount: number;
   conversionReserved: number;
-  selectMenuModeOn: boolean;
+  selectMenuModeOn?: boolean;
 }
 
 interface ComponentsV2SectionProps {

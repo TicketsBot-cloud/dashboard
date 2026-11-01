@@ -771,8 +771,12 @@ func validateMessageComponents(ctx PanelValidationContext) validation.Validation
 			return validation.NewInvalidInputError(componentsV2PremiumMessage)
 		}
 
-		_, err := validateComponentTree(ctx.Data.MessageComponents, treeRules{reserved: panelMessageReserved})
-		return err
+		result, err := validateComponentTree(ctx.Data.MessageComponents, treeRules{ownPanel: true})
+		if err != nil || result.ownPlaced {
+			return err
+		}
+
+		return checkComponentBudget(result.count, panelMessageReserved)
 	}
 }
 

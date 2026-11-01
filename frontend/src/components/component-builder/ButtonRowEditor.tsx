@@ -16,7 +16,7 @@ import {
   type V2ButtonRowButton,
 } from "@/lib/component-tree";
 import PanelButtonTag from "./PanelButtonTag";
-import { withOwnPanel, type PickerPanel } from "./picker-panels";
+import { THIS_PANEL_PICKER, withOwnPanel, type PickerPanel } from "./picker-panels";
 
 interface ButtonRowEditorProps {
   value: V2ButtonRow;
@@ -123,7 +123,7 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
                     }
                     title={
                       !isPanelMode && noneUnplaced
-                        ? "Every panel is already placed as a button"
+                        ? "Every panel button is already placed"
                         : undefined
                     }
                     onClick={() => setButtonMode(i, "panel")}
@@ -133,7 +133,7 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
                   </Button>
                   {!isPanelMode && noneUnplaced && (
                     <span id={`${hintId}-${b.id}`} hidden>
-                      Every panel is already placed as a button
+                      Every panel button is already placed
                     </span>
                   )}
                 </div>
@@ -141,21 +141,25 @@ const ButtonRowEditor: FC<ButtonRowEditorProps> = ({
 
               {isPanelMode ? (
                 <div className="flex items-center gap-2">
-                  <Select
-                    className="flex-1"
-                    label={`Ticket panel for button ${i + 1}`}
-                    hideLabel
-                    placeholder="Select a panel..."
-                    value={String(b.panel_id)}
-                    options={panelOptions.map((p) => ({
-                      key: String(p.panel_id),
-                      label: p.label,
-                    }))}
-                    onChange={(key) => {
-                      if (key !== null) setPanelId(i, Number(key));
-                    }}
-                  />
-                  <PanelButtonTag />
+                  {b.panel_id === THIS_PANEL_PICKER.panel_id ? (
+                    <span className="flex-1 text-sm text-gray-200">{THIS_PANEL_PICKER.label}</span>
+                  ) : (
+                    <Select
+                      className="flex-1"
+                      label={`Ticket panel for button ${i + 1}`}
+                      hideLabel
+                      placeholder="Select a panel..."
+                      value={String(b.panel_id)}
+                      options={panelOptions.map((p) => ({
+                        key: String(p.panel_id),
+                        label: p.label,
+                      }))}
+                      onChange={(key) => {
+                        if (key !== null) setPanelId(i, Number(key));
+                      }}
+                    />
+                  )}
+                  <PanelButtonTag thisPanel={b.panel_id === THIS_PANEL_PICKER.panel_id} />
                 </div>
               ) : (
                 <div className="grid gap-2 grid-cols-1 md:grid-cols-2">

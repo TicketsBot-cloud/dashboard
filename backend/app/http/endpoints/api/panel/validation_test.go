@@ -25,6 +25,8 @@ func TestValidateMessageComponents(t *testing.T) {
 		{name: "empty tree is allowed for the panel message", data: panelBody{MessageUsesComponentsV2: true}, paid: true},
 		{name: "38 components leave room for the open ticket row", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: texts(38)}, paid: true},
 		{name: "39 components do not", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: texts(39)}, paid: true, wantErr: "Too many components"},
+		{name: "a placed panel button needs no reserved row", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: append(texts(38), row(ownPanelBtn()))}, paid: true},
+		{name: "a placed panel button still counts", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: append(texts(39), row(ownPanelBtn()))}, paid: true, wantErr: "Too many components"},
 		{name: "panel placement is not available", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: []component.Component{row(panelBtn(1))}}, paid: true, wantErr: "Panel button"},
 		{name: "avatar placeholder is rejected as a gallery url", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: []component.Component{gallery(types.AvatarUrlPlaceholder)}}, paid: true, wantErr: "Media gallery"},
 		{name: "avatar placeholder is rejected as a thumbnail url", data: panelBody{MessageUsesComponentsV2: true, MessageComponents: []component.Component{section(thumb(types.AvatarUrlPlaceholder), text("a"))}}, paid: true, wantErr: "Thumbnail"},

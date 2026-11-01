@@ -29,6 +29,9 @@ const (
 	// Marks a panel placed in a multi-panel tree; replaced by the real panel button before sending.
 	panelPlacementPrefix = "panel:"
 
+	// A new panel has no id yet.
+	ownPanelCustomId = panelPlacementPrefix + "0"
+
 	panelDropdownCustomId = "multipanel"
 
 	panelMessageReserved       = 2
@@ -39,6 +42,7 @@ const (
 type treeRules struct {
 	validPanelIds          map[int]bool
 	dropdownMode           bool
+	ownPanel               bool
 	reserved               int
 	allowAvatarPlaceholder bool
 }
@@ -49,11 +53,13 @@ type treeValidator struct {
 	textLength   int
 	placed       map[int]bool
 	selectPlaced bool
+	ownPlaced    bool
 }
 
 type treeResult struct {
 	placed       map[int]bool
 	dropdownUsed bool
+	ownPlaced    bool
 	count        int
 }
 
@@ -70,7 +76,7 @@ func validateComponentTree(tree []component.Component, rules treeRules) (treeRes
 		return treeResult{}, validation.NewInvalidInputErrorf("Text displays contain %d characters in total (maximum %d)", v.textLength, maxTreeTextLength)
 	}
 
-	return treeResult{placed: v.placed, dropdownUsed: v.selectPlaced, count: v.count}, nil
+	return treeResult{placed: v.placed, dropdownUsed: v.selectPlaced, ownPlaced: v.ownPlaced, count: v.count}, nil
 }
 
 func checkComponentBudget(count, reserved int) error {
@@ -259,6 +265,15 @@ func (v *treeValidator) button(b component.Button) error {
 
 	if b.Url != nil || b.Style == component.ButtonStyleLink {
 		return v.linkButton(b)
+	}
+
+	if b.CustomId == ownPanelCustomId && v.rules.ownPanel {
+		if v.ownPlaced {
+			return validation.NewInvalidInputError("Panel button: can only be placed once")
+		}
+
+		v.ownPlaced = true
+		return nil
 	}
 
 	panelId, ok := parsePanelPlacement(b.CustomId)

@@ -140,15 +140,37 @@ func (p *panelMessageData) buildEmbed() *embed.Embed {
 	return e
 }
 
-func (p *panelMessageData) systemButton() component.Component {
-	return component.BuildActionRow(component.BuildButton(component.Button{
+func (p *panelMessageData) button() component.Button {
+	return component.Button{
 		Label:    p.ButtonLabel,
 		CustomId: p.CustomId,
 		Style:    p.ButtonStyle,
 		Emoji:    p.Emoji,
 		Url:      nil,
 		Disabled: p.ButtonDisabled,
-	}))
+	}
+}
+
+func (p *panelMessageData) systemButton() component.Component {
+	return component.BuildActionRow(component.BuildButton(p.button()))
+}
+
+func (p *panelMessageData) v2Components() []component.Component {
+	placed := false
+	tree := mapComponentTree(p.Components, func(c component.Component) (component.Component, bool) {
+		if b, ok := c.ComponentData.(component.Button); ok && b.Url == nil && b.CustomId == ownPanelCustomId {
+			placed = true
+			return component.BuildButton(p.button()), true
+		}
+
+		return c, true
+	})
+
+	if placed {
+		return tree
+	}
+
+	return append(tree, p.systemButton())
 }
 
 func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
@@ -160,7 +182,7 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 	if p.UsesComponentsV2 {
 		data = rest.CreateMessageData{
 			Flags:      message.SumFlags(message.FlagComponentsV2),
-			Components: append(append([]component.Component{}, p.Components...), p.systemButton()),
+			Components: p.v2Components(),
 		}
 	} else {
 		data = rest.CreateMessageData{
@@ -179,7 +201,7 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 
 func (p *panelMessageData) buildEditData() rest.EditMessageData {
 	if p.UsesComponentsV2 {
-		return v2EditData(append(append([]component.Component{}, p.Components...), p.systemButton()))
+		return v2EditData(p.v2Components())
 	}
 
 	return rest.EditMessageData{

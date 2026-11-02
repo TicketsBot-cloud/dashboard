@@ -1,15 +1,34 @@
 import type { FC } from "react";
 import DiscordContent from "./DiscordContent";
+import type { DiscordContentProps } from "./types";
 
 interface DiscordTextProps {
   content: string;
   raw?: boolean;
+  profile?: DiscordContentProps["profile"];
+  entities?: DiscordContentProps["entities"];
+  webhook?: boolean;
   className?: string;
 }
 
-const DiscordText: FC<DiscordTextProps> = ({ content, raw = false, className = "" }) => {
+const DiscordText: FC<DiscordTextProps> = ({
+  content,
+  raw = false,
+  profile,
+  entities,
+  webhook,
+  className = "",
+}) => {
   if (!raw) {
-    return <DiscordContent content={content} className={className} />;
+    return (
+      <DiscordContent
+        content={content}
+        profile={profile}
+        entities={entities}
+        webhook={webhook}
+        className={className}
+      />
+    );
   }
 
   if (!content.trim()) {

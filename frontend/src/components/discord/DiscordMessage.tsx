@@ -156,8 +156,7 @@ const DiscordMessage = memo(DiscordMessageComponent, (prevProps, nextProps) => {
   // `entities` has to be in here — the ticket view fills it in a second time
   // after the member fetch, and skipping it leaves mentions as raw <@id>.
   return (
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.message.content === nextProps.message.content &&
+    prevProps.message === nextProps.message &&
     prevProps.entities === nextProps.entities &&
     prevProps.compact === nextProps.compact &&
     prevProps.showTimestamp === nextProps.showTimestamp &&

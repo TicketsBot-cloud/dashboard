@@ -53,6 +53,42 @@ func TestValidateMessageComponents_VotingPremiumIsNotEnough(t *testing.T) {
 	require.ErrorContains(t, err, "premium")
 }
 
+func TestValidateCloseReasons(t *testing.T) {
+	reasons := func(list ...string) *database.PanelCloseReasons {
+		return &database.PanelCloseReasons{Reasons: list, AllowCustom: true}
+	}
+
+	many := make([]string, 26)
+	for i := range many {
+		many[i] = fmt.Sprintf("reason %d", i)
+	}
+
+	tests := []struct {
+		name    string
+		data    panelBody
+		wantErr string
+	}{
+		{name: "absent", data: panelBody{}},
+		{name: "presets", data: panelBody{CloseReasons: reasons("Resolved", "Duplicate")}},
+		{name: "100 emoji are 100 characters", data: panelBody{CloseReasons: reasons(strings.Repeat("😀", 100))}},
+		{name: "101 characters", data: panelBody{CloseReasons: reasons(strings.Repeat("a", 101))}, wantErr: "100 characters"},
+		{name: "null character", data: panelBody{CloseReasons: reasons("a\x00b")}, wantErr: "null characters"},
+		{name: "duplicates ignore case", data: panelBody{CloseReasons: reasons("Resolved", "resolved")}, wantErr: "Duplicate"},
+		{name: "26 presets", data: panelBody{CloseReasons: reasons(many...)}, wantErr: "25 close reasons"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateCloseReasons(PanelValidationContext{Data: tt.data})()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
 func TestValidateWelcomeMessageComponents(t *testing.T) {
 	tests := []struct {
 		name    string

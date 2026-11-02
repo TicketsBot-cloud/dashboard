@@ -508,7 +508,8 @@ export function splitOnHeadings(body: string): string[] {
     const lineStart = cursor;
     cursor += line.length + 1;
 
-    if (!isInsideFence(lineStart) && HEADING_RE.test(line)) {
+    // Splitting at an indented # would turn it into a heading.
+    if (!isInsideFence(lineStart) && line.startsWith("#") && HEADING_RE.test(line)) {
       const segment = body.slice(segmentStart, lineStart).replace(/\n$/, "");
       if (segment.trim()) segments.push(segment);
       segmentStart = lineStart;
@@ -539,6 +540,17 @@ function convertibleImageUrl(url: string | undefined, allowAvatarPlaceholder?: b
   return isSafeUrl(url) || (!!allowAvatarPlaceholder && url === AVATAR_PLACEHOLDER);
 }
 
+// Discord's heading rule drops a trailing # and a leading # marker; escaping and bold keep them.
+function classicTitleHeading(title: string): string {
+  const escaped = title.replace(/^(\s*)#/, "$1\\#");
+  const heading = `### ${escaped}`;
+  if (HEADING_RE.exec(heading)?.[2]?.trim() === escaped.trim() || escaped.includes("**")) {
+    return heading;
+  }
+
+  return `### **${escaped.trim()}**`;
+}
+
 export function convertClassicToComponentsV2(
   source: ClassicConversionSource,
   maxBlocks: number,
@@ -546,7 +558,7 @@ export function convertClassicToComponentsV2(
   const segments: string[] = [];
 
   if (source.title && source.title.trim().length > 0) {
-    segments.push(`### ${source.title}`);
+    segments.push(classicTitleHeading(source.title));
   }
 
   for (const segment of splitOnHeadings(source.body ?? "")) {

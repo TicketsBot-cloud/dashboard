@@ -6,6 +6,7 @@ import {
   MISSING_FIELD_CLASS,
   isBlank,
 } from "@/lib/field-validity";
+import { codePointMaxLength } from "@/lib/input-length";
 
 interface TextInputProps {
   value: string;
@@ -92,7 +93,7 @@ const TextInput: FC<TextInputProps> = (props) => {
           autoFocus={autoFocus}
           placeholder={placeholder}
           disabled={disabled}
-          maxLength={maxLength}
+          maxLength={maxLength === undefined ? undefined : codePointMaxLength(maxLength, value)}
           inputMode={inputMode}
           pattern={pattern}
           aria-describedby={

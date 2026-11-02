@@ -587,8 +587,8 @@ func validateCloseReasons(ctx PanelValidationContext) validation.ValidationFunc 
 				return validation.NewInvalidInputError("Close reasons must be 100 characters or fewer")
 			}
 
-			if len(reason) > 255 {
-				return validation.NewInvalidInputErrorf("Close reason \"%s\" is too long", reason)
+			if strings.ContainsRune(reason, 0) {
+				return validation.NewInvalidInputError("Close reasons cannot contain null characters")
 			}
 
 			for _, previous := range reasons[:i] {

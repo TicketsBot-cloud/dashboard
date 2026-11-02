@@ -1,6 +1,6 @@
 import type { Panel } from "@/types";
 import type { APIMessageTopLevelComponent } from "discord-api-types/v10";
-import { RE_HEADING } from "@/lib/discord-markdown";
+import { HEADING_RE } from "@/lib/discord-markdown/rules";
 import { intToColour } from "@/lib/colour";
 import { isSafeUrl } from "@/lib/url";
 import { AVATAR_PLACEHOLDER, previewAvatarUrl } from "@/lib/embed-avatar";
@@ -508,7 +508,7 @@ export function splitOnHeadings(body: string): string[] {
     const lineStart = cursor;
     cursor += line.length + 1;
 
-    if (!isInsideFence(lineStart) && RE_HEADING.test(line)) {
+    if (!isInsideFence(lineStart) && HEADING_RE.test(line)) {
       const segment = body.slice(segmentStart, lineStart).replace(/\n$/, "");
       if (segment.trim()) segments.push(segment);
       segmentStart = lineStart;

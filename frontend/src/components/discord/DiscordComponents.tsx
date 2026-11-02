@@ -115,7 +115,12 @@ const DiscordComponents: FC<DiscordComponentsProps> = ({
 
           case 10:
             return (
-              <DiscordContent key={index} content={component.content || ""} entities={entities} />
+              <DiscordContent
+                key={index}
+                content={component.content || ""}
+                entities={entities}
+                profile="textDisplay"
+              />
             );
 
           case 13:

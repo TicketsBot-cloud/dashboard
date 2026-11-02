@@ -542,7 +542,7 @@ function convertibleImageUrl(url: string | undefined, allowAvatarPlaceholder?: b
 
 // Discord's heading rule drops a trailing # and a leading # marker; escaping and bold keep them.
 function classicTitleHeading(title: string): string {
-  const escaped = title.replace(/^(\s*)#/, "$1\\#");
+  const escaped = title.replace(/^(\s*)(#{1,3})(?=\s|$)/, "$1\\$2");
   const heading = `### ${escaped}`;
   if (HEADING_RE.exec(heading)?.[2]?.trim() === escaped.trim() || escaped.includes("**")) {
     return heading;

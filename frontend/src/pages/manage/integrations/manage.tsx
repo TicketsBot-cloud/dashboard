@@ -295,8 +295,8 @@ const ManageIntegrationPage: FC = () => {
               label="Description"
               required
               placeholder="Let people know what your integration does"
-              value={(data.description ?? "").slice(0, 255)}
-              onChange={(v) => updateField("description", v.slice(0, 255))}
+              value={data.description ?? ""}
+              onChange={(v) => updateField("description", v)}
               max={255}
             />
           </div>

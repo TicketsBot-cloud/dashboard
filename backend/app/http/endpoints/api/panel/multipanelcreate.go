@@ -146,7 +146,12 @@ func validateDropdownLabels(panels []database.Panel, configs []panelConfiguratio
 		}
 
 		if label == "" {
-			return validation.NewInvalidInputErrorf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)
+			displayName := panel.Title
+			if panel.Name != nil && *panel.Name != "" {
+				displayName = *panel.Name
+			}
+
+			return validation.NewInvalidInputErrorf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", displayName)
 		}
 	}
 

@@ -78,6 +78,7 @@ type panelBody struct {
 	SupportCanView            bool                               `json:"support_can_view"`
 	SupportCanType            bool                               `json:"support_can_type"`
 	AutoClose                 PanelAutoCloseBody                 `json:"auto_close"`
+	CloseReasons              *database.PanelCloseReasons        `json:"close_reasons"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) panelMessageData {
@@ -145,6 +146,7 @@ func CreatePanel(c *gin.Context) {
 
 	// Apply defaults
 	ApplyPanelDefaults(&data)
+	normaliseCloseReasons(&data)
 
 	// Not in DefaultApplicators: that also runs on update, where an empty list means "delete
 	// every rule" rather than "unconfigured".
@@ -332,6 +334,7 @@ func CreatePanel(c *gin.Context) {
 		TeamIds:            data.Teams,              // Already validated
 		AccessControlRules: *data.AccessControlList, // Already validated
 		KBCategoryIds:      data.KBCategoryIds,      // Already validated
+		CloseReasons:       data.CloseReasons,
 	}
 
 	// insert role mention data
@@ -399,6 +402,7 @@ type panelCreateOptions struct {
 	TeamIds            []int
 	AccessControlRules []database.PanelAccessControlRule
 	KBCategoryIds      []int
+	CloseReasons       *database.PanelCloseReasons
 }
 
 func storePanel(ctx context.Context, panel database.Panel, options panelCreateOptions) (int, error) {
@@ -433,6 +437,12 @@ func storePanel(ctx context.Context, panel database.Panel, options panelCreateOp
 
 		if err := dbclient.Client.PanelKBCategories.SetWithTx(ctx, tx, panelId, options.KBCategoryIds); err != nil {
 			return err
+		}
+
+		if options.CloseReasons != nil {
+			if err := dbclient.Client.PanelCloseReasons.SetWithTx(ctx, tx, panelId, *options.CloseReasons); err != nil {
+				return err
+			}
 		}
 
 		return nil

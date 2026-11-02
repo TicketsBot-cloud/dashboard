@@ -14,6 +14,7 @@ import { WS_URL } from "@/lib/constants";
 import Collapsible from "@/components/Collapsible";
 import type {
   Message,
+  PanelCloseReasons,
   StrippedMessage,
   Tag,
   TicketMember,
@@ -25,6 +26,7 @@ import type {
 import MentionTextarea from "@/components/MentionTextarea";
 import NumberInput from "@/components/NumberInput";
 import TextInput from "@/components/TextInput";
+import CloseReasonSelect from "@/components/CloseReasonSelect";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import PremiumGate from "@/components/PremiumGate";
 import { faEyeSlash, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
@@ -147,6 +149,7 @@ const TicketViewPage: FC = () => {
 
   const [ticket, setTicket] = useState<TicketViewData | null>(null);
   const [panelTitle, setPanelTitle] = useState<string | null>(null);
+  const [closeReasons, setCloseReasons] = useState<PanelCloseReasons | undefined>(undefined);
   const [entities, setEntities] = useState<Transcript["entities"]>({
     users: {},
     channels: {},
@@ -188,6 +191,7 @@ const TicketViewPage: FC = () => {
       const response = await apiClient.tickets.getById(guildId, ticketId);
       setTicket(response.data.ticket);
       setPanelTitle(response.data.panel_title ?? null);
+      setCloseReasons(response.data.close_reasons);
 
       const missing = response.data.channel_missing ?? false;
       setChannelMissing(missing);
@@ -239,6 +243,7 @@ const TicketViewPage: FC = () => {
 
         setTicket(ticketRes.value.data.ticket);
         setPanelTitle(ticketRes.value.data.panel_title ?? null);
+        setCloseReasons(ticketRes.value.data.close_reasons);
 
         const restricted = ticketRes.value.data.content_restricted ?? false;
         setContentRestricted(restricted);
@@ -643,13 +648,24 @@ const TicketViewPage: FC = () => {
                   &amp; Deny buttons in Discord.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <TextInput
-                    label="Reason"
-                    placeholder="Reason (optional)"
-                    value={closeRequestReason}
-                    onChange={setCloseRequestReason}
-                    className="flex-1"
-                  />
+                  {closeReasons?.reasons.length ? (
+                    <CloseReasonSelect
+                      label="Reason"
+                      closeReasons={closeReasons}
+                      value={closeRequestReason}
+                      onChange={setCloseRequestReason}
+                      max={255}
+                      className="flex-1"
+                    />
+                  ) : (
+                    <TextInput
+                      label="Reason"
+                      placeholder="Reason (optional)"
+                      value={closeRequestReason}
+                      onChange={setCloseRequestReason}
+                      className="flex-1"
+                    />
+                  )}
                   <NumberInput
                     label="Auto-close delay (hours)"
                     value={closeRequestDelay}
@@ -672,12 +688,24 @@ const TicketViewPage: FC = () => {
 
           <Collapsible title="" subtitle="Close Ticket" defaultOpen={true}>
             <div className="flex flex-col sm:flex-row gap-2">
-              <TextInput
-                placeholder="Close reason (optional)"
-                value={closeReason}
-                onChange={setCloseReason}
-                className="flex-1"
-              />
+              {closeReasons?.reasons.length ? (
+                <CloseReasonSelect
+                  label="Close reason"
+                  hideLabel
+                  closeReasons={closeReasons}
+                  value={closeReason}
+                  onChange={setCloseReason}
+                  max={1024}
+                  className="flex-1"
+                />
+              ) : (
+                <TextInput
+                  placeholder="Close reason (optional)"
+                  value={closeReason}
+                  onChange={setCloseReason}
+                  className="flex-1"
+                />
+              )}
               <Button
                 variant="danger"
                 type="button"

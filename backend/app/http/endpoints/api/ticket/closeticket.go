@@ -61,11 +61,17 @@ func CloseTicket(c *gin.Context) {
 		return
 	}
 
+	reason, ok := resolveCloseReason(c, ticket, body.Reason)
+	if !ok {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr(closeReasonNotPredefined))
+		return
+	}
+
 	data := closerelay.TicketClose{
 		GuildId:  guildId,
 		TicketId: ticket.Id,
 		UserId:   userId,
-		Reason:   body.Reason,
+		Reason:   reason,
 	}
 
 	if err := closerelay.Publish(redis.Client.Client, data); err != nil {

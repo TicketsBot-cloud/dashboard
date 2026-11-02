@@ -7,6 +7,7 @@ import {
   guildKeys,
   useGuildEmojis,
   useGuildForms,
+  useGuildPanels,
   useGuildPremium,
 } from "@/hooks/queries/useGuild";
 import { useKBCategories } from "@/hooks/queries/useKB";
@@ -33,11 +34,13 @@ import DurationPicker from "@/components/DurationPicker";
 import SupportHoursForm from "@/components/SupportHoursForm";
 import AccessControlListEditor from "@/components/AccessControlListEditor";
 import EmbedFieldsEditor from "@/components/EmbedFieldsEditor";
+import CloseReasonsEditor from "@/components/CloseReasonsEditor";
 import DateTimePicker from "@/components/DateTimePicker";
 import Button from "@/components/Button";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
+import { DEFAULT_CLOSE_REASONS, findDuplicateCloseReasons } from "@/lib/close-reasons";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
 import { COMPONENTS_V2_BUILDER_FLAG, FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
@@ -96,6 +99,7 @@ const PanelsPage: FC = () => {
   const showBrandingFooter = !premiumWithVoting?.premium;
   const { data: kbCategories = [] } = useKBCategories(guildId);
   const { data: guildEmojis = [] } = useGuildEmojis(guildId, true);
+  const { data: panels = [] } = useGuildPanels(guildId);
   const [isLoadingClone, setIsLoadingClone] = useState(!!clonePanelId);
   const [ticketModeInfoOpen, setTicketModeInfoOpen] = useState(false);
   const [messageTree, setMessageTree] = useState<V2Component[]>([]);
@@ -194,6 +198,7 @@ const PanelsPage: FC = () => {
         role_id: guildId,
       },
     ],
+    close_reasons: { reasons: [], allow_custom: true },
   });
 
   const initialPanel = useRef(panel);
@@ -360,6 +365,7 @@ const PanelsPage: FC = () => {
         requireContent: true,
         allowAvatarPlaceholder: true,
       }).length > 0);
+  const closeReasons = panel.close_reasons ?? DEFAULT_CLOSE_REASONS;
   const hasMissingRequired =
     missingChannel ||
     missingCategory ||
@@ -373,7 +379,8 @@ const PanelsPage: FC = () => {
     invalidWelcomeMessageUrls.length > 0 ||
     componentTreeInvalid ||
     messageV2Blocked ||
-    welcomeV2Blocked;
+    welcomeV2Blocked ||
+    findDuplicateCloseReasons(closeReasons.reasons).size > 0;
 
   const v2UnavailableNote = (
     <div
@@ -1287,6 +1294,46 @@ const PanelsPage: FC = () => {
               />
             </div>
           </div>
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-col">
+              <span className="mb-1 text-white">Close Reasons</span>
+              <CloseReasonsEditor
+                reasons={closeReasons.reasons}
+                importPanels={panels}
+                onChange={(reasons) =>
+                  setPanel((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          close_reasons: {
+                            ...(prev.close_reasons ?? DEFAULT_CLOSE_REASONS),
+                            reasons,
+                          },
+                        }
+                      : prev,
+                  )
+                }
+              />
+            </div>
+            <Slider
+              label="Allow Custom Close Reasons"
+              value={closeReasons.allow_custom}
+              disabled={closeReasons.reasons.length === 0}
+              onChange={(e) =>
+                setPanel((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        close_reasons: {
+                          ...(prev.close_reasons ?? DEFAULT_CLOSE_REASONS),
+                          allow_custom: e,
+                        },
+                      }
+                    : prev,
+                )
+              }
+            />
+          </div>
 
           <div className="border-t border-gray-700 my-6"></div>
 
@@ -1548,7 +1595,11 @@ const PanelsPage: FC = () => {
                 }
               }
 
-              await queryClient.invalidateQueries({ queryKey: guildKeys.panels(guildId) });
+              await queryClient.cancelQueries({ queryKey: guildKeys.panels(guildId) });
+              await queryClient.invalidateQueries({
+                queryKey: guildKeys.panels(guildId),
+                refetchType: "none",
+              });
 
               initialPanel.current = panel;
               allowNavigation();

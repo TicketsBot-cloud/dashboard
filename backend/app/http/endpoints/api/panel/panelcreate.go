@@ -79,6 +79,7 @@ type panelBody struct {
 	SupportCanView            bool                               `json:"support_can_view"`
 	SupportCanType            bool                               `json:"support_can_type"`
 	AutoClose                 PanelAutoCloseBody                 `json:"auto_close"`
+	CloseReasons              *database.PanelCloseReasons        `json:"close_reasons"`
 
 	MessageUsesComponentsV2        bool                  `json:"message_uses_components_v2"`
 	MessageComponents              []component.Component `json:"message_components"`
@@ -157,6 +158,7 @@ func CreatePanel(c *gin.Context) {
 
 	// Apply defaults
 	ApplyPanelDefaults(&data)
+	normaliseCloseReasons(&data)
 
 	if data.MessageUsesComponentsV2 {
 		data.ImageUrl = validClassicUrlOrNil(data.ImageUrl)
@@ -391,6 +393,7 @@ func CreatePanel(c *gin.Context) {
 		TeamIds:            data.Teams,              // Already validated
 		AccessControlRules: *data.AccessControlList, // Already validated
 		KBCategoryIds:      data.KBCategoryIds,      // Already validated
+		CloseReasons:       data.CloseReasons,
 	}
 
 	// insert role mention data
@@ -459,6 +462,7 @@ type panelCreateOptions struct {
 	TeamIds            []int
 	AccessControlRules []database.PanelAccessControlRule
 	KBCategoryIds      []int
+	CloseReasons       *database.PanelCloseReasons
 }
 
 func storePanel(ctx context.Context, panel database.Panel, options panelCreateOptions) (int, error) {
@@ -493,6 +497,12 @@ func storePanel(ctx context.Context, panel database.Panel, options panelCreateOp
 
 		if err := dbclient.Client.PanelKBCategories.SetWithTx(ctx, tx, panelId, options.KBCategoryIds); err != nil {
 			return err
+		}
+
+		if options.CloseReasons != nil {
+			if err := dbclient.Client.PanelCloseReasons.SetWithTx(ctx, tx, panelId, *options.CloseReasons); err != nil {
+				return err
+			}
 		}
 
 		return nil

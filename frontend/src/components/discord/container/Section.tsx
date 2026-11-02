@@ -36,6 +36,7 @@ export default function Section({ textComponents = [], accessory = null, entitie
             key={index}
             content={textComp.content}
             entities={entities}
+            profile="textDisplay"
             className="text-[15px]"
           />
         ))}

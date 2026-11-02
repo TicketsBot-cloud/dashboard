@@ -90,11 +90,16 @@ func GetTicket(c *gin.Context) {
 	}
 
 	var panelTitle *string
+	closeReasons := database.DefaultPanelCloseReasons()
 	if ticket.PanelId != nil {
 		panel, err := dbclient.Client.Panel.GetById(c, *ticket.PanelId)
 		if err == nil {
 			label := panelLabel(panel)
 			panelTitle = &label
+		}
+
+		if reasons, err := dbclient.Client.PanelCloseReasons.Get(c, *ticket.PanelId); err == nil {
+			closeReasons = reasons
 		}
 	}
 
@@ -135,6 +140,7 @@ func GetTicket(c *gin.Context) {
 			"success":            true,
 			"ticket":             ticketData,
 			"panel_title":        panelTitle,
+			"close_reasons":      closeReasons,
 			"messages":           messages,
 			"content_restricted": contentRestricted,
 			"channel_missing":    channelMissing,

@@ -1,5 +1,6 @@
 import type { GuildChannel, GuildRole, Message, User } from "@/types";
 import type { APIEmbed, ButtonStyle } from "discord-api-types/v10";
+import type { MdProfile } from "@/lib/discord-markdown";
 
 export interface DiscordMessageProps {
   message: Message;
@@ -27,6 +28,7 @@ export interface DiscordEmbedProps {
     channels: Record<string, GuildChannel>;
     roles: Record<string, GuildRole>;
   };
+  legacy?: boolean;
   className?: string;
 }
 
@@ -37,6 +39,9 @@ export interface DiscordContentProps {
     channels: Record<string, GuildChannel>;
     roles: Record<string, GuildRole>;
   };
+  profile?: MdProfile;
+  legacy?: boolean;
+  webhook?: boolean;
   className?: string;
 }
 

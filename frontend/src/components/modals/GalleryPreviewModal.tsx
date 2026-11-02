@@ -6,6 +6,7 @@ import GalleryListingPreview, {
   listingHasMarkdown,
 } from "@/components/gallery/GalleryListingPreview";
 import { userAvatarUrl } from "@/lib/discord-cdn";
+import { useDiscordEmoji } from "@/lib/discord-emoji";
 import type { GallerySubmission } from "@/types";
 
 type PreviewView = "rendered" | "raw";
@@ -20,7 +21,9 @@ const PreviewBody: FC<{
   view: PreviewView;
   onViewChange: (view: PreviewView) => void;
 }> = ({ listing, view, onViewChange }) => {
-  if (!listingHasMarkdown(listing)) {
+  const emoji = useDiscordEmoji();
+
+  if (!listingHasMarkdown(listing, emoji)) {
     return (
       <div className="space-y-6">
         <GalleryListingPreview listing={listing} />

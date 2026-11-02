@@ -664,7 +664,7 @@ const AdminIntegrationsPage: FC = () => {
             <Button
               variant="secondary"
               onClick={handleUnapprove}
-              disabled={unapproving || unapproveReason.length > UNAPPROVE_MAX}
+              disabled={unapproving || [...unapproveReason].length > UNAPPROVE_MAX}
               isLoading={unapproving}
             >
               {unapproving ? "Unapproving..." : "Unapprove"}

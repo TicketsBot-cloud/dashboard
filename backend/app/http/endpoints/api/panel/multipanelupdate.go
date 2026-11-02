@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -13,9 +12,9 @@ import (
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v4"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
-	"github.com/ticketsbot-cloud/dashboard/backend/app/http/validation"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
@@ -33,7 +32,8 @@ func MultiPanelUpdate(c *gin.Context) {
 
 	// parse body
 	var data multiPanelCreateData
-	if err := c.ShouldBindJSON(&data); err != nil {
+	keys, err := bindJSONWithKeys(c, &data)
+	if err != nil {
 		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
@@ -64,6 +64,29 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
+	if err := data.keepStoredWhenAbsent(keys, multiPanel); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+		return
+	}
+
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
+		return
+	}
+
+	if _, ok := componentsV2Gate(c, userId, guildId, botContext, data.entersComponentsV2(multiPanel), data.UsesComponentsV2, nil, nil, "Failed to verify premium status"); !ok {
+		return
+	}
+
+	if data.UsesComponentsV2 {
+		data.Embed = classicEmbedForV2(data.Embed)
+		data.stripUnknownPlacements()
+	} else if data.Embed == nil {
+		c.JSON(400, utils.ErrorStr("An embed is required for classic messages."))
+		return
+	}
+
 	if err := validate.Struct(data); err != nil {
 		var validationErrors validator.ValidationErrors
 		if ok := errors.As(err, &validationErrors); !ok {
@@ -76,41 +99,23 @@ func MultiPanelUpdate(c *gin.Context) {
 		return
 	}
 
-	// validate body & get sub-panels
-	panels, err := data.doValidations(guildId)
+	name, err := normaliseMultiPanelName(data.Name)
 	if err != nil {
-		var validationError *validation.InvalidInputError
-		if errors.As(err, &validationError) {
-			c.JSON(400, utils.ErrorStr("%s", validationError.Error()))
-		} else {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-		}
+		respondValidationError(c, err, "Failed to update multi-panel")
 		return
 	}
 
-	// Validate labels for dropdown mode
+	// validate body & get sub-panels
+	panels, err := data.doValidations(guildId)
+	if err != nil {
+		respondValidationError(c, err, "Failed to update multi-panel")
+		return
+	}
+
 	if data.SelectMenu {
-		for _, panel := range panels {
-			var panelConfig *panelConfiguration
-			for _, cfg := range data.Panels {
-				if panel.PanelId == cfg.PanelId {
-					panelConfig = &cfg
-					break
-				}
-			}
-
-			var effectiveLabel string
-			if panelConfig != nil {
-				effectiveLabel = getEffectiveLabelForValidation(panel.ButtonLabel, panelConfig.CustomLabel)
-			} else {
-				effectiveLabel = panel.ButtonLabel
-			}
-
-			if effectiveLabel == "" {
-				formatted := fmt.Sprintf("Panel '%s' must have a label when using dropdown mode. Please add a custom label or ensure the panel has a button label.", panel.Title)
-				c.JSON(400, utils.ErrorStr("%s", formatted))
-				return
-			}
+		if err := validateDropdownLabels(panels, data.Panels); err != nil {
+			respondValidationError(c, err, "Failed to update multi-panel")
+			return
 		}
 	}
 
@@ -129,10 +134,8 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
-	// get bot context
-	botContext, err := botcontext.ContextForGuild(guildId)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to connect to Discord. Please try again later."))
+	if err := validateMultiPanelComponents(data); err != nil {
+		respondValidationError(c, err, "Failed to update multi-panel")
 		return
 	}
 
@@ -154,23 +157,15 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
+	if data.UsesComponentsV2 {
+		data.Components = normaliseComponentTree(data.Components)
+	}
+
 	messageData := data.IntoMessageData(footer)
 	var messageId uint64
 
-	// Check if channel changed
-	if multiPanel.ChannelId != data.ChannelId {
-		ctx, cancel := app.DefaultContext()
-		defer cancel()
-
-		if err := rest.DeleteMessage(ctx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
-			var unwrapped request.RestError
-			if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
-				return
-			}
-		}
-		cancel()
-
+	reposted := resendsMessage(multiPanel.ChannelId, data.ChannelId, multiPanel.UsesComponentsV2, data.UsesComponentsV2)
+	if reposted {
 		messageId, err = messageData.send(botContext, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
@@ -191,13 +186,8 @@ func MultiPanelUpdate(c *gin.Context) {
 		err = messageData.edit(botContext, multiPanel.MessageId, panelsWithCustom)
 		if err != nil {
 			var unwrapped request.RestError
-			// Gone (404/10008), or authored by a different bot and so uneditable (50005):
-			// delete the old message if we can (ignoring failure) and resend.
-			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005) {
-				delCtx, delCancel := app.DefaultContext()
-				_ = rest.DeleteMessage(delCtx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
-				delCancel()
-
+			if shouldRepost(err, !messageData.UsesComponentsV2, liveComponentsV2(botContext, multiPanel.ChannelId, multiPanel.MessageId)) {
+				reposted = true
 				messageId, err = messageData.send(botContext, panelsWithCustom)
 				if err != nil {
 					var unwrapped2 request.RestError
@@ -228,8 +218,25 @@ func MultiPanelUpdate(c *gin.Context) {
 		}
 	}
 
+	stored := false
+	defer func() {
+		if reposted && !stored {
+			discardMessage(botContext, data.ChannelId, messageId)
+		}
+	}()
+
 	// update DB
-	dbEmbed, dbEmbedFields := data.Embed.IntoDatabaseStruct()
+	componentsJSON, err := componentsToStore(data.UsesComponentsV2, data.Components, multiPanel.Components)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
+		return
+	}
+
+	dbEmbed := embedIntoDatabase(data.Embed)
+	if data.UsesComponentsV2 && dbEmbed == nil {
+		dbEmbed = multiPanel.Embed
+	}
+
 	updated := database.MultiPanel{
 		Id:                    multiPanel.Id,
 		MessageId:             messageId,
@@ -237,15 +244,38 @@ func MultiPanelUpdate(c *gin.Context) {
 		GuildId:               guildId,
 		SelectMenu:            data.SelectMenu,
 		SelectMenuPlaceholder: data.SelectMenuPlaceholder,
-		Embed: &database.CustomEmbedWithFields{
-			CustomEmbed: dbEmbed,
-			Fields:      dbEmbedFields,
-		},
+		Embed:                 dbEmbed,
+		UsesComponentsV2:      data.UsesComponentsV2,
+		Components:            componentsJSON,
+		Name:                  name,
 	}
 
-	if err = dbclient.Client.MultiPanels.Update(c, multiPanel.Id, updated); err != nil {
+	err = dbclient.Client.MultiPanels.BeginFunc(c, func(tx pgx.Tx) error {
+		if err := dbclient.Client.MultiPanels.UpdateWithTx(c, tx, multiPanel.Id, updated); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.MultiPanels.UpdateComponentsV2WithTx(c, tx, multiPanel.Id, updated.UsesComponentsV2, updated.Components); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.MultiPanels.SetNameWithTx(c, tx, multiPanel.Id, updated.Name); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update multi-panel"))
 		return
+	}
+
+	stored = true
+	if reposted {
+		ctx, cancel := app.DefaultContext()
+		_ = rest.DeleteMessage(ctx, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
+		cancel()
 	}
 
 	// TODO: one query for ACID purposes

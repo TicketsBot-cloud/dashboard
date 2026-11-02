@@ -58,16 +58,6 @@ func MultiPanelResend(ctx *gin.Context) {
 		return
 	}
 
-	// delete old message
-	// TODO: Use proper context
-	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
-		var unwrapped request.RestError
-		if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
-			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
-			return
-		}
-	}
-
 	footer, err := footerPolicyForGuild(ctx, guildId, botContext)
 	if err != nil {
 		ctx.JSON(500, utils.ErrorStr("Unable to verify premium status. Please try again."))
@@ -80,8 +70,23 @@ func MultiPanelResend(ctx *gin.Context) {
 		return
 	}
 
-	// send new message
 	messageData := multiPanelIntoMessageData(multiPanel, footer)
+	if messageData.rendersEmpty(panels) {
+		ctx.JSON(400, utils.ErrorStr("This multi-panel has no panels or blocks left to show."))
+		return
+	}
+
+	// delete old message
+	// TODO: Use proper context
+	if err := rest.DeleteMessage(context.Background(), botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId); err != nil {
+		var unwrapped request.RestError
+		if errors.As(err, &unwrapped) && !unwrapped.IsClientError() {
+			ctx.JSON(500, utils.ErrorStr("Failed to send message. Please try again."))
+			return
+		}
+	}
+
+	// send new message
 	messageId, err := messageData.send(botContext, panels)
 	if err != nil {
 		var unwrapped request.RestError

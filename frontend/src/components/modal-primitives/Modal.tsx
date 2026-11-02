@@ -20,6 +20,8 @@ export interface ModalProps {
   children: ReactNode;
   className?: string;
   ariaLabelledBy?: string;
+  ariaDescribedBy?: string;
+  role?: "dialog" | "alertdialog";
   initialFocusRef?: RefObject<HTMLElement | null>;
   hideCloseButton?: boolean;
 }
@@ -34,6 +36,8 @@ const Modal: FC<ModalProps> = ({
   children,
   className = "max-w-md",
   ariaLabelledBy,
+  ariaDescribedBy,
+  role = "dialog",
   initialFocusRef,
   hideCloseButton = false,
 }) => {
@@ -126,9 +130,10 @@ const Modal: FC<ModalProps> = ({
   return createPortal(
     <div
       className="fixed inset-0 z-modal flex items-center justify-center"
-      role="dialog"
+      role={role}
       aria-modal="true"
       aria-labelledby={ariaLabelledBy || labelId}
+      aria-describedby={ariaDescribedBy}
     >
       <div
         aria-hidden="true"

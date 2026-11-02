@@ -17,6 +17,7 @@ func ListPanels(c *gin.Context) {
 	type panelResponse struct {
 		PanelId           int                        `json:"panel_id"`
 		ChannelId         uint64                     `json:"channel_id,string"`
+		Name              string                     `json:"name"`
 		Title             string                     `json:"title"`
 		Colour            *int32                     `json:"colour"`
 		ButtonLabel       string                     `json:"button_label"`
@@ -42,7 +43,7 @@ func ListPanels(c *gin.Context) {
 
 	g.Go(func() error {
 		var err error
-		panels, err = dbclient.Client.Panel.GetByGuild(ctx, guildId)
+		panels, err = dbclient.Client.Panel.GetByGuildWithoutComponents(ctx, guildId)
 		return err
 	})
 
@@ -119,6 +120,11 @@ func ListPanels(c *gin.Context) {
 	for i, p := range panels {
 		hasSH := supportHoursSet[p.PanelId]
 
+		displayName := p.Title
+		if p.Name != nil && *p.Name != "" {
+			displayName = *p.Name
+		}
+
 		panelCloseReasons, ok := closeReasons[p.PanelId]
 		if !ok {
 			panelCloseReasons = database.DefaultPanelCloseReasons()
@@ -127,6 +133,7 @@ func ListPanels(c *gin.Context) {
 		wrapped[i] = panelResponse{
 			PanelId:           p.PanelId,
 			ChannelId:         p.ChannelId,
+			Name:              displayName,
 			Title:             p.Title,
 			Colour:            p.Colour,
 			ButtonLabel:       p.ButtonLabel,

@@ -6,6 +6,7 @@ import {
   MISSING_FIELD_CLASS,
   isBlank,
 } from "@/lib/field-validity";
+import { clampCodePoints, codePointMaxLength } from "@/lib/input-length";
 
 interface TextareaProps {
   value: string;
@@ -60,11 +61,11 @@ const Textarea: FC<TextareaProps> = (props) => {
           id={textareaId}
           className="w-full bg-gray-700 p-3 rounded resize-y h-50 focus:outline-none"
           value={safeValue}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(clampCodePoints(safeValue, e.target.value, max))}
           onBlur={onBlur}
           disabled={disabled}
           minLength={min}
-          maxLength={max}
+          maxLength={codePointMaxLength(max, safeValue)}
           placeholder={placeholder || ""}
           aria-invalid={error ? true : undefined}
           aria-required={required || undefined}

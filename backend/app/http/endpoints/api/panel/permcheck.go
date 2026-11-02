@@ -52,7 +52,7 @@ func PermCheckHandler(c *gin.Context) {
 
 	g1.Go(func() error {
 		var err error
-		panels, err = dbclient.Client.Panel.GetByGuild(ctx1, guildId)
+		panels, err = dbclient.Client.Panel.GetByGuildWithoutComponents(ctx1, guildId)
 		return err
 	})
 
@@ -126,9 +126,14 @@ func PermCheckHandler(c *gin.Context) {
 	for _, panel := range panels {
 		useThreads := panel.UseThreads
 
+		displayName := panel.Title
+		if panel.Name != nil && *panel.Name != "" {
+			displayName = *panel.Name
+		}
+
 		pr := panelPermResult{
 			PanelId:    panel.PanelId,
-			PanelTitle: panel.Title,
+			PanelTitle: displayName,
 			UseThreads: useThreads,
 			Channels:   make([]channelCheckResult, 0, 3),
 		}

@@ -13,8 +13,8 @@ import (
 )
 
 type usageResponse struct {
-	Metrics         database.GlobalUsageMetrics   `json:"metrics"`
-	TicketsPerDay   []database.GlobalTicketsPerDay `json:"tickets_per_day"`
+	Metrics       database.GlobalUsageMetrics    `json:"metrics"`
+	TicketsPerDay []database.GlobalTicketsPerDay `json:"tickets_per_day"`
 }
 
 func GetUsageHandler(ctx *gin.Context) {

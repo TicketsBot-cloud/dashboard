@@ -17,14 +17,14 @@ const (
 )
 
 type referralResponse struct {
-	Id           string  `json:"id"`
-	ReferredTier string  `json:"referred_tier"`
-	PurchasedDays int    `json:"purchased_days"`
-	CreditDays   int     `json:"credit_days"`
-	Status       string  `json:"status"`
-	CreatedAt    string  `json:"created_at"`
-	RedeemableAt string  `json:"redeemable_at"`
-	RedeemedAt   *string `json:"redeemed_at"`
+	Id            string  `json:"id"`
+	ReferredTier  string  `json:"referred_tier"`
+	PurchasedDays int     `json:"purchased_days"`
+	CreditDays    int     `json:"credit_days"`
+	Status        string  `json:"status"`
+	CreatedAt     string  `json:"created_at"`
+	RedeemableAt  string  `json:"redeemable_at"`
+	RedeemedAt    *string `json:"redeemed_at"`
 }
 
 type referralsListResponse struct {

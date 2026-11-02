@@ -9,6 +9,7 @@ import (
 func MultiPanelList(ctx *gin.Context) {
 	type multiPanelResponse struct {
 		Id    int     `json:"id"`
+		Name  string  `json:"name"`
 		Title *string `json:"title"`
 	}
 
@@ -25,10 +26,22 @@ func MultiPanelList(ctx *gin.Context) {
 		var title *string
 		if multiPanel.Embed != nil {
 			title = multiPanel.Embed.Title
+		} else if multiPanel.UsesComponentsV2 {
+			t := "Components v2 message"
+			title = &t
+		}
+
+		displayName := "Untitled multi-panel"
+		if title != nil && *title != "" {
+			displayName = *title
+		}
+		if multiPanel.Name != nil && *multiPanel.Name != "" {
+			displayName = *multiPanel.Name
 		}
 
 		data[i] = multiPanelResponse{
 			Id:    multiPanel.Id,
+			Name:  displayName,
 			Title: title,
 		}
 	}

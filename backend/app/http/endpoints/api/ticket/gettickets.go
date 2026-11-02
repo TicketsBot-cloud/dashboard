@@ -111,7 +111,7 @@ func GetTickets(c *gin.Context) {
 		return
 	}
 
-	panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+	panels, err := dbclient.Client.Panel.GetByGuildWithoutComponents(c, guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panels for guild from database"))
 		return
@@ -119,7 +119,7 @@ func GetTickets(c *gin.Context) {
 
 	panelTitles := make(map[int]string)
 	for _, panel := range panels {
-		panelTitles[panel.PanelId] = panel.Title
+		panelTitles[panel.PanelId] = panelLabel(panel)
 	}
 
 	// Get user objects
@@ -205,7 +205,7 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		}
 	}
 
-	panels, err := dbclient.Client.Panel.GetByGuild(c, guildId)
+	panels, err := dbclient.Client.Panel.GetByGuildWithoutComponents(c, guildId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to fetch panels for guild from database"))
 		return
@@ -213,7 +213,7 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 
 	panelTitles := make(map[int]string)
 	for _, panel := range panels {
-		panelTitles[panel.PanelId] = panel.Title
+		panelTitles[panel.PanelId] = panelLabel(panel)
 	}
 
 	// Get user objects
@@ -265,6 +265,14 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		Labels:        labelsMap,
 		SelfId:        userId,
 	})
+}
+
+func panelLabel(panel database.Panel) string {
+	if panel.Name != nil && *panel.Name != "" {
+		return *panel.Name
+	}
+
+	return panel.Title
 }
 
 func fetchLabelsForTickets(c *gin.Context, guildId uint64, ticketIds []int) (map[int][]ticketLabelData, error) {

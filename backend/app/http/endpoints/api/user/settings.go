@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	verificationCodeLength = 6
-	verificationCodeExpiry = 15 * time.Minute
+	verificationCodeLength  = 6
+	verificationCodeExpiry  = 15 * time.Minute
 	maxVerificationAttempts = 5
 )
 
@@ -41,10 +41,10 @@ func hmacCode(code string) string {
 }
 
 type settingsResponse struct {
-	Email         *string                            `json:"email"`
-	EmailVerified bool                               `json:"email_verified"`
-	Preferences   []notificationPreferenceResponse   `json:"notification_preferences"`
-	Categories    []notify.CategoryInfo              `json:"notification_categories"`
+	Email         *string                          `json:"email"`
+	EmailVerified bool                             `json:"email_verified"`
+	Preferences   []notificationPreferenceResponse `json:"notification_preferences"`
+	Categories    []notify.CategoryInfo            `json:"notification_categories"`
 }
 
 type notificationPreferenceResponse struct {

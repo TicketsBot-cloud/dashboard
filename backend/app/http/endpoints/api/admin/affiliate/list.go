@@ -19,21 +19,21 @@ const (
 )
 
 type affiliateCodeEntry struct {
-	Id                  string         `json:"id"`
-	UserId              string         `json:"user_id"`
-	Username            string         `json:"username"`
-	AvatarUrl           string         `json:"avatar_url,omitempty"`
-	Code                string         `json:"code"`
-	PolarDiscountId     *string        `json:"polar_discount_id"`
-	Status              string         `json:"status"`
-	DiscountBasisPoints int            `json:"discount_basis_points"`
-	CreditPercentage    *int           `json:"credit_percentage"`
-	CreatedAt           string         `json:"created_at"`
-	ApprovedAt          *string        `json:"approved_at"`
-	ApprovedBy          *string        `json:"approved_by"`
-	RevokedAt           *string        `json:"revoked_at"`
-	TotalReferrals      int `json:"total_referrals"`
-	RedeemedCredits     int `json:"redeemed_credits"`
+	Id                  string  `json:"id"`
+	UserId              string  `json:"user_id"`
+	Username            string  `json:"username"`
+	AvatarUrl           string  `json:"avatar_url,omitempty"`
+	Code                string  `json:"code"`
+	PolarDiscountId     *string `json:"polar_discount_id"`
+	Status              string  `json:"status"`
+	DiscountBasisPoints int     `json:"discount_basis_points"`
+	CreditPercentage    *int    `json:"credit_percentage"`
+	CreatedAt           string  `json:"created_at"`
+	ApprovedAt          *string `json:"approved_at"`
+	ApprovedBy          *string `json:"approved_by"`
+	RevokedAt           *string `json:"revoked_at"`
+	TotalReferrals      int     `json:"total_referrals"`
+	RedeemedCredits     int     `json:"redeemed_credits"`
 }
 
 type listResponse struct {

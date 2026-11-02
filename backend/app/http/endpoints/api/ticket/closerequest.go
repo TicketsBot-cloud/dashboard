@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/TicketsBot-cloud/common/model"
 	dbmodel "github.com/TicketsBot-cloud/database"
@@ -45,7 +46,7 @@ func CloseRequest(c *gin.Context) {
 		return
 	}
 
-	if body.Reason != nil && len(*body.Reason) > 255 {
+	if body.Reason != nil && utf8.RuneCountInString(*body.Reason) > 255 {
 		c.JSON(http.StatusBadRequest, utils.ErrorStr("Reason must be 255 characters or fewer"))
 		return
 	}

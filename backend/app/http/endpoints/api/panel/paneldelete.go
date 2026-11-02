@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -48,7 +47,7 @@ func DeletePanel(c *gin.Context) {
 	}
 
 	if panel.PanelId == 0 {
-		c.JSON(404, utils.ErrorStr(fmt.Sprintf("Panel not found: %d", panelId)))
+		c.JSON(404, utils.ErrorStr("Panel not found: %d", panelId))
 		return
 	}
 
@@ -123,6 +122,11 @@ func DeletePanel(c *gin.Context) {
 
 		messageData := multiPanelIntoMessageData(multiPanel, footer)
 		messageId, err := messageData.send(botContext, panels)
+		if errors.Is(err, errEmptyMultiPanel) {
+			_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
+			continue
+		}
+
 		if err != nil {
 			var unwrapped request.RestError
 			if !errors.As(err, &unwrapped) || !unwrapped.IsClientError() {

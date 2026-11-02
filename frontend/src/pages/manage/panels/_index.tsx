@@ -86,7 +86,7 @@ const PanelsPage: FC = () => {
         value: (p) => selectedGuild?.channels?.find((c) => c.id == p.channel_id)?.name ?? null,
         defaultDir: "asc",
       },
-      title: { value: (p) => p.title, defaultDir: "asc" },
+      title: { value: (p) => p.name || p.title, defaultDir: "asc" },
       status: { value: (p) => statusRank(p), defaultDir: "asc" },
     }),
     [selectedGuild],
@@ -292,7 +292,7 @@ const PanelsPage: FC = () => {
                       <Table.Cell>
                         #{selectedGuild?.channels?.find((c) => c.id == panel.channel_id)?.name}
                       </Table.Cell>
-                      <Table.Cell>{panel.title}</Table.Cell>
+                      <Table.Cell>{panel.name || panel.title || "Untitled panel"}</Table.Cell>
                       <Table.Cell className="px-4 py-3 hidden sm:table-cell">
                         {panel.force_disabled ? (
                           <span
@@ -376,7 +376,7 @@ const PanelsPage: FC = () => {
                                     isOpen: true,
                                     type: "panel",
                                     id: panel.panel_id.toString(),
-                                    name: panel.title,
+                                    name: panel.name || panel.title,
                                   }),
                               },
                             ]}
@@ -425,7 +425,7 @@ const PanelsPage: FC = () => {
                 ) : (
                   multiPanels.map((panel) => (
                     <Table.Row key={panel.id}>
-                      <Table.Cell>{panel.title}</Table.Cell>
+                      <Table.Cell>{panel.name || panel.title || "Untitled multi-panel"}</Table.Cell>
 
                       <Table.Cell>
                         <div className="flex justify-end">
@@ -462,7 +462,7 @@ const PanelsPage: FC = () => {
                                     isOpen: true,
                                     type: "multipanel",
                                     id: panel.id.toString(),
-                                    name: panel.title || "Multi-panel",
+                                    name: panel.name || panel.title || "Multi-panel",
                                   }),
                               },
                             ]}
@@ -585,7 +585,12 @@ const PanelsPage: FC = () => {
         <GallerySubmitModal
           itemType="panel"
           itemId={gallerySubmitPanel?.panel_id ?? 0}
-          itemTitle={gallerySubmitPanel?.title ?? galleryEditSubmission?.name ?? ""}
+          itemTitle={
+            gallerySubmitPanel?.name ||
+            gallerySubmitPanel?.title ||
+            galleryEditSubmission?.name ||
+            ""
+          }
           guildId={guildId}
           open={!!(gallerySubmitPanel || galleryEditSubmission)}
           onClose={() => {

@@ -286,7 +286,6 @@ const PanelsPage: FC = () => {
     );
   }
 
-  const formatToggleShown = builderEnabled === true || panel.message_uses_components_v2;
   const thisPanelPlaced = getPlacedPanelIds(messageTree).has(THIS_PANEL_ID);
   const messageReserved = thisPanelPlaced ? 0 : PANEL_MESSAGE_RESERVED;
 
@@ -407,34 +406,20 @@ const PanelsPage: FC = () => {
         featureLabel="Panel changes"
         existingLabel="panels"
       />
-      <div className="mb-4 bg-gray-800 rounded-xl p-4 grid gap-4 grid-cols-1 md:grid-cols-2">
-        <div>
+      <div className="mb-4 bg-gray-800 rounded-xl p-4">
+        <div className="px-4">
           <TextInput
             label="Panel Name"
             descriptionId="panel-name-help"
-            placeholder="e.g. Billing support"
+            placeholder={panel.title || "e.g. Billing support"}
             value={panel.name || ""}
             onChange={(e) => setPanel((prev) => (prev ? { ...prev, name: e } : prev))}
             maxLength={100}
             showCount
           />
           <p id="panel-name-help" className="text-xs text-gray-400 mt-1">
-            Only shown in the dashboard.
-          </p>
-        </div>
-        <div>
-          <TextInput
-            label="Panel Title"
-            descriptionId="panel-title-help"
-            placeholder="e.g. Open a ticket"
-            value={panel.title || ""}
-            onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
-            maxLength={80}
-            showCount
-          />
-          <p id="panel-title-help" className="text-xs text-gray-400 mt-1">
-            Shown as the embed title{formatToggleShown ? " in Classic mode" : ""}, and used by
-            /open, the ticket channel topic and the thread notice.
+            Used in /open, the ticket channel topic and the thread notice. Defaults to the panel
+            title.
           </p>
         </div>
       </div>
@@ -482,7 +467,15 @@ const PanelsPage: FC = () => {
           {!panel.message_uses_components_v2 && (
             <div className="pb-2">
               <span className="text-xl font-semibold">Panel Properties</span>
-              <div className="pt-2">
+              <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+                <TextInput
+                  label="Panel Title"
+                  placeholder="e.g. Open a ticket"
+                  value={panel.title || ""}
+                  onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
+                  maxLength={80}
+                  showCount
+                />
                 <ColourSelect
                   nullable
                   clearable

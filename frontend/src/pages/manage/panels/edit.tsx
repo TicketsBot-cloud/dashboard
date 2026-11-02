@@ -43,7 +43,7 @@ import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timest
 import { panelEmoteName, preparePanelForApi } from "@/lib/panel-payload";
 import { DEFAULT_CLOSE_REASONS, findDuplicateCloseReasons } from "@/lib/close-reasons";
 import { scrollToFirstMissingField } from "@/lib/scroll-to-missing";
-import { COMPONENTS_V2_BUILDER_FLAG, FEATURE_PANELS } from "@/lib/feature-flags";
+import { FEATURE_PANELS } from "@/lib/feature-flags";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import PremiumGate from "@/components/PremiumGate";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -58,7 +58,6 @@ import {
 import TicketModeInfoModal from "@/components/modals/TicketModeInfoModal";
 import { useMutationGuard } from "@/hooks/useMutationGuard";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
-import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
@@ -134,7 +133,6 @@ const EditPanelsPage: FC = () => {
   const { isSubmitting, guard } = useMutationGuard();
   const hasLoadedOnceRef = useRef(false);
   const [storedV2, setStoredV2] = useState({ message: false, welcome: false });
-  const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const { locked: polledLock } = useFeatureLock(FEATURE_PANELS, guildId);
   const [forcedLock, setForcedLock] = useState(false);
@@ -265,8 +263,6 @@ const EditPanelsPage: FC = () => {
     }
   };
 
-  const formatToggleShown =
-    builderEnabled === true || storedV2.message || panel.message_uses_components_v2;
   const thisPanelPlaced = getPlacedPanelIds(messageTree).has(THIS_PANEL_ID);
   const messageReserved = thisPanelPlaced ? 0 : PANEL_MESSAGE_RESERVED;
 
@@ -363,34 +359,20 @@ const EditPanelsPage: FC = () => {
         featureLabel="Panel changes"
         existingLabel="panels"
       />
-      <div className="mb-4 bg-gray-800 rounded-xl p-4 grid gap-4 grid-cols-1 md:grid-cols-2">
-        <div>
+      <div className="mb-4 bg-gray-800 rounded-xl p-4">
+        <div className="px-4">
           <TextInput
             label="Panel Name"
             descriptionId="panel-name-help"
-            placeholder="e.g. Billing support"
+            placeholder={panel.title || "e.g. Billing support"}
             value={panel.name || ""}
             onChange={(e) => setPanel((prev) => (prev ? { ...prev, name: e } : prev))}
             maxLength={100}
             showCount
           />
           <p id="panel-name-help" className="text-xs text-gray-400 mt-1">
-            Only shown in the dashboard.
-          </p>
-        </div>
-        <div>
-          <TextInput
-            label="Panel Title"
-            descriptionId="panel-title-help"
-            placeholder="e.g. Open a ticket"
-            value={panel.title || ""}
-            onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
-            maxLength={80}
-            showCount
-          />
-          <p id="panel-title-help" className="text-xs text-gray-400 mt-1">
-            Shown as the embed title{formatToggleShown ? " in Classic mode" : ""}, and used by
-            /open, the ticket channel topic and the thread notice.
+            Used in /open, the ticket channel topic and the thread notice. Defaults to the panel
+            title.
           </p>
         </div>
       </div>
@@ -444,7 +426,15 @@ const EditPanelsPage: FC = () => {
           {!panel.message_uses_components_v2 && (
             <div className="pb-2">
               <span className="text-xl font-semibold">Panel Properties</span>
-              <div className="pt-2">
+              <div className="pt-2 grid gap-2 grid-cols-1 md:grid-cols-2">
+                <TextInput
+                  label="Panel Title"
+                  placeholder="e.g. Open a ticket"
+                  value={panel.title || ""}
+                  onChange={(e) => setPanel((prev) => (prev ? { ...prev, title: e } : prev))}
+                  maxLength={80}
+                  showCount
+                />
                 <ColourSelect
                   nullable
                   clearable

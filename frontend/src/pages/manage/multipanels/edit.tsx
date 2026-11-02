@@ -338,18 +338,20 @@ const MultiPanelsPage: FC = () => {
         existingLabel="panels"
       />
       <div className="mb-4 bg-gray-800 rounded-xl p-4">
-        <TextInput
-          label="Multi-Panel Name"
-          descriptionId="multi-panel-name-help"
-          placeholder="e.g. Support Categories"
-          value={multiPanel?.name || ""}
-          onChange={(e) => setMultiPanel((prev) => (prev ? { ...prev, name: e } : prev))}
-          maxLength={100}
-          showCount
-        />
-        <p id="multi-panel-name-help" className="text-xs text-gray-400 mt-1">
-          Only shown in the dashboard.
-        </p>
+        <div className="px-4">
+          <TextInput
+            label="Multi-Panel Name"
+            descriptionId="multi-panel-name-help"
+            placeholder="e.g. Support Categories"
+            value={multiPanel?.name || ""}
+            onChange={(e) => setMultiPanel((prev) => (prev ? { ...prev, name: e } : prev))}
+            maxLength={100}
+            showCount
+          />
+          <p id="multi-panel-name-help" className="text-xs text-gray-400 mt-1">
+            Only shown in the dashboard.
+          </p>
+        </div>
       </div>
       <Collapsible
         title="Ticket Settings"

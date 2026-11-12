@@ -39,15 +39,16 @@ func componentsV2Gate(c *gin.Context, userId, guildId uint64, botContext *botcon
 			votingTier = paidTier
 		}
 
-		if votingTier == nil {
-			tier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
-			if err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, internalMessage))
-				return false, false
-			}
+		// TODO: Re-enable post-beta
+		// if votingTier == nil {
+		// 	tier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+		// 	if err != nil {
+		// 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, internalMessage))
+		// 		return false, false
+		// 	}
 
-			votingTier = &tier
-		}
+		// 	votingTier = &tier
+		// }
 
 		if !componentsV2BuilderEnabled(c, userId, guildId, *votingTier) {
 			c.JSON(403, utils.ErrorStr(componentsV2UnavailableMessage))

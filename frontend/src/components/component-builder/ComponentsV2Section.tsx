@@ -81,7 +81,9 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   const { data: premiumState = null } = useGuildPremium(guildId, false);
 
   const canEnterV2 = builderEnabled === true || storedIsV2;
-  const needsPremium = isV2 && storedIsV2 && premiumState?.premium === false;
+  // TODO: Re-enable after beta
+  // const needsPremium = isV2 && storedIsV2 && premiumState?.premium === false;
+  const needsPremium = false;
   const hasClassicContent = hasConvertibleClassicContent(classicSource);
   const issues = validateComponentTree(tree, {
     requireContent,

@@ -17,7 +17,12 @@ import Table from "@/components/Table";
 import { getAdminTierLabel } from "@/lib/admin-tier";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
-import type { AdminTier, NotificationPreference, UserSettings } from "@/types";
+import type {
+  AdminTier,
+  NotificationCategory,
+  NotificationPreference,
+  UserSettings,
+} from "@/types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -33,6 +38,7 @@ interface CategoryDisplayInfo {
   label: string;
   description: string;
   minTier: AdminTier;
+  minChannels: number;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
@@ -67,6 +73,27 @@ function toApiPreferences(prefs: LocalNotificationPreference[]): NotificationPre
     email: p.channels.email,
     in_app: p.channels.in_app,
   }));
+}
+
+function usableChannelCount(
+  channels: Record<NotificationChannel, boolean>,
+  hasVerifiedEmail: boolean,
+): number {
+  return CHANNEL_ORDER.filter((c) => channels[c] && (c !== "email" || hasVerifiedEmail)).length;
+}
+
+/** Matches the API, which turns In-app on for a row below its category's minimum. */
+function withRequiredInApp(
+  prefs: LocalNotificationPreference[],
+  categories: NotificationCategory[],
+  hasVerifiedEmail: boolean,
+): LocalNotificationPreference[] {
+  return prefs.map((p) => {
+    const minChannels = categories.find((c) => c.key === p.category)?.min_channels ?? 0;
+    return usableChannelCount(p.channels, hasVerifiedEmail) < minChannels
+      ? { ...p, channels: { ...p.channels, in_app: true } }
+      : p;
+  });
 }
 
 /** Badge marking a category that only bot admins can see. */
@@ -129,6 +156,9 @@ export default function UserSettings() {
       setSettings((prev) =>
         prev ? { ...prev, email: emailInput.trim(), email_verified: false } : prev,
       );
+      setPreferences((prev) =>
+        withRequiredInApp(prev, settings?.notification_categories ?? [], false),
+      );
       setShowVerification(true);
       toast.success("Verification code sent to your email address.");
     } catch {
@@ -144,6 +174,8 @@ export default function UserSettings() {
     try {
       await apiClient.settings.verifyEmail(verificationCode.trim());
       setSettings((prev) => (prev ? { ...prev, email_verified: true } : prev));
+      // In-app may only have been on because the email didn't count yet; the API has the stored value.
+      if (!preferencesChanged) loadSettings();
       setShowVerification(false);
       setVerificationCode("");
       toast.success("Email verified successfully.");
@@ -171,6 +203,9 @@ export default function UserSettings() {
     try {
       await apiClient.settings.deleteEmail();
       setSettings((prev) => (prev ? { ...prev, email: null, email_verified: false } : prev));
+      setPreferences((prev) =>
+        withRequiredInApp(prev, settings?.notification_categories ?? [], false),
+      );
       setEmailInput("");
       setShowVerification(false);
       setShowRemoveEmailModal(false);
@@ -226,6 +261,7 @@ export default function UserSettings() {
       label: c.label,
       description: c.description,
       minTier: c.min_tier,
+      minChannels: c.min_channels,
     }),
   );
 
@@ -485,6 +521,7 @@ function PreferencesTable({
         {categories.map((categoryInfo) => {
           const pref = preferences.find((p) => p.category === categoryInfo.category);
           if (!pref) return null;
+          const enabledCount = usableChannelCount(pref.channels, hasVerifiedEmail);
           return (
             <Table.Row key={categoryInfo.category} className="border-b border-gray-700">
               <Table.HeaderCell scope="row" className="px-4 py-4 font-normal">
@@ -502,6 +539,8 @@ function PreferencesTable({
                 // Allow turning email off, but not on.
                 const disabled = emailUnusable && !enabled;
                 const showEmailWarning = emailUnusable && enabled;
+                const required =
+                  enabled && !emailUnusable && enabledCount <= categoryInfo.minChannels;
                 return (
                   <Table.Cell key={channel} className="px-4 py-4 align-top">
                     <div className="flex justify-center">
@@ -509,8 +548,8 @@ function PreferencesTable({
                         <Slider
                           value={enabled}
                           onChange={(val) => onToggle(categoryInfo.category, channel, val)}
-                          disabled={disabled}
-                          ariaLabel={`${categoryInfo.label} ${CHANNEL_LABELS[channel]}`}
+                          disabled={disabled || required}
+                          ariaLabel={`${categoryInfo.label} ${CHANNEL_LABELS[channel]}${required ? ` (at least ${categoryInfo.minChannels} required)` : ""}`}
                         />
                         {/* Kept invisible (not unmounted) so the cell size stays stable. */}
                         {channel === "email" && (
@@ -556,6 +595,7 @@ function PreferenceCard({
   onToggle: (category: string, channel: NotificationChannel, value: boolean) => void;
 }) {
   const headingId = useId();
+  const enabledCount = usableChannelCount(preference.channels, hasVerifiedEmail);
   return (
     <div className="bg-gray-900/50 rounded-lg p-4" role="group" aria-labelledby={headingId}>
       <div className="mb-3">
@@ -574,6 +614,7 @@ function PreferenceCard({
           // Allow turning email off, but not on.
           const disabled = emailUnusable && !enabled;
           const showEmailWarning = emailUnusable && enabled;
+          const required = enabled && !emailUnusable && enabledCount <= categoryInfo.minChannels;
           return (
             <div key={channel} className="flex items-center justify-between">
               <div>
@@ -588,8 +629,8 @@ function PreferenceCard({
               <Slider
                 value={enabled}
                 onChange={(val) => onToggle(categoryInfo.category, channel, val)}
-                disabled={disabled}
-                ariaLabel={`${categoryInfo.label} ${CHANNEL_LABELS[channel]}`}
+                disabled={disabled || required}
+                ariaLabel={`${categoryInfo.label} ${CHANNEL_LABELS[channel]}${required ? ` (at least ${categoryInfo.minChannels} required)` : ""}`}
               />
             </div>
           );

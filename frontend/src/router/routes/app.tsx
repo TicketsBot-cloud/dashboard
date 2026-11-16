@@ -9,6 +9,7 @@ import {
   Callback,
   GalleryBrowsePage,
   GalleryViewPage,
+  GdprPage,
   GuildLayout,
   LogoutPage,
   NotFound,
@@ -46,6 +47,7 @@ export const appRoutes: RouteObject = {
     { path: "affiliate", element: lazyPage(<AffiliatePage />) },
     { path: "notifications", element: lazyPage(<NotificationsPage />) },
     { path: "settings", element: lazyPage(<UserSettingsPage />) },
+    { path: "gdpr", element: lazyPage(<GdprPage />) },
     { path: "gallery", element: lazyPage(<GalleryBrowsePage />) },
     { path: "gallery/:listingId", element: lazyPage(<GalleryViewPage />) },
     {

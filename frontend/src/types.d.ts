@@ -1198,6 +1198,7 @@ export interface NotificationCategory {
   label: string;
   description: string;
   min_tier: AdminTier;
+  min_channels: number;
 }
 
 export interface UserSettings {
@@ -1205,6 +1206,61 @@ export interface UserSettings {
   email_verified: boolean;
   notification_preferences: NotificationPreference[];
   notification_categories: NotificationCategory[];
+}
+
+export type GdprExportType = "server" | "user";
+
+export interface GdprGuild {
+  id: Snowflake;
+  name: string;
+}
+
+export interface GdprStatus {
+  worker_online: boolean;
+  next_export_at: Record<GdprExportType, string | null>;
+  owned_guilds: GdprGuild[];
+  owned_transcript_guilds: GdprGuild[];
+  transcript_guilds: GdprGuild[];
+}
+
+export interface GdprExport {
+  id: number;
+  type: GdprExportType;
+  status: "queued" | "processing" | "ready" | "failed" | "no_data";
+  guilds: GdprGuild[];
+  categories: string[];
+  ticket_ids: number[] | null;
+  expires_at: string;
+  downloadable: boolean;
+}
+
+export interface GdprRequest {
+  id: number;
+  request_type:
+    | "AllTranscripts"
+    | "SpecificTranscripts"
+    | "AllMessages"
+    | "SpecificMessages"
+    | "ExportGuild"
+    | "ExportUser";
+  status: "Queued" | "Completed" | "Failed" | "Expired";
+  requested_at: string;
+  export?: GdprExport;
+}
+
+export interface GdprCreateRequest {
+  type: "anonymize" | "transcripts" | GdprExportType;
+  scope: "all" | "specific";
+  guild_ids: Snowflake[];
+  ticket_ids: string;
+  categories: string[];
+}
+
+export interface GdprErrorResponse {
+  error?: string;
+  invalid_ticket_ids?: string[];
+  next_allowed_at?: string;
+  worker_offline?: boolean;
 }
 
 /**

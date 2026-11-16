@@ -30,6 +30,7 @@ import (
 	api_blacklist "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/blacklist"
 	api_forms "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/forms"
 	api_gallery "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/gallery"
+	api_gdpr "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/gdpr"
 	api_integrations "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/integrations"
 	api_kb "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/kb"
 	api_onboarding "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/onboarding"
@@ -256,6 +257,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 			rl(middleware.RateLimitTypeUser, 20, time.Minute),
 			api_transcripts.ListTranscripts,
 		)
+		guildAuthApiSupport.DELETE("/transcripts/:ticketId", rl(middleware.RateLimitTypeGuild, 20, time.Minute), api_transcripts.DeleteTranscript)
+		guildAuthApiSupport.GET("/transcripts/:ticketId/export", rl(middleware.RateLimitTypeGuild, 20, time.Minute), api_transcripts.ExportTranscript)
 
 		// Allow regular users to get their own transcripts, make sure you check perms inside
 		guildApiNoAuth.GET("/transcripts/:ticketId", rl(middleware.RateLimitTypeGuild, 10, 10*time.Second), api_transcripts.GetTranscriptHandler)
@@ -452,6 +455,11 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		userGroup.GET("/notifications/unread-count", rl(middleware.RateLimitTypeUser, 10, 30*time.Second), api_user.UnreadCount)
 		userGroup.POST("/notifications/:id/read", api_user.MarkNotificationRead)
 		userGroup.POST("/notifications/read-all", api_user.MarkAllNotificationsRead)
+
+		userGroup.GET("/gdpr", rl(middleware.RateLimitTypeUser, 20, time.Minute), api_gdpr.GetStatus)
+		userGroup.GET("/gdpr/requests", rl(middleware.RateLimitTypeUser, 60, time.Minute), api_gdpr.ListRequests)
+		userGroup.POST("/gdpr/requests", rl(middleware.RateLimitTypeUser, 5, time.Minute), api_gdpr.CreateRequest)
+		userGroup.GET("/gdpr/exports/:id/download", rl(middleware.RateLimitTypeUser, 10, time.Minute), api_gdpr.DownloadExport)
 
 		{
 			whitelabelGroup := userGroup.Group("/whitelabel", middleware.VerifyWhitelabel(true))

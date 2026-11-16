@@ -12,6 +12,7 @@ interface CheckboxProps {
   label?: string;
   labelPosition?: CheckboxLabelPosition;
   ariaLabel?: string;
+  ariaDescribedBy?: string;
   className?: string;
 }
 
@@ -30,6 +31,7 @@ const Checkbox: FC<CheckboxProps> = ({
   label,
   labelPosition = "right",
   ariaLabel,
+  ariaDescribedBy,
   className = "",
 }) => {
   const id = useId();
@@ -54,6 +56,7 @@ const Checkbox: FC<CheckboxProps> = ({
           onChange={(e) => onChange(e.target.checked)}
           disabled={disabled}
           aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
         />
         <span className="w-4 h-4 shrink-0 rounded border border-gray-500 bg-gray-700 flex items-center justify-center text-[10px] transition-colors peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-gray-800">
           {indeterminate ? (

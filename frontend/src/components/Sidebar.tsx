@@ -27,6 +27,7 @@ import {
   faImages,
   faReceipt,
   faSterlingSign,
+  faUserShield,
 } from "@fortawesome/free-solid-svg-icons";
 import { getGuildNavLinks, isNavSection, type NavItem, type NavEntry } from "@/lib/navigation";
 import { useNotificationStore } from "@/stores/notifications";
@@ -276,6 +277,21 @@ const Sidebar = () => {
             />
           </span>
           Settings
+        </Link>
+        <Link
+          to="/gdpr"
+          onClick={() => setAvatarDropdownOpen(false)}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+          role="menuitem"
+        >
+          <span className={dropdownIconFrame}>
+            <FontAwesomeIcon
+              icon={faUserShield}
+              className={`${dropdownIconClass} text-gray-400`}
+              aria-hidden="true"
+            />
+          </span>
+          GDPR Requests
         </Link>
         <button
           type="button"

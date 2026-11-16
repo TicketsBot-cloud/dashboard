@@ -82,6 +82,7 @@ export const GalleryViewPage = lazyRetry(() => import("@/pages/gallery/view"));
 export const AffiliatePage = lazyRetry(() => import("@/pages/Affiliate"));
 export const NotificationsPage = lazyRetry(() => import("@/pages/Notifications"));
 export const UserSettingsPage = lazyRetry(() => import("@/pages/UserSettings"));
+export const GdprPage = lazyRetry(() => import("@/pages/Gdpr"));
 
 export const AdminLayout = lazyRetry(() => import("@/pages/admin/AdminLayout"));
 export const BotStaffPage = lazyRetry(() => import("@/pages/admin/bot-staff/_index"));

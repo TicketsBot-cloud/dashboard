@@ -16,6 +16,7 @@ import {
   faImages,
   faPlug,
   faShieldHalved,
+  faUserShield,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -35,6 +36,11 @@ export const CATEGORY_PRESENTATION: Record<string, CategoryPresentation> = {
     label: "Integrations",
     colour: "bg-cyan-600",
     icon: faPlug,
+  },
+  gdpr: {
+    label: "GDPR",
+    colour: "bg-teal-600",
+    icon: faUserShield,
   },
   admin_gallery: {
     label: "Gallery",

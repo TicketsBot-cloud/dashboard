@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 
 import { useAuthStore } from "@/stores/auth";
 import { useEntitlementsStore } from "@/stores/entitlements";
@@ -23,6 +23,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 
 function AppContent() {
   const { isLoading, isAuthenticated, guilds, accessToken, user } = useAuthStore();
+  const { pathname } = useLocation();
   const {
     loaded: entitlementsLoaded,
     fetch: fetchEntitlements,
@@ -72,7 +73,7 @@ function AppContent() {
   }, []);
 
   const handleLogin = useCallback(() => {
-    const currentPath = new URL(window.location.href).pathname;
+    const currentPath = window.location.pathname + window.location.search;
     const nonce = crypto.randomUUID();
     const statePayload = JSON.stringify({ path: currentPath, nonce });
     const state = btoa(statePayload);
@@ -86,7 +87,9 @@ function AppContent() {
   const isOnSpecialRoute =
     window.location.href.includes("/oauth2/callback") || window.location.href.includes("/logout");
 
-  const needsAuth = !isOnSpecialRoute && (!isAuthenticated || !accessToken || guilds.length === 0);
+  const needsAuth =
+    !isOnSpecialRoute &&
+    (!isAuthenticated || !accessToken || (guilds.length === 0 && pathname !== "/gdpr"));
 
   if (isLoading) {
     return (

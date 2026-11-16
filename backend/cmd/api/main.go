@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
@@ -15,6 +16,7 @@ import (
 	"github.com/TicketsBot-cloud/common/chatrelay"
 	"github.com/TicketsBot-cloud/common/experiments"
 	"github.com/TicketsBot-cloud/common/featureflags"
+	"github.com/TicketsBot-cloud/common/gdprrelay"
 	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/observability"
 	"github.com/TicketsBot-cloud/common/premium"
@@ -23,6 +25,8 @@ import (
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/TicketsBot-cloud/worker/i18n"
 	"github.com/getsentry/sentry-go"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	app "github.com/ticketsbot-cloud/dashboard/backend/app/http"
 	admin_featureflags "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/admin/featureflags"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/ticket/livechat"
@@ -31,6 +35,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/email"
 	"github.com/ticketsbot-cloud/dashboard/backend/growthbook"
 	"github.com/ticketsbot-cloud/dashboard/backend/log"
+	"github.com/ticketsbot-cloud/dashboard/backend/notify"
 	"github.com/ticketsbot-cloud/dashboard/backend/redis"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
@@ -95,8 +100,18 @@ func main() {
 	cache.Instance = cache.NewCache()
 
 	logger.Info("Initialising microservice clients")
-	utils.ArchiverClient = archiverclient.NewArchiverClient(archiverclient.NewProxyRetriever(config.Conf.Bot.ObjectStore), []byte(config.Conf.Bot.AesKey))
+	utils.ArchiverProxy = archiverclient.NewProxyRetriever(config.Conf.Bot.ObjectStore)
+	utils.ArchiverClient = archiverclient.NewArchiverClient(utils.ArchiverProxy, []byte(config.Conf.Bot.AesKey))
 	utils.SecureProxyClient = secureproxy.NewSecureProxy(config.Conf.SecureProxyUrl)
+
+	if config.Conf.ExportS3.Endpoint != "" {
+		utils.ExportS3, err = minio.New(config.Conf.ExportS3.Endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(config.Conf.ExportS3.AccessKey, config.Conf.ExportS3.SecretKey, ""),
+			Secure: config.Conf.ExportS3.Secure,
+			Region: config.Conf.ExportS3.Region,
+		})
+		utils.Must(err)
+	}
 
 	i18n.Init()
 
@@ -190,6 +205,8 @@ func main() {
 
 	go ListenChat(redis.Client, socketManager)
 
+	go ListenGdprResults(redis.Client)
+
 	if !config.Conf.Debug {
 		rpc.PremiumClient = premium.NewPremiumLookupClient(
 			redis.Client.Client,
@@ -242,6 +259,26 @@ func ListenChat(client *redis.RedisClient, sm *livechat.SocketManager) {
 
 	for event := range ch {
 		sm.BroadcastMessage(event)
+	}
+}
+
+func ListenGdprResults(client *redis.RedisClient) {
+	for {
+		// An event popped right before the pod stops is lost, BLMOVE into a processing list would keep it.
+		res, err := client.BLPop(context.Background(), 0, gdprrelay.KeyNotifications).Result()
+		if err != nil {
+			log.Logger.Error("Failed to read GDPR result", zap.Error(err))
+			time.Sleep(time.Second)
+			continue
+		}
+
+		var result gdprrelay.Notification
+		if err := json.Unmarshal([]byte(res[1]), &result); err != nil {
+			log.Logger.Error("Failed to decode GDPR result", zap.Error(err))
+			continue
+		}
+
+		notify.SendGdprResult(context.Background(), result)
 	}
 }
 

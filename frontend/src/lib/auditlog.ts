@@ -47,6 +47,8 @@ const ACTION_TYPE_LABELS: Record<number, string> = {
   95: "Ticket Claim",
   96: "Ticket Unclaim",
   97: "Ticket Transfer",
+  98: "Transcript Delete",
+  99: "Transcript Delete All",
 
   100: "Integration Activate",
   101: "Integration Update Secrets",
@@ -142,6 +144,8 @@ const ACTION_TYPE_LABELS: Record<number, string> = {
 
   450: "Submission Blacklist Add",
   451: "Submission Blacklist Remove",
+
+  460: "Transcript Export",
 };
 
 const RESOURCE_TYPE_LABELS: Record<number, string> = {
@@ -184,6 +188,7 @@ const RESOURCE_TYPE_LABELS: Record<number, string> = {
   37: "User Email Verification",
   38: "Feature Flag",
   39: "Submission Blacklist",
+  40: "Transcript",
 };
 
 export function formatActionType(type: number): string {

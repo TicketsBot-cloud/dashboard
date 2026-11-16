@@ -75,6 +75,9 @@ import type {
   Notification,
   NotificationPreference,
   UserSettings,
+  GdprCreateRequest,
+  GdprRequest,
+  GdprStatus,
   WhitelabelRecreateStatus,
   TagAliasResyncStatus,
 } from "@/types";
@@ -162,9 +165,17 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
     if ((error.config as RequestSlotConfig | undefined)?._requestSlot) {
       releaseRequestSlot();
+    }
+
+    // A blob request gets its JSON error body as a Blob too, so read it back for the message.
+    if (error.response?.data instanceof Blob) {
+      error.response.data = await error.response.data
+        .text()
+        .then((text) => JSON.parse(text))
+        .catch(() => undefined);
     }
 
     if (error.response?.status === 401) {
@@ -396,12 +407,21 @@ export const apiClient = {
 
   transcripts: {
     list: (guildId: string, body: unknown) =>
-      api.post<{ transcripts: Ticket[]; total_pages: number; total_count: number }>(
-        `/api/${guildId}/transcripts`,
-        body,
-      ),
+      api.post<{
+        transcripts: Ticket[];
+        total_pages: number;
+        total_count: number;
+        is_owner: boolean;
+      }>(`/api/${guildId}/transcripts`, body),
     getById: (guildId: string, transcriptId: string) =>
       api.get<TranscriptPayload>(`/api/${guildId}/transcripts/${transcriptId}/render`),
+    delete: (guildId: string, ticketId: number) =>
+      api.delete(`/api/${guildId}/transcripts/${ticketId}`, { timeout: LONG_TIMEOUT_MS }),
+    export: (guildId: string, ticketId: number) =>
+      api.get<Blob>(`/api/${guildId}/transcripts/${ticketId}/export`, {
+        responseType: "blob",
+        timeout: LONG_TIMEOUT_MS,
+      }),
   },
 
   tags: {
@@ -743,6 +763,21 @@ export const apiClient = {
       api.put("/user/settings/notifications", prefs),
     verifyEmail: (code: string) => api.post("/user/settings/verify-email", { code }),
     resendVerification: () => api.post("/user/settings/resend-verification"),
+  },
+
+  gdpr: {
+    status: (config?: AxiosRequestConfig) => api.get<GdprStatus>("/user/gdpr", config),
+    listRequests: (config?: AxiosRequestConfig) =>
+      api.get<GdprRequest[]>("/user/gdpr/requests", config),
+    createRequest: (body: GdprCreateRequest) =>
+      api.post<{ success: boolean; request_id: number }>("/user/gdpr/requests", body, {
+        ...SKIP_ERROR_TOAST,
+        timeout: LONG_TIMEOUT_MS,
+      }),
+    download: (exportId: number) =>
+      api.get<{ url: string }>(`/user/gdpr/exports/${exportId}/download`, {
+        timeout: LONG_TIMEOUT_MS,
+      }),
   },
 
   admin: {

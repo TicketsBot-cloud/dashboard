@@ -6,6 +6,7 @@ import { usePreferencesStore } from "@/stores/preferences";
 import { toast } from "sonner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faDownload,
   faEye,
   faPencil,
   faScroll,
@@ -15,6 +16,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import ColumnSelectorButton from "@/components/ColumnSelectorButton";
 import Button from "@/components/Button";
+import ConfirmModal from "@/components/modals/ConfirmModal";
+import { useMutationGuard } from "@/hooks/useMutationGuard";
 import Table from "@/components/Table";
 import { SortTrigger, ariaSortFor } from "@/components/SortableHeaderCell";
 import ColumnFilter from "@/components/ColumnFilter";
@@ -31,6 +34,7 @@ import LabelAssignDropdown from "@/components/LabelAssignDropdown";
 import ColourSelect from "@/components/ColourSelect";
 import { colourToInt, embedColourHex, intToColour } from "@/lib/colour";
 import { resolveCloseReason } from "@/lib/close-reasons";
+import { downloadBlob } from "@/lib/download";
 import ActionDropdown from "@/components/ActionDropdown";
 import ActionModal from "@/components/modal-primitives/ActionModal";
 import DismissibleModal from "@/components/modal-primitives/DismissibleModal";
@@ -152,6 +156,11 @@ const TranscriptsPage: FC = () => {
   const [editingTicketId, setEditingTicketId] = useState<number | null>(null);
   const [editReason, setEditReason] = useState("");
 
+  const [isOwner, setIsOwner] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const { isSubmitting: deleting, guard } = useMutationGuard();
+  const { isSubmitting: exporting, guard: guardExport } = useMutationGuard();
+
   const visibleColumns = useMemo(
     () => ALL_COLUMNS.filter((col) => selectedColumns.includes(col.key)),
     [selectedColumns],
@@ -206,6 +215,7 @@ const TranscriptsPage: FC = () => {
         setTranscripts(response.data.transcripts ?? []);
         setTotalPages(response.data.total_pages ?? 1);
         setTotalCount(response.data.total_count ?? 0);
+        setIsOwner(response.data.is_owner ?? false);
         setPage(targetPage);
       } catch (error) {
         console.error("Failed to fetch transcripts:", error);
@@ -382,6 +392,36 @@ const TranscriptsPage: FC = () => {
     } catch (error) {
       console.error("Failed to update close reason:", error);
     }
+  };
+
+  const deleteTranscript = (ticketId: number) => {
+    setConfirmDelete(null);
+    guard(async () => {
+      try {
+        await apiClient.transcripts.delete(guildId, ticketId);
+        setTranscripts((prev) =>
+          prev.map((t) => (t.ticket_id === ticketId ? { ...t, has_transcript: false } : t)),
+        );
+        toast.success(`Transcript #${ticketId} deleted`);
+      } catch (error) {
+        console.error("Failed to delete transcript:", error);
+      }
+    });
+  };
+
+  const exportTranscript = (ticketId: number) => {
+    guardExport(async () => {
+      const toastId = toast.loading(`Exporting transcript #${ticketId}…`);
+      try {
+        const { data } = await apiClient.transcripts.export(guildId, ticketId);
+        downloadBlob(`transcript-${guildId}-${ticketId}.json`, data);
+        toast.success(`Transcript #${ticketId} exported`, { id: toastId });
+      } catch (error) {
+        console.error("Failed to export transcript:", error);
+        // The api client already toasts the error.
+        toast.dismiss(toastId);
+      }
+    });
   };
 
   // Header filters can be hidden by the column selector; surfaced here so none stay stuck on.
@@ -743,6 +783,21 @@ const TranscriptsPage: FC = () => {
                             setEditReason(transcript.close_reason ?? "");
                           },
                         },
+                        {
+                          label: "Export",
+                          icon: faDownload,
+                          onClick: () => exportTranscript(transcript.ticket_id),
+                          hidden: !isOwner || !transcript.has_transcript,
+                          disabled: exporting,
+                        },
+                        {
+                          label: "Delete",
+                          icon: faTrash,
+                          variant: "danger",
+                          onClick: () => setConfirmDelete(transcript.ticket_id),
+                          hidden: !isOwner || !transcript.has_transcript,
+                          disabled: deleting,
+                        },
                       ]}
                     />
                   </Table.Cell>
@@ -759,6 +814,16 @@ const TranscriptsPage: FC = () => {
         totalPages={totalPages}
         onChange={fetchTranscripts}
         disabled={loading}
+      />
+
+      <ConfirmModal
+        isOpen={confirmDelete !== null}
+        title="Delete Transcript"
+        message={`This permanently deletes transcript #${confirmDelete}. The ticket stays listed, but its transcript can no longer be viewed. This can't be undone.`}
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => confirmDelete !== null && deleteTranscript(confirmDelete)}
+        onCancel={() => setConfirmDelete(null)}
       />
 
       {/* Edit close reason modal */}

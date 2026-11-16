@@ -6,7 +6,9 @@ import (
 
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
 	"github.com/TicketsBot-cloud/gdl/objects/member"
+	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/internal/admin"
@@ -87,6 +89,15 @@ func GetPermissionLevelWithSource(ctx context.Context, guildId, userId uint64) (
 	}
 
 	return permission.GetPermissionLevelWithSource(ctx, botContext, member, guildId)
+}
+
+func GetGuildLive(ctx context.Context, guildId uint64) (guild.Guild, error) {
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		return guild.Guild{}, err
+	}
+
+	return rest.GetGuild(ctx, botContext.Token, botContext.RateLimiter, guildId)
 }
 
 func HasPermissionToViewTicket(ctx context.Context, guildId, userId uint64, ticket database.Ticket) (bool, *api.RequestError) {

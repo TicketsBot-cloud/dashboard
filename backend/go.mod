@@ -2,13 +2,15 @@ module github.com/ticketsbot-cloud/dashboard/backend
 
 go 1.26.0
 
-// replace github.com/TicketsBot-cloud/database => ../../database
+replace github.com/TicketsBot-cloud/database => ../../database
 
-// replace github.com/TicketsBot-cloud/common => ../../common
+replace github.com/TicketsBot-cloud/common => ../../common
 
-// replace github.com/TicketsBot-cloud/worker => ../../worker
+replace github.com/TicketsBot-cloud/worker => ../../worker
 
-// replace github.com/TicketsBot-cloud/gdl => ../../gdl
+replace github.com/TicketsBot-cloud/gdl => ../../gdl
+
+replace github.com/TicketsBot-cloud/archiverclient => ../../archiverclient
 
 replace github.com/go-playground/validator/v10 => github.com/go-playground/validator/v10 v10.14.0
 
@@ -38,6 +40,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/joho/godotenv v1.5.1
 	github.com/mailgun/mailgun-go/v4 v4.23.0
+	github.com/minio/minio-go/v7 v7.4.1
 	github.com/penglongli/gin-metrics v0.1.13
 	github.com/pkg/errors v0.9.1
 	github.com/polarsource/polar-go v0.16.0
@@ -102,7 +105,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.31 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.4.1 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	verificationCodeLength = 6
-	verificationCodeExpiry = 15 * time.Minute
+	verificationCodeLength  = 6
+	verificationCodeExpiry  = 15 * time.Minute
 	maxVerificationAttempts = 5
 )
 
@@ -41,10 +41,10 @@ func hmacCode(code string) string {
 }
 
 type settingsResponse struct {
-	Email         *string                            `json:"email"`
-	EmailVerified bool                               `json:"email_verified"`
-	Preferences   []notificationPreferenceResponse   `json:"notification_preferences"`
-	Categories    []notify.CategoryInfo              `json:"notification_categories"`
+	Email         *string                          `json:"email"`
+	EmailVerified bool                             `json:"email_verified"`
+	Preferences   []notificationPreferenceResponse `json:"notification_preferences"`
+	Categories    []notify.CategoryInfo            `json:"notification_categories"`
 }
 
 type notificationPreferenceResponse struct {
@@ -107,7 +107,7 @@ func GetSettings(ctx *gin.Context) {
 				Category:  cat.Key,
 				DiscordDm: saved.DiscordDm,
 				Email:     saved.Email,
-				InApp:     saved.InApp,
+				InApp:     notify.EffectiveInApp(cat.Key, saved.InApp, saved.DiscordDm, saved.Email && emailVerified),
 			})
 		} else {
 			prefResponses = append(prefResponses, notificationPreferenceResponse{
@@ -273,7 +273,14 @@ func UpdateNotificationPreferences(ctx *gin.Context) {
 
 	userTier := admin.GetAdminTier(ctx, userId)
 
-	for _, p := range body {
+	userEmail, err := dbclient.Client.UserEmails.GetByUserId(ctx, userId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, utils.ErrorStr("Failed to query database. Please try again."))
+		return
+	}
+	emailUsable := userEmail != nil && userEmail.Verified
+
+	for i, p := range body {
 		if !notify.IsValidCategory(p.Category) {
 			ctx.JSON(http.StatusBadRequest, utils.ErrorStr("Invalid notification category."))
 			return
@@ -283,6 +290,8 @@ func UpdateNotificationPreferences(ctx *gin.Context) {
 			ctx.JSON(http.StatusForbidden, utils.ErrorStr("You do not have access to this notification category."))
 			return
 		}
+
+		body[i].InApp = notify.EffectiveInApp(p.Category, p.InApp, p.DiscordDm, p.Email && emailUsable)
 	}
 
 	// Get old preferences for audit log

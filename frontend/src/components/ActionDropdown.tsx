@@ -211,6 +211,8 @@ const ActionDropdown: FC<ActionDropdownProps> = ({ items }) => {
                   disabled={item.disabled}
                   onClick={() => {
                     if (item.disabled) return;
+                    // The item unmounts on close; modals opened by onClick restore focus here.
+                    buttonRef.current?.focus();
                     item.onClick?.();
                     setIsOpen(false);
                   }}

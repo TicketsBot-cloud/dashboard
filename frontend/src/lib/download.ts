@@ -1,5 +1,4 @@
-export function downloadTextFile(filename: string, content: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
+export function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -9,6 +8,10 @@ export function downloadTextFile(filename: string, content: string, mimeType: st
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
+}
+
+export function downloadTextFile(filename: string, content: string, mimeType: string): void {
+  downloadBlob(filename, new Blob([content], { type: mimeType }));
 }
 
 export function downloadExportFile(

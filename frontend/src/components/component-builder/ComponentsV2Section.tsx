@@ -57,8 +57,7 @@ interface ComponentsV2SectionProps {
 const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   guildId,
   isV2,
-  // TODO: Re-enable after beta
-  // storedIsV2,
+  storedIsV2,
   onV2Change,
   tree,
   onTreeChange,
@@ -78,14 +77,12 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
 }) => {
   const hintId = useId();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  // TODO: Re-enable after beta
-  // const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
+  const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
 
+  const canEnterV2 = builderEnabled === true || storedIsV2;
   // TODO: Re-enable after beta
-  // const canEnterV2 = builderEnabled === true || storedIsV2;
   // const needsPremium = isV2 && storedIsV2 && premiumState?.premium === false;
-  const canEnterV2 = true;
   const needsPremium = false;
   const hasClassicContent = hasConvertibleClassicContent(classicSource);
   const issues = validateComponentTree(tree, {

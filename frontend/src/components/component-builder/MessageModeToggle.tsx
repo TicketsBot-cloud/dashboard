@@ -48,7 +48,9 @@ const MessageModeToggle: FC<MessageModeToggleProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {OPTIONS.map((option) => {
           const isV2 = option.mode === "components_v2";
-          const locked = isV2 && !isPremium;
+          // TODO: Re-enable after beta
+          // const locked = isV2 && !isPremium;
+          const locked = false;
           const selected = mode === option.mode;
           const unavailable = isV2 && !canEnterV2 && !selected;
           const dim = !selected && (locked || unavailable) ? "opacity-50" : "";

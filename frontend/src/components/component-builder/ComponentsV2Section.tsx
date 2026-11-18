@@ -57,7 +57,8 @@ interface ComponentsV2SectionProps {
 const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
   guildId,
   isV2,
-  storedIsV2,
+  // TODO: Re-enable after beta
+  // storedIsV2,
   onV2Change,
   tree,
   onTreeChange,
@@ -77,7 +78,8 @@ const ComponentsV2Section: FC<ComponentsV2SectionProps> = ({
 }) => {
   const hintId = useId();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
+  // TODO: Re-enable after beta
+  // const { enabled: builderEnabled } = useFeatureFlag(COMPONENTS_V2_BUILDER_FLAG, guildId);
   const { data: premiumState = null } = useGuildPremium(guildId, false);
 
   // TODO: Re-enable after beta

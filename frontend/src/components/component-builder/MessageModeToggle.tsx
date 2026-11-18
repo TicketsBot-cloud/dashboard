@@ -32,7 +32,8 @@ const OPTIONS: { mode: MessageMode; icon: typeof faListUl; title: string; descri
 const MessageModeToggle: FC<MessageModeToggleProps> = ({
   mode,
   onChange,
-  isPremium,
+  // TODO: Re-enable after beta
+  // isPremium,
   canEnterV2 = true,
   disabled,
   legendSuffix,

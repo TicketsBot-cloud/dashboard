@@ -50,7 +50,7 @@ function autolinkNode(capture: Capture): MdNode {
   return link ? linkNode(link.target, link.display) : text(capture[1]!);
 }
 
-const HEADING_RE = /^ *(#{1,3})(?:\s+)((?!\s*#{1,3}\s)[^\n]+?)#*\s*(?:\n|$)/;
+export const HEADING_RE = /^ *(#{1,3})(?:\s+)((?!\s*#{1,3}\s)[^\n]+?)#*\s*(?:\n|$)/;
 const SUBTEXT_RE = /^ *-# +((?!-#)[^\n]+)(?:\n|$)/;
 const CODE_BLOCK_RE = /^```(?:([a-z0-9_+\-.#]+?)\n)?\n*([^\n][^]*?)\n*```/i;
 const QUOTE_RE = /^( *>>> +([\s\S]*))|^( *>(?!>>) +[^\n]*(\n *>(?!>>) +[^\n]*)*\n?)/;

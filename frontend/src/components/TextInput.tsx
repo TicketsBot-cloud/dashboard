@@ -6,6 +6,7 @@ import {
   MISSING_FIELD_CLASS,
   isBlank,
 } from "@/lib/field-validity";
+import { clampCodePoints, codePointMaxLength } from "@/lib/input-length";
 
 interface TextInputProps {
   value: string;
@@ -86,13 +87,19 @@ const TextInput: FC<TextInputProps> = (props) => {
           autoComplete={autoComplete}
           className="w-full bg-transparent text-white focus:outline-none p-2"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) =>
+            onChange(
+              maxLength === undefined
+                ? e.target.value
+                : clampCodePoints(value, e.target.value, maxLength),
+            )
+          }
           onKeyDown={onKeyDown}
           onBlur={onBlur}
           autoFocus={autoFocus}
           placeholder={placeholder}
           disabled={disabled}
-          maxLength={maxLength}
+          maxLength={maxLength === undefined ? undefined : codePointMaxLength(maxLength, value)}
           inputMode={inputMode}
           pattern={pattern}
           aria-describedby={

@@ -7,6 +7,7 @@ interface ColourSelectBaseProps {
   disabled?: boolean;
   className?: string;
   label?: string; // Optional label
+  ariaLabel?: string;
 }
 
 interface SolidColourSelectProps extends ColourSelectBaseProps {
@@ -28,7 +29,7 @@ interface NullableColourSelectProps extends ColourSelectBaseProps {
 type ColourSelectProps = SolidColourSelectProps | NullableColourSelectProps;
 
 const ColourSelect: React.FC<ColourSelectProps> = (props) => {
-  const { value, disabled = false, className = "", label } = props;
+  const { value, disabled = false, className = "", label, ariaLabel } = props;
   const clearable = props.nullable && props.clearable;
   const fallbackColour = (props.nullable && props.fallbackColour) || "#5865f2";
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +93,7 @@ const ColourSelect: React.FC<ColourSelectProps> = (props) => {
             id={inputId}
             ref={inputRef}
             type="color"
-            aria-label={label ?? "Select a colour"}
+            aria-label={label ?? ariaLabel ?? "Select a colour"}
             aria-labelledby={isNone ? (label ? `${labelId} ${noneId}` : noneId) : undefined}
             className="flex-1 min-w-0 bg-transparent text-white focus:outline-none py-0.75 rounded cursor-pointer disabled:cursor-not-allowed [&::-webkit-color-swatch]:rounded [&::-webkit-color-swatch]:border-none [&::-moz-color-swatch]:rounded [&::-moz-color-swatch]:border-none"
             defaultValue={initialColour}

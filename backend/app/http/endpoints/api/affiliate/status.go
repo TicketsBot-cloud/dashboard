@@ -53,12 +53,12 @@ type statusResponse struct {
 }
 
 type affiliateCodeResponse struct {
-	Id                  string `json:"id"`
-	Code                string `json:"code"`
-	Status              string `json:"status"`
-	DiscountBasisPoints int    `json:"discount_basis_points"`
-	CreditPercentage    *int   `json:"credit_percentage"`
-	CreatedAt           string `json:"created_at"`
+	Id                  string  `json:"id"`
+	Code                string  `json:"code"`
+	Status              string  `json:"status"`
+	DiscountBasisPoints int     `json:"discount_basis_points"`
+	CreditPercentage    *int    `json:"credit_percentage"`
+	CreatedAt           string  `json:"created_at"`
 	ApprovedAt          *string `json:"approved_at"`
 }
 

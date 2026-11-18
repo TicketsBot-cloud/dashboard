@@ -93,11 +93,11 @@ func UpdateRatesHandler(ctx *gin.Context) {
 		ResourceId:   audit.StringPtr(affiliateId.String()),
 		OldData: map[string]any{
 			"discount_basis_points": oldBasisPoints,
-			"credit_percentage":    oldCreditPercentage,
+			"credit_percentage":     oldCreditPercentage,
 		},
 		NewData: map[string]any{
 			"discount_basis_points": body.DiscountBasisPoints,
-			"credit_percentage":    body.CreditPercentage,
+			"credit_percentage":     body.CreditPercentage,
 		},
 	})
 

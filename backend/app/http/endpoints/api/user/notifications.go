@@ -19,13 +19,13 @@ const (
 )
 
 type notificationResponse struct {
-	Id        int64  `json:"id"`
-	Category  string `json:"category"`
-	Title     string `json:"title"`
-	Body      string `json:"body"`
+	Id        int64   `json:"id"`
+	Category  string  `json:"category"`
+	Title     string  `json:"title"`
+	Body      string  `json:"body"`
 	Link      *string `json:"link"`
-	Read      bool   `json:"read"`
-	CreatedAt string `json:"created_at"`
+	Read      bool    `json:"read"`
+	CreatedAt string  `json:"created_at"`
 }
 
 type listNotificationsResponse struct {

@@ -23,6 +23,13 @@ const READ_ONLY_PANEL_KEYS = [
   "use_custom_emoji",
 ] as const;
 
+// Component trees are sent verbatim: a text display or label reading "null" is real content.
+const COMPONENT_TREE_KEYS = new Set([
+  "message_components",
+  "welcome_message_components",
+  "components",
+]);
+
 function setBlankStringsToNull(value: unknown): void {
   if (value === null || typeof value !== "object") return;
 
@@ -34,6 +41,7 @@ function setBlankStringsToNull(value: unknown): void {
   }
 
   for (const [key, entry] of Object.entries(value)) {
+    if (COMPONENT_TREE_KEYS.has(key)) continue;
     if (entry === "" || entry === "null") {
       (value as Record<string, unknown>)[key] = null;
     } else if (entry !== null && typeof entry === "object") {

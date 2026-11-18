@@ -222,12 +222,12 @@ func Redeem(ctx *gin.Context) {
 		ResourceType: database.AuditResourceAffiliateReferral,
 		ResourceId:   audit.StringPtr(affiliateCode.Id.String()),
 		NewData: map[string]any{
-			"redeemed_count":  result.redeemedCount,
-			"total_credits":   result.totalCredits,
-			"total_days":      result.totalDays,
-			"tier":            result.tier,
-			"method":          result.method,
-			"referral_ids":    result.referralIds,
+			"redeemed_count": result.redeemedCount,
+			"total_credits":  result.totalCredits,
+			"total_days":     result.totalDays,
+			"tier":           result.tier,
+			"method":         result.method,
+			"referral_ids":   result.referralIds,
 		},
 	})
 

@@ -215,9 +215,8 @@ const SupportHoursForm: FC<SupportHoursFormProps> = ({ value, onChange }) => {
   };
 
   const handleMessageChange = (val: string) => {
-    const clamped = val.slice(0, 500);
-    setOutOfHoursMessage(clamped);
-    emitChange(hours, timezone, outOfHoursBehaviour, outOfHoursTitle, clamped, outOfHoursColour);
+    setOutOfHoursMessage(val);
+    emitChange(hours, timezone, outOfHoursBehaviour, outOfHoursTitle, val, outOfHoursColour);
   };
 
   const handleColourChange = (val: string | null) => {

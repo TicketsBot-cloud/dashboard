@@ -33,6 +33,9 @@ func componentsV2BuilderEnabled(ctx context.Context, userId, guildId uint64, tie
 }
 
 func componentsV2Gate(c *gin.Context, userId, guildId uint64, botContext *botcontext.BotContext, entering, usesV2 bool, votingTier, paidTier *premium.PremiumTier, internalMessage string) (hasPaid, ok bool) {
+	// TODO: Remove post-beta
+	paidTier = utils.Ptr(premium.Premium)
+
 	if entering {
 		// A paid tier is also the voting-inclusive one: voting only counts without paid premium.
 		if votingTier == nil && paidTier != nil && *paidTier > premium.None {
@@ -55,6 +58,7 @@ func componentsV2Gate(c *gin.Context, userId, guildId uint64, botContext *botcon
 			return false, false
 		}
 	}
+
 
 	if paidTier != nil {
 		hasPaid = *paidTier > premium.None

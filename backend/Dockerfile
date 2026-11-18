@@ -2,13 +2,14 @@
 FROM golang:1.26 AS builder
 
 # Copy local modules that replace directives point to
-# COPY common/ /go/src/github.com/TicketsBot-cloud/common/
-# COPY database/ /go/src/github.com/TicketsBot-cloud/database/
-# COPY worker/ /go/src/github.com/TicketsBot-cloud/worker/
+COPY common/ /go/src/github.com/common/
+COPY database/ /go/src/github.com/database/
+COPY worker/ /go/src/github.com/worker/
+COPY gdl/ /go/src/github.com/gdl/
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y ca-certificates zlib1g-dev
 
-COPY . /go/src/github.com/TicketsBot-cloud/dashboard
+COPY dashboard/backend/ /go/src/github.com/TicketsBot-cloud/dashboard
 WORKDIR /go/src/github.com/TicketsBot-cloud/dashboard
 
 RUN set -Eeux && \

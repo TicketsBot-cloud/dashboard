@@ -79,12 +79,6 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
   const [selectedCategory, setSelectedCategory] = useState<string>(
     hasGuildEmojis ? GUILD_CATEGORY : groups[0] || "smileys-emotion",
   );
-  const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-    maxHeight: 400,
-  });
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -100,7 +94,7 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
     setSearchText("");
   }, []);
 
-  const { position: floatingPosition } = useFloatingDropdown({
+  const { position: dropdownPosition } = useFloatingDropdown({
     isOpen,
     triggerRef,
     dropdownRef,
@@ -108,10 +102,6 @@ const EmojiPicker: FC<EmojiPickerProps> = (props) => {
     maxHeight: 400,
     minWidth: 280,
   });
-
-  useEffect(() => {
-    setDropdownPosition(floatingPosition);
-  }, [floatingPosition]);
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) searchInputRef.current.focus();

@@ -41,7 +41,6 @@ export default defineConfig(({ mode }) => {
     "https://cdn.discordapp.com",
     "https://media.discordapp.net",
     "https://dbl-static.b-cdn.net",
-    "https://avatar.iran.liara.run",
     // Common third-party image hosts
     "https://imgur.com",
     "https://i.imgur.com",

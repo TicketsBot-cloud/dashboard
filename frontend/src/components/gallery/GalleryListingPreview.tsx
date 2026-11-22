@@ -194,12 +194,44 @@ const TagListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ list
   );
 };
 
+// Mirrors what the bot sends Discord (worker buildFormComponents): min 0 is dropped on required
+// inputs (Discord then needs at least 1), and a string select's max is capped at its option count.
+function effectiveInputRange(input: GalleryFormInputSnapshot): string | null {
+  // Text Display and Radio Group have no range (FormInputRow's NO_RANGE_TYPES).
+  if (input.type === 10 || input.type === 21) return null;
+
+  let min = input.min_length || undefined;
+  if (min === undefined && input.required) min = 1;
+  else if (min === undefined && input.min_length === 0) min = 0;
+
+  let max = input.max_length ?? undefined;
+  // API-fed selects have no stored options, so their real count is unknown.
+  const optionCount = input.options?.length ?? 0;
+  if (input.type === 3 && optionCount > 0 && max !== undefined) {
+    max = Math.min(max, optionCount);
+    if (min !== undefined) min = Math.min(min, max);
+  }
+
+  const unit = (n: number) => (input.type !== 4 ? "" : n === 1 ? " character" : " characters");
+  if (min !== undefined && max !== undefined) {
+    return min === max ? `${max}${unit(max)}` : `${min}–${max}${unit(max)}`;
+  }
+  if (min) return `at least ${min}${unit(min)}`;
+  if (max !== undefined) return `up to ${max}${unit(max)}`;
+  return null;
+}
+
 const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot; raw: boolean }> = ({
   input,
   raw,
 }) => {
-  const typeName = FORM_INPUT_TYPE_NAMES[input.type] ?? `Type ${input.type}`;
+  const isText = input.type === 4;
+  const baseTypeName = FORM_INPUT_TYPE_NAMES[input.type] ?? `Type ${input.type}`;
+  const typeName = isText
+    ? `${baseTypeName} · ${input.style === 2 ? "Multi-line" : "Single-line"}`
+    : baseTypeName;
   const isTextDisplay = input.type === 10;
+  const range = effectiveInputRange(input);
 
   return (
     <div className="bg-gray-900 rounded p-3">
@@ -226,12 +258,17 @@ const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot; raw: boolean }>
       {input.placeholder && (
         <p className="text-gray-400 text-xs mt-1 italic">Placeholder: {input.placeholder}</p>
       )}
+      {range && (
+        <p className="text-gray-400 text-xs mt-1">
+          {isText ? "Length" : "Items"}: {range}
+        </p>
+      )}
       {input.options && input.options.length > 0 && (
         <div className="mt-2 space-y-1">
           <p className="text-gray-400 text-xs font-medium">Options:</p>
           {input.options.map((opt, i) => (
             <div key={i} className="text-xs text-gray-400 pl-3">
-              &bull; {opt.label}
+              &bull; {opt.label} <span className="font-mono">({opt.value})</span>
               {opt.description ? ` - ${opt.description}` : ""}
             </div>
           ))}

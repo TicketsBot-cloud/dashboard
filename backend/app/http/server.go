@@ -222,7 +222,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 		// Must be readable to load transcripts page
 		guildAuthApiSupport.GET("/panels", api_panels.ListPanels)
-		guildAuthApiSupport.GET("/panels/:panelid", api_panels.GetPanel)
+		guildAuthApiAdmin.GET("/panels/:panelid", api_panels.GetPanel)
 		guildAuthApiAdmin.GET("/panels/perm-check", api_panels.PermCheckHandler)
 		guildAuthApiAdmin.POST("/panels", api_panels.CreatePanel)
 		guildAuthApiAdmin.POST("/panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.ResendPanel)
@@ -232,7 +232,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.DELETE("/panels/:panelid/cooldowns", api_panels.ResetPanelCooldowns)
 
 		// Support hours endpoints
-		guildAuthApiSupport.GET("/panels/:panelid/support-hours", api_panels.GetSupportHours)
+		guildAuthApiAdmin.GET("/panels/:panelid/support-hours", api_panels.GetSupportHours)
 		guildAuthApiAdmin.POST("/panels/:panelid/support-hours", api_panels.SetSupportHours)
 		guildAuthApiAdmin.DELETE("/panels/:panelid/support-hours", api_panels.DeleteSupportHours)
 		guildAuthApiSupport.GET("/panels/:panelid/is-active", api_panels.IsPanelActive)
@@ -244,7 +244,7 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiAdmin.PATCH("/multi-panels/:panelid", api_panels.MultiPanelUpdate)
 		guildAuthApiAdmin.DELETE("/multi-panels/:panelid", api_panels.MultiPanelDelete)
 
-		guildAuthApiSupport.GET("/forms", api_forms.GetForms)
+		guildAuthApiAdmin.GET("/forms", api_forms.GetForms)
 		guildAuthApiAdmin.POST("/forms", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.CreateForm)
 		guildAuthApiAdmin.PATCH("/forms/:form-id", rl(middleware.RateLimitTypeGuild, 30, time.Hour), api_forms.UpdateForm)
 		guildAuthApiAdmin.DELETE("/forms/:form-id", api_forms.DeleteForm)

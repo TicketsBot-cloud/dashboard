@@ -10,6 +10,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/log"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -23,6 +24,17 @@ type basicOverviewResponse struct {
 func GetBasicOverviewHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 
+	allPanels, panelIds, err := utils.GetPanelAccess(ctx, guildId, ctx.Keys["userid"].(uint64))
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check panel access"))
+		return
+	}
+
+	var filter *database.PanelFilter
+	if !allPanels {
+		filter = utils.ScopePanelFilter(nil, panelIds)
+	}
+
 	var resp basicOverviewResponse
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -30,7 +42,7 @@ func GetBasicOverviewHandler(ctx *gin.Context) {
 	group, groupCtx := errgroup.WithContext(timeoutCtx)
 
 	group.Go(func() error {
-		count, err := dbclient.Client.Tickets.GetTotalTicketCount(groupCtx, guildId)
+		count, err := dbclient.Client.Tickets.GetTotalTicketCountFiltered(groupCtx, guildId, filter)
 		if err != nil {
 			return err
 		}
@@ -39,11 +51,7 @@ func GetBasicOverviewHandler(ctx *gin.Context) {
 	})
 
 	group.Go(func() error {
-		openFlag := true
-		count, err := dbclient.Client.Tickets.CountByOptions(groupCtx, database.TicketQueryOptions{
-			GuildId: guildId,
-			Open:    &openFlag,
-		})
+		count, err := dbclient.Client.Tickets.CountOpenTickets(groupCtx, guildId, filter)
 		if err != nil {
 			return err
 		}
@@ -52,7 +60,7 @@ func GetBasicOverviewHandler(ctx *gin.Context) {
 	})
 
 	group.Go(func() (err error) {
-		resp.TicketsPerDay, err = dbclient.Client.Tickets.GetTicketsPerDay(groupCtx, guildId, 7)
+		resp.TicketsPerDay, err = dbclient.Client.Tickets.GetTicketsPerDayFiltered(groupCtx, guildId, 7, filter)
 		return
 	})
 

@@ -128,6 +128,16 @@ func GetAnalyticsOverviewHandler(ctx *gin.Context) {
 		return // parsePanelFilter already wrote the 400 response
 	}
 
+	allPanels, panelIds, err := utils.GetPanelAccess(ctx, guildId, ctx.Keys["userid"].(uint64))
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check panel access"))
+		return
+	}
+
+	if !allPanels {
+		filter = utils.ScopePanelFilter(filter, panelIds)
+	}
+
 	// Queries using generate_series or CURRENT_DATE arithmetic need a positive day count.
 	// For "all time" (days=0), use a large value so the date filter includes everything.
 	legacyDays := days

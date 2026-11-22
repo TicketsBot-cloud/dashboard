@@ -17,6 +17,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/log"
 	"github.com/ticketsbot-cloud/dashboard/backend/redis"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+	"github.com/ticketsbot-cloud/dashboard/backend/whitelabeltokens"
 	"go.uber.org/zap"
 )
 
@@ -114,7 +115,23 @@ func runWhitelabelRecreate(bots []database.WhitelabelBot, commands []rest.Create
 	for _, bot := range bots {
 		rateLimiter := ratelimit.NewRateLimiter(ratelimit.NewRedisStore(redis.Client.Client, fmt.Sprintf("ratelimiter:%d", bot.BotId)), 1)
 
-		if _, err := rest.ModifyGlobalCommands(context.Background(), bot.Token, rateLimiter, bot.BotId, commands); err != nil {
+		token, tokenErr := whitelabeltokens.Token(bot)
+		if tokenErr != nil {
+			status.Failed++
+			if len(status.Errors) < maxTrackedErrors {
+				status.Errors = append(status.Errors, recreateBotError{
+					BotId: fmt.Sprintf("%d", bot.BotId),
+					Error: "stored token could not be read",
+				})
+			}
+			log.Logger.Warn("Failed to read whitelabel token for command recreation", zap.Uint64("bot_id", bot.BotId), zap.Error(tokenErr))
+
+			status.Processed++
+			writeStatus(status)
+			continue
+		}
+
+		if _, err := rest.ModifyGlobalCommands(context.Background(), token, rateLimiter, bot.BotId, commands); err != nil {
 			status.Failed++
 			if len(status.Errors) < maxTrackedErrors {
 				status.Errors = append(status.Errors, recreateBotError{

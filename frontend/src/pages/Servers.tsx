@@ -213,7 +213,7 @@ const ServersPage: FC = () => {
     if (!inviteVariant) return null;
     if (showPerServerInvite && invitableQuery.isLoading) return null;
     if (showToolbarInvite)
-      return "Tickets is not in any of your servers yet. Use Invite bot to add it.";
+      return "Tickets is not in any of your servers yet. Use Add Tickets above to add it.";
     return (
       <>
         Tickets is not in any server you are a member of. Add it from the{" "}
@@ -278,10 +278,10 @@ const ServersPage: FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleInviteClick}
-            aria-label="Invite bot, opens in a new tab"
+            aria-label="Add Tickets, opens in a new tab"
             className={`${buttonLinkClassName("outline")} shrink-0 whitespace-nowrap`}
           >
-            Invite bot
+            Add Tickets
             <FontAwesomeIcon
               icon={faArrowUpRightFromSquare}
               className="h-3 w-3"

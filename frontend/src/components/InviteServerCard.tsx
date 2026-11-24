@@ -43,10 +43,10 @@ const InviteServerCard: FC<InviteServerCardProps> = ({ guild, onInviteClick }) =
         target="_blank"
         rel="noopener noreferrer"
         onClick={onInviteClick}
-        aria-label={`Add bot to ${guild.name}, opens in a new tab`}
+        aria-label={`Add Tickets to ${guild.name}, opens in a new tab`}
         className={`${buttonLinkClassName("outline", "sm")} shrink-0 whitespace-nowrap`}
       >
-        Add bot
+        Add Tickets
         <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" aria-hidden="true" />
       </a>
     </article>

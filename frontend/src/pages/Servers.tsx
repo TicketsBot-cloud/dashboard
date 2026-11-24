@@ -58,7 +58,7 @@ const ServersPage: FC = () => {
   const [checkFocusAfterReload, setCheckFocusAfterReload] = useState(false);
   const [inviteSettled, setInviteSettled] = useState(false);
   const focusBeforeReloadRef = useRef<Element | null>(null);
-  const statusRefreshRef = useRef<HTMLButtonElement>(null);
+  const refreshButtonRef = useRef<HTMLButtonElement>(null);
   const isRefreshingRef = useRef(false);
   const reloadOnFocusRef = useRef(false);
   // The reload endpoint is rate limited to one call per 10s.
@@ -114,7 +114,7 @@ const ServersPage: FC = () => {
   useEffect(() => {
     if (!checkFocusAfterReload) return;
     setCheckFocusAfterReload(false);
-    if (focusBeforeReloadRef.current?.isConnected === false) statusRefreshRef.current?.focus();
+    if (focusBeforeReloadRef.current?.isConnected === false) refreshButtonRef.current?.focus();
     focusBeforeReloadRef.current = null;
   }, [checkFocusAfterReload]);
 
@@ -137,7 +137,7 @@ const ServersPage: FC = () => {
     return () => window.removeEventListener("focus", onFocus);
   }, [applyReloadedGuilds]);
 
-  const handleRefresh = async (fromStatusLine = false) => {
+  const handleRefresh = async () => {
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
@@ -151,7 +151,7 @@ const ServersPage: FC = () => {
         window.location.href = "/logout";
         return;
       }
-      if (fromStatusLine) {
+      if (inviteClicked) {
         applyReloadedGuilds(res.data.guilds);
       } else {
         setGuilds(res.data.guilds);
@@ -263,6 +263,7 @@ const ServersPage: FC = () => {
     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-start">
         <Button
+          ref={refreshButtonRef}
           variant="primary"
           onClick={() => void handleRefresh()}
           disabled={isRefreshing}
@@ -338,29 +339,12 @@ const ServersPage: FC = () => {
   const header = (
     <>
       {toolbar}
-      <div
-        className={
-          inviteClicked ? "flex flex-wrap items-center gap-2 text-sm text-gray-300 mb-6" : undefined
-        }
-      >
-        {/* Always mounted, or the first message is not announced. */}
-        <span role="status">
-          {inviteClicked &&
-            (statusMessage ?? "Once you have added Tickets, it can take a few seconds to appear.")}
-        </span>
-        {inviteClicked && (
-          <Button
-            ref={statusRefreshRef}
-            variant="ghost"
-            size="sm"
-            onClick={() => void handleRefresh(true)}
-            visuallyDisabled={isRefreshing}
-            aria-busy={isRefreshing || undefined}
-          >
-            Refresh list
-          </Button>
-        )}
-      </div>
+      {/* Always mounted, or the first message is not announced. */}
+      <p role="status" className={inviteClicked ? "text-sm text-gray-300 mb-6" : undefined}>
+        {inviteClicked &&
+          (statusMessage ??
+            "Once you have added Tickets, use Refresh list to see it. It can take a few seconds to appear.")}
+      </p>
     </>
   );
 

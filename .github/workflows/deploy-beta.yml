@@ -68,6 +68,8 @@ jobs:
           VITE_BASE_URL: ${{ vars.VITE_BASE_URL }}
           VITE_WS_URL: ${{ vars.VITE_WS_URL }}
           VITE_BOT_ID: ${{ vars.VITE_BOT_ID }}
+          VITE_DISCORD_AUTHORIZE_URL: ${{ vars.VITE_DISCORD_AUTHORIZE_URL }}
+          VITE_INVITE_PERMISSIONS: ${{ vars.VITE_INVITE_PERMISSIONS }}
           VITE_DOCS_URL: ${{ vars.VITE_DOCS_URL }}
           VITE_KB_DOMAIN: ${{ vars.VITE_KB_DOMAIN }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}

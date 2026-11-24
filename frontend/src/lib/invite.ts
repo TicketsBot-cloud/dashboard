@@ -1,6 +1,4 @@
-import { BOT_ID } from "@/lib/constants";
-
-const INVITE_PERMISSIONS = "395942816984";
+import { BOT_ID, DISCORD_AUTHORIZE_URL, INVITE_PERMISSIONS } from "@/lib/constants";
 
 /**
  * Discord OAuth2 bot invite URL. With a guildId, Discord preselects that server
@@ -16,5 +14,5 @@ export function buildInviteUrl(guildId?: string): string {
     params.set("guild_id", guildId);
     params.set("disable_guild_select", "true");
   }
-  return `https://discord.com/oauth2/authorize?${params.toString()}`;
+  return `${DISCORD_AUTHORIZE_URL}?${params.toString()}`;
 }

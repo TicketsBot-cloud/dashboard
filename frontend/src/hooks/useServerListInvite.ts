@@ -42,5 +42,7 @@ export function useInvitableGuilds(enabled: boolean) {
     queryFn: () => apiClient.guilds.invitable().then((res) => res.data.guilds ?? []),
     enabled: enabled && !!token,
     staleTime: 60_000,
+    // A focus refetch could drop the focused invite row before the reload hands focus off.
+    refetchOnWindowFocus: false,
   });
 }

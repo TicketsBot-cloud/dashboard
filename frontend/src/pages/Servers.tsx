@@ -34,7 +34,7 @@ import {
 import { useUrlSearch } from "@/hooks/useUrlSearch";
 import { matchesSearch } from "@/lib/search";
 import { sortGuildsForPicker } from "@/lib/guild-picker";
-import type { Guild, InvitableGuild } from "@/types";
+import type { Guild } from "@/types";
 
 const ServersPage: FC = () => {
   const { searchQuery, setSearchQuery, debouncedSearch } = useUrlSearch();
@@ -49,14 +49,17 @@ const ServersPage: FC = () => {
   const inviteVariant = useServerListInviteVariant();
   const showToolbarInvite = showsToolbarInvite(inviteVariant);
   const showPerServerInvite = showsPerServerInvite(inviteVariant);
-  const invitableQuery = useInvitableGuilds(showPerServerInvite);
+  // The toolbar variant loads it too, only to tell a real add from a server joined since login.
+  const invitableQuery = useInvitableGuilds(showToolbarInvite || showPerServerInvite);
+  const invitableData = invitableQuery.data;
 
   const [inviteClicked, setInviteClicked] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [focusStatusRefresh, setFocusStatusRefresh] = useState(false);
+  const [checkFocusAfterReload, setCheckFocusAfterReload] = useState(false);
+  const [inviteSettled, setInviteSettled] = useState(false);
+  const focusBeforeReloadRef = useRef<Element | null>(null);
   const statusRefreshRef = useRef<HTMLButtonElement>(null);
   const isRefreshingRef = useRef(false);
-  const invitableRef = useRef<InvitableGuild[]>([]);
   const reloadOnFocusRef = useRef(false);
   // The reload endpoint is rate limited to one call per 10s.
   const lastReloadAtRef = useRef(0);
@@ -85,13 +88,15 @@ const ServersPage: FC = () => {
     reloadOnFocusRef.current = true;
   }, []);
 
-  // A reload can remove the invite row that holds focus, so focus is handed to the
-  // status line's Refresh button and the newly added servers are announced there.
+  // A reload can unmount the focused invite row, so the effect below rescues focus.
   const applyReloadedGuilds = useCallback(
     (guilds: Guild[]) => {
-      const joined = new Set(guilds.map((g) => g.id));
-      const added = invitableRef.current.filter((g) => joined.has(g.id));
-      const focusInInviteSection = !!document.activeElement?.closest("[data-invite-servers]");
+      const previous = new Set(useAuthStore.getState().guilds.map((g) => g.id));
+      const inviteIds = invitableData && new Set(invitableData.map((g) => g.id));
+      const added = guilds.filter(
+        (g) => !previous.has(g.id) && (!inviteIds || inviteIds.has(g.id)),
+      );
+      focusBeforeReloadRef.current = document.activeElement;
 
       setGuilds(guilds);
       void invalidateInvitable();
@@ -101,16 +106,17 @@ const ServersPage: FC = () => {
       } else if (added.length > 1) {
         setStatusMessage(`Tickets added to ${added.length} servers.`);
       }
-      if (focusInInviteSection) setFocusStatusRefresh(true);
+      setCheckFocusAfterReload(true);
     },
-    [setGuilds, invalidateInvitable],
+    [setGuilds, invalidateInvitable, invitableData],
   );
 
   useEffect(() => {
-    if (!focusStatusRefresh) return;
-    statusRefreshRef.current?.focus();
-    setFocusStatusRefresh(false);
-  }, [focusStatusRefresh]);
+    if (!checkFocusAfterReload) return;
+    setCheckFocusAfterReload(false);
+    if (focusBeforeReloadRef.current?.isConnected === false) statusRefreshRef.current?.focus();
+    focusBeforeReloadRef.current = null;
+  }, [checkFocusAfterReload]);
 
   useEffect(() => {
     // Stays pending until a reload succeeds, so a 429 or a return inside the 10s
@@ -191,9 +197,6 @@ const ServersPage: FC = () => {
     const joined = new Set(servers.map((s) => s.id));
     return invitableQuery.data.filter((g) => !joined.has(g.id));
   }, [showPerServerInvite, invitableQuery.data, servers]);
-  useEffect(() => {
-    invitableRef.current = invitable;
-  }, [invitable]);
   const filteredInvitable = useMemo(
     () => invitable.filter((g) => matchesSearch(debouncedSearch, g.name, g.id)),
     [invitable, debouncedSearch],
@@ -272,23 +275,6 @@ const ServersPage: FC = () => {
           />
           Refresh list
         </Button>
-        {showToolbarInvite && (
-          <a
-            href={buildInviteUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={handleInviteClick}
-            aria-label="Add Tickets, opens in a new tab"
-            className={`${buttonLinkClassName("outline")} shrink-0 whitespace-nowrap`}
-          >
-            Add Tickets
-            <FontAwesomeIcon
-              icon={faArrowUpRightFromSquare}
-              className="h-3 w-3"
-              aria-hidden="true"
-            />
-          </a>
-        )}
         <div
           className="flex items-stretch self-stretch rounded-lg border border-gray-600 overflow-hidden"
           role="group"
@@ -319,6 +305,24 @@ const ServersPage: FC = () => {
             <FontAwesomeIcon icon={faGrip} className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
+        {/* Last, so on phones Refresh and the view toggle share a row and this wraps below. */}
+        {showToolbarInvite && (
+          <a
+            href={buildInviteUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleInviteClick}
+            aria-label="Add Tickets, opens in a new tab"
+            className={`${buttonLinkClassName("outline")} w-full sm:w-auto shrink-0 whitespace-nowrap`}
+          >
+            Add Tickets
+            <FontAwesomeIcon
+              icon={faArrowUpRightFromSquare}
+              className="h-3 w-3"
+              aria-hidden="true"
+            />
+          </a>
+        )}
       </div>
       <SearchInput
         value={searchQuery}
@@ -335,33 +339,39 @@ const ServersPage: FC = () => {
     <>
       {toolbar}
       <div
-        role="status"
         className={
-          inviteClicked ? "flex flex-wrap items-center gap-2 text-sm text-gray-300 mb-6" : ""
+          inviteClicked ? "flex flex-wrap items-center gap-2 text-sm text-gray-300 mb-6" : undefined
         }
       >
+        {/* Always mounted, or the first message is not announced. */}
+        <span role="status">
+          {inviteClicked &&
+            (statusMessage ?? "Once you have added Tickets, it can take a few seconds to appear.")}
+        </span>
         {inviteClicked && (
-          <>
-            <span>
-              {statusMessage ?? "Once you have added Tickets, it can take a few seconds to appear."}
-            </span>
-            <Button
-              ref={statusRefreshRef}
-              variant="ghost"
-              size="sm"
-              onClick={() => void handleRefresh(true)}
-              visuallyDisabled={isRefreshing}
-              aria-busy={isRefreshing || undefined}
-            >
-              Refresh list
-            </Button>
-          </>
+          <Button
+            ref={statusRefreshRef}
+            variant="ghost"
+            size="sm"
+            onClick={() => void handleRefresh(true)}
+            visuallyDisabled={isRefreshing}
+            aria-busy={isRefreshing || undefined}
+          >
+            Refresh list
+          </Button>
         )}
       </div>
     </>
   );
 
-  if (!hasLoaded) {
+  // First load only: avoids a reshuffle after paint, and refetches never hide the list.
+  const invitePending =
+    !inviteSettled &&
+    (inviteVariant === undefined ||
+      (showPerServerInvite && invitableQuery.isLoading && invitableQuery.failureCount === 0));
+  if (!inviteSettled && !invitePending) setInviteSettled(true);
+
+  if (!hasLoaded || invitePending) {
     return (
       <MainLayout
         title="Select a Server"

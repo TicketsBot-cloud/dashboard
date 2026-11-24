@@ -19,7 +19,7 @@ const InviteServersSection: FC<InviteServersSectionProps> = ({
   onInviteClick,
   className = "",
 }) => (
-  <section className={className} aria-labelledby="invite-servers-heading" data-invite-servers>
+  <section className={className} aria-labelledby="invite-servers-heading">
     <h2 id="invite-servers-heading" className="text-xl font-medium mb-4">
       Add Tickets to a server
     </h2>

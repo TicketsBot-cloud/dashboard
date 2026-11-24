@@ -1,0 +1,195 @@
+/* Unlayered on purpose: inside a layer, App.css's unlayered rules would win. */
+
+.discord-markup {
+  --dm-text-strong: #f2f3f5;
+  --dm-text-subtle: #949ba4;
+  --dm-spine: #4e5058;
+  --dm-code-bg: #2b2d31;
+  --dm-code-border: #3f4147;
+  --dm-code-text: #dbdee1;
+  --dm-timestamp-bg: rgba(78, 80, 88, 0.3);
+  --dm-link: #00a8fc;
+  white-space: break-spaces;
+  overflow-wrap: break-word;
+}
+
+.discord-markup h1,
+.discord-markup h2,
+.discord-markup h3 {
+  color: var(--dm-text-strong);
+  font-weight: 700;
+  line-height: 1.375em;
+  margin: 16px 0 8px;
+}
+.discord-markup h1 {
+  font-size: 1.5rem;
+}
+.discord-markup h2 {
+  font-size: 1.25rem;
+}
+.discord-markup h3 {
+  font-size: 1rem;
+}
+.discord-markup h1:first-child,
+.discord-markup h2:first-child {
+  margin-top: 8px;
+}
+.discord-markup h3:first-child {
+  margin-top: 4px;
+}
+
+.discord-markup small {
+  color: var(--dm-text-subtle);
+  display: block;
+  font-size: 0.875em;
+  line-height: 1.375;
+}
+
+.discord-markup strong {
+  font-weight: 700;
+}
+
+.discord-markup ul,
+.discord-markup ol {
+  list-style-position: outside;
+  margin: 4px 0 0 16px;
+  padding: 0;
+}
+.discord-markup ul {
+  list-style-type: disc;
+}
+.discord-markup ol {
+  list-style-type: decimal;
+  margin-inline-start: calc(0.4em + var(--dm-ol-digits, 1) * 0.6em);
+}
+.discord-markup ol ul,
+.discord-markup ul ul {
+  list-style-type: circle;
+  margin-bottom: 0;
+}
+.discord-markup ol ol,
+.discord-markup ul ol {
+  margin-bottom: 0;
+}
+.discord-markup li {
+  margin-bottom: 4px;
+  white-space: break-spaces;
+}
+
+.discord-markup .dm-quote {
+  display: flex;
+  margin: 4px 0;
+}
+.discord-markup .dm-quote-divider {
+  background: var(--dm-spine);
+  border-radius: 4px;
+  flex-shrink: 0;
+  width: 4px;
+}
+.discord-markup blockquote {
+  box-sizing: border-box;
+  color: var(--dm-text-subtle);
+  margin: 0;
+  max-width: 90%;
+  padding: 0 8px 0 12px;
+}
+
+.discord-markup pre {
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  margin: 6px 0 0;
+  max-width: 90%;
+  padding: 0;
+  white-space: pre-wrap;
+}
+.discord-markup blockquote pre {
+  max-width: 100%;
+}
+/* Overrides the app-wide pink `code` colour in App.css. */
+.discord-markup code {
+  background: var(--dm-code-bg);
+  border: 1px solid var(--dm-code-border);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.875rem;
+  line-height: 1.125rem;
+  white-space: pre-wrap;
+}
+.discord-markup pre code {
+  border-radius: 4px;
+  color: var(--dm-code-text);
+  display: block;
+  padding: 0.5em;
+}
+.discord-markup code.dm-inline-code {
+  border-radius: 4px;
+  font-size: 85%;
+  margin: -0.2em 0;
+  padding: 0 0.2em;
+}
+
+.discord-markup img.dm-emoji {
+  display: inline-block;
+  height: 1.375em;
+  max-width: none;
+  object-fit: contain;
+  vertical-align: bottom;
+  width: 1.375em;
+}
+.discord-markup .dm-emoji-glyph {
+  font-size: 1.375em;
+  line-height: 1;
+  vertical-align: bottom;
+}
+
+.discord-markup .dm-timestamp {
+  background: var(--dm-timestamp-bg);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.discord-markup a {
+  color: var(--dm-link);
+  text-decoration: none;
+}
+.discord-markup a:hover {
+  text-decoration: underline;
+}
+.discord-markup--underline-links a {
+  text-decoration: underline;
+}
+
+.discord-markup--embed img.dm-emoji {
+  height: 18px;
+  width: 18px;
+}
+.discord-markup--embed .dm-emoji-glyph {
+  font-size: 18px;
+}
+.discord-markup--embed :is(h1, h2, h3) img.dm-emoji {
+  height: 1.375em;
+  width: 1.375em;
+}
+.discord-markup--embed :is(h1, h2, h3) .dm-emoji-glyph {
+  font-size: 1.375em;
+}
+.discord-markup--embed pre,
+.discord-markup--embed blockquote {
+  max-width: 100%;
+}
+.discord-markup--embed pre code {
+  border: none;
+}
+.discord-markup--embed small {
+  font-size: 1em;
+}
+
+.discord-markup--jumbo img.dm-emoji {
+  height: 3rem;
+  width: 3rem;
+}
+.discord-markup--jumbo .dm-emoji-glyph {
+  font-size: 3rem;
+}

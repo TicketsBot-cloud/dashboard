@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useId, useMemo, type FC } from "react";
 import { apiClient } from "@/lib/api";
+import { userAvatarUrl } from "@/lib/discord-cdn";
 import { toast } from "sonner";
-import type { GallerySubmission } from "@/types";
+import type { AdminGallerySubmission } from "@/types";
 import Button from "@/components/Button";
 import CardGridSkeleton from "@/components/skeletons/CardGridSkeleton";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -31,26 +32,29 @@ const STATUS_BADGE: Record<TabStatus, string> = {
   rejected: "bg-red-600/20 text-red-400",
 };
 
+// Solid so it doesn't read as the "rejected" status pill.
+const WARNING_BADGE = "bg-red-600 text-white rounded-full px-2 py-0.5 font-medium";
+
 const AdminGalleryPage: FC = () => {
   const { user } = useAuthStore();
   const canModerate = isAtLeast(user?.admin_tier ?? "", "admin");
   const rejectHeadingId = useId();
   const [tab, setTab] = useState<TabStatus>("pending");
   const [listingType, setListingType] = useState<string>("all");
-  const [submissions, setSubmissions] = useState<GallerySubmission[]>([]);
+  const [submissions, setSubmissions] = useState<AdminGallerySubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const { searchQuery, setSearchQuery, debouncedSearch } = useUrlSearch();
 
   // Reject modal
-  const [rejectTarget, setRejectTarget] = useState<GallerySubmission | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<AdminGallerySubmission | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
 
   // Remove modal
-  const [removeTarget, setRemoveTarget] = useState<GallerySubmission | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<AdminGallerySubmission | null>(null);
 
   // Preview modal
-  const [previewTarget, setPreviewTarget] = useState<GallerySubmission | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<AdminGallerySubmission | null>(null);
 
   const fetchSubmissions = useCallback(async () => {
     setLoading(true);
@@ -84,7 +88,7 @@ const AdminGalleryPage: FC = () => {
     );
   }, [submissions, debouncedSearch]);
 
-  const handleApprove = async (submission: GallerySubmission) => {
+  const handleApprove = async (submission: AdminGallerySubmission) => {
     try {
       await apiClient.admin.gallery.approve(submission.id);
       toast.success(`"${submission.name}" approved.`);
@@ -122,7 +126,7 @@ const AdminGalleryPage: FC = () => {
     }
   };
 
-  const handleToggleFeatured = async (submission: GallerySubmission) => {
+  const handleToggleFeatured = async (submission: AdminGallerySubmission) => {
     try {
       await apiClient.admin.gallery.update(submission.id, { featured: !submission.featured });
       setSubmissions((prev) =>
@@ -221,16 +225,26 @@ const AdminGalleryPage: FC = () => {
                       >
                         {submission.status}
                       </span>
+                      {submission.server_blacklisted && (
+                        <span className={WARNING_BADGE}>Server blacklisted from bot</span>
+                      )}
+                      {submission.submitter_gallery_blacklisted && (
+                        <span className={WARNING_BADGE}>Submitter blacklisted from gallery</span>
+                      )}
+                      {submission.source_guild_gallery_blacklisted && (
+                        <span className={WARNING_BADGE}>Server blacklisted from gallery</span>
+                      )}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
                       by
-                      {submission.submitted_user.avatar_url && (
-                        <img
-                          src={submission.submitted_user.avatar_url}
-                          alt=""
-                          className="w-4 h-4 rounded-full inline"
-                        />
-                      )}
+                      <img
+                        src={userAvatarUrl(
+                          submission.submitted_user.id,
+                          submission.submitted_user.avatar_url,
+                        )}
+                        alt=""
+                        className="w-4 h-4 rounded-full inline"
+                      />
                       {submission.submitted_user.username} &middot; {date}
                     </div>
                   </div>

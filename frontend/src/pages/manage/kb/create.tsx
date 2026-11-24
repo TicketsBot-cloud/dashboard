@@ -23,6 +23,7 @@ import type { TagEmbed } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
 import { embedUrlError } from "@/lib/embed-url";
+import { embedColourHex, embedColourInt } from "@/lib/colour";
 import EmbedCharacterTotal from "@/components/EmbedCharacterTotal";
 
 const defaultEmbed: TagEmbed = {
@@ -261,12 +262,14 @@ const CreateKBArticlePage: FC = () => {
                     showCount
                   />
                   <ColourSelect
+                    nullable
+                    clearable
                     label="Colour"
-                    value={`#${(embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`}
+                    value={embedColourHex(embed.colour)}
                     onChange={(v) =>
                       setEmbed((prev) => ({
                         ...prev,
-                        colour: parseInt(v.replace("#", ""), 16),
+                        colour: embedColourInt(v),
                       }))
                     }
                   />

@@ -54,6 +54,10 @@ func SetIntegrationPublicHandler(ctx *gin.Context) {
 		return
 	}
 
+	if utils.RejectIfSubmissionBlacklisted(ctx, dbmodel.SubmissionFeatureIntegrations, userId, 0) {
+		return
+	}
+
 	e := embed.NewEmbed().
 		SetTitle("Public Integration Request").
 		SetColor(0xfcb97d).

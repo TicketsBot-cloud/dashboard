@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router";
 import { MainLayout } from "@/pages/layout/Main";
 import Button from "@/components/Button";
 import { apiClient } from "@/lib/api";
+import { userAvatarUrl } from "@/lib/discord-cdn";
 import type { GalleryListing } from "@/types";
 import GalleryImportModal from "@/components/modals/GalleryImportModal";
 import GalleryImportTagModal from "@/components/modals/GalleryImportTagModal";
@@ -12,13 +13,7 @@ import GalleryListingPreview, {
   GALLERY_TYPE_BADGES,
 } from "@/components/gallery/GalleryListingPreview";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowLeft,
-  faDownload,
-  faStar,
-  faClock,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faDownload, faStar, faClock } from "@fortawesome/free-solid-svg-icons";
 
 function getImportButtonLabel(type: string): string {
   if (type === "tag") return "Import Tag";
@@ -131,15 +126,11 @@ const GalleryViewPage: FC = () => {
 
             <div className="space-y-2 text-sm text-gray-400 mb-6">
               <div className="flex items-center gap-2">
-                {listing.submitted_user.avatar_url ? (
-                  <img
-                    src={listing.submitted_user.avatar_url}
-                    alt=""
-                    className="w-5 h-5 rounded-full"
-                  />
-                ) : (
-                  <FontAwesomeIcon icon={faUser} className="w-4" aria-hidden="true" />
-                )}
+                <img
+                  src={userAvatarUrl(listing.submitted_user.id, listing.submitted_user.avatar_url)}
+                  alt=""
+                  className="w-5 h-5 rounded-full"
+                />
                 <span>{listing.submitted_user.username}</span>
               </div>
               <div className="flex items-center gap-2">

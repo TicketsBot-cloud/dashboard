@@ -12,13 +12,14 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	"github.com/ticketsbot-cloud/dashboard/backend/config"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 )
 
 type panelMessageData struct {
 	ChannelId uint64
 
 	Title, Content, CustomId string
-	Colour                   int
+	Colour                   *int
 	ImageUrl, ThumbnailUrl   *string
 	Emoji                    *emoji.Emoji
 	ButtonStyle              component.ButtonStyle
@@ -47,7 +48,7 @@ func panelIntoMessageData(panel database.Panel, showBranding bool) panelMessageD
 		Title:          panel.Title,
 		Content:        panel.Content,
 		CustomId:       panel.CustomId,
-		Colour:         int(panel.Colour),
+		Colour:         utils.ConvertPtr[int](panel.Colour),
 		ImageUrl:       panel.ImageUrl,
 		ThumbnailUrl:   panel.ThumbnailUrl,
 		Emoji:          emote,
@@ -62,7 +63,7 @@ func (p *panelMessageData) send(c *botcontext.BotContext) (uint64, error) {
 	e := embed.NewEmbed().
 		SetTitle(p.Title).
 		SetDescription(p.Content).
-		SetColor(p.Colour)
+		SetColorPtr(p.Colour)
 
 	if p.ImageUrl != nil {
 		e.SetImage(*p.ImageUrl)
@@ -105,7 +106,7 @@ func (p *panelMessageData) edit(c *botcontext.BotContext, messageId uint64) erro
 	e := embed.NewEmbed().
 		SetTitle(p.Title).
 		SetDescription(p.Content).
-		SetColor(p.Colour)
+		SetColorPtr(p.Colour)
 
 	if p.ImageUrl != nil {
 		e.SetImage(*p.ImageUrl)

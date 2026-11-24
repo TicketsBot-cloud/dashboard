@@ -100,6 +100,7 @@ export interface GuildChannel {
     join_timestamp: string; // ISO 8601 format
     flags: number; // Flags for the member
   };
+  flags?: number;
   // Additional fields can be added as needed
 }
 
@@ -113,7 +114,7 @@ export interface GuildSettings {
     switch_panel_claim_behavior: number;
   };
   colours: {
-    [key: string]: string;
+    [key: string]: string | null;
   };
   language: string;
   locales: Array<{
@@ -130,6 +131,7 @@ export interface TicketLabel {
 
 export interface Ticket {
   ticket_id: number;
+  panel_id?: number | null;
   username: string;
   close_reason?: string;
   closed_by?: number;
@@ -182,7 +184,7 @@ export interface Panel {
   guild_id: Snowflake;
   title: string;
   content: string;
-  colour: number;
+  colour: number | null;
   category_id: string;
   emoji_name?: string;
   emoji_id?: string;
@@ -231,7 +233,7 @@ export interface Panel {
     title?: string;
     description: string;
     url?: string;
-    colour: string;
+    colour: string | null;
     author: {
       name?: string;
       icon_url?: string;
@@ -256,6 +258,12 @@ export interface Panel {
   teams: Array<number>;
   kb_category_ids: number[];
   access_control_list: Array<ACL>;
+  close_reasons?: PanelCloseReasons;
+}
+
+export interface PanelCloseReasons {
+  reasons: string[];
+  allow_custom: boolean;
 }
 
 export interface MultiPanelPanelEntry {
@@ -291,7 +299,7 @@ export interface MultiPanelEmbed {
     icon_url?: string;
     url?: string;
   };
-  colour: string;
+  colour: string | null;
   description?: string;
   fields?: Array<{
     name: string;
@@ -386,6 +394,7 @@ export interface FormInput {
   label: string;
   placeholder?: string;
   description?: string;
+  content?: string;
   options?: Array<FormInputOption>;
   required: boolean;
   min_length?: number;
@@ -430,7 +439,7 @@ export interface SupportHoursData {
   out_of_hours_behaviour: "block_creation" | "allow_with_warning";
   out_of_hours_title: string;
   out_of_hours_message: string;
-  out_of_hours_colour: number;
+  out_of_hours_colour: number | null;
 }
 
 export interface BotStaffMember {
@@ -460,9 +469,24 @@ export interface GlobalBlacklistEntry {
 
 export interface ServerBlacklistEntry {
   guild_id: string;
+  name?: string;
+  icon?: string;
   reason?: string;
   owner_id?: string;
   real_owner_id?: string;
+}
+
+export type SubmissionBlacklistFeature = "gallery" | "integrations";
+
+export type SubmissionBlacklistTarget = "user" | "guild";
+
+export interface SubmissionBlacklistEntry {
+  target_type: SubmissionBlacklistTarget;
+  target_id: string;
+  name?: string;
+  avatar_url?: string;
+  icon?: string;
+  reason: string | null;
 }
 
 export interface PremiumKeyEntry {
@@ -499,7 +523,7 @@ export interface TagEmbed {
   title?: string;
   description?: string;
   url?: string;
-  colour: number;
+  colour: number | null;
   author: { name?: string; icon_url?: string; url?: string };
   image_url?: string;
   thumbnail_url?: string;
@@ -601,6 +625,7 @@ export interface TicketViewResponse {
   success: boolean;
   ticket: TicketViewData;
   panel_title?: string;
+  close_reasons?: PanelCloseReasons;
   messages: StrippedMessage[];
   content_restricted?: boolean;
   channel_missing?: boolean;
@@ -985,6 +1010,7 @@ export interface ChannelPermCheckResult {
   required: string[];
   missing: string[];
   deleted: boolean;
+  no_access: boolean;
   ok: boolean;
 }
 
@@ -1027,6 +1053,7 @@ export interface GalleryFormInputSnapshot {
   label: string;
   description?: string;
   placeholder?: string;
+  content?: string;
   required: boolean;
   min_length?: number;
   max_length?: number;
@@ -1052,7 +1079,7 @@ export interface GalleryListing {
   // Panel visual design fields
   title: string;
   content: string;
-  colour: number;
+  colour: number | null;
   image_url?: string;
   thumbnail_url?: string;
   button_style: number | null;
@@ -1066,7 +1093,18 @@ export interface GallerySubmission extends GalleryListing {
   status: "pending" | "approved" | "rejected";
   review_note?: string;
   source_guild_id: string;
-  reviewed_at?: string;
+}
+
+export interface AdminGallerySubmission extends GallerySubmission {
+  // On pending listings these are whoever resubmitted, and when.
+  reviewed_by: GallerySubmittedUser | null;
+  reviewed_at: string | null;
+  source_guild_name?: string;
+  source_guild_icon?: string;
+  server_blacklisted?: boolean;
+  // Only sent to admin rank and up.
+  submitter_gallery_blacklisted?: boolean;
+  source_guild_gallery_blacklisted?: boolean;
 }
 
 export interface OnboardingState {

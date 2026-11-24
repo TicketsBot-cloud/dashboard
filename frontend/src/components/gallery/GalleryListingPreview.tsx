@@ -1,8 +1,11 @@
 import type { FC, ReactNode } from "react";
 import DiscordText from "@/components/discord/DiscordText";
 import { parseDiscordMarkdown } from "@/lib/discord-markdown";
+import type { MdProfile } from "@/lib/discord-markdown";
+import type { DiscordEmojiTable } from "@/lib/discord-emoji";
 import EmbedPreview from "@/components/EmbedPreview";
 import DiscordButton from "@/components/discord/container/Button";
+import { embedColourInt } from "@/lib/colour";
 import type {
   GalleryListing,
   GalleryTagSnapshot,
@@ -17,6 +20,7 @@ const FORM_INPUT_TYPE_NAMES: Record<number, string> = {
   6: "Role Select",
   7: "Mentionable Select",
   8: "Channel Select",
+  10: "Text Display",
   21: "Radio Group",
   22: "Checkbox Group",
 };
@@ -46,51 +50,75 @@ export const GALLERY_TYPE_OPTIONS = Object.entries(GALLERY_TYPE_BADGES).map(([ke
   color: badge.dot,
 }));
 
-// Anything the parser leaves as plain text renders identically either way.
-function hasMarkdown(content: string | undefined): boolean {
+type MarkdownField = [content: string | undefined, profile: MdProfile, webhook?: boolean];
+
+// Only output differing from the source counts: a typed emoji is plain text, a :shortcode: isn't.
+function hasMarkdown(
+  [content, profile, webhook]: MarkdownField,
+  emoji: DiscordEmojiTable | null,
+): boolean {
   if (!content) return false;
 
   const source = content.replace(/\r\n?/g, "\n");
   let plain = "";
-  for (const node of parseDiscordMarkdown(source)) {
-    if (node.type !== "text") return true;
-    plain += node.value;
+  for (const node of parseDiscordMarkdown(source, profile, { emoji, webhook })) {
+    if (node.type === "text") plain += node.value;
+    else if (node.type === "unicodeEmoji") plain += node.surrogate;
+    else return true;
   }
   return plain !== source;
 }
 
-// Only the text EmbedPreview and TagListingPreview pass through DiscordText.
-// Form labels and placeholders are not markdown surfaces in Discord.
-function markdownFields(listing: GalleryListing): (string | undefined)[] {
+function embedFields(
+  embed:
+    | {
+        title?: string;
+        description?: string;
+        url?: string;
+        fields?: { name: string; value: string }[];
+      }
+    | undefined,
+): MarkdownField[] {
+  const titleProfile: MdProfile = embed?.url ? "embedTitleNoLinks" : "embedTitle";
+  return [
+    [embed?.title, titleProfile],
+    [embed?.description, "embedDescription"],
+    ...(embed?.fields ?? []).flatMap((field): MarkdownField[] => [
+      [field.name, titleProfile],
+      [field.value, "embedFieldValue"],
+    ]),
+  ];
+}
+
+// Only the text EmbedPreview, TagListingPreview and form Text Display fields pass through
+// DiscordText. Form labels and placeholders are not markdown surfaces in Discord.
+function markdownFields(listing: GalleryListing): MarkdownField[] {
   const listingType = listing.listing_type || "panel";
 
   if (listingType === "form") {
-    return [];
+    const snapshot = listing.snapshot_data as GalleryFormSnapshot | undefined;
+    return (snapshot?.inputs ?? [])
+      .filter((input) => input.type === 10)
+      .map((input): MarkdownField => [input.content, "textDisplay"]);
   }
 
   if (listingType === "tag") {
     const snapshot = listing.snapshot_data as GalleryTagSnapshot | undefined;
-    const embed = snapshot?.embed;
-    return [
-      snapshot?.content,
-      embed?.title,
-      embed?.description,
-      ...(embed?.fields ?? []).flatMap((field) => [field.name, field.value]),
-    ];
+    return [[snapshot?.content, "content", true], ...embedFields(snapshot?.embed)];
   }
 
-  const welcomeMessage = listing.welcome_message;
   return [
-    listing.title,
-    listing.content,
-    welcomeMessage?.title,
-    welcomeMessage?.description,
-    ...(welcomeMessage?.fields ?? []).flatMap((field) => [field.name, field.value]),
+    [listing.title, "embedTitle"],
+    [listing.content, "embedDescription"],
+    ...embedFields(listing.welcome_message),
   ];
 }
 
-export function listingHasMarkdown(listing: GalleryListing): boolean {
-  return markdownFields(listing).some(hasMarkdown);
+export function listingHasMarkdown(
+  listing: GalleryListing,
+  emoji: DiscordEmojiTable | null,
+): boolean {
+  return markdownFields(listing).some((field) => hasMarkdown(field, emoji));
 }
 
 const PreviewSection: FC<{ title: string; children: ReactNode }> = ({ title, children }) => (
@@ -131,7 +159,7 @@ const PanelListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ li
             raw={raw}
             embed={{
               ...welcomeMessage,
-              colour: parseInt(welcomeMessage.colour, 10) || listing.colour,
+              colour: embedColourInt(welcomeMessage.colour),
             }}
           />
         </PreviewSection>
@@ -157,45 +185,90 @@ const TagListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ list
         <DiscordText
           raw={raw}
           content={snapshot.content}
+          webhook
           className="text-gray-300 text-sm mb-4 bg-gray-900 rounded p-3"
         />
       )}
-      {snapshot.embed && (
-        <EmbedPreview
-          raw={raw}
-          embed={{ ...snapshot.embed, colour: snapshot.embed.colour || 0x14b8a6 }}
-        />
-      )}
+      {snapshot.embed && <EmbedPreview raw={raw} embed={snapshot.embed} />}
     </PreviewSection>
   );
 };
 
-const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot }> = ({ input }) => {
-  const typeName = FORM_INPUT_TYPE_NAMES[input.type] ?? `Type ${input.type}`;
+// Mirrors what the bot sends Discord (worker buildFormComponents): min 0 is dropped on required
+// inputs (Discord then needs at least 1), and a string select's max is capped at its option count.
+function effectiveInputRange(input: GalleryFormInputSnapshot): string | null {
+  // Text Display and Radio Group have no range (FormInputRow's NO_RANGE_TYPES).
+  if (input.type === 10 || input.type === 21) return null;
+
+  let min = input.min_length || undefined;
+  if (min === undefined && input.required) min = 1;
+  else if (min === undefined && input.min_length === 0) min = 0;
+
+  let max = input.max_length ?? undefined;
+  // API-fed selects have no stored options, so their real count is unknown.
+  const optionCount = input.options?.length ?? 0;
+  if (input.type === 3 && optionCount > 0 && max !== undefined) {
+    max = Math.min(max, optionCount);
+    if (min !== undefined) min = Math.min(min, max);
+  }
+
+  const unit = (n: number) => (input.type !== 4 ? "" : n === 1 ? " character" : " characters");
+  if (min !== undefined && max !== undefined) {
+    return min === max ? `${max}${unit(max)}` : `${min}–${max}${unit(max)}`;
+  }
+  if (min) return `at least ${min}${unit(min)}`;
+  if (max !== undefined) return `up to ${max}${unit(max)}`;
+  return null;
+}
+
+const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot; raw: boolean }> = ({
+  input,
+  raw,
+}) => {
+  const isText = input.type === 4;
+  const baseTypeName = FORM_INPUT_TYPE_NAMES[input.type] ?? `Type ${input.type}`;
+  const typeName = isText
+    ? `${baseTypeName} · ${input.style === 2 ? "Multi-line" : "Single-line"}`
+    : baseTypeName;
+  const isTextDisplay = input.type === 10;
+  const range = effectiveInputRange(input);
 
   return (
     <div className="bg-gray-900 rounded p-3">
       <div className="flex items-start justify-between gap-2 mb-1">
-        <span className="text-white text-sm font-medium">{input.label}</span>
-        <div className="flex items-center gap-2 shrink-0">
+        {!isTextDisplay && <span className="text-white text-sm font-medium">{input.label}</span>}
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
           <span className="text-gray-400 text-xs">{typeName}</span>
-          {input.required && (
+          {!isTextDisplay && input.required && (
             <span className="bg-red-600/20 text-red-400 rounded-full px-2 py-0.5 text-xs font-medium">
               Required
             </span>
           )}
         </div>
       </div>
+      {isTextDisplay && input.content && (
+        <DiscordText
+          raw={raw}
+          content={input.content}
+          profile="textDisplay"
+          className="text-gray-300 text-sm"
+        />
+      )}
       {input.description && <p className="text-gray-400 text-xs mt-1">{input.description}</p>}
       {input.placeholder && (
         <p className="text-gray-400 text-xs mt-1 italic">Placeholder: {input.placeholder}</p>
+      )}
+      {range && (
+        <p className="text-gray-400 text-xs mt-1">
+          {isText ? "Length" : "Items"}: {range}
+        </p>
       )}
       {input.options && input.options.length > 0 && (
         <div className="mt-2 space-y-1">
           <p className="text-gray-400 text-xs font-medium">Options:</p>
           {input.options.map((opt, i) => (
             <div key={i} className="text-xs text-gray-400 pl-3">
-              &bull; {opt.label}
+              &bull; {opt.label} <span className="font-mono">({opt.value})</span>
               {opt.description ? ` - ${opt.description}` : ""}
             </div>
           ))}
@@ -205,7 +278,7 @@ const FormInputPreviewRow: FC<{ input: GalleryFormInputSnapshot }> = ({ input })
   );
 };
 
-const FormListingPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
+const FormListingPreview: FC<{ listing: GalleryListing; raw: boolean }> = ({ listing, raw }) => {
   const snapshot = listing.snapshot_data as GalleryFormSnapshot | undefined;
 
   if (!snapshot) {
@@ -224,7 +297,7 @@ const FormListingPreview: FC<{ listing: GalleryListing }> = ({ listing }) => {
       {sortedInputs.length > 0 ? (
         <div className="space-y-3">
           {sortedInputs.map((input, i) => (
-            <FormInputPreviewRow key={i} input={input} />
+            <FormInputPreviewRow key={i} input={input} raw={raw} />
           ))}
         </div>
       ) : (
@@ -244,7 +317,7 @@ const GalleryListingPreview: FC<GalleryListingPreviewProps> = ({ listing, raw = 
     case "tag":
       return <TagListingPreview listing={listing} raw={raw} />;
     case "form":
-      return <FormListingPreview listing={listing} />;
+      return <FormListingPreview listing={listing} raw={raw} />;
     default:
       return <PanelListingPreview listing={listing} raw={raw} />;
   }

@@ -22,7 +22,13 @@ func DeleteTeam(ctx *gin.Context) {
 		return
 	}
 
-	teamId, err := strconv.Atoi(ctx.Param("teamid"))
+	teamIdParam := ctx.Param("teamid")
+	if teamIdParam == "default" {
+		ctx.JSON(400, utils.ErrorStr("Default team cannot be deleted"))
+		return
+	}
+
+	teamId, err := strconv.Atoi(teamIdParam)
 	if err != nil {
 		ctx.JSON(400, utils.ErrorStr("Failed to delete team. Please try again."))
 		return

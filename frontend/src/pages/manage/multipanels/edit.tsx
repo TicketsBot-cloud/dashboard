@@ -22,7 +22,7 @@ import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
-import { intToColour } from "@/lib/colour";
+import { embedColourHex } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -182,7 +182,8 @@ const MultiPanelsPage: FC = () => {
   // Returns the message so the Save button can reuse the rules.
   const saveBlocker = () => {
     if (!multiPanel?.channel_id) return "Select a panel channel before saving the multi-panel.";
-    if (staleChannel) return "The selected panel channel no longer exists.";
+    if (staleChannel)
+      return "The selected panel channel no longer exists or the bot can't view it.";
     if (tooFewPanels) return "Select at least two panels before saving the multi-panel.";
     if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
     if (labellessPanelCount > 0) return "Every dropdown panel needs a label.";
@@ -245,7 +246,7 @@ const MultiPanelsPage: FC = () => {
             options={panels?.map((panel) => ({
               label: panel.title,
               key: panel.panel_id.toString(),
-              color: intToColour(panel.colour),
+              color: embedColourHex(panel.colour) ?? undefined,
             }))}
             onChange={(e) =>
               setMultiPanel((prev) => {
@@ -373,8 +374,10 @@ const MultiPanelsPage: FC = () => {
                 showCount
               />
               <ColourSelect
+                nullable
+                clearable
                 label="Colour"
-                value={multiPanel?.embed?.colour || "#5865f2"}
+                value={multiPanel?.embed ? embedColourHex(multiPanel.embed.colour) : "#5865f2"}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev ? { ...prev, embed: { ...prev.embed, colour: e } } : prev,

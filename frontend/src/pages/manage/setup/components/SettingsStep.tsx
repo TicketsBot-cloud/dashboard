@@ -29,8 +29,8 @@ const SettingsStep = forwardRef<SettingsStepRef, SettingsStepProps>(({ guildId }
   const [isLoading, setIsLoading] = useState(true);
   const [language, setLanguage] = useState<string | null>(null);
   const [locales, setLocales] = useState<Array<{ iso_short_code: string; local_name: string }>>([]);
-  const [successColour, setSuccessColour] = useState(DEFAULT_SUCCESS_COLOUR);
-  const [failureColour, setFailureColour] = useState(DEFAULT_FAILURE_COLOUR);
+  const [successColour, setSuccessColour] = useState<string | null>(DEFAULT_SUCCESS_COLOUR);
+  const [failureColour, setFailureColour] = useState<string | null>(DEFAULT_FAILURE_COLOUR);
   const baseSettingsRef = useRef<GuildSettings | null>(null);
 
   useEffect(() => {
@@ -44,8 +44,8 @@ const SettingsStep = forwardRef<SettingsStepRef, SettingsStepProps>(({ guildId }
         setLocales(data.locales || []);
 
         if (data.colours) {
-          if (data.colours["0"]) setSuccessColour(data.colours["0"]);
-          if (data.colours["1"]) setFailureColour(data.colours["1"]);
+          if ("0" in data.colours) setSuccessColour(data.colours["0"]);
+          if ("1" in data.colours) setFailureColour(data.colours["1"]);
         }
       } catch {
         toast.error("Failed to load settings");
@@ -107,8 +107,22 @@ const SettingsStep = forwardRef<SettingsStepRef, SettingsStepProps>(({ guildId }
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <ColourSelect label="Success colour" value={successColour} onChange={setSuccessColour} />
-        <ColourSelect label="Failure colour" value={failureColour} onChange={setFailureColour} />
+        <ColourSelect
+          nullable
+          clearable
+          label="Success colour"
+          value={successColour}
+          fallbackColour={DEFAULT_SUCCESS_COLOUR}
+          onChange={setSuccessColour}
+        />
+        <ColourSelect
+          nullable
+          clearable
+          label="Failure colour"
+          value={failureColour}
+          fallbackColour={DEFAULT_FAILURE_COLOUR}
+          onChange={setFailureColour}
+        />
       </div>
     </div>
   );

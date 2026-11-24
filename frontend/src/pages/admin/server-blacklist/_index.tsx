@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import BlacklistAvatar from "@/components/BlacklistAvatar";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import Button from "@/components/Button";
 import TextInput from "@/components/TextInput";
@@ -16,6 +17,7 @@ import { isAtLeast } from "@/lib/admin-tier";
 export default function ServerBlacklistPage() {
   const { user } = useAuthStore();
   const canModify = isAtLeast(user?.admin_tier ?? "", "admin");
+  const canRemove = isAtLeast(user?.admin_tier ?? "", "owner");
   const [entries, setEntries] = useState<ServerBlacklistEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newGuildId, setNewGuildId] = useState("");
@@ -40,7 +42,7 @@ export default function ServerBlacklistPage() {
   }, [fetchEntries]);
 
   const filteredEntries = useMemo(
-    () => entries.filter((e) => matchesSearch(debouncedSearch, e.guild_id, e.reason)),
+    () => entries.filter((e) => matchesSearch(debouncedSearch, e.name, e.guild_id, e.reason)),
     [entries, debouncedSearch],
   );
 
@@ -138,14 +140,14 @@ export default function ServerBlacklistPage() {
           value={searchQuery}
           onChange={setSearchQuery}
           placeholder="Search servers..."
-          label="Search by server ID or reason"
+          label="Search by name, ID or reason"
           className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4"
         />
       </div>
 
       {/* Server Grid */}
       <div
-        className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
         role="list"
         aria-label="Blacklisted servers"
       >
@@ -153,33 +155,49 @@ export default function ServerBlacklistPage() {
           <div
             key={entry.guild_id}
             role="listitem"
-            className="group bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition"
+            className="bg-gray-800 p-4 rounded-lg hover:bg-gray-700 transition"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
-                <p className="font-mono text-sm text-white mb-1">{entry.guild_id}</p>
-                {entry.reason && (
-                  <p className="text-gray-400 text-sm mb-2 truncate">{entry.reason}</p>
-                )}
-                <div className="space-y-1">
-                  {entry.owner_id && (
-                    <p className="text-gray-500 text-xs">
-                      Owner: <span className="font-mono">{entry.owner_id}</span>
-                    </p>
-                  )}
-                  {entry.real_owner_id && (
-                    <p className="text-gray-500 text-xs">
-                      Real Owner: <span className="font-mono">{entry.real_owner_id}</span>
-                    </p>
-                  )}
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-md overflow-hidden shrink-0">
+                    <BlacklistAvatar
+                      targetType="guild"
+                      targetId={entry.guild_id}
+                      label={entry.name ?? "Unknown Server"}
+                      name={entry.name}
+                      icon={entry.icon}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-medium truncate">{entry.name ?? "Unknown Server"}</h3>
+                    <p className="text-gray-400 text-sm font-mono truncate">{entry.guild_id}</p>
+                  </div>
                 </div>
+                {entry.reason && (
+                  <p className="text-gray-400 text-sm mt-2 truncate">{entry.reason}</p>
+                )}
+                {(entry.owner_id || entry.real_owner_id) && (
+                  <div className="space-y-1 mt-2">
+                    {entry.owner_id && (
+                      <p className="text-gray-500 text-xs">
+                        Owner: <span className="font-mono">{entry.owner_id}</span>
+                      </p>
+                    )}
+                    {entry.real_owner_id && (
+                      <p className="text-gray-500 text-xs">
+                        Real Owner: <span className="font-mono">{entry.real_owner_id}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              {canModify && (
+              {canRemove && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setDeleteTarget(entry)}
-                  className="opacity-0 group-hover:opacity-100 text-green-400 hover:text-green-300 hover:bg-green-900/30 transition-all ml-2"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-all ml-2"
                   title={`Remove server ${entry.guild_id} from blacklist`}
                 >
                   <FontAwesomeIcon icon="trash" aria-hidden="true" />
@@ -199,13 +217,13 @@ export default function ServerBlacklistPage() {
         </p>
       )}
 
-      {canModify && (
+      {canRemove && (
         <ConfirmModal
           isOpen={deleteTarget !== null}
           title="Remove from Blacklist"
           message={`Are you sure you want to remove server ${deleteTarget?.guild_id ?? ""} from the blacklist?`}
           confirmText="Remove"
-          confirmVariant="success"
+          confirmVariant="danger"
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />

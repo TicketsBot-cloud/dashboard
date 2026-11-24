@@ -40,7 +40,7 @@ type panelBody struct {
 	MessageId                 uint64                             `json:"message_id,string"`
 	Title                     string                             `json:"title"`
 	Content                   string                             `json:"content"`
-	Colour                    uint32                             `json:"colour"`
+	Colour                    *uint32                            `json:"colour" validate:"omitempty,max=16777215"`
 	CategoryId                uint64                             `json:"category_id,string"`
 	Emoji                     types.Emoji                        `json:"emote"`
 	WelcomeMessage            *types.CustomEmbed                 `json:"welcome_message" validate:"omitempty"`
@@ -78,6 +78,7 @@ type panelBody struct {
 	SupportCanView            bool                               `json:"support_can_view"`
 	SupportCanType            bool                               `json:"support_can_type"`
 	AutoClose                 PanelAutoCloseBody                 `json:"auto_close"`
+	CloseReasons              *database.PanelCloseReasons        `json:"close_reasons"`
 }
 
 func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) panelMessageData {
@@ -86,7 +87,7 @@ func (p *panelBody) IntoPanelMessageData(customId string, showBranding bool) pan
 		Title:          p.Title,
 		Content:        p.Content,
 		CustomId:       customId,
-		Colour:         int(p.Colour),
+		Colour:         utils.ConvertPtr[int](p.Colour),
 		ImageUrl:       p.ImageUrl,
 		ThumbnailUrl:   p.ThumbnailUrl,
 		Emoji:          p.getEmoji(),
@@ -145,6 +146,7 @@ func CreatePanel(c *gin.Context) {
 
 	// Apply defaults
 	ApplyPanelDefaults(&data)
+	normaliseCloseReasons(&data)
 
 	// Not in DefaultApplicators: that also runs on update, where an empty list means "delete
 	// every rule" rather than "unconfigured".
@@ -290,7 +292,7 @@ func CreatePanel(c *gin.Context) {
 		GuildId:                   guildId,
 		Title:                     data.Title,
 		Content:                   data.Content,
-		Colour:                    int32(data.Colour),
+		Colour:                    utils.ConvertPtr[int32](data.Colour),
 		TargetCategory:            data.CategoryId,
 		EmojiId:                   emojiId,
 		EmojiName:                 emojiName,
@@ -332,6 +334,7 @@ func CreatePanel(c *gin.Context) {
 		TeamIds:            data.Teams,              // Already validated
 		AccessControlRules: *data.AccessControlList, // Already validated
 		KBCategoryIds:      data.KBCategoryIds,      // Already validated
+		CloseReasons:       data.CloseReasons,
 	}
 
 	// insert role mention data
@@ -399,6 +402,7 @@ type panelCreateOptions struct {
 	TeamIds            []int
 	AccessControlRules []database.PanelAccessControlRule
 	KBCategoryIds      []int
+	CloseReasons       *database.PanelCloseReasons
 }
 
 func storePanel(ctx context.Context, panel database.Panel, options panelCreateOptions) (int, error) {
@@ -433,6 +437,12 @@ func storePanel(ctx context.Context, panel database.Panel, options panelCreateOp
 
 		if err := dbclient.Client.PanelKBCategories.SetWithTx(ctx, tx, panelId, options.KBCategoryIds); err != nil {
 			return err
+		}
+
+		if options.CloseReasons != nil {
+			if err := dbclient.Client.PanelCloseReasons.SetWithTx(ctx, tx, panelId, *options.CloseReasons); err != nil {
+				return err
+			}
 		}
 
 		return nil

@@ -23,6 +23,7 @@ type channelCheckResult struct {
 	Required    []string `json:"required"`
 	Missing     []string `json:"missing"`
 	Deleted     bool     `json:"deleted"`
+	NoAccess    bool     `json:"no_access"`
 	Ok          bool     `json:"ok"`
 }
 
@@ -200,6 +201,13 @@ func checkChannel(
 	if !exists {
 		// Channel not found in the guild's channel list - it has been deleted.
 		result.Deleted = true
+		result.Ok = false
+		return result
+	}
+
+	if ch.IsObfuscated() {
+		result.NoAccess = true
+		result.Missing = []string{permission.ViewChannel.String()}
 		result.Ok = false
 		return result
 	}

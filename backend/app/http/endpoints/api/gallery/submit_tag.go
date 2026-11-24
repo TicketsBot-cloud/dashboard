@@ -20,6 +20,10 @@ func SubmitTagHandler(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
 
+	if utils.RejectIfSubmissionBlacklisted(ctx, database.SubmissionFeatureGallery, userId, guildId) {
+		return
+	}
+
 	tagId := ctx.Param("tagid")
 
 	var body submitBody
@@ -112,7 +116,7 @@ func SubmitTagHandler(ctx *gin.Context) {
 		// Panel fields left at zero values for non-panel listings
 		Title:       "",
 		Content:     "",
-		Colour:      0,
+		Colour:      nil,
 		ButtonLabel: "",
 	}
 

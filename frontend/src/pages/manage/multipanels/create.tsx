@@ -22,7 +22,7 @@ import MultiSelect from "@/components/MultiSelect";
 import Select from "@/components/Select";
 import TextInput from "@/components/TextInput";
 import ColourSelect from "@/components/ColourSelect";
-import { intToColour } from "@/lib/colour";
+import { embedColourHex } from "@/lib/colour";
 import Textarea from "@/components/Textarea";
 import PanelPreview from "@/components/PanelPreview";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -178,7 +178,8 @@ const MultiPanelsPage: FC = () => {
   // Returns the message so the Save button can reuse the rules.
   const saveBlocker = () => {
     if (!multiPanel.channel_id) return "Select a panel channel before creating the multi-panel.";
-    if (staleChannel) return "The selected panel channel no longer exists.";
+    if (staleChannel)
+      return "The selected panel channel no longer exists or the bot can't view it.";
     if (multiPanel.panels.length < 2)
       return "Select at least two panels before creating the multi-panel.";
     if (multiPanel.panels.length > 15) return "Multi-panels cannot contain more than 15 panels.";
@@ -244,7 +245,7 @@ const MultiPanelsPage: FC = () => {
             options={panels?.map((panel) => ({
               label: panel.title,
               key: panel.panel_id.toString(),
-              color: intToColour(panel.colour),
+              color: embedColourHex(panel.colour) ?? undefined,
             }))}
             onChange={(e) =>
               setMultiPanel((prev) => {
@@ -372,8 +373,10 @@ const MultiPanelsPage: FC = () => {
                 showCount
               />
               <ColourSelect
+                nullable
+                clearable
                 label="Colour"
-                value={multiPanel.embed?.colour || "#5865f2"}
+                value={embedColourHex(multiPanel.embed?.colour)}
                 onChange={(e) =>
                   setMultiPanel((prev) =>
                     prev ? { ...prev, embed: { ...prev.embed, colour: e } } : prev,

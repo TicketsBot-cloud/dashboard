@@ -11,6 +11,7 @@ import CardGridSkeleton from "@/components/skeletons/CardGridSkeleton";
 import Tabs from "@/components/Tabs";
 import type { GalleryListing } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
+import { embedColourInt, intToColour } from "@/lib/colour";
 
 interface PanelsStepProps {
   guildId: string;
@@ -24,20 +25,6 @@ type TabId = "import" | "scratch";
 
 /** Blurple (#5865F2) as a decimal integer. */
 const DEFAULT_COLOUR = 5793266;
-
-/**
- * Converts a decimal colour integer to a CSS hex string (e.g. 5793266 -> "#5865F2").
- */
-function colourToHex(colour: number): string {
-  return "#" + colour.toString(16).padStart(6, "0");
-}
-
-/**
- * Converts a CSS hex string to a decimal integer (e.g. "#5865F2" -> 5793266).
- */
-function hexToColour(hex: string): number {
-  return parseInt(hex.replace("#", ""), 16) || DEFAULT_COLOUR;
-}
 
 const PanelsStep: FC<PanelsStepProps> = ({
   guildId,
@@ -59,7 +46,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
   // ─── Create-from-scratch state ───────────────────────────────────────────────
   const [title, setTitle] = useState("Open a Ticket");
   const [content, setContent] = useState("Click the button below to open a support ticket.");
-  const [colour, setColour] = useState(colourToHex(DEFAULT_COLOUR));
+  const [colour, setColour] = useState<string | null>(intToColour(DEFAULT_COLOUR));
   const [channel, setChannel] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [teamId, setTeamId] = useState<string | null>("default");
@@ -156,7 +143,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
       await apiClient.panels.create(guildId, {
         title: title.trim(),
         content,
-        colour: hexToColour(colour),
+        colour: embedColourInt(colour),
         channel_id: channel,
         category_id: category,
         default_team: teamId === "default",
@@ -260,7 +247,7 @@ const PanelsStep: FC<PanelsStepProps> = ({
               placeholder="Open a Ticket"
               maxLength={80}
             />
-            <ColourSelect label="Colour" value={colour} onChange={setColour} />
+            <ColourSelect nullable clearable label="Colour" value={colour} onChange={setColour} />
           </div>
           <Textarea
             label="Content"

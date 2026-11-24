@@ -127,7 +127,7 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 
 	for _, colourCode := range activeColours {
 		if _, ok := s.Colours[colourCode]; !ok {
-			s.Colours[colourCode] = utils.HexColour(customisation.DefaultColours[colourCode])
+			s.Colours[colourCode] = utils.Ptr(utils.HexColour(customisation.DefaultColours[colourCode]))
 		}
 	}
 
@@ -171,9 +171,9 @@ func (s *Settings) updateLanguage(guildId uint64) error {
 
 func (s *Settings) updateColours(guildId uint64) error {
 	// Convert ColourMap to primitives
-	converted := make(map[int16]int)
+	converted := make(map[int16]*int)
 	for colour, hex := range s.Colours {
-		converted[int16(colour)] = int(hex)
+		converted[int16(colour)] = utils.ConvertPtr[int](hex)
 	}
 
 	return dbclient.Client.CustomColours.BatchSet(context.Background(), guildId, converted)

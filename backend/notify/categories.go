@@ -24,7 +24,7 @@ var AllCategories = []CategoryInfo{
 	{Key: CategoryIntegrations, Label: "Integrations", Description: "Updates when your public integration request is approved, rejected, or unapproved", MinTier: admin.AdminTierNone},
 	{Key: CategoryAdminGallery, Label: "Gallery Submissions", Description: "New gallery panel submissions for review", MinTier: admin.AdminTierAdmin},
 	{Key: CategoryAdminAffiliates, Label: "Affiliate Applications", Description: "New affiliate applications pending approval", MinTier: admin.AdminTierOwner},
-	{Key: CategoryAdminIntegrations, Label: "Integration Requests", Description: "Integration public access requests", MinTier: admin.AdminTierAdmin},
+	{Key: CategoryAdminIntegrations, Label: "Integration Requests", Description: "Integration public access requests", MinTier: admin.AdminTierOwner},
 }
 
 func AdminCategoryKeys() []string {

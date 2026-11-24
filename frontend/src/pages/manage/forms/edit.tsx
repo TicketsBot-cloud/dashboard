@@ -13,7 +13,13 @@ import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_FORMS } from "@/lib/feature-flags";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faFloppyDisk } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlus,
+  faEdit,
+  faFloppyDisk,
+  faExclamationTriangle,
+  faInfoCircle,
+} from "@fortawesome/free-solid-svg-icons";
 import { useApiErrorHandler } from "@/hooks/useApiErrorHandler";
 
 interface ExtendedFormInput extends FormInput {
@@ -285,6 +291,12 @@ const EditFormPage: FC = () => {
     );
   }
 
+  const totalContentLength = form.inputs
+    .filter((i) => i.type === 10)
+    .reduce((total, i) => total + [...(i.content ?? "")].length, 0);
+  const exceedsContentLimit = totalContentLength > 4000;
+  const isDisplayOnly = form.inputs.length > 0 && form.inputs.every((i) => i.type === 10);
+
   return (
     <MainLayout title={`Edit Form - ${form.title}`} subtitle="Manage form fields and settings">
       <FeatureLockBanner
@@ -379,6 +391,36 @@ const EditFormPage: FC = () => {
             {form.inputs.length >= 5 && (
               <div className="text-center text-gray-400 mt-4">Maximum of 5 fields reached</div>
             )}
+
+            {exceedsContentLimit && (
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 mt-4"
+              >
+                <FontAwesomeIcon
+                  icon={faExclamationTriangle}
+                  className="mt-0.5 h-4 w-4 shrink-0 text-red-400"
+                  aria-hidden="true"
+                />
+                <p className="text-sm text-red-400">
+                  Text Display fields can have at most 4000 characters in total (currently{" "}
+                  {totalContentLength}).
+                </p>
+              </div>
+            )}
+
+            {isDisplayOnly && (
+              <div className="flex items-start gap-3 rounded-lg border border-blue-500/40 bg-blue-500/10 px-4 py-3 mt-4">
+                <FontAwesomeIcon
+                  icon={faInfoCircle}
+                  className="mt-0.5 h-4 w-4 shrink-0 text-blue-400"
+                  aria-hidden="true"
+                />
+                <p className="text-sm text-blue-300">
+                  This form only has Text Display fields, so it will not collect any answers.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -390,6 +432,7 @@ const EditFormPage: FC = () => {
           disabled={
             form.inputs.length === 0 ||
             isSaving ||
+            exceedsContentLimit ||
             Object.values(inputValidationErrors).some(Boolean)
           }
           visuallyDisabled={isLocked}

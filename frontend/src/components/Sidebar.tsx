@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, type SyntheticEvent } from "react";
-import { guildIconUrl, userAvatarUrl } from "@/lib/discord-cdn";
+import { guildIconUrl, RANDOM_DEFAULT_AVATAR_URL, userAvatarUrl } from "@/lib/discord-cdn";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
 
@@ -193,13 +193,11 @@ const Sidebar = () => {
     setAvatarDropdownPos({ top, left, width: menuWidth });
   }, []);
 
-  const userAvatarSrc =
-    safeUserData.id == 0
-      ? "https://avatar.iran.liara.run/public"
-      : userAvatarUrl(String(safeUserData.id), safeUserData.avatar || null);
+  const userAvatarSrc = userAvatarUrl(String(safeUserData.id), safeUserData.avatar || null);
 
   const handleUserAvatarError = (event: SyntheticEvent<HTMLImageElement>) => {
-    event.currentTarget.src = "https://avatar.iran.liara.run/public";
+    const img = event.currentTarget;
+    if (img.src !== RANDOM_DEFAULT_AVATAR_URL) img.src = RANDOM_DEFAULT_AVATAR_URL;
   };
 
   const toggleAvatarDropdown = () => {

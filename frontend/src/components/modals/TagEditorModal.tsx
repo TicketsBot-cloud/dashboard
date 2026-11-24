@@ -12,8 +12,10 @@ import EmbedPreview from "@/components/EmbedPreview";
 import DiscordContent from "@/components/discord/DiscordContent";
 import DateTimePicker from "@/components/DateTimePicker";
 import { useKBArticles } from "@/hooks/queries/useKB";
+import { usePreviewEntities } from "@/hooks/usePreviewEntities";
 import { parseEmbedTimestamp, serializeEmbedTimestamp } from "@/lib/embed-timestamp";
 import { embedUrlError } from "@/lib/embed-url";
+import { embedColourHex, embedColourInt } from "@/lib/colour";
 import type { Tag, TagEmbed } from "@/types";
 import { EMBED_LIMITS } from "@/constants/embedLimits";
 import { BRANDING_FOOTER_TEXT } from "@/lib/constants";
@@ -52,6 +54,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
   onSave,
   onClose,
 }) => {
+  const previewEntities = usePreviewEntities();
   const [id, setId] = useState("");
   const [useGuildCommand, setUseGuildCommand] = useState(false);
   const [content, setContent] = useState("");
@@ -79,12 +82,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
           ? {
               ...defaultEmbed,
               ...tag.embed,
-              colour: (() => {
-                const c = tag.embed.colour;
-                if (typeof c === "number") return c;
-                const parsed = parseInt(String(c ?? "").replace(/^#/, ""), 16);
-                return isNaN(parsed) ? defaultEmbed.colour : parsed;
-              })(),
+              colour: embedColourInt(tag.embed.colour),
               author: { ...defaultEmbed.author, ...tag.embed.author },
               footer: { ...defaultEmbed.footer, ...tag.embed.footer },
               fields: tag.embed.fields?.length ? [...tag.embed.fields] : [],
@@ -103,12 +101,7 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
           ? {
               ...defaultEmbed,
               ...tag.embed,
-              colour: (() => {
-                const c = tag.embed.colour;
-                if (typeof c === "number") return c;
-                const parsed = parseInt(String(c ?? "").replace(/^#/, ""), 16);
-                return isNaN(parsed) ? defaultEmbed.colour : parsed;
-              })(),
+              colour: embedColourInt(tag.embed.colour),
               author: { ...defaultEmbed.author, ...tag.embed.author },
               footer: { ...defaultEmbed.footer, ...tag.embed.footer },
               fields: tag.embed.fields?.length ? [...tag.embed.fields] : [],
@@ -283,12 +276,14 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                         showCount
                       />
                       <ColourSelect
+                        nullable
+                        clearable
                         label="Colour"
-                        value={`#${(embed.colour || 0x5865f2).toString(16).padStart(6, "0")}`}
+                        value={embedColourHex(embed.colour)}
                         onChange={(v) =>
                           setEmbed((prev) => ({
                             ...prev,
-                            colour: parseInt(v.replace("#", ""), 16),
+                            colour: embedColourInt(v),
                           }))
                         }
                       />
@@ -433,6 +428,8 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                 {hasArticlePreview && (
                   <DiscordContent
                     content={linkedArticle.content ?? ""}
+                    entities={previewEntities}
+                    webhook
                     className="text-sm bg-[#242429] rounded p-3"
                   />
                 )}
@@ -447,6 +444,8 @@ const TagEditorModal: FC<TagEditorModalProps> = ({
                 {hasContentPreview && (
                   <DiscordContent
                     content={content}
+                    entities={previewEntities}
+                    webhook
                     className="mt-4 text-sm bg-[#242429] rounded p-3"
                   />
                 )}

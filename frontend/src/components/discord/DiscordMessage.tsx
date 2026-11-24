@@ -5,6 +5,7 @@ import DiscordAuthor from "./DiscordAuthor";
 import DiscordContent from "./DiscordContent";
 import DiscordEmbed from "./DiscordEmbed";
 import DiscordComponents from "./DiscordComponents";
+import { isLegacyMarkdown } from "@/lib/discord-markdown";
 
 const DiscordMessageComponent: FC<DiscordMessageProps> = ({
   message,
@@ -17,6 +18,7 @@ const DiscordMessageComponent: FC<DiscordMessageProps> = ({
   const hasEmbeds = message.embeds && message.embeds.length > 0;
   const hasComponents = message.components && message.components.length > 0;
   const hasAttachments = message.attachments && message.attachments.length > 0;
+  const legacy = isLegacyMarkdown(message.timestamp);
 
   const resolvedUser = entities?.users[message.author] ?? {
     id: message.author,
@@ -46,11 +48,16 @@ const DiscordMessageComponent: FC<DiscordMessageProps> = ({
             compact={true}
           />
           {hasContent && (
-            <DiscordContent entities={entities} content={message.content} className="mt-1" />
+            <DiscordContent
+              entities={entities}
+              content={message.content}
+              legacy={legacy}
+              className="mt-1"
+            />
           )}
           {hasEmbeds &&
             message.embeds.map((embed, index) => (
-              <DiscordEmbed key={index} embed={embed} entities={entities} />
+              <DiscordEmbed key={index} embed={embed} entities={entities} legacy={legacy} />
             ))}
           {hasComponents && (
             <DiscordComponents entities={entities} components={message.components || []} />
@@ -98,10 +105,12 @@ const DiscordMessageComponent: FC<DiscordMessageProps> = ({
         compact={false}
       />
       <div className="ml-14 -mt-4">
-        {hasContent && <DiscordContent entities={entities} content={message.content} />}
+        {hasContent && (
+          <DiscordContent entities={entities} content={message.content} legacy={legacy} />
+        )}
         {hasEmbeds &&
           message.embeds.map((embed, index) => (
-            <DiscordEmbed key={index} embed={embed} entities={entities} />
+            <DiscordEmbed key={index} embed={embed} entities={entities} legacy={legacy} />
           ))}
         {hasComponents && (
           <DiscordComponents entities={entities} components={message.components || []} />

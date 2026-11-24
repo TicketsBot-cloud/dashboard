@@ -11,7 +11,6 @@ const ROLE_LABELS: Record<string, string> = {
   transcript_channel: "Transcript channel",
 };
 
-// Maps a role to the appropriate noun for "no longer exists" messages
 const ROLE_ENTITY: Record<string, string> = {
   ticket_category: "category",
 };
@@ -63,6 +62,15 @@ const PanelDetail: FC<{ panel: PanelPermResult; isError: boolean; guildId: strin
                 {" - "}
                 {ROLE_ENTITY[ch.role] ?? "channel"} no longer exists
               </span>
+            ) : ch.no_access ? (
+              <>
+                {" "}
+                <span className={nameColor}>({ch.channel_id})</span>
+                {" - "}
+                <span>
+                  bot cannot see this {ROLE_ENTITY[ch.role] ?? "channel"}, grant it View Channel
+                </span>
+              </>
             ) : (
               <>
                 {" "}

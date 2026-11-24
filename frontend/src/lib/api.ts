@@ -41,6 +41,9 @@ import type {
   BotStaffMember,
   GlobalBlacklistEntry,
   ServerBlacklistEntry,
+  SubmissionBlacklistEntry,
+  SubmissionBlacklistFeature,
+  SubmissionBlacklistTarget,
   AdminEntitlement,
   PremiumKeyEntry,
   SkuWithDetails,
@@ -59,6 +62,7 @@ import type {
   PermCheckResponse,
   GalleryListing,
   GallerySubmission,
+  AdminGallerySubmission,
   OnboardingState,
   AffiliateCode,
   AffiliateReferral,
@@ -778,6 +782,18 @@ export const apiClient = {
         api.post(`/api/admin/server-blacklist/${guildId}`, data),
       remove: (guildId: string) => api.delete(`/api/admin/server-blacklist/${guildId}`),
     },
+    submissionBlacklist: {
+      list: (feature: SubmissionBlacklistFeature) =>
+        api.get<SubmissionBlacklistEntry[]>(`/api/admin/submission-blacklist/${feature}`),
+      add: (
+        feature: SubmissionBlacklistFeature,
+        type: SubmissionBlacklistTarget,
+        id: string,
+        data?: { reason?: string },
+      ) => api.post(`/api/admin/submission-blacklist/${feature}/${type}/${id}`, data),
+      remove: (feature: SubmissionBlacklistFeature, type: SubmissionBlacklistTarget, id: string) =>
+        api.delete(`/api/admin/submission-blacklist/${feature}/${type}/${id}`),
+    },
     featureFlags: {
       list: () => api.get<FeatureFlagList>("/api/admin/feature-flags"),
       experiments: () => api.get<FeatureFlagExperiment[]>("/api/admin/feature-flags/experiments"),
@@ -844,7 +860,7 @@ export const apiClient = {
     },
     gallery: {
       list: (params?: { status?: string; type?: string }) =>
-        api.get<GallerySubmission[]>("/api/admin/gallery", { params }),
+        api.get<AdminGallerySubmission[]>("/api/admin/gallery", { params }),
       approve: (id: number) => api.post(`/api/admin/gallery/${id}/approve`),
       reject: (id: number, reason: string) =>
         api.post(`/api/admin/gallery/${id}/reject`, { reason }),

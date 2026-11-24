@@ -71,7 +71,7 @@ const DashboardAccessRequiredModal: FC<DashboardAccessRequiredModalProps> = ({
             </ul>
             <p className="m-0 mt-3 text-sm">
               <a
-                href={`${DOCS_URL}/setup/staff`}
+                href={`${DOCS_URL}/setup/support-staff`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#5865f2] hover:text-[#7289da] hover:underline"

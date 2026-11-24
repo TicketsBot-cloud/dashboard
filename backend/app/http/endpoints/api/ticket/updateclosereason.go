@@ -69,13 +69,18 @@ func UpdateCloseReason(c *gin.Context) {
 		return
 	}
 
+	reason, ok := resolveCloseReason(c, ticket, body.Reason)
+	if !ok {
+		c.JSON(http.StatusBadRequest, utils.ErrorStr(closeReasonNotPredefined))
+		return
+	}
+
 	existing, _, err := database.Client.CloseReason.Get(c, guildId, ticketId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to load close reason. Please try again."))
 		return
 	}
 
-	reason := body.Reason
 	oldReason := ""
 	if existing.Reason != nil {
 		oldReason = *existing.Reason

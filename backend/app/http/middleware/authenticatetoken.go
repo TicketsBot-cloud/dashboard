@@ -54,7 +54,7 @@ func AuthenticateToken(ctx *gin.Context) {
 		}
 
 		if ctx.Keys == nil {
-			ctx.Keys = make(map[string]interface{})
+			ctx.Keys = make(map[any]any)
 		}
 
 		ctx.Keys["userid"] = parsedId

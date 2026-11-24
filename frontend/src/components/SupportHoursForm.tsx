@@ -4,6 +4,7 @@ import type { SupportHoursData } from "@/types";
 import Button from "@/components/Button";
 import Select from "@/components/Select";
 import ColourSelect from "@/components/ColourSelect";
+import { embedColourHex, embedColourInt } from "@/lib/colour";
 import TextInput from "@/components/TextInput";
 import Textarea from "@/components/Textarea";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -21,14 +22,6 @@ function formatTime(timeString: string): string {
   if (/^\d{2}:\d{2}$/.test(timeString)) return timeString;
   if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) return timeString.substring(0, 5);
   return "09:00";
-}
-
-function colourIntToHex(colour: number): string {
-  return `#${colour.toString(16).padStart(6, "0")}`;
-}
-
-function hexToColourInt(hex: string): number {
-  return parseInt(hex.replace("#", ""), 16);
 }
 
 interface HoursState {
@@ -58,7 +51,7 @@ const SupportHoursForm: FC<SupportHoursFormProps> = ({ value, onChange }) => {
   >("block_creation");
   const [outOfHoursTitle, setOutOfHoursTitle] = useState("");
   const [outOfHoursMessage, setOutOfHoursMessage] = useState("");
-  const [outOfHoursColour, setOutOfHoursColour] = useState("#FC3F35");
+  const [outOfHoursColour, setOutOfHoursColour] = useState<string | null>("#FC3F35");
   const [currentTimeDisplay, setCurrentTimeDisplay] = useState("");
 
   // Load initial data from value prop
@@ -68,7 +61,8 @@ const SupportHoursForm: FC<SupportHoursFormProps> = ({ value, onChange }) => {
     if (value.out_of_hours_behaviour) setOutOfHoursBehaviour(value.out_of_hours_behaviour);
     if (value.out_of_hours_title) setOutOfHoursTitle(value.out_of_hours_title);
     if (value.out_of_hours_message) setOutOfHoursMessage(value.out_of_hours_message);
-    if (value.out_of_hours_colour) setOutOfHoursColour(colourIntToHex(value.out_of_hours_colour));
+    if (value.out_of_hours_colour !== undefined)
+      setOutOfHoursColour(embedColourHex(value.out_of_hours_colour));
 
     if (value.hours && value.hours.length > 0) {
       setHours((prev) => {
@@ -128,7 +122,7 @@ const SupportHoursForm: FC<SupportHoursFormProps> = ({ value, onChange }) => {
       newBehaviour: "block_creation" | "allow_with_warning",
       newTitle: string,
       newMessage: string,
-      newColour: string,
+      newColour: string | null,
     ) => {
       const enabledHours = newHours.filter((h) => h.enabled);
       if (enabledHours.length === 0) {
@@ -146,7 +140,7 @@ const SupportHoursForm: FC<SupportHoursFormProps> = ({ value, onChange }) => {
         out_of_hours_behaviour: newBehaviour,
         out_of_hours_title: newTitle,
         out_of_hours_message: newMessage,
-        out_of_hours_colour: hexToColourInt(newColour),
+        out_of_hours_colour: embedColourInt(newColour),
       });
     },
     [onChange],
@@ -226,7 +220,7 @@ const SupportHoursForm: FC<SupportHoursFormProps> = ({ value, onChange }) => {
     emitChange(hours, timezone, outOfHoursBehaviour, outOfHoursTitle, clamped, outOfHoursColour);
   };
 
-  const handleColourChange = (val: string) => {
+  const handleColourChange = (val: string | null) => {
     setOutOfHoursColour(val);
     emitChange(hours, timezone, outOfHoursBehaviour, outOfHoursTitle, outOfHoursMessage, val);
   };
@@ -405,8 +399,11 @@ const SupportHoursForm: FC<SupportHoursFormProps> = ({ value, onChange }) => {
           </p>
 
           <ColourSelect
+            nullable
+            clearable
             label="Embed Colour"
             value={outOfHoursColour}
+            fallbackColour="#fc3f35"
             onChange={handleColourChange}
           />
 

@@ -63,6 +63,11 @@ func BulkCloseRequest(c *gin.Context) {
 		return
 	}
 
+	var panelCloseReasons map[int]dbmodel.PanelCloseReasons
+	if body.Reason != nil {
+		panelCloseReasons = getGuildCloseReasons(c, guildId, *body.Reason)
+	}
+
 	var closeAt *time.Time
 	if body.CloseDelay != nil && *body.CloseDelay > 0 {
 		t := time.Now().Add(time.Hour * time.Duration(*body.CloseDelay))
@@ -79,20 +84,35 @@ func BulkCloseRequest(c *gin.Context) {
 	locale := utils.ResolveGuildLocale(context.Background(), guildId)
 	msgEmbed, components := buildCloseRequestMessage(locale, userId, body.Reason, closeAt)
 
-	sendOne := func(opCtx context.Context, ticketId int) bool {
+	sendOne := func(opCtx context.Context, ticketId int) (bool, string) {
+		failed := fmt.Sprintf("Failed to send close request for ticket #%d", ticketId)
+
 		ticket, err := database.Client.Tickets.Get(opCtx, ticketId, guildId)
 		if err != nil || ticket.UserId == 0 {
-			return false
+			return false, failed
 		}
 
 		hasPermission, requestErr := utils.HasPermissionToViewTicket(opCtx, guildId, userId, ticket)
 		if requestErr != nil || !hasPermission {
-			return false
+			return false, failed
 		}
 
 		hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(opCtx, guildId, userId, ticket)
 		if contentErr != nil || !hasContentPermission {
-			return false
+			return false, failed
+		}
+
+		reason, ticketEmbed := body.Reason, msgEmbed
+		if body.Reason != nil {
+			canonical, ok := resolveCloseReasonFrom(panelCloseReasons, ticket, *body.Reason)
+			if !ok {
+				return false, closeReasonNotPredefined
+			}
+
+			if canonical != *body.Reason {
+				reason = &canonical
+				ticketEmbed, _ = buildCloseRequestMessage(locale, userId, reason, closeAt)
+			}
 		}
 
 		closeReq := dbmodel.CloseRequest{
@@ -100,30 +120,30 @@ func BulkCloseRequest(c *gin.Context) {
 			TicketId: ticketId,
 			UserId:   userId,
 			CloseAt:  closeAt,
-			Reason:   body.Reason,
+			Reason:   reason,
 		}
 
 		if err := database.Client.CloseRequest.Set(opCtx, closeReq); err != nil {
 			_ = app.NewError(err, fmt.Sprintf("Failed to save close request for ticket #%d", ticketId))
-			return false
+			return false, failed
 		}
 
 		if err := database.Client.Tickets.SetStatus(opCtx, guildId, ticketId, model.TicketStatusPending); err != nil {
 			_ = app.NewError(err, fmt.Sprintf("Failed to update status for ticket #%d", ticketId))
-			return false
+			return false, failed
 		}
 
 		if !ticket.IsThread {
 			if err := database.Client.CategoryUpdateQueue.Add(opCtx, guildId, ticketId, model.TicketStatusPending); err != nil {
 				_ = app.NewError(err, fmt.Sprintf("Failed to queue category update for ticket #%d", ticketId))
-				return false
+				return false, failed
 			}
 		}
 
 		if ticket.ChannelId != nil {
 			_, _ = rest.CreateMessage(opCtx, botCtx.Token, botCtx.RateLimiter, *ticket.ChannelId, rest.CreateMessageData{
 				Content: fmt.Sprintf("<@%d>", ticket.UserId),
-				Embeds:  []*embed.Embed{msgEmbed},
+				Embeds:  []*embed.Embed{ticketEmbed},
 				AllowedMentions: messagetypes.AllowedMention{
 					Users: []uint64{ticket.UserId},
 				},
@@ -137,9 +157,9 @@ func BulkCloseRequest(c *gin.Context) {
 			ActionType:   dbmodel.AuditActionTicketCloseRequest,
 			ResourceType: dbmodel.AuditResourceTicket,
 			ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
-			Metadata:     map[string]interface{}{"reason": body.Reason, "bulk": true},
+			Metadata:     map[string]interface{}{"reason": reason, "bulk": true},
 		})
-		return true
+		return true, ""
 	}
 
 	var backgroundIds []int
@@ -150,10 +170,10 @@ func BulkCloseRequest(c *gin.Context) {
 			break
 		}
 
-		if sendOne(c, ticketId) {
+		if ok, msg := sendOne(c, ticketId); ok {
 			result.Sent = append(result.Sent, ticketId)
 		} else {
-			result.Failed[strconv.Itoa(ticketId)] = fmt.Sprintf("Failed to send close request for ticket #%d", ticketId)
+			result.Failed[strconv.Itoa(ticketId)] = msg
 		}
 
 		if i < len(body.TicketIds)-1 && !time.Now().After(deadline) {

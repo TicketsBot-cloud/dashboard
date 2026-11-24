@@ -27,7 +27,7 @@ type CustomEmbed struct {
 	Title        *string        `json:"title" validate:"omitempty,min=1,max=256"`
 	Description  *string        `json:"description" validate:"omitempty,min=1,max=4096"`
 	Url          *string        `json:"url" validate:"omitempty,max=255"`
-	Colour       Colour         `json:"colour" validate:"gte=0,lte=16777215"`
+	Colour       *Colour        `json:"colour" validate:"omitempty,lte=16777215"`
 	Author       Author         `json:"author"`
 	ImageUrl     *string        `json:"image_url" validate:"omitempty,max=255"`
 	ThumbnailUrl *string        `json:"thumbnail_url" validate:"omitempty,max=255"`
@@ -105,7 +105,7 @@ func NewCustomEmbed(c *database.CustomEmbed, fields []database.EmbedField) *Cust
 		Title:       c.Title,
 		Description: c.Description,
 		Url:         c.Url,
-		Colour:      Colour(c.Colour),
+		Colour:      utils.ConvertPtr[Colour](c.Colour),
 		Author: Author{
 			Name:    c.AuthorName,
 			IconUrl: c.AuthorIconUrl,
@@ -136,7 +136,7 @@ func (c *CustomEmbed) IntoDatabaseStruct() (*database.CustomEmbed, []database.Em
 		Title:         c.Title,
 		Description:   c.Description,
 		Url:           c.Url,
-		Colour:        uint32(c.Colour),
+		Colour:        utils.ConvertPtr[uint32](c.Colour),
 		AuthorName:    c.Author.Name,
 		AuthorIconUrl: c.Author.IconUrl,
 		AuthorUrl:     c.Author.Url,
@@ -154,7 +154,7 @@ func (c *CustomEmbed) IntoDiscordEmbed() *embed.Embed {
 		Description: utils.ValueOrZero(c.Description),
 		Url:         resolveAvatarPlaceholder(utils.ValueOrZero(c.Url)),
 		Timestamp:   TimeOrNil(c.Timestamp),
-		Color:       int(c.Colour),
+		Color:       utils.ConvertPtr[int](c.Colour),
 	}
 
 	if c.Footer.Text != nil {

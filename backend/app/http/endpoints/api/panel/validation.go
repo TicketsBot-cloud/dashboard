@@ -41,6 +41,21 @@ func DefaultApplicators(data *panelBody) []defaults.DefaultApplicator {
 	}
 }
 
+func normaliseCloseReasons(data *panelBody) {
+	if data.CloseReasons == nil {
+		return
+	}
+
+	reasons := make([]string, 0, len(data.CloseReasons.Reasons))
+	for _, reason := range data.CloseReasons.Reasons {
+		if reason = strings.TrimSpace(reason); reason != "" {
+			reasons = append(reasons, reason)
+		}
+	}
+
+	data.CloseReasons.Reasons = reasons
+}
+
 const (
 	MentionBehaviourNone   = "none"
 	MentionBehaviourHide   = "hide"
@@ -82,6 +97,7 @@ func panelValidators() []validation.Validator[PanelValidationContext] {
 		validateNamingScheme,
 		validateWelcomeMessage,
 		validateAccessControlList,
+		validateCloseReasons,
 		validatePendingCategory,
 		validateTranscriptChannelId,
 		validateTicketNotificationChannel,
@@ -114,12 +130,26 @@ func validateContent(ctx PanelValidationContext) validation.ValidationFunc {
 	}
 }
 
+func errChannelNoAccess(what string) error {
+	return validation.NewInvalidInputError(fmt.Sprintf("%s is not visible to the bot - grant it the View Channel permission", what))
+}
+
 func validateChannelId(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
 		for _, ch := range ctx.Channels {
-			if ch.Id == ctx.Data.ChannelId && (ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews) {
+			if ch.Id != ctx.Data.ChannelId {
+				continue
+			}
+
+			if ch.IsObfuscated() {
+				return errChannelNoAccess("Panel channel")
+			}
+
+			if ch.Type == channel.ChannelTypeGuildText || ch.Type == channel.ChannelTypeGuildNews {
 				return nil
 			}
+
+			break
 		}
 
 		return validation.NewInvalidInputError("Panel channel not found")
@@ -128,10 +158,24 @@ func validateChannelId(ctx PanelValidationContext) validation.ValidationFunc {
 
 func validateCategory(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
+		if ctx.Data.UseThreads {
+			return nil
+		}
+
 		for _, ch := range ctx.Channels {
-			if ch.Id == ctx.Data.CategoryId && ch.Type == channel.ChannelTypeGuildCategory {
+			if ch.Id != ctx.Data.CategoryId {
+				continue
+			}
+
+			if ch.IsObfuscated() {
+				return errChannelNoAccess("Ticket category")
+			}
+
+			if ch.Type == channel.ChannelTypeGuildCategory {
 				return nil
 			}
+
+			break
 		}
 
 		return validation.NewInvalidInputError("Invalid ticket category")
@@ -279,9 +323,19 @@ func validatePendingCategory(ctx PanelValidationContext) validation.ValidationFu
 		}
 
 		for _, ch := range ctx.Channels {
-			if ch.Id == *ctx.Data.PendingCategory && ch.Type == channel.ChannelTypeGuildCategory {
+			if ch.Id != *ctx.Data.PendingCategory {
+				continue
+			}
+
+			if ch.IsObfuscated() && !ctx.Data.UseThreads {
+				return errChannelNoAccess("Awaiting response category")
+			}
+
+			if ch.Type == channel.ChannelTypeGuildCategory {
 				return nil
 			}
+
+			break
 		}
 
 		return validation.NewInvalidInputError("Invalid awaiting response category")
@@ -438,6 +492,38 @@ func validateAccessControlList(ctx PanelValidationContext) validation.Validation
 	}
 }
 
+func validateCloseReasons(ctx PanelValidationContext) validation.ValidationFunc {
+	return func() error {
+		if ctx.Data.CloseReasons == nil {
+			return nil
+		}
+
+		reasons := ctx.Data.CloseReasons.Reasons
+
+		if len(reasons) > 25 {
+			return validation.NewInvalidInputError("Panel cannot have more than 25 close reasons")
+		}
+
+		for i, reason := range reasons {
+			if utf8.RuneCountInString(reason) > 100 {
+				return validation.NewInvalidInputError("Close reasons must be 100 characters or fewer")
+			}
+
+			if len(reason) > 255 {
+				return validation.NewInvalidInputErrorf("Close reason \"%s\" is too long", reason)
+			}
+
+			for _, previous := range reasons[:i] {
+				if strings.EqualFold(previous, reason) {
+					return validation.NewInvalidInputErrorf("Duplicate close reason \"%s\"", reason)
+				}
+			}
+		}
+
+		return nil
+	}
+}
+
 func validateEmbed(e *types.CustomEmbed) error {
 	if e == nil {
 		return nil
@@ -486,6 +572,9 @@ func validateTranscriptChannelId(ctx PanelValidationContext) validation.Validati
 
 		for _, ch := range ctx.Channels {
 			if ch.Id == *ctx.Data.TranscriptChannelId {
+				if ch.IsObfuscated() {
+					return errChannelNoAccess("Transcript channel")
+				}
 				if ch.Type != channel.ChannelTypeGuildText && ch.Type != channel.ChannelTypeGuildNews {
 					return validation.NewInvalidInputError("Transcript channel must be a text channel")
 				}
@@ -499,12 +588,18 @@ func validateTranscriptChannelId(ctx PanelValidationContext) validation.Validati
 
 func validateTicketNotificationChannel(ctx PanelValidationContext) validation.ValidationFunc {
 	return func() error {
-		// Always validate the channel if provided
+		if !ctx.Data.UseThreads {
+			return nil
+		}
+
 		if ctx.Data.TicketNotificationChannel != nil {
 			channelFound := false
 			for _, ch := range ctx.Channels {
 				if ch.Id == *ctx.Data.TicketNotificationChannel {
 					channelFound = true
+					if ch.IsObfuscated() {
+						return errChannelNoAccess("Ticket notification channel")
+					}
 					if ch.Type != channel.ChannelTypeGuildText {
 						return validation.NewInvalidInputError("Ticket notification channel must be a text channel")
 					}
@@ -518,7 +613,7 @@ func validateTicketNotificationChannel(ctx PanelValidationContext) validation.Va
 		}
 
 		// Thread mode requires a per-panel notification channel
-		if ctx.Data.UseThreads && ctx.Data.TicketNotificationChannel == nil {
+		if ctx.Data.TicketNotificationChannel == nil {
 			return validation.NewInvalidInputError("You must select a ticket notification channel for this panel when thread mode is enabled")
 		}
 
@@ -548,6 +643,10 @@ func validateOverflowCategoryId(ctx PanelValidationContext) validation.Validatio
 
 		for _, ch := range ctx.Channels {
 			if ch.Id == *ctx.Data.OverflowCategoryId {
+				if ch.IsObfuscated() && !ctx.Data.UseThreads {
+					return errChannelNoAccess("Overflow category")
+				}
+
 				if ch.GuildId != ctx.GuildId {
 					return validation.NewInvalidInputError("Overflow category guild ID does not match")
 				}

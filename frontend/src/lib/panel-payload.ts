@@ -95,6 +95,13 @@ export function preparePanelForApi(panel: Panel): Partial<Panel> {
     };
   }
 
+  if (panel.close_reasons) {
+    payload.close_reasons = {
+      ...panel.close_reasons,
+      reasons: panel.close_reasons.reasons.map((reason) => reason.trim()).filter(Boolean),
+    };
+  }
+
   setBlankStringsToNull(payload);
   return payload;
 }

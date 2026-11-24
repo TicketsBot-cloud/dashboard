@@ -41,7 +41,6 @@ export default defineConfig(({ mode }) => {
     "https://cdn.discordapp.com",
     "https://media.discordapp.net",
     "https://dbl-static.b-cdn.net",
-    "https://avatar.iran.liara.run",
     // Common third-party image hosts
     "https://imgur.com",
     "https://i.imgur.com",
@@ -93,7 +92,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       port: 5173,
-      open: true,
+      open: baseUrl,
       allowedHosts: ["localhost", new URL(baseUrl).hostname],
       headers: securityHeaders,
     },
@@ -114,6 +113,9 @@ export default defineConfig(({ mode }) => {
       },
       target: "es2022",
       minify: "terser",
+      terserOptions: {
+        ecma: 2020,
+      },
       sourcemap: false,
     },
   };

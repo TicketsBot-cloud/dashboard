@@ -48,6 +48,8 @@ func BulkCloseTickets(c *gin.Context) {
 		return
 	}
 
+	panelCloseReasons := getGuildCloseReasons(c, guildId, body.Reason)
+
 	result := bulkCloseResult{
 		Closed: []int{},
 		Failed: map[string]string{},
@@ -55,27 +57,34 @@ func BulkCloseTickets(c *gin.Context) {
 
 	deadline := time.Now().Add(bulkTimeoutSeconds * time.Second)
 
-	closeOne := func(opCtx context.Context, ticketId int) bool {
+	closeOne := func(opCtx context.Context, ticketId int) (bool, string) {
+		failed := fmt.Sprintf("Failed to close ticket #%d", ticketId)
+
 		ticket, err := database.Client.Tickets.Get(opCtx, ticketId, guildId)
 		if err != nil || ticket.UserId == 0 {
-			return false
+			return false, failed
 		}
 
 		hasPermission, requestErr := utils.HasPermissionToViewTicket(opCtx, guildId, userId, ticket)
 		if requestErr != nil || !hasPermission {
-			return false
+			return false, failed
+		}
+
+		reason, ok := resolveCloseReasonFrom(panelCloseReasons, ticket, body.Reason)
+		if !ok {
+			return false, closeReasonNotPredefined
 		}
 
 		data := closerelay.TicketClose{
 			GuildId:  guildId,
 			TicketId: ticket.Id,
 			UserId:   userId,
-			Reason:   body.Reason,
+			Reason:   reason,
 		}
 
 		if err := closerelay.Publish(redis.Client.Client, data); err != nil {
 			_ = app.NewError(err, fmt.Sprintf("Failed to publish close event for ticket #%d", ticketId))
-			return false
+			return false, failed
 		}
 
 		audit.Log(audit.LogEntry{
@@ -86,7 +95,7 @@ func BulkCloseTickets(c *gin.Context) {
 			ResourceId:   audit.StringPtr(strconv.Itoa(ticketId)),
 			Metadata:     map[string]interface{}{"reason": data.Reason, "bulk": true},
 		})
-		return true
+		return true, ""
 	}
 
 	var backgroundIds []int
@@ -97,10 +106,10 @@ func BulkCloseTickets(c *gin.Context) {
 			break
 		}
 
-		if closeOne(c, ticketId) {
+		if ok, msg := closeOne(c, ticketId); ok {
 			result.Closed = append(result.Closed, ticketId)
 		} else {
-			result.Failed[strconv.Itoa(ticketId)] = fmt.Sprintf("Failed to close ticket #%d", ticketId)
+			result.Failed[strconv.Itoa(ticketId)] = msg
 		}
 
 		if i < len(body.TicketIds)-1 && !time.Now().After(deadline) {

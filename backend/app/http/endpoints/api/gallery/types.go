@@ -9,6 +9,7 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 )
 
 // AllowedCategories defines the permitted categories for gallery submissions.
@@ -70,7 +71,7 @@ type galleryListingPublicResponse struct {
 	SnapshotData              stdjson.RawMessage   `json:"snapshot_data,omitempty"`
 	Title                     string               `json:"title"`
 	Content                   string               `json:"content"`
-	Colour                    int32                `json:"colour"`
+	Colour                    *int32               `json:"colour"`
 	ImageUrl                  *string              `json:"image_url,omitempty"`
 	ThumbnailUrl              *string              `json:"thumbnail_url,omitempty"`
 	ButtonStyle               *int16               `json:"button_style"`
@@ -99,7 +100,7 @@ type galleryListingResponse struct {
 	SnapshotData              stdjson.RawMessage   `json:"snapshot_data,omitempty"`
 	Title                     string               `json:"title"`
 	Content                   string               `json:"content"`
-	Colour                    int32                `json:"colour"`
+	Colour                    *int32               `json:"colour"`
 	ImageUrl                  *string              `json:"image_url,omitempty"`
 	ThumbnailUrl              *string              `json:"thumbnail_url,omitempty"`
 	ButtonStyle               *int16               `json:"button_style"`
@@ -111,25 +112,50 @@ type galleryListingResponse struct {
 	UpdatedAt                 time.Time            `json:"updated_at"`
 }
 
-// stripWelcomeMessageGuildId removes the guild_id field from a welcome message JSON blob.
-func stripWelcomeMessageGuildId(raw []byte) stdjson.RawMessage {
+// Stored embeds are flat and carry source-guild row ids; the frontend's embed types expect types.CustomEmbed.
+// A blob that fails to parse is dropped, not forwarded, because it could still hold those ids.
+
+func WelcomeMessageResponse(raw []byte) stdjson.RawMessage {
 	if len(raw) == 0 {
 		return nil
 	}
 
-	var m map[string]interface{}
-	if err := stdjson.Unmarshal(raw, &m); err != nil {
-		return stdjson.RawMessage(raw) // return as-is if not valid JSON
+	var embed database.CustomEmbed
+	if err := stdjson.Unmarshal(raw, &embed); err != nil {
+		return nil
 	}
 
-	delete(m, "guild_id")
-	delete(m, "id")
+	return marshalOrNil(types.NewCustomEmbed(&embed, nil))
+}
 
-	stripped, err := stdjson.Marshal(m)
+func SnapshotResponse(l database.GalleryListing) stdjson.RawMessage {
+	if len(l.SnapshotData) == 0 || l.ListingType != database.GalleryListingTypeTag {
+		return stdjson.RawMessage(l.SnapshotData)
+	}
+
+	var snapshot database.GalleryTagSnapshot
+	if err := stdjson.Unmarshal(l.SnapshotData, &snapshot); err != nil {
+		return nil
+	}
+
+	response := struct {
+		Content *string            `json:"content,omitempty"`
+		Embed   *types.CustomEmbed `json:"embed,omitempty"`
+	}{Content: snapshot.Content}
+
+	if snapshot.Embed != nil && snapshot.Embed.CustomEmbed != nil {
+		response.Embed = types.NewCustomEmbed(snapshot.Embed.CustomEmbed, snapshot.Embed.Fields)
+	}
+
+	return marshalOrNil(response)
+}
+
+func marshalOrNil(v any) stdjson.RawMessage {
+	marshalled, err := stdjson.Marshal(v)
 	if err != nil {
-		return stdjson.RawMessage(raw)
+		return nil
 	}
-	return stdjson.RawMessage(stripped)
+	return marshalled
 }
 
 func toPublicListingResponse(l database.GalleryListing, tags []string, user submittedUser) galleryListingPublicResponse {
@@ -147,7 +173,7 @@ func toPublicListingResponse(l database.GalleryListing, tags []string, user subm
 		Category:                  l.Category,
 		ImportCount:               l.ImportCount,
 		Featured:                  l.Featured,
-		SnapshotData:              stdjson.RawMessage(l.SnapshotData),
+		SnapshotData:              SnapshotResponse(l),
 		Title:                     l.Title,
 		Content:                   l.Content,
 		Colour:                    l.Colour,
@@ -156,7 +182,7 @@ func toPublicListingResponse(l database.GalleryListing, tags []string, user subm
 		ButtonStyle:               l.ButtonStyle,
 		ButtonLabel:               l.ButtonLabel,
 		EmojiName:                 l.EmojiName,
-		WelcomeMessage:            stripWelcomeMessageGuildId(l.WelcomeMessage),
+		WelcomeMessage:            WelcomeMessageResponse(l.WelcomeMessage),
 		Tags:                      tags,
 		CreatedAt:                 l.CreatedAt,
 		UpdatedAt:                 l.UpdatedAt,
@@ -181,7 +207,7 @@ func toListingResponse(l database.GalleryListing, tags []string, user submittedU
 		ReviewNote:                l.ReviewNote,
 		ImportCount:               l.ImportCount,
 		Featured:                  l.Featured,
-		SnapshotData:              stdjson.RawMessage(l.SnapshotData),
+		SnapshotData:              SnapshotResponse(l),
 		Title:                     l.Title,
 		Content:                   l.Content,
 		Colour:                    l.Colour,
@@ -190,7 +216,7 @@ func toListingResponse(l database.GalleryListing, tags []string, user submittedU
 		ButtonStyle:               l.ButtonStyle,
 		ButtonLabel:               l.ButtonLabel,
 		EmojiName:                 l.EmojiName,
-		WelcomeMessage:            stdjson.RawMessage(l.WelcomeMessage),
+		WelcomeMessage:            WelcomeMessageResponse(l.WelcomeMessage),
 		Tags:                      tags,
 		CreatedAt:                 l.CreatedAt,
 		UpdatedAt:                 l.UpdatedAt,

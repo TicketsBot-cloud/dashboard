@@ -22,7 +22,7 @@ import "./App.css";
 import "react-loading-skeleton/dist/skeleton.css";
 
 function AppContent() {
-  const { isLoading, isAuthenticated, guilds, accessToken, user } = useAuthStore();
+  const { isLoading, isAuthenticated, accessToken, user } = useAuthStore();
   const {
     loaded: entitlementsLoaded,
     fetch: fetchEntitlements,
@@ -86,7 +86,7 @@ function AppContent() {
   const isOnSpecialRoute =
     window.location.href.includes("/oauth2/callback") || window.location.href.includes("/logout");
 
-  const needsAuth = !isOnSpecialRoute && (!isAuthenticated || !accessToken || guilds.length === 0);
+  const needsAuth = !isOnSpecialRoute && (!isAuthenticated || !accessToken);
 
   if (isLoading) {
     return (

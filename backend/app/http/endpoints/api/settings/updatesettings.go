@@ -45,6 +45,12 @@ func UpdateSettingsHandler(ctx *gin.Context) {
 	}
 
 	if err := settings.Validate(ctx, guildId, premiumTier); err != nil {
+		var apiErr *app.ApiError
+		if errors.As(err, &apiErr) {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, apiErr)
+			return
+		}
+
 		ctx.JSON(400, utils.ErrorStr("%v", err))
 		return
 	}
@@ -141,7 +147,7 @@ func (s *Settings) Validate(ctx context.Context, guildId uint64, premiumTier pre
 
 			panel, err := dbclient.Client.Panel.GetById(ctx, panelId)
 			if err != nil {
-				return err
+				return app.NewError(err, "Failed to save settings. Please try again.")
 			}
 
 			if guildId != panel.GuildId {

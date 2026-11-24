@@ -5,6 +5,7 @@ export interface ErrorDetails {
   message: string;
   apiError?: string;
   internalError?: string;
+  errorId?: string;
   requestUrl?: string;
   requestMethod?: string;
 }

@@ -179,7 +179,7 @@ func FilterInvitableGuilds(guilds []database.UserGuild, botGuildIds *collections
 	return dtos
 }
 
-// TODO: Remove this function!
+// user_guilds is what LoadInvitableGuilds reads, so this write is load-bearing.
 func storeGuildsInDb(ctx context.Context, userId uint64, guilds []guild.Guild) error {
 	var wrappedGuilds []database.UserGuild
 

@@ -135,8 +135,11 @@ const ServersPage: FC = () => {
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
-    lastReloadAtRef.current = Date.now();
     try {
+      // A focus reload may have just used the window; waiting beats a 429 double toast.
+      const wait = lastReloadAtRef.current + 10_000 - Date.now();
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      lastReloadAtRef.current = Date.now();
       const res = await apiClient.guilds.reload();
       if (res.data.reauthenticate_required) {
         window.location.href = "/logout";

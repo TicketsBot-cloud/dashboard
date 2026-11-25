@@ -9,6 +9,7 @@ import (
 	"github.com/TicketsBot-cloud/database"
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils/types"
 )
 
 // AllowedCategories defines the permitted categories for gallery submissions.
@@ -111,25 +112,50 @@ type galleryListingResponse struct {
 	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
-// stripWelcomeMessageGuildId removes the guild_id field from a welcome message JSON blob.
-func stripWelcomeMessageGuildId(raw []byte) stdjson.RawMessage {
+// Stored embeds are flat and carry source-guild row ids; the frontend's embed types expect types.CustomEmbed.
+// A blob that fails to parse is dropped, not forwarded, because it could still hold those ids.
+
+func WelcomeMessageResponse(raw []byte) stdjson.RawMessage {
 	if len(raw) == 0 {
 		return nil
 	}
 
-	var m map[string]interface{}
-	if err := stdjson.Unmarshal(raw, &m); err != nil {
-		return stdjson.RawMessage(raw) // return as-is if not valid JSON
+	var embed database.CustomEmbed
+	if err := stdjson.Unmarshal(raw, &embed); err != nil {
+		return nil
 	}
 
-	delete(m, "guild_id")
-	delete(m, "id")
+	return marshalOrNil(types.NewCustomEmbed(&embed, nil))
+}
 
-	stripped, err := stdjson.Marshal(m)
+func SnapshotResponse(l database.GalleryListing) stdjson.RawMessage {
+	if len(l.SnapshotData) == 0 || l.ListingType != database.GalleryListingTypeTag {
+		return stdjson.RawMessage(l.SnapshotData)
+	}
+
+	var snapshot database.GalleryTagSnapshot
+	if err := stdjson.Unmarshal(l.SnapshotData, &snapshot); err != nil {
+		return nil
+	}
+
+	response := struct {
+		Content *string            `json:"content,omitempty"`
+		Embed   *types.CustomEmbed `json:"embed,omitempty"`
+	}{Content: snapshot.Content}
+
+	if snapshot.Embed != nil && snapshot.Embed.CustomEmbed != nil {
+		response.Embed = types.NewCustomEmbed(snapshot.Embed.CustomEmbed, snapshot.Embed.Fields)
+	}
+
+	return marshalOrNil(response)
+}
+
+func marshalOrNil(v any) stdjson.RawMessage {
+	marshalled, err := stdjson.Marshal(v)
 	if err != nil {
-		return stdjson.RawMessage(raw)
+		return nil
 	}
-	return stdjson.RawMessage(stripped)
+	return marshalled
 }
 
 func toPublicListingResponse(l database.GalleryListing, tags []string, user submittedUser) galleryListingPublicResponse {

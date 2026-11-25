@@ -61,6 +61,7 @@ import type {
   PermCheckResponse,
   GalleryListing,
   GallerySubmission,
+  AdminGallerySubmission,
   OnboardingState,
   AffiliateCode,
   AffiliateReferral,
@@ -850,7 +851,7 @@ export const apiClient = {
     },
     gallery: {
       list: (params?: { status?: string; type?: string }) =>
-        api.get<GallerySubmission[]>("/api/admin/gallery", { params }),
+        api.get<AdminGallerySubmission[]>("/api/admin/gallery", { params }),
       approve: (id: number) => api.post(`/api/admin/gallery/${id}/approve`),
       reject: (id: number, reason: string) =>
         api.post(`/api/admin/gallery/${id}/reject`, { reason }),

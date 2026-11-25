@@ -35,6 +35,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+	"github.com/ticketsbot-cloud/dashboard/backend/whitelabeltokens"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -49,6 +50,8 @@ func main() {
 	cfg, err := config.LoadConfig()
 	utils.Must(err)
 	config.Conf = cfg
+
+	utils.Must(whitelabeltokens.Init(config.Conf.WhitelabelTokenKeys, config.Conf.WhitelabelTokenActiveKeyVersion))
 
 	if config.Conf.SentryDsn != nil {
 		sentryOpts := sentry.ClientOptions{

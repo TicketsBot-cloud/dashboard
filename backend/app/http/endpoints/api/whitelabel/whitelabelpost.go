@@ -26,6 +26,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/log"
 	"github.com/ticketsbot-cloud/dashboard/backend/redis"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+	"github.com/ticketsbot-cloud/dashboard/backend/whitelabeltokens"
 	"go.uber.org/zap"
 )
 
@@ -66,27 +67,22 @@ func WhitelabelPost() func(*gin.Context) {
 			return
 		}
 
-		// Check if this is a different token
 		existing, err := dbclient.Client.Whitelabel.GetByUserId(c, userId)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
 
-		// Take existing whitelabel bot offline, if it is a different bot
-		if existing.BotId != 0 && existing.BotId != bot.Id {
-			whitelabeldelete.Publish(redis.Client.Client, existing.BotId)
+		sealed, keyVersion, err := whitelabeltokens.Seal(bot.Id, data.Token)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+			return
 		}
 
-		// Set token in DB so that http-gateway can use it when Discord validates the interactions endpoint
-		// TODO: Use a transaction
-		if err := dbclient.Client.Whitelabel.Set(c, database.WhitelabelBot{
-			UserId:    userId,
-			BotId:     bot.Id,
-			PublicKey: bot.VerifyKey,
-			Token:     data.Token,
-		}); err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		// Store the token so that http-gateway can use it when Discord validates the interactions endpoint.
+		// The write only applies to the row that was read above, so a concurrent request cannot be overwritten
+		// and no Discord or pub/sub side effect happens for a request that lost.
+		if !storeSnapshotted(c, dbclient.Client.Whitelabel, existing, userId, bot.Id, bot.VerifyKey, sealed, keyVersion) {
 			return
 		}
 
@@ -102,9 +98,9 @@ func WhitelabelPost() func(*gin.Context) {
 		}
 
 		if _, err := rest.EditCurrentApplication(c, data.Token, nil, editData); err != nil {
-			// TODO: Use a transaction
-			if _, deleteErr := dbclient.Client.Whitelabel.Delete(c, bot.Id); deleteErr != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(deleteErr, "Failed to process request"))
+			if rollbackErr := rollbackAfterRejection(c, userId, bot.Id, sealed, existing); rollbackErr != nil {
+				log.Logger.Error("Failed to roll back whitelabel row", zap.Error(rollbackErr), zap.Uint64("user_id", userId), zap.Uint64("bot_id", bot.Id))
+				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(rollbackErr, "Failed to process request"))
 				return
 			}
 
@@ -117,13 +113,15 @@ func WhitelabelPost() func(*gin.Context) {
 			return
 		}
 
-		tokenChangeData := tokenchange.TokenChangeData{
-			Token: data.Token,
-			NewId: bot.Id,
-			OldId: 0,
+		// Take the previous bot offline only once the replacement is stored and accepted by Discord.
+		if existing.BotId != 0 && existing.BotId != bot.Id {
+			whitelabeldelete.Publish(redis.Client.Client, existing.BotId)
 		}
 
-		if err := tokenchange.PublishTokenChange(redis.Client.Client, tokenChangeData); err != nil {
+		if err := tokenchange.PublishTokenChange(redis.Client.Client, tokenchange.TokenChangeData{
+			NewId: bot.Id,
+			OldId: existing.BotId,
+		}); err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
 			return
 		}
@@ -149,6 +147,29 @@ func WhitelabelPost() func(*gin.Context) {
 			"username": bot.Bot.Username,
 		})
 	}
+}
+
+// snapshotWriter is the part of the whitelabel table the create handler needs
+// to store a token without clobbering a concurrent change.
+type snapshotWriter interface {
+	WriteEncryptedIfSnapshot(ctx context.Context, snapshot database.WhitelabelBot, userId, botId uint64, publicKey string, sealed []byte, version int16) (bool, error)
+}
+
+// storeSnapshotted writes the sealed token and, when it cannot, sends the
+// response itself and reports false so the caller stops before any side effect.
+func storeSnapshotted(c *gin.Context, writer snapshotWriter, snapshot database.WhitelabelBot, userId, botId uint64, publicKey string, sealed []byte, version int16) bool {
+	applied, err := writer.WriteEncryptedIfSnapshot(c, snapshot, userId, botId, publicKey, sealed, version)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to process request"))
+		return false
+	}
+
+	if !applied {
+		c.AbortWithStatusJSON(http.StatusConflict, utils.ErrorStr("Your whitelabel bot could not be saved because it changed while this request was running, or the bot is already in use. Please refresh the page and try again."))
+		return false
+	}
+
+	return true
 }
 
 var errInvalidToken = fmt.Errorf("invalid token")

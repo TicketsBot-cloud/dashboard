@@ -17,6 +17,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/log"
 	"github.com/ticketsbot-cloud/dashboard/backend/redis"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+	"github.com/ticketsbot-cloud/dashboard/backend/whitelabeltokens"
 	"go.uber.org/zap"
 )
 
@@ -47,7 +48,13 @@ func WhitelabelResync() func(*gin.Context) {
 			return
 		}
 
-		if err := whitelabel.ReapplyIntents(c, bot.Token); err != nil {
+		token, err := whitelabeltokens.Token(bot)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load whitelabel bot"))
+			return
+		}
+
+		if err := whitelabel.ReapplyIntents(c, token); err != nil {
 			if whitelabel.IsIntentsRejection(err) {
 				c.JSON(http.StatusBadRequest, utils.ErrorStr(whitelabel.IntentsRejectedMessage))
 				return
@@ -58,7 +65,6 @@ func WhitelabelResync() func(*gin.Context) {
 		}
 
 		if err := tokenchange.PublishTokenChange(redis.Client.Client, tokenchange.TokenChangeData{
-			Token: bot.Token,
 			NewId: bot.BotId,
 			OldId: 0,
 		}); err != nil {
@@ -68,14 +74,14 @@ func WhitelabelResync() func(*gin.Context) {
 
 		// Re-register slash commands. The cooldown is non-fatal here: the rest of the resync
 		// (token reapply + guild sync) still succeeded, and commands were registered recently.
-		if err := createInteractions(cm, bot.BotId, bot.Token); err != nil && !errors.Is(err, ErrInteractionCreateCooldown) {
+		if err := createInteractions(cm, bot.BotId, token); err != nil && !errors.Is(err, ErrInteractionCreateCooldown) {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to re-create slash commands"))
 			return
 		} else if err != nil {
 			log.Logger.Warn("Skipped slash command re-registration during resync (on cooldown)", zap.Uint64("bot_id", bot.BotId))
 		}
 
-		if err := whitelabel.SyncGuilds(c, dbclient.Client, bot.Token, bot.BotId); err != nil {
+		if err := whitelabel.SyncGuilds(c, dbclient.Client, token, bot.BotId); err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to sync guilds"))
 			return
 		}

@@ -2,6 +2,7 @@ package botcontext
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/TicketsBot-cloud/common/restcache"
@@ -9,6 +10,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/config"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/redis"
+	"github.com/ticketsbot-cloud/dashboard/backend/whitelabeltokens"
 )
 
 func ContextForGuild(guildId uint64) (*BotContext, error) {
@@ -23,13 +25,24 @@ func ContextForGuild(guildId uint64) (*BotContext, error) {
 			return nil, err
 		}
 
+		if res.BotId == 0 {
+			return nil, errors.New("whitelabel bot not found")
+		}
+
+		// A decryption failure must surface as an error. Falling back to the
+		// public token would make the dashboard act as the wrong bot.
+		token, err := whitelabeltokens.Token(res)
+		if err != nil {
+			return nil, fmt.Errorf("reading whitelabel token: %w", err)
+		}
+
 		rateLimiter := ratelimit.NewRateLimiter(ratelimit.NewRedisStore(redis.Client.Client, fmt.Sprintf("ratelimiter:%d", whitelabelBotId)), 1)
 
 		return &BotContext{
 			BotId:       res.BotId,
-			Token:       res.Token,
+			Token:       token,
 			RateLimiter: rateLimiter,
-			RestCache:   restcache.NewRedisRestCache(redis.Client.Client, res.Token, rateLimiter),
+			RestCache:   restcache.NewRedisRestCache(redis.Client.Client, token, rateLimiter),
 		}, nil
 	} else {
 		return PublicContext(), nil

@@ -2,11 +2,11 @@ module github.com/ticketsbot-cloud/dashboard/backend
 
 go 1.26.0
 
-replace github.com/TicketsBot-cloud/database => ../../database
+// replace github.com/TicketsBot-cloud/database => ../../database
 
-replace github.com/TicketsBot-cloud/common => ../../common
+// replace github.com/TicketsBot-cloud/common => ../../common
 
-replace github.com/TicketsBot-cloud/worker => ../../worker
+// replace github.com/TicketsBot-cloud/worker => ../../worker
 
 // replace github.com/TicketsBot-cloud/gdl => ../../gdl
 
@@ -15,11 +15,11 @@ replace github.com/go-playground/validator/v10 => github.com/go-playground/valid
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/TicketsBot-cloud/archiverclient v0.0.0-20260912070140-b0cd1b003b87
-	github.com/TicketsBot-cloud/common v0.0.0-20261022190115-887ce60dce1b
-	github.com/TicketsBot-cloud/database v0.0.0-20261022191045-27b0736fc5a3
+	github.com/TicketsBot-cloud/common v0.0.0-20261125211506-1dc1b3403cad
+	github.com/TicketsBot-cloud/database v0.0.0-20261125210836-e9dee689b8ff
 	github.com/TicketsBot-cloud/gdl v0.0.0-20261022191043-9caa827c743a
 	github.com/TicketsBot-cloud/logarchiver v0.0.0-20260929182354-92f0b13a1e1f
-	github.com/TicketsBot-cloud/worker v0.0.0-20261026221951-1d6f2e690ed4
+	github.com/TicketsBot-cloud/worker v0.0.0-20261125212225-c21c2239e196
 	github.com/apex/log v1.9.0
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/getsentry/sentry-go v0.33.0
@@ -46,8 +46,8 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/weppos/publicsuffix-go v0.50.3
 	go.uber.org/zap v1.28.0
-	golang.org/x/net v0.61.0
-	golang.org/x/sync v0.24.0
+	golang.org/x/net v0.62.0
+	golang.org/x/sync v0.25.0
 )
 
 require (
@@ -130,11 +130,11 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/arch v0.32.0 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
-	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
+	golang.org/x/exp v0.0.0-20261124000051-d6646c509b6d // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect

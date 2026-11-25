@@ -108,6 +108,8 @@ type Config struct {
 		SecretKey string `env:"SECRET_KEY"`
 		Secure    bool   `env:"SECURE" envDefault:"true"`
 	} `envPrefix:"S3_EXPORT_"`
+
+	DisableGdprResultConsumer bool `env:"DISABLE_GDPR_RESULT_CONSUMER"`
 }
 
 // TODO: Don't use a global variable

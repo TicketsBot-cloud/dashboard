@@ -205,7 +205,9 @@ func main() {
 
 	go ListenChat(redis.Client, socketManager)
 
-	go ListenGdprResults(redis.Client)
+	if !config.Conf.DisableGdprResultConsumer {
+		go ListenGdprResults(redis.Client)
+	}
 
 	if !config.Conf.Debug {
 		rpc.PremiumClient = premium.NewPremiumLookupClient(

@@ -36,6 +36,7 @@ type paginatedTranscripts struct {
 	TotalCount  int                  `json:"total_count"`
 	TotalPages  int                  `json:"total_pages"`
 	CurrentPage int                  `json:"current_page"`
+	IsOwner     bool                 `json:"is_owner"`
 }
 
 func ListTranscripts(ctx *gin.Context) {
@@ -61,6 +62,7 @@ func ListTranscripts(ctx *gin.Context) {
 				TotalCount:  0,
 				TotalPages:  1,
 				CurrentPage: currentPage,
+				IsOwner:     isCachedOwner(ctx, guildId, userId),
 			})
 		} else if errors.Is(err, errUsernameTooLong) {
 			ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
@@ -222,7 +224,18 @@ func ListTranscripts(ctx *gin.Context) {
 		TotalCount:  totalCount,
 		TotalPages:  totalPages,
 		CurrentPage: currentPage,
+		IsOwner:     isCachedOwner(ctx, guildId, userId),
 	}
 
 	ctx.JSON(200, response)
+}
+
+func isCachedOwner(ctx context.Context, guildId, userId uint64) bool {
+	botContext, err := botcontext.ContextForGuild(guildId)
+	if err != nil {
+		return false
+	}
+
+	ownerId, err := botContext.GetGuildOwner(ctx, guildId)
+	return err == nil && ownerId == userId
 }

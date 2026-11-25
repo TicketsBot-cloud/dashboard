@@ -99,6 +99,17 @@ type Config struct {
 	// and is never included in a response. Unset means the admin pages report
 	// that flags are not configured.
 	GrowthBookApiKey string `env:"GROWTHBOOK_API_KEY"`
+
+	ExportS3 struct {
+		Endpoint  string `env:"ENDPOINT"`
+		Region    string `env:"REGION"`
+		Bucket    string `env:"BUCKET"`
+		AccessKey string `env:"ACCESS_KEY"`
+		SecretKey string `env:"SECRET_KEY"`
+		Secure    bool   `env:"SECURE" envDefault:"true"`
+	} `envPrefix:"S3_EXPORT_"`
+
+	DisableGdprResultConsumer bool `env:"DISABLE_GDPR_RESULT_CONSUMER"`
 }
 
 // TODO: Don't use a global variable

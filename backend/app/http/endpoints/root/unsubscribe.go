@@ -68,6 +68,9 @@ func UnsubscribeHandler(ctx *gin.Context) {
 		inApp = pref.InApp
 	}
 
+	// One-click unsubscribe can't be refused, so in-app keeps the category's minimum.
+	inApp = notify.EffectiveInApp(category, inApp, discordDm, false)
+
 	if err := dbclient.Client.NotificationPreferences.Upsert(ctx, userId, category, discordDm, false, inApp); err != nil {
 		log.Printf("Failed to update notification preferences for user %d: %v", userId, err)
 		if wantsJSON {

@@ -21,6 +21,15 @@ interface AuthState {
   patchGuild: (guildId: string, updates: Partial<Guild>) => void;
 }
 
+const tokenExpired = (token: string): boolean => {
+  try {
+    const { exp } = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof exp === "number" && exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+};
+
 export const useAuthStore = create<AuthState>()(
   devtools(
     persist(
@@ -84,6 +93,8 @@ export const useAuthStore = create<AuthState>()(
           guilds: state.guilds,
         }),
         onRehydrateStorage: () => (state) => {
+          // Logging out here, not on the first 401, keeps the URL for the login round trip (e.g. /gdpr?export_id=).
+          if (state?.accessToken && tokenExpired(state.accessToken)) state.logout();
           state?.setLoading(false);
         },
       },

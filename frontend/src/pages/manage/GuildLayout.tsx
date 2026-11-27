@@ -88,6 +88,8 @@ export default function GuildLayout() {
             icon: guildRes.data.icon ?? undefined,
             permission_level: serverLevel,
           };
+          // Tickets joined after the list was loaded; admin checks read the list.
+          useAuthStore.getState().addGuild(guild);
         } catch {
           if (cancelled) return;
           selectGuild(null);

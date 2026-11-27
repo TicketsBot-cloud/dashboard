@@ -22,7 +22,7 @@ const Setup = lazy(() => import("./Setup"));
 function SetupLayoutContent() {
   const { guildId } = useParams<{ guildId: string }>();
   const navigate = useNavigate();
-  const { isLoading, isAuthenticated, guilds, accessToken } = useAuthStore();
+  const { isLoading, isAuthenticated, accessToken } = useAuthStore();
   const { selectedGuild, selectGuild, updateGuild } = useGuildStore();
   const updateGuildPermission = useAuthStore((s) => s.updateGuildPermission);
   const [verified, setVerified] = useState(false);
@@ -43,7 +43,7 @@ function SetupLayoutContent() {
     window.location.href = oauthUrl;
   }, []);
 
-  const needsAuth = !isAuthenticated || !accessToken || guilds.length === 0;
+  const needsAuth = !isAuthenticated || !accessToken;
 
   useEffect(() => {
     if (isLoading || needsAuth || flagLoading) return;
@@ -52,13 +52,8 @@ function SetupLayoutContent() {
       return;
     }
 
+    // Can be missing from a list loaded before Tickets joined; the server check below decides.
     const g = getGuildById(guildId);
-    if (!g) {
-      selectGuild(null);
-      toast.warning("You do not have permission to view this page.");
-      navigate("/", { replace: true });
-      return;
-    }
 
     if (!wizardEnabled) {
       selectGuild(null);
@@ -67,7 +62,7 @@ function SetupLayoutContent() {
       return;
     }
 
-    if ((g.permission_level ?? 0) < 2) {
+    if (g && (g.permission_level ?? 0) < 2) {
       selectGuild(null);
       toast.warning("You need administrator permissions to access the setup wizard.");
       navigate("/", { replace: true });
@@ -89,7 +84,19 @@ function SetupLayoutContent() {
           return;
         }
 
-        selectGuild({ ...g, permission_level: serverLevel });
+        let guild = g;
+        if (!guild) {
+          const infoRes = await apiClient.guilds.getInfo(guildId);
+          guild = {
+            id: guildId,
+            name: infoRes.data.name,
+            icon: infoRes.data.icon ?? undefined,
+            permission_level: serverLevel,
+          };
+          useAuthStore.getState().addGuild(guild);
+        }
+
+        selectGuild({ ...guild, permission_level: serverLevel });
         setVerified(true);
       } catch {
         selectGuild(null);

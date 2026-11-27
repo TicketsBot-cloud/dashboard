@@ -7,6 +7,7 @@ import Select from "@/components/Select";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import FeatureLockBanner from "@/components/FeatureLockBanner";
 import { apiClient, SKIP_ERROR_TOAST } from "@/lib/api";
+import { INVITE_PERMISSIONS } from "@/lib/constants";
 import { toast } from "sonner";
 import { useFeatureLock } from "@/hooks/useFeatureLock";
 import { FEATURE_WHITELABEL } from "@/lib/feature-flags";
@@ -139,7 +140,7 @@ export default function Whitelabel() {
   const generateInvite = async () => {
     try {
       const res = await apiClient.whitelabel.get();
-      const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${res.data.id}&scope=bot+applications.commands&permissions=805825784`;
+      const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${res.data.id}&scope=bot+applications.commands&permissions=${INVITE_PERMISSIONS}`;
       window.open(inviteUrl, "_blank");
     } catch {
       // Interceptor handles error display

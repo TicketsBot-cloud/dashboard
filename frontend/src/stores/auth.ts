@@ -17,6 +17,7 @@ interface AuthState {
   updateUser: (updates: Partial<User>) => void;
   setLoading: (loading: boolean) => void;
   setGuilds: (guilds: Guild[]) => void;
+  addGuild: (guild: Guild) => void;
   updateGuildPermission: (guildId: string, level: number) => void;
   patchGuild: (guildId: string, updates: Partial<Guild>) => void;
 }
@@ -58,6 +59,11 @@ export const useAuthStore = create<AuthState>()(
 
         setGuilds: (guilds: Guild[]) => {
           set({ guilds: validateGuilds(guilds) }, false, "auth/setGuilds");
+        },
+
+        addGuild: (guild: Guild) => {
+          if (get().guilds.some((g) => g.id === guild.id)) return;
+          set({ guilds: validateGuilds([...get().guilds, guild]) }, false, "auth/addGuild");
         },
 
         updateGuildPermission: (guildId: string, level: number) => {

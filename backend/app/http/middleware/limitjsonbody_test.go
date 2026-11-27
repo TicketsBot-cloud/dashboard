@@ -1,0 +1,142 @@
+package middleware
+
+import (
+	"bytes"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+)
+
+func nestedArrays(depth int) string {
+	return strings.Repeat("[", depth) + strings.Repeat("]", depth)
+}
+
+func TestLimitJSONBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	const maxBytes = 256 * 1024
+	const maxDepth = 16
+
+	padded := func(size int) string {
+		overhead := len(`{"a":""}`)
+		return `{"a":"` + strings.Repeat("x", size-overhead) + `"}`
+	}
+
+	tests := []struct {
+		name        string
+		body        string
+		wantStatus  int
+		wantReached bool
+	}{
+		{name: "small valid object", body: `{"a":1}`, wantStatus: http.StatusOK, wantReached: true},
+		{name: "empty array", body: `[]`, wantStatus: http.StatusOK, wantReached: true},
+		{name: "exactly at the size limit", body: padded(maxBytes), wantStatus: http.StatusOK, wantReached: true},
+		{name: "one byte over the size limit", body: padded(maxBytes + 1), wantStatus: http.StatusRequestEntityTooLarge},
+		{name: "depth exactly the limit", body: nestedArrays(maxDepth), wantStatus: http.StatusOK, wantReached: true},
+		{name: "depth one over the limit", body: nestedArrays(maxDepth + 1), wantStatus: http.StatusBadRequest},
+		{name: "mixed object and array depth at limit", body: strings.Repeat(`{"a":[`, maxDepth/2) + strings.Repeat(`]}`, maxDepth/2), wantStatus: http.StatusOK, wantReached: true},
+		{name: "5000 deep", body: nestedArrays(5000), wantStatus: http.StatusBadRequest},
+		{name: "5000 deep unterminated", body: strings.Repeat("[", 5000), wantStatus: http.StatusBadRequest},
+		{name: "invalid JSON", body: `{"a":`, wantStatus: http.StatusBadRequest},
+		{name: "garbage", body: `not json`, wantStatus: http.StatusBadRequest},
+		{name: "brackets inside strings do not count", body: `{"a":"` + strings.Repeat("[", 100) + `"}`, wantStatus: http.StatusOK, wantReached: true},
+		{name: "empty body", body: ``, wantStatus: http.StatusOK, wantReached: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var reached bool
+			var seen string
+
+			router := gin.New()
+			router.POST("/", LimitJSONBody(maxBytes, maxDepth), func(c *gin.Context) {
+				reached = true
+				buf := new(bytes.Buffer)
+				_, _ = buf.ReadFrom(c.Request.Body)
+				seen = buf.String()
+				c.Status(http.StatusOK)
+			})
+
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			require.Equal(t, tt.wantStatus, rec.Code)
+			require.Equal(t, tt.wantReached, reached)
+			if tt.wantReached {
+				require.Equal(t, tt.body, seen, "the handler must receive the body unchanged")
+			}
+		})
+	}
+}
+
+func TestLimitJSONBody_DeclaredContentLengthOverLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var reached bool
+	router := gin.New()
+	router.POST("/", LimitJSONBody(10, 16), func(c *gin.Context) {
+		reached = true
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{}`))
+	req.ContentLength = 11
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+	require.False(t, reached)
+}
+
+type countingReader struct {
+	io.Reader
+	read int
+}
+
+func (r *countingReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.read += n
+	return n, err
+}
+
+func TestLimitJSONBody_UnknownContentLengthOverLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	const maxBytes = 256 * 1024
+
+	tests := []struct {
+		name string
+		size int
+	}{
+		{"one byte over the size limit", maxBytes + 1},
+		{"1 MiB", 1024 * 1024},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var reached bool
+			router := gin.New()
+			router.POST("/", LimitJSONBody(maxBytes, 16), func(c *gin.Context) {
+				reached = true
+				c.Status(http.StatusOK)
+			})
+
+			// Not a *strings.Reader, so httptest leaves ContentLength at -1 like a chunked request.
+			body := &countingReader{Reader: strings.NewReader(`{"a":"` + strings.Repeat("x", tt.size-len(`{"a":""}`)) + `"}`)}
+			req := httptest.NewRequest(http.MethodPost, "/", body)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			require.Equal(t, int64(-1), req.ContentLength)
+			require.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+			require.False(t, reached)
+			require.LessOrEqual(t, body.read, maxBytes+1)
+		})
+	}
+}

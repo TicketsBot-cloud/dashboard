@@ -101,7 +101,7 @@ func SetTicketLabels(ctx *gin.Context) {
 			return
 		}
 		if panel.PanelId != 0 {
-			topicMsg = fmt.Sprintf("%s | ", panel.Title)
+			topicMsg = fmt.Sprintf("%s | ", panelLabel(panel))
 		}
 	}
 

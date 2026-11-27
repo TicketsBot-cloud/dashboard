@@ -44,7 +44,10 @@ const ImportCloseReasonsModal: FC<ImportCloseReasonsModalProps> = ({
   const selectableOf = (id: string | null, replaceMode: boolean) =>
     reasonsOf(id).filter((reason) => replaceMode || !isAdded(reason));
 
-  const options = panels.map((panel) => ({ key: String(panel.panel_id), label: panel.title }));
+  const options = panels.map((panel) => ({
+    key: String(panel.panel_id),
+    label: panel.name || panel.title,
+  }));
   const source = reasonsOf(panelId);
   const selectable = selectableOf(panelId, replace);
   const incoming = selectable.filter((reason) => ticked.has(reason));

@@ -36,6 +36,20 @@ func multiPanelSyncError(multiPanelId int, action, detail string) string {
 	)
 }
 
+func abortPanelMessageError(c *gin.Context, err error) {
+	var unwrapped request.RestError
+	if errors.As(err, &unwrapped) && unwrapped.IsClientError() {
+		c.JSON(400, utils.ErrorStr("Failed to update panel message: %s", unwrapped.Error()))
+		return
+	}
+
+	_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+}
+
+func resendsMessage(storedChannel, channel uint64, storedV2, usesV2 bool) bool {
+	return storedChannel != channel || (storedV2 && !usesV2)
+}
+
 func UpdatePanel(c *gin.Context) {
 	guildId := c.Keys["guildid"].(uint64)
 	userId := c.Keys["userid"].(uint64)
@@ -52,7 +66,8 @@ func UpdatePanel(c *gin.Context) {
 	}
 
 	var data panelBody
-	if err := c.ShouldBindJSON(&data); err != nil {
+	keys, err := bindJSONWithKeys(c, &data)
+	if err != nil {
 		c.JSON(400, utils.ErrorStr("Invalid request body: malformed JSON"))
 		return
 	}
@@ -76,6 +91,11 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	if err := data.mergeStored(keys, existing); err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
+	}
+
 	existingAcl, err := dbclient.Client.PanelAccessControlRules.GetAll(c, panelId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panel"))
@@ -96,18 +116,23 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
+	}
+
+	hasPaid, ok := componentsV2Gate(c, userId, guildId, botContext, data.entersComponentsV2(existing), data.usesComponentsV2(), &premiumTier, nil, "Failed to update panel")
+	if !ok {
+		return
+	}
+
 	// Apply defaults
 	ApplyPanelDefaults(&data)
 	normaliseCloseReasons(&data)
 
 	closeReasonsChanged := data.CloseReasons != nil &&
 		(data.CloseReasons.AllowCustom != existingCloseReasons.AllowCustom || !slices.Equal(data.CloseReasons.Reasons, existingCloseReasons.Reasons))
-
-	premiumTier, err := rpc.PremiumClient.GetTierByGuildId(c, guildId, true, botContext.Token, botContext.RateLimiter)
-	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-		return
-	}
 
 	footer, err := footerPolicyForGuild(c, guildId, botContext)
 	if err != nil {
@@ -135,12 +160,13 @@ func UpdatePanel(c *gin.Context) {
 
 	// Do custom validation
 	validationContext := PanelValidationContext{
-		Data:       data,
-		GuildId:    guildId,
-		IsPremium:  premiumTier > premium.None,
-		BotContext: botContext,
-		Channels:   channels,
-		Roles:      roles,
+		Data:           data,
+		GuildId:        guildId,
+		IsPremium:      premiumTier > premium.None,
+		HasPaidPremium: hasPaid,
+		BotContext:     botContext,
+		Channels:       channels,
+		Roles:          roles,
 	}
 
 	if err := ValidatePanelBody(validationContext); err != nil {
@@ -157,6 +183,8 @@ func UpdatePanel(c *gin.Context) {
 	if !data.UseThreads {
 		data.TicketNotificationChannel = nil
 	}
+
+	data.dropHiddenClassicEmbed()
 
 	// Do tag validation
 	if err := validate.Struct(data); err != nil {
@@ -186,12 +214,18 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
+	if data.MessageUsesComponentsV2 {
+		data.MessageComponents = normaliseComponentTree(data.MessageComponents)
+	}
+	if data.WelcomeMessageUsesComponentsV2 {
+		data.WelcomeMessageComponents = normaliseComponentTree(data.WelcomeMessageComponents)
+	}
+
 	messageData := data.IntoPanelMessageData(existing.CustomId, footer.ShowBranding)
 	var newMessageId uint64
 
-	// Check if channel changed
-	if existing.ChannelId != data.ChannelId {
-		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
+	reposted := resendsMessage(existing.ChannelId, data.ChannelId, existing.MessageUsesComponentsV2, data.MessageUsesComponentsV2)
+	if reposted {
 		newMessageId, err = messageData.send(botContext)
 		if err != nil {
 			var unwrapped request.RestError
@@ -203,11 +237,11 @@ func UpdatePanel(c *gin.Context) {
 					// Swallow error
 					// TODO: Make channel_id column nullable, and set to null
 				} else {
-					_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+					abortPanelMessageError(c, err)
 					return
 				}
 			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+				abortPanelMessageError(c, err)
 				return
 			}
 		}
@@ -216,18 +250,15 @@ func UpdatePanel(c *gin.Context) {
 		err = messageData.edit(botContext, existing.MessageId)
 		if err != nil {
 			var unwrapped request.RestError
-			// Message is gone (404/10008), or was authored by a different bot — e.g. the
-			// guild switched between the main bot and a whitelabel bot — and so cannot be
-			// edited (50005). Delete the old message if we can (ignoring failure) and resend.
-			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005) {
-				_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
+			if shouldRepost(err, !messageData.UsesComponentsV2, liveComponentsV2(botContext, existing.ChannelId, existing.MessageId)) {
+				reposted = true
 				newMessageId, err = messageData.send(botContext)
 				if err != nil {
 					var unwrapped2 request.RestError
 					if errors.As(err, &unwrapped2) && unwrapped2.StatusCode == 403 {
 						c.JSON(403, utils.ErrorStr("I do not have permission to send messages in the specified channel"))
 					} else {
-						_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+						abortPanelMessageError(c, err)
 					}
 
 					return
@@ -236,7 +267,7 @@ func UpdatePanel(c *gin.Context) {
 				c.JSON(403, utils.ErrorStr("I do not have permission to edit messages in the specified channel"))
 				return
 			} else {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+				abortPanelMessageError(c, err)
 				return
 			}
 		} else {
@@ -244,40 +275,58 @@ func UpdatePanel(c *gin.Context) {
 		}
 	}
 
-	// Update welcome message
-	var welcomeMessageEmbed *int
-	if data.WelcomeMessage == nil {
-		if existing.WelcomeMessageEmbed != nil { // If welcome message wasn't null, but now is, delete the embed
+	stored := false
+	defer func() {
+		if reposted && !stored && newMessageId != 0 {
+			discardMessage(botContext, data.ChannelId, newMessageId)
+		}
+	}()
+
+	welcomeEmbed := data.WelcomeMessage
+
+	welcomeMessageEmbed := existing.WelcomeMessageEmbed
+	switch {
+	case welcomeEmbed == nil && !data.WelcomeMessageUsesComponentsV2:
+		if existing.WelcomeMessageEmbed != nil {
 			if err := dbclient.Client.Embeds.Delete(c, *existing.WelcomeMessageEmbed); err != nil {
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
-		} // else, welcomeMessageEmbed will be nil
-	} else {
-		// TODO: Upsert? Don't think we can, as no unique key in the table, panel_id is in panels table
-		if existing.WelcomeMessageEmbed == nil { // Create
-			embed, fields := data.WelcomeMessage.IntoDatabaseStruct()
-			embed.GuildId = guildId
-
-			id, err := dbclient.Client.Embeds.CreateWithFields(c, embed, fields)
-			if err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-				return
-			}
-
-			welcomeMessageEmbed = &id
-		} else { // Update
-			welcomeMessageEmbed = existing.WelcomeMessageEmbed
-
-			embed, fields := data.WelcomeMessage.IntoDatabaseStruct()
-			embed.Id = *existing.WelcomeMessageEmbed
-			embed.GuildId = guildId
-
-			if err := dbclient.Client.Embeds.UpdateWithFields(c, embed, fields); err != nil {
-				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
-				return
-			}
 		}
+
+		welcomeMessageEmbed = nil
+	case welcomeEmbed != nil && existing.WelcomeMessageEmbed == nil:
+		embed, fields := welcomeEmbed.IntoDatabaseStruct()
+		embed.GuildId = guildId
+
+		id, err := dbclient.Client.Embeds.CreateWithFields(c, embed, fields)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
+
+		welcomeMessageEmbed = &id
+	case welcomeEmbed != nil:
+		embed, fields := welcomeEmbed.IntoDatabaseStruct()
+		embed.Id = *existing.WelcomeMessageEmbed
+		embed.GuildId = guildId
+
+		if err := dbclient.Client.Embeds.UpdateWithFields(c, embed, fields); err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+			return
+		}
+	}
+
+	welcomeMessageComponents, err := componentsToStore(data.WelcomeMessageUsesComponentsV2, data.WelcomeMessageComponents, existing.WelcomeMessageComponents)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
+	}
+
+	messageComponents, err := componentsToStore(data.MessageUsesComponentsV2, data.MessageComponents, existing.MessageComponents)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
+		return
 	}
 
 	// If ticket limit is 0, this panel has no limit of its own
@@ -291,6 +340,7 @@ func UpdatePanel(c *gin.Context) {
 		MessageId:                 newMessageId,
 		ChannelId:                 data.ChannelId,
 		GuildId:                   guildId,
+		Name:                      data.trimmedName(),
 		Title:                     data.Title,
 		Content:                   data.Content,
 		Colour:                    utils.ConvertPtr[int32](data.Colour),
@@ -329,6 +379,11 @@ func UpdatePanel(c *gin.Context) {
 		FeedbackEnabled:           data.FeedbackEnabled,
 		SupportCanView:            data.SupportCanView,
 		SupportCanType:            data.SupportCanType,
+
+		MessageUsesComponentsV2:        data.MessageUsesComponentsV2,
+		MessageComponents:              messageComponents,
+		WelcomeMessageUsesComponentsV2: data.WelcomeMessageUsesComponentsV2,
+		WelcomeMessageComponents:       welcomeMessageComponents,
 	}
 
 	// insert mention data
@@ -358,6 +413,14 @@ func UpdatePanel(c *gin.Context) {
 
 	err = dbclient.Client.Panel.BeginFunc(c, func(tx pgx.Tx) error {
 		if err := dbclient.Client.Panel.UpdateWithTx(c, tx, panel); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.Panel.UpdateComponentsV2WithTx(c, tx, panel); err != nil {
+			return err
+		}
+
+		if err := dbclient.Client.Panel.SetNameWithTx(c, tx, panel.PanelId, panel.Name); err != nil {
 			return err
 		}
 
@@ -403,6 +466,11 @@ func UpdatePanel(c *gin.Context) {
 		return
 	}
 
+	stored = true
+	if reposted {
+		_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, existing.ChannelId, existing.MessageId)
+	}
+
 	if err := dbclient.Client.PanelTicketPermissions.Set(c, panel.PanelId, data.TicketPermissions); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to save panel ticket permissions"))
 		return
@@ -443,10 +511,7 @@ func UpdatePanel(c *gin.Context) {
 		err = messageData.edit(botContext, multiPanel.MessageId, panels)
 		if err != nil {
 			var unwrapped request.RestError
-			// Gone (404/10008), or authored by a different bot and so uneditable (50005):
-			// delete the old message if we can (ignoring failure) and resend.
-			if errors.As(err, &unwrapped) && (unwrapped.StatusCode == 404 || unwrapped.StatusCode == 10008 || unwrapped.ApiError.Code == 50005) {
-				_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
+			if shouldRepost(err, !messageData.UsesComponentsV2, liveComponentsV2(botContext, multiPanel.ChannelId, multiPanel.MessageId)) {
 				messageId, err = messageData.send(botContext, panels)
 				if err != nil {
 					var unwrapped2 request.RestError
@@ -489,9 +554,12 @@ func UpdatePanel(c *gin.Context) {
 
 		if messageId != multiPanel.MessageId {
 			if err := dbclient.Client.MultiPanels.UpdateMessageId(c, multiPanel.Id, messageId); err != nil {
+				discardMessage(botContext, multiPanel.ChannelId, messageId)
 				_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to update panel"))
 				return
 			}
+
+			_ = rest.DeleteMessage(c, botContext.Token, botContext.RateLimiter, multiPanel.ChannelId, multiPanel.MessageId)
 		}
 	}
 

@@ -15,9 +15,9 @@ type listResponse struct {
 	Flags []flagResponse `json:"flags"`
 	// Environments is what GrowthBook actually has configured, so the UI offers
 	// real names instead of assuming production and staging.
-	Environments []string `json:"environments"`
-	Configured     bool `json:"configured"`
-	FlagsDefaultOn bool `json:"flags_default_on"`
+	Environments   []string `json:"environments"`
+	Configured     bool     `json:"configured"`
+	FlagsDefaultOn bool     `json:"flags_default_on"`
 }
 
 type flagResponse struct {

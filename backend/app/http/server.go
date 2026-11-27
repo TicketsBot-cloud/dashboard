@@ -54,6 +54,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	panelBodyMaxBytes     = 256 * 1024
+	panelBodyMaxJSONDepth = 16
+)
+
 func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server {
 	logger.Info("Starting HTTP server")
 
@@ -193,6 +198,8 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		}
 	}
 
+	panelWriteLimit := middleware.LimitJSONBody(panelBodyMaxBytes, panelBodyMaxJSONDepth)
+
 	guildAuthApiAdmin := apiGroup.Group("/:id", middleware.AuthenticateGuild(permission.Admin), middleware.SentryUser)
 	guildAuthApiSupport := apiGroup.Group("/:id", middleware.AuthenticateGuild(permission.Support), middleware.SentryUser)
 	guildApiNoAuth := apiGroup.Group("/:id", middleware.ParseGuildId, middleware.SentryUser)
@@ -224,9 +231,9 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 		guildAuthApiSupport.GET("/panels", api_panels.ListPanels)
 		guildAuthApiSupport.GET("/panels/:panelid", api_panels.GetPanel)
 		guildAuthApiAdmin.GET("/panels/perm-check", api_panels.PermCheckHandler)
-		guildAuthApiAdmin.POST("/panels", api_panels.CreatePanel)
+		guildAuthApiAdmin.POST("/panels", panelWriteLimit, api_panels.CreatePanel)
 		guildAuthApiAdmin.POST("/panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.ResendPanel)
-		guildAuthApiAdmin.PATCH("/panels/:panelid", api_panels.UpdatePanel)
+		guildAuthApiAdmin.PATCH("/panels/:panelid", panelWriteLimit, api_panels.UpdatePanel)
 		guildAuthApiAdmin.DELETE("/panels/:panelid", api_panels.DeletePanel)
 
 		guildAuthApiAdmin.DELETE("/panels/:panelid/cooldowns", api_panels.ResetPanelCooldowns)
@@ -239,9 +246,9 @@ func StartServer(logger *zap.Logger, sm *livechat.SocketManager) *nethttp.Server
 
 		guildAuthApiAdmin.GET("/multi-panels", api_panels.MultiPanelList)
 		guildAuthApiAdmin.GET("/multi-panels/:panelid", api_panels.MultiPanelGet)
-		guildAuthApiAdmin.POST("/multi-panels", api_panels.MultiPanelCreate)
+		guildAuthApiAdmin.POST("/multi-panels", panelWriteLimit, api_panels.MultiPanelCreate)
 		guildAuthApiAdmin.POST("/multi-panels/:panelid", rl(middleware.RateLimitTypeGuild, 5, 5*time.Second), api_panels.MultiPanelResend)
-		guildAuthApiAdmin.PATCH("/multi-panels/:panelid", api_panels.MultiPanelUpdate)
+		guildAuthApiAdmin.PATCH("/multi-panels/:panelid", panelWriteLimit, api_panels.MultiPanelUpdate)
 		guildAuthApiAdmin.DELETE("/multi-panels/:panelid", api_panels.MultiPanelDelete)
 
 		guildAuthApiSupport.GET("/forms", api_forms.GetForms)

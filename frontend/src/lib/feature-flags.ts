@@ -33,6 +33,8 @@ export const FEATURE_WHITELABEL = "202608_FEATURE_WHITELABEL";
 export const FEATURE_INTEGRATIONS = "202608_FEATURE_INTEGRATIONS";
 export const FEATURE_AUTOMATIONS = "202608_FEATURE_AUTOMATIONS";
 
+export const COMPONENTS_V2_BUILDER_FLAG = "202608_COMPONENTS_V2_BUILDER";
+
 /**
  * String flag choosing which invite entry points the server list shows:
  * "off", "toolbar", "per_server" or "both". See useServerListInviteVariant.

@@ -52,7 +52,7 @@ export default function Button({
           ) : (
             <span className="mr-2">{emoji.name}</span>
           ))}
-        {label || ""}&nbsp;<i className="fas fa-external-link-alt"></i>
+        {label || ""}&nbsp;<i className="fas fa-external-link-alt" aria-hidden="true"></i>
       </a>
     );
   }

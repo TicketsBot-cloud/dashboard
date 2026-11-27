@@ -94,7 +94,8 @@ func GetTicket(c *gin.Context) {
 	if ticket.PanelId != nil {
 		panel, err := dbclient.Client.Panel.GetById(c, *ticket.PanelId)
 		if err == nil {
-			panelTitle = &panel.Title
+			label := panelLabel(panel)
+			panelTitle = &label
 		}
 
 		if reasons, err := dbclient.Client.PanelCloseReasons.Get(c, *ticket.PanelId); err == nil {

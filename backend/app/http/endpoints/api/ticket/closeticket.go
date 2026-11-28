@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -51,8 +50,7 @@ func CloseTicket(c *gin.Context) {
 
 	hasPermission, requestErr := utils.HasPermissionToViewTicket(context.Background(), guildId, userId, ticket)
 	if requestErr != nil {
-		c.JSON(requestErr.StatusCode, app.NewError(requestErr,
-			fmt.Sprintf("Failed to verify permissions for user %d to close ticket #%d", userId, ticketId)))
+		_ = c.AbortWithError(requestErr.StatusCode, app.NewError(requestErr.Err, *requestErr.UserMessage))
 		return
 	}
 

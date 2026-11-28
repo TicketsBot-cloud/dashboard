@@ -58,7 +58,7 @@ func GetTicketMembers(c *gin.Context) {
 
 	hasPermission, requestErr := utils.HasPermissionToViewTicket(c, guildId, userId, ticket)
 	if requestErr != nil {
-		c.JSON(requestErr.StatusCode, app.NewError(requestErr, fmt.Sprintf("Failed to verify permissions for user %d to view ticket #%d", userId, ticketId)))
+		_ = c.AbortWithError(requestErr.StatusCode, app.NewError(requestErr.Err, *requestErr.UserMessage))
 		return
 	}
 

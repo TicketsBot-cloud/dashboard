@@ -8,6 +8,7 @@ import (
 	"github.com/TicketsBot-cloud/common/premium"
 	dbmodel "github.com/TicketsBot-cloud/database"
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	"github.com/ticketsbot-cloud/dashboard/backend/database"
@@ -78,7 +79,7 @@ func SendMessage(ctx *gin.Context) {
 
 	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(ctx, guildId, userId, ticket)
 	if contentErr != nil {
-		ctx.JSON(contentErr.StatusCode, utils.ErrorStr("Failed to verify content permissions. Please try again."))
+		_ = ctx.AbortWithError(contentErr.StatusCode, app.NewError(contentErr.Err, *contentErr.UserMessage))
 		return
 	}
 

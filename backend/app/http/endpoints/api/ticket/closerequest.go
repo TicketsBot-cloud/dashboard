@@ -63,8 +63,7 @@ func CloseRequest(c *gin.Context) {
 
 	hasPermission, requestErr := utils.HasPermissionToViewTicket(context.Background(), guildId, userId, ticket)
 	if requestErr != nil {
-		c.JSON(requestErr.StatusCode, app.NewError(requestErr,
-			fmt.Sprintf("Failed to verify permissions for user %d on ticket #%d", userId, ticketId)))
+		_ = c.AbortWithError(requestErr.StatusCode, app.NewError(requestErr.Err, *requestErr.UserMessage))
 		return
 	}
 
@@ -75,7 +74,7 @@ func CloseRequest(c *gin.Context) {
 
 	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(context.Background(), guildId, userId, ticket)
 	if contentErr != nil {
-		c.JSON(contentErr.StatusCode, utils.ErrorStr("Failed to verify content permissions. Please try again."))
+		_ = c.AbortWithError(contentErr.StatusCode, app.NewError(contentErr.Err, *contentErr.UserMessage))
 		return
 	}
 

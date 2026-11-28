@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
@@ -38,6 +40,19 @@ type paginatedTranscripts struct {
 	CurrentPage int                  `json:"current_page"`
 }
 
+func emptyTranscriptPage(page int) paginatedTranscripts {
+	if page == 0 {
+		page = 1
+	}
+
+	return paginatedTranscripts{
+		Transcripts: []transcriptMetadata{},
+		TotalCount:  0,
+		TotalPages:  1,
+		CurrentPage: page,
+	}
+}
+
 func ListTranscripts(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
 	userId := ctx.Keys["userid"].(uint64)
@@ -51,17 +66,7 @@ func ListTranscripts(ctx *gin.Context) {
 	opts, err := queryOptions.toQueryOptions(guildId)
 	if err != nil {
 		if errors.Is(err, errUsernameNotFound) {
-			currentPage := queryOptions.Page
-			if currentPage == 0 {
-				currentPage = 1
-			}
-
-			ctx.JSON(200, paginatedTranscripts{
-				Transcripts: []transcriptMetadata{},
-				TotalCount:  0,
-				TotalPages:  1,
-				CurrentPage: currentPage,
-			})
+			ctx.JSON(200, emptyTranscriptPage(queryOptions.Page))
 		} else if errors.Is(err, errUsernameTooLong) {
 			ctx.JSON(400, utils.ErrorStr("Invalid request data. Please check your input and try again."))
 		} else {
@@ -70,18 +75,15 @@ func ListTranscripts(ctx *gin.Context) {
 		return
 	}
 
-	// Check if user is a panel team member only (not admin or guild-wide support)
-	isPanelTeamOnly, err := utils.IsPanelTeamMemberOnly(ctx, guildId, userId)
+	allPanels, panelIds, err := utils.GetPanelAccess(ctx, guildId, userId)
 	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to check user permissions"))
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check user permissions"))
 		return
 	}
 
-	// Get accessible panels for panel team members
-	if isPanelTeamOnly {
-		panelIds, err := utils.GetAccessiblePanelIds(ctx, guildId, userId)
-		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to get accessible panels"))
+	if !allPanels {
+		if len(panelIds) == 0 {
+			ctx.JSON(200, emptyTranscriptPage(queryOptions.Page))
 			return
 		}
 

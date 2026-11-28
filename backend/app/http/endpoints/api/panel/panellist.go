@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
@@ -10,6 +11,7 @@ import (
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
+	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -60,6 +62,12 @@ func ListPanels(c *gin.Context) {
 
 	if err := g.Wait(); err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to load panels"))
+		return
+	}
+
+	allPanels, accessiblePanelIds, err := utils.GetPanelAccess(c, guildId, c.Keys["userid"].(uint64))
+	if err != nil {
+		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check user permissions"))
 		return
 	}
 
@@ -115,8 +123,12 @@ func ListPanels(c *gin.Context) {
 		}
 	}
 
-	wrapped := make([]panelResponse, len(panels))
-	for i, p := range panels {
+	wrapped := make([]panelResponse, 0, len(panels))
+	for _, p := range panels {
+		if !allPanels && !slices.Contains(accessiblePanelIds, p.PanelId) {
+			continue
+		}
+
 		hasSH := supportHoursSet[p.PanelId]
 
 		panelCloseReasons, ok := closeReasons[p.PanelId]
@@ -124,7 +136,7 @@ func ListPanels(c *gin.Context) {
 			panelCloseReasons = database.DefaultPanelCloseReasons()
 		}
 
-		wrapped[i] = panelResponse{
+		wrapped = append(wrapped, panelResponse{
 			PanelId:           p.PanelId,
 			ChannelId:         p.ChannelId,
 			Title:             p.Title,
@@ -140,7 +152,7 @@ func ListPanels(c *gin.Context) {
 			Disabled:          p.Disabled,
 			ForceDisabled:     p.ForceDisabled,
 			CloseReasons:      panelCloseReasons,
-		}
+		})
 	}
 
 	c.JSON(200, wrapped)

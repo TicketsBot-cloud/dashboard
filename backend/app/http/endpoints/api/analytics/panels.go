@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/TicketsBot-cloud/common/premium"
@@ -111,6 +112,16 @@ func GetAnalyticsPanelsHandler(ctx *gin.Context) {
 	filter, ok := parsePanelFilter(ctx)
 	if !ok {
 		return // parsePanelFilter already wrote the 400 response
+	}
+
+	allPanels, panelIds, err := utils.GetPanelAccess(ctx, guildId, ctx.Keys["userid"].(uint64))
+	if err != nil {
+		_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check panel access"))
+		return
+	}
+
+	if !allPanels {
+		filter = utils.ScopePanelFilter(filter, panelIds)
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -387,6 +398,10 @@ GROUP BY p.panel_id, p.default_team;`
 	var defaultPanelIds []int
 
 	for _, pg := range panelGroupings {
+		if !allPanels && !slices.Contains(panelIds, pg.panelId) {
+			continue
+		}
+
 		for _, tid := range pg.teamIds {
 			teamPanels[tid] = append(teamPanels[tid], pg.panelId)
 		}

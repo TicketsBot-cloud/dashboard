@@ -38,21 +38,15 @@ func GetTickets(c *gin.Context) {
 	userId := c.Keys["userid"].(uint64)
 	guildId := c.Keys["guildid"].(uint64)
 
-	// Check if user is a panel team member only (not admin or guild-wide support)
-	isPanelTeamOnly, err := utils.IsPanelTeamMemberOnly(c, guildId, userId)
+	allPanels, panelIds, err := utils.GetPanelAccess(c, guildId, userId)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to check user permissions"))
 		return
 	}
 
-	// Get accessible panels for panel team members
-	var panelIds []int
-	if isPanelTeamOnly {
-		panelIds, err = utils.GetAccessiblePanelIds(c, guildId, userId)
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Failed to get accessible panels"))
-			return
-		}
+	if !allPanels && len(panelIds) == 0 {
+		buildResponseFromPlainTickets(c, nil, guildId, userId)
+		return
 	}
 
 	if c.Request.Method == "POST" {
@@ -70,8 +64,7 @@ func GetTickets(c *gin.Context) {
 				return
 			}
 
-			// Apply panel team member filtering if needed
-			if isPanelTeamOnly {
+			if !allPanels {
 				opts.FilterByPanelIds = panelIds
 			}
 
@@ -86,8 +79,7 @@ func GetTickets(c *gin.Context) {
 		}
 	}
 
-	// For GET requests, if user is panel team only, convert to use GetByOptions with filter
-	if isPanelTeamOnly {
+	if !allPanels {
 		openTrue := true
 		opts := database.TicketQueryOptions{
 			GuildId:          guildId,
@@ -211,9 +203,19 @@ func buildResponseFromPlainTickets(c *gin.Context, plainTickets []database.Ticke
 		return
 	}
 
+	// Only titles for panels in the result, so a filtered list doesn't leak the rest
+	shownPanels := make(map[int]bool)
+	for _, ticket := range plainTickets {
+		if ticket.PanelId != nil {
+			shownPanels[*ticket.PanelId] = true
+		}
+	}
+
 	panelTitles := make(map[int]string)
 	for _, panel := range panels {
-		panelTitles[panel.PanelId] = panel.Title
+		if shownPanels[panel.PanelId] {
+			panelTitles[panel.PanelId] = panel.Title
+		}
 	}
 
 	// Get user objects

@@ -2,12 +2,14 @@ package api
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/rest"
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/app/http/audit"
 	"github.com/ticketsbot-cloud/dashboard/backend/botcontext"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
@@ -18,12 +20,44 @@ type setLabelsBody struct {
 	LabelIds []int `json:"label_ids"`
 }
 
+// checkTicketAccess uses the list rule, not HasPermissionToViewTicket, so labels match the rows a user sees.
+func checkTicketAccess(ctx *gin.Context, guildId, userId uint64, ticketId int) (database.Ticket, bool) {
+	ticket, err := dbclient.Client.Tickets.Get(ctx, ticketId, guildId)
+	if err != nil {
+		_ = ctx.AbortWithError(500, app.NewError(err, "Unable to load ticket. Please try again."))
+		return ticket, false
+	}
+
+	if ticket.UserId == 0 {
+		ctx.JSON(404, utils.ErrorStr("Ticket #%d not found", ticketId))
+		return ticket, false
+	}
+
+	allPanels, panelIds, err := utils.GetPanelAccess(ctx, guildId, userId)
+	if err != nil {
+		_ = ctx.AbortWithError(500, app.NewError(err, "Failed to check user permissions"))
+		return ticket, false
+	}
+
+	if !allPanels && (ticket.PanelId == nil || !slices.Contains(panelIds, *ticket.PanelId)) {
+		ctx.JSON(403, utils.ErrorStr("You do not have permission to access this ticket"))
+		return ticket, false
+	}
+
+	return ticket, true
+}
+
 func GetTicketLabels(ctx *gin.Context) {
 	guildId := ctx.Keys["guildid"].(uint64)
+	userId := ctx.Keys["userid"].(uint64)
 
 	ticketId, err := strconv.Atoi(ctx.Param("ticketId"))
 	if err != nil {
 		ctx.JSON(400, utils.ErrorStr("Invalid ticket ID."))
+		return
+	}
+
+	if _, ok := checkTicketAccess(ctx, guildId, userId, ticketId); !ok {
 		return
 	}
 
@@ -47,6 +81,11 @@ func SetTicketLabels(ctx *gin.Context) {
 	ticketId, err := strconv.Atoi(ctx.Param("ticketId"))
 	if err != nil {
 		ctx.JSON(400, utils.ErrorStr("Invalid ticket ID."))
+		return
+	}
+
+	ticket, ok := checkTicketAccess(ctx, guildId, userId, ticketId)
+	if !ok {
 		return
 	}
 
@@ -84,12 +123,6 @@ func SetTicketLabels(ctx *gin.Context) {
 
 	if err := dbclient.Client.TicketLabelAssignments.Replace(ctx, guildId, ticketId, body.LabelIds); err != nil {
 		ctx.JSON(500, utils.ErrorStr("Failed to update labels. Please try again."))
-		return
-	}
-
-	ticket, err := dbclient.Client.Tickets.Get(ctx, ticketId, guildId)
-	if err != nil {
-		ctx.JSON(500, utils.ErrorStr("Failed to fetch ticket. Please try again."))
 		return
 	}
 
@@ -152,6 +185,10 @@ func RemoveTicketLabel(ctx *gin.Context) {
 	labelId, err := strconv.Atoi(ctx.Param("labelid"))
 	if err != nil {
 		ctx.JSON(400, utils.ErrorStr("Invalid label ID."))
+		return
+	}
+
+	if _, ok := checkTicketAccess(ctx, guildId, userId, ticketId); !ok {
 		return
 	}
 

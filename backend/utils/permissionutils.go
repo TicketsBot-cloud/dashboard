@@ -2,6 +2,8 @@ package utils
 
 import (
 	"context"
+	"net/http"
+	"slices"
 
 	"github.com/TicketsBot-cloud/common/permission"
 	"github.com/TicketsBot-cloud/database"
@@ -221,160 +223,48 @@ func HasPermissionToViewTicket(ctx context.Context, guildId, userId uint64, tick
 	}
 }
 
-// IsPanelTeamMemberOnly checks if a user has ONLY panel team access (not guild-wide permissions)
-// Returns true if the user is a support team member but does not have admin or default team access
-func IsPanelTeamMemberOnly(ctx context.Context, guildId, userId uint64) (bool, error) {
+// GetPanelAccess reports which tickets a user may list: all for admins and the default team,
+// otherwise only panelIds. An empty panelIds means nothing, never unfiltered.
+func GetPanelAccess(ctx context.Context, guildId, userId uint64) (bool, []int, error) {
+	level, err := GetPermissionLevel(ctx, guildId, userId)
+	if err != nil {
+		return false, nil, err
+	}
+
+	if level >= permission.Admin {
+		return true, nil, nil
+	}
+
 	botContext, err := botcontext.ContextForGuild(guildId)
 	if err != nil {
-		return false, err
-	}
-
-	// Bot admins have full access
-	if botContext.IsBotAdmin(ctx, userId) {
-		return false, nil
-	}
-
-	// Check staff override
-	staffOverride, err := dbclient.Client.StaffOverride.HasActiveOverride(ctx, guildId)
-	if err != nil {
-		return false, err
-	}
-
-	// If staff override enabled and the user is bot staff, they have full access
-	if staffOverride {
-		isBotStaff, err := dbclient.Client.BotStaff.IsStaff(ctx, userId)
-		if err != nil {
-			return false, err
-		}
-
-		if isBotStaff {
-			return false, nil
-		}
-	}
-
-	// Check if server owner
-	guild, err := botContext.GetGuild(ctx, guildId)
-	if err != nil {
-		return false, err
-	}
-
-	if guild.OwnerId == userId {
-		return false, nil
+		return false, nil, err
 	}
 
 	member, err := botContext.GetGuildMember(ctx, guildId, userId)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
-	// Admins have full access
-	isAdmin, err := dbclient.Client.Permissions.IsAdmin(ctx, guildId, userId)
-	if err != nil {
-		return false, err
+	onDefaultTeam, apiErr := isOnDefaultTeam(ctx, guildId, member)
+	if apiErr != nil {
+		// apiErr.Error() is only the generic user message
+		return false, nil, apiErr.Err
 	}
 
-	if isAdmin {
-		return false, nil
+	if onDefaultTeam {
+		return true, nil, nil
 	}
 
-	// Check admin roles
-	adminRoles, err := dbclient.Client.RolePermissions.GetAdminRoles(ctx, guildId)
-	if err != nil {
-		return false, err
-	}
-
-	for _, roleId := range adminRoles {
-		if member.HasRole(roleId) {
-			return false, nil
-		}
-	}
-
-	// Check if user is on the default support team (guild-wide support)
-	isSupport, err := dbclient.Client.Permissions.IsSupport(ctx, guildId, userId)
-	if err != nil {
-		return false, err
-	}
-
-	if isSupport {
-		return false, nil
-	}
-
-	// Check if user has a support role (guild-wide)
-	supportRoles, err := dbclient.Client.RolePermissions.GetSupportRoles(ctx, guildId)
-	if err != nil {
-		return false, err
-	}
-
-	for _, supportRoleId := range supportRoles {
-		if member.HasRole(supportRoleId) {
-			return false, nil
-		}
-	}
-
-	// Now check if user is in any support team (panel-specific)
-	allTeams, err := dbclient.Client.SupportTeam.Get(ctx, guildId)
-	if err != nil {
-		return false, err
-	}
-
-	if len(allTeams) > 0 {
-		var teamIds []int
-		for _, team := range allTeams {
-			teamIds = append(teamIds, team.Id)
-		}
-
-		// Check if user is directly in any support team
-		isInTeam, err := dbclient.Client.SupportTeamMembers.IsSupportSubset(ctx, guildId, userId, teamIds)
-		if err != nil {
-			return false, err
-		}
-
-		if isInTeam {
-			return true, nil
-		}
-
-		// Check if user has a role that's in any support team
-		isInTeam, err = dbclient.Client.SupportTeamRoles.IsSupportAnySubset(ctx, guildId, member.Roles, teamIds)
-		if err != nil {
-			return false, err
-		}
-
-		if isInTeam {
-			return true, nil
-		}
-	}
-
-	// User has no support access at all
-	return false, nil
-}
-
-// GetAccessiblePanelIds returns the list of panel IDs a panel team member has access to.
-// This function should only be called for users who have been verified as panel-team-only
-// members via IsPanelTeamMemberOnly().
-func GetAccessiblePanelIds(ctx context.Context, guildId, userId uint64) ([]int, error) {
-	botContext, err := botcontext.ContextForGuild(guildId)
-	if err != nil {
-		return nil, err
-	}
-
-	member, err := botContext.GetGuildMember(ctx, guildId, userId)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all team IDs the user belongs to directly
 	directTeamIds, err := dbclient.Client.SupportTeamMembers.GetAllTeamsForUser(ctx, guildId, userId)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
-	// Get all team IDs the user belongs to via roles
 	roleTeamIds, err := dbclient.Client.SupportTeamRoles.GetAllTeamsForRoles(ctx, guildId, member.Roles)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
-	// Combine and deduplicate team IDs
 	teamIdSet := make(map[int]struct{})
 	for _, id := range directTeamIds {
 		teamIdSet[id] = struct{}{}
@@ -384,7 +274,7 @@ func GetAccessiblePanelIds(ctx context.Context, guildId, userId uint64) ([]int, 
 	}
 
 	if len(teamIdSet) == 0 {
-		return nil, nil
+		return false, nil, nil
 	}
 
 	var allTeamIds []int
@@ -392,13 +282,34 @@ func GetAccessiblePanelIds(ctx context.Context, guildId, userId uint64) ([]int, 
 		allTeamIds = append(allTeamIds, id)
 	}
 
-	// Get all panels that use any of these teams
 	panelIds, err := dbclient.Client.PanelTeams.GetPanelsByTeams(ctx, allTeamIds)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
-	return panelIds, nil
+	return false, panelIds, nil
+}
+
+// ScopePanelFilter narrows filter to the accessible panels, never to "every panel".
+func ScopePanelFilter(filter *database.PanelFilter, accessible []int) *database.PanelFilter {
+	var ids []int
+	if filter == nil {
+		ids = slices.Clone(accessible)
+	} else {
+		for _, id := range filter.PanelIds {
+			if slices.Contains(accessible, id) {
+				ids = append(ids, id)
+			}
+		}
+	}
+
+	// Panel IDs start at 1, so {0} matches nothing, whereas an empty list means no filter
+	if len(ids) == 0 {
+		ids = []int{0}
+	}
+
+	slices.Sort(ids)
+	return &database.PanelFilter{PanelIds: ids}
 }
 
 // HasPermissionToViewTicketContent checks whether a user may view the actual

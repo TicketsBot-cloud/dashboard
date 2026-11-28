@@ -9,7 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/log"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+	"github.com/ticketsbot-cloud/dashboard/backend/whitelabeltokens"
+	"go.uber.org/zap"
 )
 
 type whitelabelResponse struct {
@@ -47,7 +50,12 @@ func WhitelabelGet(c *gin.Context) {
 		return
 	}
 
-	username := getBotUsername(c, bot.Token)
+	username := "Unknown User"
+	if token, err := whitelabeltokens.Token(bot); err != nil {
+		log.Logger.Error("Failed to read whitelabel token", zap.Error(err), zap.Uint64("bot_id", bot.BotId))
+	} else {
+		username = getBotUsername(c, token)
+	}
 
 	c.JSON(200, whitelabelResponse{
 		Id:         bot.BotId,

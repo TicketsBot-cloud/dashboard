@@ -28,6 +28,13 @@ export interface User {
  */
 export type GuildPermissionLevel = 0 | 1 | 2;
 
+/** A server the user can manage that the bot has not joined yet. */
+export interface InvitableGuild {
+  id: Snowflake;
+  name: string;
+  icon: string;
+}
+
 export interface Guild {
   id: Snowflake;
   icon?: string;
@@ -1086,7 +1093,18 @@ export interface GallerySubmission extends GalleryListing {
   status: "pending" | "approved" | "rejected";
   review_note?: string;
   source_guild_id: string;
-  reviewed_at?: string;
+}
+
+export interface AdminGallerySubmission extends GallerySubmission {
+  // On pending listings these are whoever resubmitted, and when.
+  reviewed_by: GallerySubmittedUser | null;
+  reviewed_at: string | null;
+  source_guild_name?: string;
+  source_guild_icon?: string;
+  server_blacklisted?: boolean;
+  // Only sent to admin rank and up.
+  submitter_gallery_blacklisted?: boolean;
+  source_guild_gallery_blacklisted?: boolean;
 }
 
 export interface OnboardingState {

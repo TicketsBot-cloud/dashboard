@@ -246,10 +246,16 @@ func runAliasResync(guildId uint64, botContext *botcontext.BotContext, plan taga
 	fail := func(tagId string, err error) {
 		status.Failed++
 		if len(status.Errors) < aliasResyncMaxErrors {
-			status.Errors = append(status.Errors, aliasResyncError{TagId: tagId, Error: err.Error()})
+			status.Errors = append(status.Errors, aliasResyncError{TagId: tagId, Error: app.NewServerError(err).ExternalMessage})
 		}
 
-		log.Logger.Warn("Failed to reconcile tag command alias",
+		// Discord's 4xx answers are expected here; anything else is ours to fix.
+		logFn := log.Logger.Error
+		if restError, ok := discordError(err); ok && restError.StatusCode < 500 {
+			logFn = log.Logger.Warn
+		}
+
+		logFn("Failed to reconcile tag command alias",
 			zap.Uint64("guild_id", guildId), zap.String("tag_id", tagId), zap.Error(err))
 	}
 

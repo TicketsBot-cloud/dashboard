@@ -83,7 +83,13 @@ type Config struct {
 		UseEU     bool   `env:"USE_EU" envDefault:"false"`
 	} `envPrefix:"MAILGUN_"`
 	SecureProxyUrl string `env:"SECURE_PROXY_URL"`
-	Security       struct {
+
+	// WhitelabelTokenKeys is the keyring protecting whitelabel bot tokens at
+	// rest, formatted "1:<base64 32 byte key>,2:<...>". Startup fails without it.
+	WhitelabelTokenKeys             string `env:"WHITELABEL_TOKEN_KEYS" toml:"whitelabel-token-keys"`
+	WhitelabelTokenActiveKeyVersion string `env:"WHITELABEL_TOKEN_ACTIVE_KEY_VERSION" toml:"whitelabel-token-active-key-version"`
+
+	Security struct {
 		VerificationHmacSecret string `env:"VERIFICATION_HMAC_SECRET" envDefault:"default-dev-secret-change-in-production"`
 	} `envPrefix:"SECURITY_"`
 

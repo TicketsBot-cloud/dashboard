@@ -11,6 +11,7 @@ import type {
   FeatureFlagRule,
   Guild,
   GuildChannel,
+  InvitableGuild,
   GuildRole,
   GuildSettings,
   GuildEmoji,
@@ -61,6 +62,7 @@ import type {
   PermCheckResponse,
   GalleryListing,
   GallerySubmission,
+  AdminGallerySubmission,
   OnboardingState,
   AffiliateCode,
   AffiliateReferral,
@@ -231,9 +233,17 @@ export const apiClient = {
   },
 
   guilds: {
-    reload: () =>
+    reload: (config?: AxiosRequestConfig) =>
       api.post<{ success: boolean; guilds: Guild[]; reauthenticate_required?: boolean }>(
         "/user/guilds/reload",
+        undefined,
+        config,
+      ),
+    /** Servers the user can manage that the bot is not in, for per-server invite links. */
+    invitable: () =>
+      api.get<{ success: boolean; guilds: InvitableGuild[] }>(
+        "/user/guilds/invitable",
+        SKIP_ERROR_TOAST,
       ),
     getAll: () => api.get<Guild[]>("/guilds"),
     getById: (guildId: string) => api.get<Guild>(`/guilds/${guildId}`),
@@ -850,7 +860,7 @@ export const apiClient = {
     },
     gallery: {
       list: (params?: { status?: string; type?: string }) =>
-        api.get<GallerySubmission[]>("/api/admin/gallery", { params }),
+        api.get<AdminGallerySubmission[]>("/api/admin/gallery", { params }),
       approve: (id: number) => api.post(`/api/admin/gallery/${id}/approve`),
       reject: (id: number, reason: string) =>
         api.post(`/api/admin/gallery/${id}/reject`, { reason }),

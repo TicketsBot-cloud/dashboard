@@ -74,7 +74,7 @@ func GetTicket(c *gin.Context) {
 
 	hasPermission, requestErr := utils.HasPermissionToViewTicket(c, guildId, userId, ticket)
 	if requestErr != nil {
-		c.JSON(requestErr.StatusCode, app.NewError(requestErr, fmt.Sprintf("Failed to verify permissions for user %d to view ticket #%d", userId, ticketId)))
+		_ = c.AbortWithError(requestErr.StatusCode, app.NewError(requestErr.Err, *requestErr.UserMessage))
 		return
 	}
 
@@ -85,7 +85,7 @@ func GetTicket(c *gin.Context) {
 
 	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(c, guildId, userId, ticket)
 	if contentErr != nil {
-		c.JSON(contentErr.StatusCode, app.NewError(contentErr, fmt.Sprintf("Failed to verify content permissions for user %d on ticket #%d", userId, ticketId)))
+		_ = c.AbortWithError(contentErr.StatusCode, app.NewError(contentErr.Err, *contentErr.UserMessage))
 		return
 	}
 

@@ -8,13 +8,6 @@ type RequestError struct {
 	StatusCode  int
 }
 
-func NewError(statusCode int, err error) *RequestError {
-	return &RequestError{
-		Err:        err,
-		StatusCode: statusCode,
-	}
-}
-
 func NewInternalServerError(err error, message string) *RequestError {
 	return NewErrorWithMessage(http.StatusInternalServerError, err, message)
 }

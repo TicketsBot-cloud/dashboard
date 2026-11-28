@@ -2,13 +2,14 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
 	"slices"
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/config"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc"
-	"github.com/ticketsbot-cloud/dashboard/backend/utils"
 )
 
 func VerifyWhitelabel(isApi bool) func(ctx *gin.Context) {
@@ -17,7 +18,7 @@ func VerifyWhitelabel(isApi bool) func(ctx *gin.Context) {
 
 		tier, err := rpc.PremiumClient.GetTierByUser(ctx, userId, false)
 		if err != nil {
-			ctx.JSON(500, utils.ErrorStr("Failed to verify premium status for user %d: %v", userId, err))
+			_ = ctx.AbortWithError(http.StatusInternalServerError, app.NewError(err, "Unable to verify premium status. Please try again."))
 			return
 		}
 

@@ -2,17 +2,19 @@ package gallery
 
 import (
 	stdjson "encoding/json"
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/TicketsBot-cloud/database"
-	cache2 "github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/gin-gonic/gin"
 	"github.com/ticketsbot-cloud/dashboard/backend/app"
+	api_gallery "github.com/ticketsbot-cloud/dashboard/backend/app/http/endpoints/api/gallery"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
+	"github.com/ticketsbot-cloud/dashboard/backend/internal/admin"
+	"github.com/ticketsbot-cloud/dashboard/backend/log"
 	"github.com/ticketsbot-cloud/dashboard/backend/rpc/cache"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
+	"go.uber.org/zap"
 )
 
 type adminUserData struct {
@@ -23,55 +25,66 @@ type adminUserData struct {
 
 // Embedding database.GalleryListing instead would marshal its []byte columns as base64.
 type adminListingResponse struct {
-	Id             int                `json:"id"`
-	ListingType    string             `json:"listing_type"`
-	SubmittedUser  adminUserData      `json:"submitted_user"`
-	SourceGuildId  uint64             `json:"source_guild_id,string"`
-	Name           string             `json:"name"`
-	Description    string             `json:"description"`
-	Category       string             `json:"category"`
-	Status         string             `json:"status"`
-	ReviewNote     *string            `json:"review_note"`
-	ReviewedBy     *uint64            `json:"reviewed_by,string"`
-	ReviewedAt     *time.Time         `json:"reviewed_at"`
-	ImportCount    int                `json:"import_count"`
-	Featured       bool               `json:"featured"`
-	SnapshotData   stdjson.RawMessage `json:"snapshot_data,omitempty"`
-	Title          string             `json:"title"`
-	Content        string             `json:"content"`
-	Colour         *int32             `json:"colour"`
-	ImageUrl       *string            `json:"image_url"`
-	ThumbnailUrl   *string            `json:"thumbnail_url"`
-	ButtonStyle    *int16             `json:"button_style"`
-	ButtonLabel    string             `json:"button_label"`
-	EmojiName      *string            `json:"emoji_name"`
-	WelcomeMessage stdjson.RawMessage `json:"welcome_message,omitempty"`
-	Tags           []string           `json:"tags"`
-	CreatedAt      time.Time          `json:"created_at"`
-	UpdatedAt      time.Time          `json:"updated_at"`
+	Id                int                `json:"id"`
+	ListingType       string             `json:"listing_type"`
+	SubmittedUser     adminUserData      `json:"submitted_user"`
+	SourceGuildId     uint64             `json:"source_guild_id,string"`
+	SourceGuildName   string             `json:"source_guild_name,omitempty"`
+	SourceGuildIcon   string             `json:"source_guild_icon,omitempty"`
+	Name              string             `json:"name"`
+	Description       string             `json:"description"`
+	Category          string             `json:"category"`
+	Status            string             `json:"status"`
+	ReviewNote        *string            `json:"review_note"`
+	ReviewedBy        *adminUserData     `json:"reviewed_by"`
+	ReviewedAt        *time.Time         `json:"reviewed_at"`
+	ImportCount       int                `json:"import_count"`
+	Featured          bool               `json:"featured"`
+	SnapshotData      stdjson.RawMessage `json:"snapshot_data,omitempty"`
+	Title             string             `json:"title"`
+	Content           string             `json:"content"`
+	Colour            *int32             `json:"colour"`
+	ImageUrl          *string            `json:"image_url"`
+	ThumbnailUrl      *string            `json:"thumbnail_url"`
+	ButtonStyle       *int16             `json:"button_style"`
+	ButtonLabel       string             `json:"button_label"`
+	EmojiName         *string            `json:"emoji_name"`
+	WelcomeMessage    stdjson.RawMessage `json:"welcome_message,omitempty"`
+	Tags              []string           `json:"tags"`
+	CreatedAt         time.Time          `json:"created_at"`
+	ServerBlacklisted bool               `json:"server_blacklisted,omitempty"`
+	// Admin tier and up only, since only they can read the gallery blacklist
+	SubmitterGalleryBlacklisted   bool `json:"submitter_gallery_blacklisted,omitempty"`
+	SourceGuildGalleryBlacklisted bool `json:"source_guild_gallery_blacklisted,omitempty"`
 }
 
-func toAdminListingResponse(l database.GalleryListing, tags []string, user adminUserData) adminListingResponse {
+func toAdminListingResponse(l database.GalleryListing, tags []string, users map[uint64]adminUserData) adminListingResponse {
 	listingType := l.ListingType
 	if listingType == "" {
 		listingType = database.GalleryListingTypePanel
 	}
 
+	var reviewer *adminUserData
+	if l.ReviewedBy != nil {
+		u := users[*l.ReviewedBy]
+		reviewer = &u
+	}
+
 	return adminListingResponse{
 		Id:             l.Id,
 		ListingType:    listingType,
-		SubmittedUser:  user,
+		SubmittedUser:  users[l.SubmitterUserId],
 		SourceGuildId:  l.SourceGuildId,
 		Name:           l.Name,
 		Description:    l.Description,
 		Category:       l.Category,
 		Status:         string(l.Status),
 		ReviewNote:     l.ReviewNote,
-		ReviewedBy:     l.ReviewedBy,
+		ReviewedBy:     reviewer,
 		ReviewedAt:     l.ReviewedAt,
 		ImportCount:    l.ImportCount,
 		Featured:       l.Featured,
-		SnapshotData:   stdjson.RawMessage(l.SnapshotData),
+		SnapshotData:   api_gallery.SnapshotResponse(l),
 		Title:          l.Title,
 		Content:        l.Content,
 		Colour:         l.Colour,
@@ -80,10 +93,9 @@ func toAdminListingResponse(l database.GalleryListing, tags []string, user admin
 		ButtonStyle:    l.ButtonStyle,
 		ButtonLabel:    l.ButtonLabel,
 		EmojiName:      l.EmojiName,
-		WelcomeMessage: stdjson.RawMessage(l.WelcomeMessage),
+		WelcomeMessage: api_gallery.WelcomeMessageResponse(l.WelcomeMessage),
 		Tags:           tags,
 		CreatedAt:      l.CreatedAt,
-		UpdatedAt:      l.UpdatedAt,
 	}
 }
 
@@ -174,23 +186,62 @@ func ListHandler(ctx *gin.Context) {
 		return
 	}
 
-	// Resolve submitter user data from cache
-	userIdSet := make(map[uint64]struct{})
-	for _, l := range listings {
-		userIdSet[l.SubmitterUserId] = struct{}{}
+	// Blacklist badges are advisory, so a failed lookup must not take down the review queue
+	serverBlacklist, err := dbclient.Client.ServerBlacklist.ListAll(ctx)
+	if err != nil {
+		log.Logger.Warn("Failed to fetch server blacklist for gallery review", zap.Error(err))
 	}
 
-	resolvedUsers := make(map[uint64]adminUserData)
-	for id := range userIdSet {
-		u, err := cache.Instance.GetUser(ctx, id)
-		if err == nil {
-			resolvedUsers[id] = adminUserData{
-				Id:        id,
-				Username:  u.Username,
-				AvatarUrl: u.AvatarUrl(256),
+	blacklistedGuilds := make(map[uint64]bool, len(serverBlacklist))
+	for _, guildId := range serverBlacklist {
+		blacklistedGuilds[guildId] = true
+	}
+
+	galleryBlacklistedUsers := make(map[uint64]bool)
+	galleryBlacklistedGuilds := make(map[uint64]bool)
+	if admin.TierSatisfies(admin.AdminTier(ctx.Keys["admin_tier"].(string)), admin.AdminTierAdmin) {
+		entries, err := dbclient.Client.SubmissionBlacklist.List(ctx, database.SubmissionFeatureGallery)
+		if err != nil {
+			log.Logger.Warn("Failed to fetch gallery blacklist for gallery review", zap.Error(err))
+		}
+
+		for _, entry := range entries {
+			switch entry.TargetType {
+			case database.SubmissionTargetUser:
+				galleryBlacklistedUsers[entry.TargetId] = true
+			case database.SubmissionTargetGuild:
+				galleryBlacklistedGuilds[entry.TargetId] = true
 			}
-		} else if errors.Is(err, cache2.ErrNotFound) {
-			resolvedUsers[id] = adminUserData{Id: id, Username: "Unknown User"}
+		}
+	}
+
+	userIds := make([]uint64, 0, len(listings))
+	guildIds := make([]uint64, 0, len(listings))
+	for _, l := range listings {
+		userIds = append(userIds, l.SubmitterUserId)
+		if l.ReviewedBy != nil {
+			userIds = append(userIds, *l.ReviewedBy)
+		}
+		guildIds = append(guildIds, l.SourceGuildId)
+	}
+
+	// Names are cosmetic: a cache failure falls back to "Unknown User" and the bare guild ID
+	cachedUsers, err := cache.Instance.GetUsers(ctx, userIds)
+	if err != nil {
+		log.Logger.Warn("Failed to resolve gallery submitters and reviewers", zap.Error(err))
+	}
+
+	guilds, err := cache.Instance.GetGuilds(ctx, guildIds)
+	if err != nil {
+		log.Logger.Warn("Failed to resolve gallery source servers", zap.Error(err))
+	}
+
+	users := make(map[uint64]adminUserData, len(userIds))
+	for _, id := range userIds {
+		if u, ok := cachedUsers[id]; ok {
+			users[id] = adminUserData{Id: id, Username: u.Username, AvatarUrl: u.AvatarUrl(256)}
+		} else {
+			users[id] = adminUserData{Id: id, Username: "Unknown User"}
 		}
 	}
 
@@ -200,7 +251,15 @@ func ListHandler(ctx *gin.Context) {
 		if tags == nil {
 			tags = make([]string, 0)
 		}
-		response[i] = toAdminListingResponse(l, tags, resolvedUsers[l.SubmitterUserId])
+
+		response[i] = toAdminListingResponse(l, tags, users)
+		if g, ok := guilds[l.SourceGuildId]; ok {
+			response[i].SourceGuildName = g.Name
+			response[i].SourceGuildIcon = g.Icon
+		}
+		response[i].ServerBlacklisted = blacklistedGuilds[l.SourceGuildId]
+		response[i].SubmitterGalleryBlacklisted = galleryBlacklistedUsers[l.SubmitterUserId]
+		response[i].SourceGuildGalleryBlacklisted = galleryBlacklistedGuilds[l.SourceGuildId]
 	}
 
 	ctx.JSON(http.StatusOK, response)

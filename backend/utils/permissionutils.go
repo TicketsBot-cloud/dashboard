@@ -136,7 +136,7 @@ func HasPermissionToViewTicket(ctx context.Context, guildId, userId uint64, tick
 
 	member, err := botContext.GetGuildMember(ctx, guildId, userId)
 	if err != nil {
-		return false, api.NewErrorWithMessage(http.StatusForbidden, err, "User not in server: are you logged into the correct account?")
+		return false, api.NewInternalServerError(err, "Unable to verify your server membership. Please try again.")
 	}
 
 	// Admins should have access to all tickets
@@ -348,7 +348,7 @@ func HasPermissionToViewTicketContent(ctx context.Context, guildId, userId uint6
 
 	member, err := botContext.GetGuildMember(ctx, guildId, userId)
 	if err != nil {
-		return false, api.NewErrorWithMessage(http.StatusForbidden, err, "User not in server: are you logged into the correct account?")
+		return false, api.NewInternalServerError(err, "Unable to verify your server membership. Please try again.")
 	}
 
 	// Admins should have access to all tickets

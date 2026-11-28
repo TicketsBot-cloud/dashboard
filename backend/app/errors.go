@@ -22,8 +22,9 @@ func NewError(internalError error, externalMessage string) *ApiError {
 }
 
 func NewServerError(internalError error) *ApiError {
+	// A 5xx body that fails Discord's error schema comes back verbatim, and may be the proxy's own page.
 	var restError request.RestError
-	if errors.As(internalError, &restError) {
+	if errors.As(internalError, &restError) && restError.StatusCode < 500 {
 		return NewError(internalError, restError.Error())
 	}
 

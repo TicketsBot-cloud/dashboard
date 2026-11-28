@@ -6,16 +6,20 @@ export interface ApiErrorInfo {
   status?: number;
   message?: string;
   internalError?: string;
+  errorId?: string;
 }
 
 export function readApiError(error: unknown): ApiErrorInfo {
   const response = (error as AxiosError | undefined)?.response;
-  const data = response?.data as { error?: string; internal_error?: string } | undefined;
+  const data = response?.data as
+    | { error?: string; internal_error?: string; error_id?: string }
+    | undefined;
   return {
     status: response?.status,
     // Empty strings collapse to undefined so a fallback still wins.
     message: data?.error || undefined,
     internalError: data?.internal_error || undefined,
+    errorId: data?.error_id || undefined,
   };
 }
 
@@ -57,7 +61,7 @@ let toastSeq = 0;
 
 /** The error toast plus the "Details" action that opens ErrorDetailModal. */
 export function showApiErrorToast(error: unknown, fallback?: string): void {
-  const { status, message: apiError, internalError } = readApiError(error);
+  const { status, message: apiError, internalError, errorId } = readApiError(error);
   const errorMessage = resolveErrorMessage(error, fallback);
   const config = (error as AxiosError | undefined)?.config;
 
@@ -67,6 +71,7 @@ export function showApiErrorToast(error: unknown, fallback?: string): void {
     message: errorMessage,
     apiError,
     internalError,
+    errorId,
     requestUrl: config?.url,
     requestMethod: config?.method,
   };

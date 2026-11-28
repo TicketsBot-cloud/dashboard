@@ -8,6 +8,7 @@ import (
 
 	"github.com/TicketsBot-cloud/archiverclient"
 	"github.com/gin-gonic/gin"
+	"github.com/ticketsbot-cloud/dashboard/backend/app"
 	"github.com/ticketsbot-cloud/dashboard/backend/chatreplica"
 	dbclient "github.com/ticketsbot-cloud/dashboard/backend/database"
 	"github.com/ticketsbot-cloud/dashboard/backend/utils"
@@ -42,7 +43,7 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 	if ticket.UserId != userId {
 		hasPermission, err := utils.HasPermissionToViewTicket(ctx, guildId, userId, ticket)
 		if err != nil {
-			ctx.JSON(err.StatusCode, utils.ErrorStr("Failed to query database. Please try again."))
+			_ = ctx.AbortWithError(err.StatusCode, app.NewError(err.Err, *err.UserMessage))
 			return
 		}
 
@@ -54,7 +55,7 @@ func GetTranscriptRenderHandler(ctx *gin.Context) {
 
 	hasContentPermission, contentErr := utils.HasPermissionToViewTicketContent(context.Background(), guildId, userId, ticket)
 	if contentErr != nil {
-		ctx.JSON(contentErr.StatusCode, utils.ErrorStr("Failed to verify content permissions. Please try again."))
+		_ = ctx.AbortWithError(contentErr.StatusCode, app.NewError(contentErr.Err, *contentErr.UserMessage))
 		return
 	}
 
